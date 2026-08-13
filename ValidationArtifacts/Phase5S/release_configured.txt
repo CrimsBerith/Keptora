@@ -1,0 +1,2 @@
+Cullora Phase 5S release-config validation
+PASS: release identifiers and HTTPS URLs configured

@@ -1,0 +1,33 @@
+{
+  "cursor_safety": {
+    "inserted_prefix_restarts": true,
+    "non_durable_prefix_restarts": true,
+    "unchanged_prefix_resumes": true
+  },
+  "family_classifications": {
+    "burst": "burst",
+    "edited": "editedExport",
+    "live": "livePhoto",
+    "raw": "rawBundle",
+    "unrelated": null
+  },
+  "recovery_matrix": {
+    "pending:0:0": "attention:missingBoth",
+    "pending:0:1": "recoveredQuarantine",
+    "pending:1:0": "incompleteMove",
+    "pending:1:1": "attention:bothCopies",
+    "quarantined:0:0": "attention:missingBoth",
+    "quarantined:0:1": "stableQuarantine",
+    "quarantined:1:0": "recoveredRestore",
+    "quarantined:1:1": "attention:bothCopies"
+  },
+  "thumbnail_budget": {
+    "bytes": 100663296,
+    "count_limit": 320,
+    "full_data_load_absent": true
+  },
+  "volume_identity": {
+    "replacement_disk_rejected": true,
+    "same_disk_after_rename": true
+  }
+}

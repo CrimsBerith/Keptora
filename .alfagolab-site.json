@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "website_repository": "/Users/khankartal/Desktop/alfagolab.com",
+  "support_email": "support@alfagolab.com",
+  "apps": [
+    {
+      "slug": "cullora",
+      "current_name": "Cullora: Duplicate Cleaner",
+      "absorbs": ["atlastrace-gpx", "aurelio-metadata"],
+      "name_source": "Cullora/Resources/Info.plist",
+      "marketing_url": "https://alfagolab.com/cullora",
+      "privacy_url": "https://alfagolab.com/cullora/privacy",
+      "support_url": "https://alfagolab.com/cullora/support"
+    }
+  ]
+}

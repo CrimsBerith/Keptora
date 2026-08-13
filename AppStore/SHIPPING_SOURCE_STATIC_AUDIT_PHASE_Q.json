@@ -1,0 +1,17 @@
+{
+  "phase": "Q",
+  "workspace": "Cullora_Phase_5S_Quarantine_Verification_Lineage",
+  "shipping_swift_file_count": 52,
+  "forbidden_source_findings": {
+    "fatalError": 0,
+    "try_bang": 0,
+    "forced_cast": 0,
+    "todo": 0,
+    "fixme": 0,
+    "urlsession": 0
+  },
+  "process_launch_policy": "NONE",
+  "process_launch_findings": [],
+  "source_gate_status": "PASS",
+  "remaining_runtime_validation": "REAL_MAC_XCODE_RUNTIME_ONLY"
+}

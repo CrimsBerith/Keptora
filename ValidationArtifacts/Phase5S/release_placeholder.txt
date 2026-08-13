@@ -1,0 +1,9 @@
+Cullora Phase 5S release-config validation
+ERROR: bundle identifier placeholder
+ERROR: development team placeholder
+ERROR: StoreKit product identifier placeholder
+ERROR: privacy_policy must be a real HTTPS URL
+ERROR: support must be a real HTTPS URL
+ERROR: marketing must be a real HTTPS URL
+FAILED: 6 error(s)
+placeholder-release-blocked-exit=1

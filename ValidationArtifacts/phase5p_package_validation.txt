@@ -1,0 +1,14 @@
+/mnt/data/Cullora_Phase_5P_Review_Confidence_Studio/Cullora.xcodeproj/project.pbxproj: OK
+/mnt/data/Cullora_Phase_5P_Review_Confidence_Studio/Cullora/Resources/Info.plist: OK
+/mnt/data/Cullora_Phase_5P_Review_Confidence_Studio/Cullora/Resources/Cullora.entitlements: OK
+/mnt/data/Cullora_Phase_5P_Review_Confidence_Studio/Cullora/Resources/PrivacyInfo.xcprivacy: OK
+JSON resources parsed.
+All Swift sources are referenced by the Xcode project.
+Cullora Phase 5P static validation
+PASS: 0 errors
+Phase 5I SQLite core smoke passed: schema v4, family graph, source isolation, durable cursor resume, and safe cursor restart.
+Phase 5H family graph smoke passed: RAW/JPEG/XMP, Live Photo, burst, and edited/export families.
+Heavy Phase 5H coordinator smoke skipped (set CULLORA_FULL_LINUX_SMOKE=1 to run).
+Phase 5J similarity core smoke passed: candidate filtering, calibration monotonicity, strict presets, and stable pair storage.
+Phase 5M review-session checkpoint smoke passed.
+Phase 5O source exclusion smoke passed: Unicode, case, extension boundaries.

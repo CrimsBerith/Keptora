@@ -1,0 +1,4 @@
+assets=100000
+verified=100000
+elapsed_seconds=0.064876
+cullora-phase5p-review-evidence-ok

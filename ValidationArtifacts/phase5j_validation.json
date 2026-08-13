@@ -1,0 +1,17 @@
+{
+  "phase": "5J",
+  "appVersion": "0.9.0",
+  "build": 90,
+  "databaseSchema": 4,
+  "swiftFilesParsed": 50,
+  "criticalLocalizedStrings": 28,
+  "staticValidation": "PASS_WITH_EXPECTED_IDENTIFIER_WARNING",
+  "fullLinuxCoreValidation": "PASS",
+  "releaseModeValidation": "EXPECTED_FAIL_UNTIL_IDENTIFIERS_CONFIGURED",
+  "forbiddenPermanentDeleteAPIs": 0,
+  "macOSXcodeBuild": "NOT_RUN_IN_LINUX_ENVIRONMENT",
+  "storeKitSandbox": "NOT_RUN",
+  "voiceOverAudit": "NOT_RUN",
+  "realLibraryBenchmarks": "NOT_RUN",
+  "generatedAtUTC": "2026-08-04T02:21:30.335696+00:00"
+}

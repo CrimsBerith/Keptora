@@ -1,0 +1,15 @@
+/home/oai/share/Cullora_Phase_5J_Work/Cullora_Phase_5J_Calisan_Xcode_Projesi/Cullora.xcodeproj/project.pbxproj: OK
+/home/oai/share/Cullora_Phase_5J_Work/Cullora_Phase_5J_Calisan_Xcode_Projesi/Cullora/Resources/Info.plist: OK
+/home/oai/share/Cullora_Phase_5J_Work/Cullora_Phase_5J_Calisan_Xcode_Projesi/Cullora/Resources/Cullora.entitlements: OK
+/home/oai/share/Cullora_Phase_5J_Work/Cullora_Phase_5J_Calisan_Xcode_Projesi/Cullora/Resources/PrivacyInfo.xcprivacy: OK
+JSON resources parsed.
+All Swift sources are referenced by the Xcode project.
+Phase 5J static validation
+WARNING: Release identifiers still placeholders: bundle identifier, development team, StoreKit product identifier
+PASS: 0 errors, 1 warning(s)
+Phase 5I SQLite core smoke passed: schema v4, family graph, source isolation, durable cursor resume, and safe cursor restart.
+Phase 5H family graph smoke passed: RAW/JPEG/XMP, Live Photo, burst, and edited/export families.
+Phase 5H coordinator smoke passed: changed-prefix restart, warm reuse, and source-scoped reconciliation.
+Phase 5J similarity core smoke passed: candidate filtering, calibration monotonicity, strict presets, and stable pair storage.
+Stored 100K similarity benchmark verified.
+Phase 5J package structure, syntax, deletion safety, StoreKit/localization consistency, family/recovery safety, SQLite schema v4, similarity presets, and stored 100K candidate benchmark passed.

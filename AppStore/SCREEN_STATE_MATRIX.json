@@ -1,0 +1,152 @@
+{
+  "app": "Cullora",
+  "identity": "Archive Review Studio",
+  "screens": [
+    {
+      "screen": "Archive Review Studio",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "no source",
+        "scanning",
+        "exact groups",
+        "similar review",
+        "committed"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "Exact Review Group",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "keeper chosen",
+        "protected",
+        "quarantine plan"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "Similar Comparison",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "strong",
+        "review",
+        "uncertain"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "Safety Plan",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "collision",
+        "blocked",
+        "ready"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "History & Restore",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "empty",
+        "committed",
+        "restored",
+        "drift"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "Quarantine Verification Lineage",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "current",
+        "changed",
+        "missing"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "Onboarding",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "first launch",
+        "complete"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    },
+    {
+      "screen": "Settings & Pro",
+      "identity": "Archive Review Studio",
+      "required_states": [
+        "locked",
+        "unlocked",
+        "invalid URL"
+      ],
+      "acceptance": {
+        "keyboard_reachable": true,
+        "voiceover_named": true,
+        "compact_standard_expansive_resize": true,
+        "reduce_motion_safe": true,
+        "high_contrast_semantics": true,
+        "failure_state_non_destructive": true,
+        "synthetic_screenshot_fixture_only": true
+      }
+    }
+  ]
+}

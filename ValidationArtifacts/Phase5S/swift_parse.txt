@@ -1,0 +1,1 @@
+swift-parse-all-pass

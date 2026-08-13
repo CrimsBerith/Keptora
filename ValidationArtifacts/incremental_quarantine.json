@@ -1,0 +1,26 @@
+{
+  "delta_scan": {
+    "discovered": 252,
+    "hashed": 4,
+    "missing": 2,
+    "reused": 248
+  },
+  "first_scan": {
+    "discovered": 253,
+    "hashed": 253,
+    "missing": 0,
+    "reused": 0
+  },
+  "quarantine_restore": {
+    "plan_id": "phase5h-smoke-plan",
+    "public_key_base64": "+FI+1UL5S87CVIo5jcJBG+LKHgPof9BlBAlNgzYPbJ4=",
+    "restored": true,
+    "signature_base64": "uD8EEcwA4BYT379991RWqgRjNsiT2LxDn27XXFG0Vi8lGKcjDAZetDg5s81pcORgiGh3sBiKwarGz1sjOj65Cw=="
+  },
+  "warm_scan": {
+    "discovered": 253,
+    "hashed": 0,
+    "missing": 0,
+    "reused": 253
+  }
+}

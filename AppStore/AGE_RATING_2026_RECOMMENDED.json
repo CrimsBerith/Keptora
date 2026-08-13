@@ -1,0 +1,14 @@
+{
+  "source_basis": "Phase Q canonical local-first utility source",
+  "recommended_global_rating": "4+",
+  "social_media_capability": false,
+  "public_user_generated_content_feed": false,
+  "unrestricted_web_access": false,
+  "gambling_or_contests": false,
+  "violence": false,
+  "sexual_or_nudity_content": false,
+  "profanity_or_crude_humor": false,
+  "alcohol_tobacco_drugs": false,
+  "medical_or_treatment_information": false,
+  "final_check": "Reconcile against live App Store Connect questionnaire after signed Mac build; do not claim if product scope changes."
+}

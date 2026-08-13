@@ -1,0 +1,13 @@
+.DS_Store
+Build/
+DerivedData/
+ValidationArtifacts/Mac/
+*.xcresult
+*.xcarchive
+*.ipa
+*.dSYM
+.swiftpm/
+Packages/*/.build/
+xcuserdata/
+*.moved-aside
+

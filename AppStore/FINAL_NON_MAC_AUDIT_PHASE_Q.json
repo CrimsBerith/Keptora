@@ -1,0 +1,41 @@
+{
+  "phase": "Q",
+  "product": "Cullora",
+  "status": "PASS_NON_MAC_IMPLEMENTATION_COMPLETE",
+  "ui_identity": "Archive Review Studio",
+  "screen_surface_contract_count": 8,
+  "production_icon": "OPAQUE_1024_MASTER_AND_COMPLETE_MACOS_SLOTS_PRESENT",
+  "ui_test_target": "PRESENT_IN_XCODE_PROJECT_AND_SHARED_SCHEME",
+  "ui_test_source_count": 1,
+  "storekit2_source_wiring": "PASS",
+  "support_privacy_in_app_wiring": "PASS",
+  "privacy_manifest": "PRESENT_AND_SOURCE_CORRELATED",
+  "privacy_required_reason_categories": [
+    "NSPrivacyAccessedAPICategoryFileTimestamp",
+    "NSPrivacyAccessedAPICategoryUserDefaults"
+  ],
+  "sandbox_entitlements": [
+    "com.apple.security.app-sandbox",
+    "com.apple.security.files.bookmarks.app-scope",
+    "com.apple.security.files.user-selected.read-write",
+    "com.apple.security.personal-information.photos-library"
+  ],
+  "persistent_security_scoped_bookmarks": true,
+  "hardened_runtime": "EXPLICIT_YES",
+  "automatic_signing_source_setting": "PRESENT",
+  "shipping_source_syntax_structure_audit": "PASS",
+  "appstore_metadata_source_contract": "PASS",
+  "design_asset_contract": "PASS",
+  "known_non_mac_source_ui_architecture_asset_gaps": [],
+  "remaining_execution_evidence": [
+    "REAL_MACOS_XCODE_BUILD_TEST_ANALYZE",
+    "REAL_MACOS_SANDBOX_FILESYSTEM_BOOKMARK_LIFECYCLE",
+    "INSTRUMENTS_AND_MEMORY_GRAPH",
+    "RUNTIME_ACCESSIBILITY_AND_WINDOW_MATRIX",
+    "STOREKIT_SANDBOX",
+    "SIGNING_ARCHIVE_VALIDATE_TESTFLIGHT",
+    "REAL_SIGNED_BUILD_SCREENSHOTS",
+    "FINAL_APP_STORE_CONNECT_RECONCILIATION",
+    "OWNER_ACCOUNT_DOMAIN_VALUES"
+  ]
+}

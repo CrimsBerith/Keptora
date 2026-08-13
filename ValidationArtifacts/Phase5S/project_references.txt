@@ -1,0 +1,1 @@
+All Swift sources are referenced by the Xcode project.

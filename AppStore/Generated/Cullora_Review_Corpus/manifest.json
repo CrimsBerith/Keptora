@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "synthetic": true,
+  "files": [
+    {
+      "path": "EdgeCases/Corrupted.jpg",
+      "bytes": 18,
+      "sha256": "1246f1fb02971d89deecb8e2e2baaaa861f840f5ed776307ed9a354518f8fee4"
+    },
+    {
+      "path": "Exact/Beach_Copy.jpg",
+      "bytes": 75291,
+      "sha256": "6f4d2ebea0dfadd84f9cb02a10bd8e88d8a98dc915a076c5930d959d958c17af"
+    },
+    {
+      "path": "Exact/Beach_Original.jpg",
+      "bytes": 75291,
+      "sha256": "6f4d2ebea0dfadd84f9cb02a10bd8e88d8a98dc915a076c5930d959d958c17af"
+    },
+    {
+      "path": "Exact/Family_Copy_1.jpg",
+      "bytes": 68879,
+      "sha256": "b1ddd3b30bbe12418e290b32dd349900739ea55f1d68aa1bcd1cdefbf07284bb"
+    },
+    {
+      "path": "Exact/Family_Copy_2.jpg",
+      "bytes": 68879,
+      "sha256": "b1ddd3b30bbe12418e290b32dd349900739ea55f1d68aa1bcd1cdefbf07284bb"
+    },
+    {
+      "path": "Exact/Family_Original.jpg",
+      "bytes": 68879,
+      "sha256": "b1ddd3b30bbe12418e290b32dd349900739ea55f1d68aa1bcd1cdefbf07284bb"
+    },
+    {
+      "path": "Exact/Poster copy.png",
+      "bytes": 8626,
+      "sha256": "477ffecf86892d33267c78468d1be27af8394aa52f84456bcc8e02a92f2bed0e"
+    },
+    {
+      "path": "Exact/Poster.png",
+      "bytes": 8626,
+      "sha256": "477ffecf86892d33267c78468d1be27af8394aa52f84456bcc8e02a92f2bed0e"
+    },
+    {
+      "path": "Families/DSC_0001.jpg",
+      "bytes": 60982,
+      "sha256": "9d37ea4c4080ee480ddfff628be2b46de1c59ef2dbc94d0b1cb3308fa65509f7"
+    },
+    {
+      "path": "Families/DSC_0001.xmp",
+      "bytes": 153,
+      "sha256": "9250f219ff2cf7ab32c4539698c9779a3e3027c8b70b3425322f38d14c63d24d"
+    },
+    {
+      "path": "Families/DSC_0001_Edit.jpg",
+      "bytes": 60982,
+      "sha256": "9d37ea4c4080ee480ddfff628be2b46de1c59ef2dbc94d0b1cb3308fa65509f7"
+    },
+    {
+      "path": "Similar/Sunset_1.jpg",
+      "bytes": 67155,
+      "sha256": "2e8fb28d1d2dc9355d9eeb99537d1e633871da1277db46b23e84ffa4851543af"
+    },
+    {
+      "path": "Similar/Sunset_2.jpg",
+      "bytes": 54533,
+      "sha256": "e58101a878d1adc3c7b8e7206029f9f73619cb0e829d3032cee486c3c7e19b56"
+    },
+    {
+      "path": "Similar/Sunset_3.jpg",
+      "bytes": 59661,
+      "sha256": "7085b8bcdc66102429ecc95b02bee5017b0dbc9f47297685dd4ef60bac531638"
+    }
+  ]
+}

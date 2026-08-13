@@ -1,0 +1,49 @@
+{
+  "app": "Cullora",
+  "identity": "Archive Review Studio",
+  "app_icon": {
+    "required": true,
+    "master_px": 1024,
+    "status": "production visual review required before archive"
+  },
+  "screens": [
+    {
+      "screen": "Archive Review Studio",
+      "asset_requirements": "Synthetic photo corpus with EXIF stripped"
+    },
+    {
+      "screen": "Exact Review Group",
+      "asset_requirements": "Small demo thumbnails only"
+    },
+    {
+      "screen": "Similar Comparison",
+      "asset_requirements": "Synthetic non-personal image pairs"
+    },
+    {
+      "screen": "Safety Plan",
+      "asset_requirements": "No raster"
+    },
+    {
+      "screen": "History & Restore",
+      "asset_requirements": "Deterministic manifests"
+    },
+    {
+      "screen": "Quarantine Verification Lineage",
+      "asset_requirements": "No raster"
+    },
+    {
+      "screen": "Onboarding",
+      "asset_requirements": "SF Symbols"
+    },
+    {
+      "screen": "Settings & Pro",
+      "asset_requirements": "No raster"
+    }
+  ],
+  "rules": {
+    "synthetic_demo_data_only": true,
+    "no_personal_data": true,
+    "prefer_sf_symbols": true,
+    "no_shared_shell_assets": true
+  }
+}

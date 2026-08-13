@@ -1,0 +1,7 @@
+WARNING: placeholder URL remains: privacy_policy
+WARNING: placeholder URL remains: support
+WARNING: placeholder URL remains: marketing
+Name: 21 chars
+en-US: subtitle=28, promo=143, description=1284, keyword_bytes=95
+tr: subtitle=29, promo=147, description=1517, keyword_bytes=98
+PASS: App Store metadata length and URL-scheme checks

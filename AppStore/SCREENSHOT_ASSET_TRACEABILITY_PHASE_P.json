@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "phase": "P",
+  "app": "Cullora",
+  "mappings": [
+    {
+      "order": 1,
+      "shot_surface": "Archive Review Studio",
+      "blueprint_screen": "Archive Review Studio",
+      "state": "representative populated state",
+      "synthetic_data_only": true,
+      "asset_requirements": "Synthetic photo corpus with EXIF stripped",
+      "asset_policy": "owned_synthetic_or_system",
+      "asset_provenance_status": "SOURCE_CONTRACT_READY",
+      "capture_rule": "Capture from the real signed Mac build in Phase I; Phase P validates source traceability only."
+    },
+    {
+      "order": 2,
+      "shot_surface": "Visual Review Floor",
+      "blueprint_screen": "Exact Review Group",
+      "state": "representative populated state",
+      "synthetic_data_only": true,
+      "asset_requirements": "Small demo thumbnails only",
+      "asset_policy": "owned_synthetic_or_system",
+      "asset_provenance_status": "SOURCE_CONTRACT_READY",
+      "capture_rule": "Capture from the real signed Mac build in Phase I; Phase P validates source traceability only."
+    },
+    {
+      "order": 3,
+      "shot_surface": "Review Queue",
+      "blueprint_screen": "Exact Review Group",
+      "state": "representative populated state",
+      "synthetic_data_only": true,
+      "asset_requirements": "Small demo thumbnails only",
+      "asset_policy": "owned_synthetic_or_system",
+      "asset_provenance_status": "SOURCE_CONTRACT_READY",
+      "capture_rule": "Capture from the real signed Mac build in Phase I; Phase P validates source traceability only."
+    },
+    {
+      "order": 4,
+      "shot_surface": "Evidence Drawer",
+      "blueprint_screen": "Similar Comparison",
+      "state": "representative populated state",
+      "synthetic_data_only": true,
+      "asset_requirements": "Synthetic non-personal image pairs",
+      "asset_policy": "owned_synthetic_or_system",
+      "asset_provenance_status": "SOURCE_CONTRACT_READY",
+      "capture_rule": "Capture from the real signed Mac build in Phase I; Phase P validates source traceability only."
+    },
+    {
+      "order": 5,
+      "shot_surface": "Decision Shelf",
+      "blueprint_screen": "Safety Plan",
+      "state": "representative populated state",
+      "synthetic_data_only": true,
+      "asset_requirements": "No raster",
+      "asset_policy": "native_system_or_owned_synthetic",
+      "asset_provenance_status": "SOURCE_CONTRACT_READY",
+      "capture_rule": "Capture from the real signed Mac build in Phase I; Phase P validates source traceability only."
+    }
+  ],
+  "rules": [
+    "Every planned App Store screenshot maps to a product-specific blueprint screen.",
+    "All screenshot content uses deterministic synthetic data only.",
+    "No final screenshot is accepted until captured from the signed Release build on Mac.",
+    "External raster art must remain covered by asset provenance/licensing evidence."
+  ]
+}

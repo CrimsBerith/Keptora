@@ -1,0 +1,14 @@
+{
+  "phase": "Q",
+  "app": "Cullora",
+  "ui_identity": "Archive Review Studio",
+  "screen_surface_count": 8,
+  "screen_contracts_complete": true,
+  "production_app_icon_master": "AppStore/AppIcon/source-1024.png",
+  "production_app_icon_opaque": true,
+  "external_stock_assets_required": false,
+  "native_system_assets_policy": "SF Symbols / SwiftUI shapes/materials preferred; external raster not required by shipping design",
+  "marketing_screenshot_status": "REAL_MAC_SIGNED_RELEASE_CAPTURE_REQUIRED",
+  "design_time_asset_status": "COMPLETE",
+  "remaining": "REAL_MAC_RUNTIME_SCREENSHOT_AND_VISUAL_ACCEPTANCE_ONLY"
+}

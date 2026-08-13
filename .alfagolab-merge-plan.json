@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "shipping_app": "cullora",
+  "modules": [
+    {"id": "journey-match", "source_slug": "atlastrace-gpx", "destination": "Cullora/Modules/JourneyMatch"},
+    {"id": "metadata-tools", "source_slug": "aurelio-metadata", "destination": "Cullora/Modules/MetadataTools"}
+  ],
+  "excluded_from_copy": ["app-entry-point", "bundle-identity", "commerce-store", "duplicate-persistence", "global-design-system"]
+}

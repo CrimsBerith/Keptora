@@ -1,0 +1,10 @@
+{
+  "tracking": false,
+  "third_party_advertising": false,
+  "developer_advertising": false,
+  "analytics_sdk": false,
+  "developer_operated_file_upload": false,
+  "developer_collected_user_data_expected": false,
+  "storekit_purchase_processing": "Apple App Store",
+  "final_check": "Reconcile signed binary, SDK privacy manifests, and App Store Connect before submission."
+}

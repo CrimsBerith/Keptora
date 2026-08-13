@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "app_name": "Cullora",
+  "primary_locale": "en-US",
+  "subtitle": "Review archive provenance",
+  "category": "public.app-category.utilities",
+  "description": "Cullora is a focused macOS workspace built around the Archive Review Studio. It helps you review, organize, verify, and export work with explicit evidence, reversible actions, and a clear audit trail. The app is designed for local-first workflows, keyboard-friendly operation, and predictable failure recovery without turning the experience into a generic dashboard.",
+  "keywords": [
+    "cullora",
+    "macOS",
+    "offline",
+    "local-first",
+    "productivity"
+  ],
+  "promotional_text": "A focused macOS workflow for archive review studio.",
+  "whats_new_1_0": "Initial release with the complete local-first workflow, recovery safeguards, accessibility hardening, and release evidence tooling.",
+  "support_url": "${DEVELOPER_BASE_URL}/support/cullora",
+  "privacy_policy_url": "${DEVELOPER_BASE_URL}/privacy/cullora",
+  "marketing_url": "${DEVELOPER_BASE_URL}/apps/cullora",
+  "review_notes": "Open Cullora and use the included synthetic demo/screenshot mode to exercise the main Archive Review Studio workflow without personal data. Purchase UI uses the bundled StoreKit configuration for local testing; production product identifiers are injected at release time.",
+  "copyright": "${COPYRIGHT_YEAR} ${DEVELOPER_LEGAL_NAME}",
+  "age_rating_draft": "AppStore/AGE_RATING_2026_DRAFT.md",
+  "privacy_label_draft": "AppStore/PRIVACY_NUTRITION_LABEL_DRAFT.md",
+  "accessibility_label_draft": "AppStore/ACCESSIBILITY_NUTRITION_LABEL_DRAFT.md",
+  "export_compliance_dsa": "AppStore/EXPORT_COMPLIANCE_DSA_CHECKLIST.md",
+  "external_release_values": [
+    "DEVELOPER_BASE_URL",
+    "COPYRIGHT_YEAR",
+    "DEVELOPER_LEGAL_NAME",
+    "DEVELOPMENT_TEAM",
+    "PRODUCT_BUNDLE_IDENTIFIER",
+    "StoreKit product IDs"
+  ],
+  "final_icon_external_blocker": false
+}

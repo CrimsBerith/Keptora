@@ -1,0 +1,14 @@
+{
+  "development_team": "REPLACE_WITH_10_CHAR_TEAM_ID",
+  "bundle_identifier": "com.yourcompany.cullora",
+  "lifetime_product_id": "com.yourcompany.cullora.pro.lifetime",
+  "privacy_url": "https://alfagolab.com/cullora/privacy",
+  "support_url": "https://alfagolab.com/cullora/support",
+  "marketing_url": "https://alfagolab.com/cullora",
+  "review_contact_email": "REPLACE_WITH_REVIEW_EMAIL",
+  "seller_or_trader_legal_name": "REPLACE_WITH_CONFIRMED_LEGAL_NAME",
+  "marketing_version": "1.0.0",
+  "build_number": "181",
+  "family_sharing": false,
+  "minimum_macos": "13.0"
+}

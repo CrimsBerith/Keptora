@@ -1,0 +1,87 @@
+{
+  "app": "Cullora",
+  "identity": "Archive Review Studio",
+  "policy_version": "Phase L",
+  "app_icon_status": "PRODUCTION_CANDIDATE_INCLUDED_PHASE_Q_OPAQUE_1024_MASTER",
+  "screens": [
+    {
+      "screen": "Archive Review Studio",
+      "asset_policy": "owned_synthetic_or_system",
+      "requirements": "Synthetic photo corpus with EXIF stripped",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "Exact Review Group",
+      "asset_policy": "owned_synthetic_or_system",
+      "requirements": "Small demo thumbnails only",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "Similar Comparison",
+      "asset_policy": "owned_synthetic_or_system",
+      "requirements": "Synthetic non-personal image pairs",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "Safety Plan",
+      "asset_policy": "native_system_or_owned_synthetic",
+      "requirements": "No raster",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "History & Restore",
+      "asset_policy": "owned_synthetic_or_system",
+      "requirements": "Deterministic manifests",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "Quarantine Verification Lineage",
+      "asset_policy": "native_system_or_owned_synthetic",
+      "requirements": "No raster",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "Onboarding",
+      "asset_policy": "native_system_or_owned_synthetic",
+      "requirements": "SF Symbols",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    },
+    {
+      "screen": "Settings & Pro",
+      "asset_policy": "native_system_or_owned_synthetic",
+      "requirements": "No raster",
+      "personal_data_allowed": false,
+      "third_party_trademark_allowed": false,
+      "license_evidence_required_for_external_asset": true,
+      "release_status": "SOURCE_CONTRACT_READY"
+    }
+  ],
+  "global_rules": {
+    "system_symbols": "SF Symbols preferred where semantically appropriate",
+    "external_assets": "must be owned/generated or have explicit license evidence",
+    "fixtures": "synthetic only; no customer/user data",
+    "retina": "all raster shipping assets require Retina-quality source",
+    "no_cross_app_shell_reuse": true
+  }
+}

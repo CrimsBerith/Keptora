@@ -1,0 +1,25 @@
+{
+  "averageAcceptedCandidates": 0.5808,
+  "bandBitWidth": 16,
+  "bandCount": 8,
+  "bucketCount": 397914,
+  "buildSeconds": 6.0433,
+  "candidatePairs": 29041,
+  "catalogSize": 100000,
+  "maximumCandidatesPerAsset": 400,
+  "maximumHammingDistance": 14,
+  "maximumRawBucketUnion": 36,
+  "naivePairs": 4999950000,
+  "pairReductionFactor": 172168.66,
+  "peakMemoryMiB": 90.11,
+  "phase": "5I",
+  "plantedNearPairs": 15000,
+  "plantedRecall": 0.9964,
+  "querySeconds": 8.3447,
+  "recoveredPlantedNearPairs": 14946,
+  "rotationOffsets": [
+    0,
+    8
+  ],
+  "scopeNote": "Synthetic dHash candidate benchmark only; Apple Vision throughput must be measured on macOS hardware."
+}

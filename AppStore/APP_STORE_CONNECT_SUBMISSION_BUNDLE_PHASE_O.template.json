@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "phase": "O",
+  "app": {
+    "name": "Cullora",
+    "primary_locale": "en-US",
+    "category": "public.app-category.utilities",
+    "bundle_identifier": "${PRODUCT_BUNDLE_IDENTIFIER}",
+    "sku": "${APP_STORE_SKU}",
+    "version": "1.0",
+    "copyright": "${COPYRIGHT_YEAR} ${DEVELOPER_LEGAL_NAME}"
+  },
+  "localization_en_US": {
+    "subtitle": "Review archive provenance",
+    "promotional_text": "A focused macOS workflow for archive review studio.",
+    "description": "Cullora is a focused macOS workspace built around the Archive Review Studio. It helps you review, organize, verify, and export work with explicit evidence, reversible actions, and a clear audit trail. The app is designed for local-first workflows, keyboard-friendly operation, and predictable failure recovery without turning the experience into a generic dashboard.",
+    "keywords": "cullora,macOS,offline,local-first,productivity",
+    "whats_new": "Initial release with the complete local-first workflow, recovery safeguards, accessibility hardening, and release evidence tooling."
+  },
+  "urls": {
+    "privacy_policy": "${PRIVACY_URL}",
+    "support": "${SUPPORT_URL}",
+    "marketing": "${MARKETING_URL}"
+  },
+  "app_privacy": {
+    "draft_disclosure": "Data Not Collected",
+    "finalization_rule": "Do not submit until the signed archive dependency/privacy report confirms no collection or tracking."
+  },
+  "age_rating": {
+    "source": "AppStore/AGE_RATING_2026_DRAFT.md",
+    "answers": "AppStore/AGE_RATING_ANSWERS_PHASE_O.md",
+    "finalization_rule": "Reconcile with the live App Store Connect questionnaire immediately before submission."
+  },
+  "accessibility": {
+    "source": "AppStore/ACCESSIBILITY_NUTRITION_LABEL_DRAFT.md",
+    "finalization_rule": "Claim only features verified on a real Mac build with keyboard and VoiceOver checks."
+  },
+  "iap": {
+    "type": "non-consumable",
+    "product_id": "${LIFETIME_PRODUCT_ID}",
+    "price": "${APP_STORE_CONNECT_PRICE_POINT}",
+    "review_screenshot": "${IAP_REVIEW_SCREENSHOT_PATH}",
+    "finalization_rule": "Create the product in App Store Connect and verify StoreKit sandbox on the signed build."
+  },
+  "review_information": {
+    "contact_email": "${REVIEW_CONTACT_EMAIL}",
+    "notes_source": "AppStore/APP_REVIEW_NOTES.md",
+    "demo_mode": "Use the package deterministic synthetic/demo mode; never include personal user files."
+  },
+  "compliance": {
+    "export_dsa_source": "AppStore/EXPORT_COMPLIANCE_DSA_CHECKLIST.md",
+    "trader_legal_name": "${SELLER_OR_TRADER_LEGAL_NAME}",
+    "content_rights_confirmation": "${CONTENT_RIGHTS_CONFIRMED}"
+  },
+  "release_assets": {
+    "screenshot_plan": "AppStore/SCREENSHOT_SHOTLIST.json",
+    "asset_provenance": "AppStore/ASSET_PROVENANCE_MANIFEST.json",
+    "final_icon_external_blocker": false,
+    "final_icon_source": "existing Xcode asset catalog; final compiled asset verification on Mac",
+    "app_icon_source": "AppStore/AppIcon/source-1024.png"
+  },
+  "external_inputs_required": [
+    "DEVELOPMENT_TEAM",
+    "PRODUCT_BUNDLE_IDENTIFIER",
+    "LIFETIME_PRODUCT_ID",
+    "PRIVACY_URL",
+    "SUPPORT_URL",
+    "MARKETING_URL",
+    "REVIEW_CONTACT_EMAIL",
+    "SELLER_OR_TRADER_LEGAL_NAME",
+    "APP_STORE_SKU",
+    "APP_STORE_CONNECT_PRICE_POINT",
+    "CONTENT_RIGHTS_CONFIRMED"
+  ],
+  "mac_only_evidence_required": [
+    "signed build/test/analyze",
+    "Instruments traces",
+    "VoiceOver and keyboard evidence",
+    "StoreKit sandbox",
+    "Archive and Validate App",
+    "TestFlight",
+    "final App Store screenshots from real build"
+  ]
+}

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Cullora: Duplicate Cleaner</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>181</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Cullora. All rights reserved.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cullora needs access to scan your Photos library locally and explain duplicate recommendations. It never uploads your images.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>APP_LIFETIME_PRODUCT_ID</key>
+	<string>com.cullora.app.pro.lifetime</string>
+	<key>APP_PRIVACY_POLICY_URL</key>
+	<string>https://alfagolab.com/cullora/privacy</string>
+	<key>APP_SUPPORT_URL</key>
+	<string>https://alfagolab.com/cullora/support</string>
+	<key>APP_MARKETING_URL</key>
+	<string>https://alfagolab.com/cullora</string>
+</dict>
+</plist>

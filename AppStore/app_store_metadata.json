@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "release": {
+    "marketing_version": "1.0.0",
+    "build_number": "181",
+    "release_mode": "manual",
+    "minimum_macos": "13.0",
+    "supported_architectures": ["arm64"],
+    "iap_family_sharing": false,
+    "status": "release-candidate"
+  },
+  "snapshot_date": "2026-08-04",
+  "app": {
+    "name": "Cullora: Duplicate Cleaner",
+    "bundle_display_name": "Cullora: Duplicate Cleaner",
+    "primary_category": "Photo & Video",
+    "secondary_category": "Utilities",
+    "age_rating_expected": "4+ subject to App Store Connect questionnaire",
+    "pricing": {
+      "download": "Free",
+      "free_tier": "Unlimited scanning and first 100 unique review decisions",
+      "iap_type": "Non-consumable lifetime unlock",
+      "planned_us_price": "$24.99",
+      "planned_launch_price": "$19.99 for the first 14 days",
+      "family_sharing": "Disabled for 1.0.0",
+      "subscription": false
+    }
+  },
+  "localizations": {
+    "en-US": {
+      "subtitle": "Clean safely. Keep memories.",
+      "promotional_text": "Clean exact duplicates safely, compare similar photos side by side, and move reviewed copies into a reversible quarantine—entirely on your Mac.",
+      "keywords": "duplicate,photo cleanup,similar photos,library,storage,organizer,offline,RAW,quarantine,restore",
+      "description": "Cullora helps you clean photo archives without trusting a black-box delete button.\n\nSTART WITH EXACT DUPLICATES\nScan a folder, external drive, or cloud folder mounted in Finder locally. Cullora groups files only after SHA-256 confirms byte-for-byte equality. It protects a keeper and explains why copies belong together.\n\nCOMPARE SIMILAR PHOTOS\nReview visually similar images side by side with synchronized zoom and pan. Similarity remains advisory: it never enters a cleanup plan automatically.\n\nREVIEW BEFORE ANY MOVE\nCullora builds a Safety Plan showing every proposed action, destination, and recoverability status. Approved copies move to a reversible quarantine on the same volume. Signed manifests and history make restoration auditable.\n\nUNDERSTAND PHOTO FAMILIES\nRAW + JPEG, XMP sidecars, Live Photo components, bursts, and edited exports are treated as related assets instead of isolated files.\n\nPRIVATE BY DESIGN\nNo account. No ads. No analytics. No photo upload. Your archive is processed on your Mac.\n\nFREE TO START\nScan without a limit and review the first 100 unique recommendations. A one-time Cullora Pro purchase unlocks unlimited review and Safety Plans. No subscription.\n\nImportant: Cullora does not permanently delete files from Apple Photos. Similar-photo suggestions always require your review."
+    },
+    "tr": {
+      "subtitle": "Güvenle temizle. Anıları koru",
+      "promotional_text": "Tam kopyaları güvenle temizleyin, benzer fotoğrafları yan yana karşılaştırın ve incelenen kopyaları Mac’inizde geri alınabilir karantinaya taşıyın.",
+      "keywords": "kopya,fotoğraf,temizleme,benzer,arşiv,depolama,düzenleme,çevrimdışı,karantina,geri yükleme",
+      "description": "Cullora, fotoğraf arşivinizi ne yaptığını açıklamayan tek tıklamalı bir silme aracına güvenmeden düzenlemenize yardımcı olur.\n\nÖNCE TAM KOPYALAR\nBir klasörü veya harici diski tamamen yerel olarak tarayın. Cullora, dosyaları yalnızca SHA-256 ile birebir aynı oldukları doğrulandıktan sonra gruplar. Saklanacak ana kopyayı korur ve dosyaların neden aynı grupta olduğunu açıklar.\n\nBENZER FOTOĞRAFLARI KARŞILAŞTIRIN\nGörsel olarak benzer fotoğrafları senkronize yakınlaştırma ve kaydırmayla yan yana inceleyin. Benzerlik yalnızca bir inceleme sinyalidir; otomatik olarak temizlik planına girmez.\n\nHER HAREKETTEN ÖNCE İNCELEYİN\nCullora, önerilen her işlemi, hedef konumu ve geri alınabilirlik durumunu gösteren bir Güvenlik Planı oluşturur. Onaylanan kopyalar aynı disk üzerindeki geri alınabilir karantinaya taşınır. İmzalı manifestler ve geçmiş, geri yüklemeyi denetlenebilir kılar.\n\nFOTOĞRAF AİLELERİNİ ANLAYIN\nRAW + JPEG, XMP sidecar dosyaları, Live Photo bileşenleri, burst çekimler ve düzenlenmiş dışa aktarımlar birbirinden kopuk dosyalar olarak değil, ilişkili varlıklar olarak ele alınır.\n\nGİZLİLİK ODAKLI\nHesap yok. Reklam yok. Analitik yok. Fotoğraf yükleme yok. Arşiviniz Mac’inizde işlenir.\n\nÜCRETSİZ BAŞLAYIN\nSınırsız tarama yapın ve ilk 100 benzersiz öneriyi inceleyin. Tek seferlik Cullora Pro satın alımı sınırsız incelemeyi ve Güvenlik Planlarını açar. Abonelik yok.\n\nÖnemli: Cullora, Apple Photos içindeki dosyaları kalıcı olarak silmez. Benzer fotoğraf önerileri her zaman sizin incelemenizi gerektirir."
+    }
+  },
+  "urls": {
+    "privacy_policy": "https://alfagolab.com/cullora/privacy",
+    "support": "https://alfagolab.com/cullora/support",
+    "marketing": "https://alfagolab.com/cullora"
+  },
+  "release_placeholders": [
+    "Legal entity name",
+    "Support email",
+    "Real privacy/support/marketing URLs",
+    "Bundle identifier",
+    "Development Team ID",
+    "Lifetime IAP product identifier",
+    "Final trademark/domain clearance"
+  ]
+}

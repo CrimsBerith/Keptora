@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "phase": "P",
+  "app_name": "Cullora",
+  "workspace": "Cullora_Phase_5S_Quarantine_Verification_Lineage",
+  "canonical_category": "public.app-category.utilities",
+  "previous_info_plist_category": "public.app-category.photography",
+  "category_alignment_status": "ALIGNED_TO_APP_STORE_SOURCE",
+  "display_name": "Cullora",
+  "storekit_product_id": "com.yourcompany.cullora.pro.lifetime",
+  "info_plist_product_id": "com.yourcompany.cullora.pro.lifetime",
+  "storekit_identity_status": "MATCH",
+  "privacy_manifest_count": 1,
+  "entitlements_count": 1,
+  "planned_app_store_screenshots": 5,
+  "blueprint_screens": 8,
+  "screenshot_traceability_status": "COMPLETE",
+  "final_icon_external_blocker": false,
+  "external_blockers": [
+    "real Apple Developer Team ID and product bundle identifier",
+    "real developer-owned privacy/support/marketing URLs",
+    "real App Store Connect SKU, price point, seller/trader legal data and IAP record",
+    "real signed-Mac build/test/analyze, Instruments, accessibility, StoreKit sandbox, Archive/Validate App and TestFlight evidence",
+    "final App Store screenshots captured from the signed Release build"
+  ],
+  "mac_only_boundary": "Phase P makes source/release-data coherence deterministic; it does not claim signed runtime or App Store acceptance."
+}

@@ -1,0 +1,15 @@
+{
+  "assets": 1041,
+  "out": "/tmp/cullora-phase5h-final-validation/corpus",
+  "seed": 42,
+  "relations": [
+    "exact",
+    "recompressed",
+    "resized",
+    "rotated",
+    "cropped",
+    "watermarked",
+    "color_edit",
+    "metadata_copy"
+  ]
+}

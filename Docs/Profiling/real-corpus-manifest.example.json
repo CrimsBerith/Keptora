@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "app": "Cullora_Phase_5S_Quarantine_Verification_Lineage",
+  "externalCorpusOnly": true,
+  "environmentKey": "CULLORA_REAL_CORPUS_PATH",
+  "allowedExtensions": [
+    "jpg",
+    "jpeg",
+    "heic",
+    "png",
+    "tif",
+    "tiff",
+    "dng"
+  ],
+  "privacy": {
+    "persistRawPaths": false,
+    "persistFileNames": false,
+    "persistContent": false
+  },
+  "tiers": [
+    {
+      "name": "small",
+      "minimumAcceptedFiles": 20
+    },
+    {
+      "name": "medium",
+      "minimumAcceptedFiles": 500
+    },
+    {
+      "name": "large",
+      "minimumAcceptedFiles": 2000
+    }
+  ],
+  "requiredScenarios": [
+    "representative",
+    "large-file-or-long-document",
+    "corrupt-or-malformed-copy",
+    "permission-denied-or-unavailable-copy",
+    "cancel-and-retry"
+  ],
+  "instruments": [
+    "Time Profiler",
+    "Allocations",
+    "Leaks"
+  ]
+}

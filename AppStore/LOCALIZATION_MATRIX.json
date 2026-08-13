@@ -1,0 +1,17 @@
+{
+  "app": "Cullora",
+  "required_locales": [
+    {
+      "locale": "en-US",
+      "status": "content-ready"
+    }
+  ],
+  "optional_locales": [
+    {
+      "locale": "tr-TR",
+      "status": "defer-until-copy-review"
+    }
+  ],
+  "fallback": "en-US",
+  "do_not_machine_publish_unreviewed_translation": true
+}
