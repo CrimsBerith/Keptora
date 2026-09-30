@@ -354,7 +354,11 @@ struct MacPhotosLibraryView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("\(cleanupCount.formatted()) \(isSimilarVideoMode ? "manually reviewed similar videos" : "verified exact copies") will move to Recently Deleted. The keeper stays protected. With iCloud Photos, removal syncs to your other devices.")
+            if isSimilarVideoMode {
+                Text("\(cleanupCount.formatted()) manually reviewed similar videos will move to Recently Deleted. The keeper stays protected. With iCloud Photos, removal syncs to your other devices.")
+            } else {
+                Text("\(cleanupCount.formatted()) verified exact copies will move to Recently Deleted. The keeper stays protected. With iCloud Photos, removal syncs to your other devices.")
+            }
         }
     }
 
@@ -469,11 +473,19 @@ struct MacPhotosLibraryView: View {
                             photos.selectAllSafeCopies(in: group)
                         }
                         .accessibilityIdentifier("mac.photos.exact.selectGroup")
-                        Button(media == .videos ? "Select All Safe Videos" : "Select All Safe Photos") {
-                            photos.selectAllSafeCopies(in: filteredExactGroups)
+                        if media == .videos {
+                            Button("Select All Safe Videos") {
+                                photos.selectAllSafeCopies(in: filteredExactGroups)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .accessibilityIdentifier("mac.photos.exact.selectAll")
+                        } else {
+                            Button("Select All Safe Photos") {
+                                photos.selectAllSafeCopies(in: filteredExactGroups)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .accessibilityIdentifier("mac.photos.exact.selectAll")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .accessibilityIdentifier("mac.photos.exact.selectAll")
                         Button("Remove from Photos") {
                             let assetIDs = photos.selectedAssetIDs.map { AssetID(rawValue: $0) }
                             if entitlement.authorizeSafetyPlan(assetIDs: assetIDs) {
@@ -591,8 +603,16 @@ private struct MacPhotosAssetCard: View {
                 MacPhotosThumbnail(asset: asset)
                     .frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 13))
                 Text(asset.displayName).font(.headline).lineLimit(1)
-                Text(isKeeper ? "Protected keeper" : (asset.isProtectedFromGlobalSelection ? "Protected metadata" : "Exact copy"))
-                    .font(.caption).foregroundStyle(isKeeper || asset.isProtectedFromGlobalSelection ? .green : .secondary)
+                if isKeeper {
+                    Text("Protected keeper")
+                        .font(.caption).foregroundStyle(.green)
+                } else if asset.isProtectedFromGlobalSelection {
+                    Text("Protected metadata")
+                        .font(.caption).foregroundStyle(.green)
+                } else {
+                    Text("Exact copy")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .padding(10).background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 16))
             .overlay { RoundedRectangle(cornerRadius: 16).stroke(selected ? KeptoraDesign.accent : Color.primary.opacity(0.06), lineWidth: selected ? 2 : 1) }
@@ -646,10 +666,17 @@ private struct MacSimilarVideoCard: View {
                 HStack {
                     Text(asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
                     Spacer()
-                    Text(isKeeper ? "Protected keeper" : (isProtected ? "Protected metadata" : "Review candidate"))
+                    if isKeeper {
+                        Text("Protected keeper")
+                            .font(.caption).foregroundStyle(.green)
+                    } else if isProtected {
+                        Text("Protected metadata")
+                            .font(.caption).foregroundStyle(.green)
+                    } else {
+                        Text("Review candidate")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-                .font(.caption)
-                .foregroundStyle(isKeeper || isProtected ? .green : .secondary)
             }
             .padding(10)
             .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 16))

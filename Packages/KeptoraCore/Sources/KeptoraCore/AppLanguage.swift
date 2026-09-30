@@ -30,3 +30,24 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         }
     }
 }
+
+public enum L10n {
+    public static var currentLanguage: AppLanguage {
+        let raw = UserDefaults.standard.string(forKey: "Keptora.AppLanguage") ?? AppLanguage.system.rawValue
+        return AppLanguage(rawValue: raw) ?? .system
+    }
+
+    public static var currentLocale: Locale {
+        currentLanguage.locale ?? .current
+    }
+
+    public static func tr(_ key: String.LocalizationValue, bundle: Bundle? = nil, comment: StaticString? = nil) -> String {
+        String(localized: key, bundle: bundle ?? .main, locale: currentLocale, comment: comment)
+    }
+
+    public static func format(_ formatKey: String.LocalizationValue, _ arguments: CVarArg...) -> String {
+        let template = String(localized: formatKey, bundle: .main, locale: currentLocale)
+        return String(format: template, locale: currentLocale, arguments: arguments)
+    }
+}
+

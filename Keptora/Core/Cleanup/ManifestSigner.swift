@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import KeptoraCore
 
 actor ManifestSigner {
     enum SignerError: LocalizedError {
@@ -8,8 +9,8 @@ actor ManifestSigner {
 
         var errorDescription: String? {
             switch self {
-            case .invalidStoredKey: return "Keptora could not load its local manifest signing key."
-            case .invalidPayload: return "The cleanup manifest could not be encoded for signing."
+            case .invalidStoredKey: return L10n.tr("Keptora could not load its local manifest signing key.")
+            case .invalidPayload: return L10n.tr("The cleanup manifest could not be encoded for signing.")
             }
         }
     }

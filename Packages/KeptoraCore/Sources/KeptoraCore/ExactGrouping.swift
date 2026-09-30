@@ -10,10 +10,10 @@ public enum UniversalScanError: LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .inaccessibleAsset(let name): return "Keptora could not read \(name)."
-        case .networkRequired(let name): return "\(name) is stored in iCloud and requires an approved download."
-        case .sourcePermissionDenied: return "Keptora does not have permission to access this source."
-        case .unsupportedReference: return "This source reference is not supported."
+        case .inaccessibleAsset(let name): return L10n.format("Keptora could not read %@.", name)
+        case .networkRequired(let name): return L10n.format("%@ is stored in iCloud and requires an approved download.", name)
+        case .sourcePermissionDenied: return L10n.tr("Keptora does not have permission to access this source.")
+        case .unsupportedReference: return L10n.tr("This source reference is not supported.")
         case .cleanupNotPermitted(let reason): return reason
         }
     }

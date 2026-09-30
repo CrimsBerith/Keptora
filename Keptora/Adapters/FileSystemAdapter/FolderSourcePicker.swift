@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import KeptoraCore
 
 enum FolderSourcePicker {
     @MainActor
@@ -8,9 +9,9 @@ enum FolderSourcePicker {
             return nil
         }
         let panel = NSOpenPanel()
-        panel.title = "Choose a photo or cloud folder"
-        panel.message = "Choose a folder from this Mac, iCloud Drive, or a cloud provider connected in Finder. Keptora scans it locally and read-only."
-        panel.prompt = "Choose Folder"
+        panel.title = L10n.tr("Choose a photo or cloud folder")
+        panel.message = L10n.tr("Choose a folder from this Mac, iCloud Drive, or a cloud provider connected in Finder. Keptora scans it locally and read-only.")
+        panel.prompt = L10n.tr("Choose Folder")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
@@ -39,11 +40,11 @@ enum FolderSourcePicker {
                 let label = raw
                     .replacingOccurrences(of: "-", with: " ")
                     .replacingOccurrences(of: "_", with: " ")
-                return label.isEmpty ? "Cloud provider" : label
+                return label.isEmpty ? L10n.tr("Cloud provider") : label
             }
-            return "Cloud provider"
+            return L10n.tr("Cloud provider")
         }
-        if path.hasPrefix("/Volumes/") { return "External volume" }
-        return "On this Mac"
+        if path.hasPrefix("/Volumes/") { return L10n.tr("External volume") }
+        return L10n.tr("On this Mac")
     }
 }

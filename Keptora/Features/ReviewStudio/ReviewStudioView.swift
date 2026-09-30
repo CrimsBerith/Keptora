@@ -252,7 +252,11 @@ struct ReviewStudioView: View {
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "rectangle.stack")
-                    Text(mode == .exact ? "Queue (\(model.duplicateGroups.count))" : "Queue (\(model.similarityGroups.count))")
+                    if mode == .exact {
+                        Text("Queue (\(model.duplicateGroups.count))")
+                    } else {
+                        Text("Queue (\(model.similarityGroups.count))")
+                    }
                 }
             }
             .buttonStyle(.bordered)
@@ -511,13 +515,19 @@ struct ReviewStudioView: View {
                 .pickerStyle(.segmented)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(mode == .exact ? "Exact duplicates" : "Similar photos")
-                        .font(.headline)
-                    Text(mode == .exact
-                         ? "\(model.duplicateGroups.count) groups · decisions persist"
-                         : "\(model.similarityGroups.count) review-only groups · on device")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if mode == .exact {
+                        Text("Exact duplicates")
+                            .font(.headline)
+                        Text("\(model.duplicateGroups.count) groups · decisions persist")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Similar photos")
+                            .font(.headline)
+                        Text("\(model.similarityGroups.count) review-only groups · on device")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .padding(16)
@@ -1337,8 +1347,13 @@ private struct SimilarityAssetCard: View {
                 HStack {
                     Text(ByteCountFormatter.string(fromByteCount: member.asset.byteCount, countStyle: .file))
                     Spacer()
-                    Text(isAnchor ? "Reference" : member.distanceToAnchor.formatted(.number.precision(.fractionLength(4))))
-                        .monospacedDigit()
+                    if isAnchor {
+                        Text("Reference")
+                            .monospacedDigit()
+                    } else {
+                        Text(member.distanceToAnchor.formatted(.number.precision(.fractionLength(4))))
+                            .monospacedDigit()
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

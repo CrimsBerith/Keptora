@@ -1,4 +1,5 @@
 import Foundation
+import KeptoraCore
 
 struct AccessPolicy: Equatable, Sendable {
     static let freeReviewLimit = 100
@@ -26,6 +27,8 @@ struct AccessPolicy: Equatable, Sendable {
     }
 }
 
+import SwiftUI
+
 enum PaywallReason: String, Identifiable, Sendable {
     case reviewLimit
     case safetyPlan
@@ -33,22 +36,41 @@ enum PaywallReason: String, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .reviewLimit: return "Your free review is complete"
+        case .safetyPlan: return "Unlock unlimited Safety Plans"
+        case .settings: return "Keptora Pro Lifetime"
+        }
+    }
+
+    var detailKey: LocalizedStringKey {
+        switch self {
+        case .reviewLimit:
+            return "You reviewed 100 unique recommendations. Unlock Keptora Pro to keep reviewing without limits."
+        case .safetyPlan:
+            return "This plan contains recommendations outside the free 100-review allowance. Pro keeps every future plan unlimited and reversible."
+        case .settings:
+            return "One purchase unlocks unlimited review decisions and Safety Plans on your supported Apple devices using the purchasing Apple Account."
+        }
+    }
+
     var title: String {
         switch self {
-        case .reviewLimit: return String(localized: "Your free review is complete")
-        case .safetyPlan: return String(localized: "Unlock unlimited Safety Plans")
-        case .settings: return String(localized: "Keptora Pro Lifetime")
+        case .reviewLimit: return L10n.tr("Your free review is complete")
+        case .safetyPlan: return L10n.tr("Unlock unlimited Safety Plans")
+        case .settings: return L10n.tr("Keptora Pro Lifetime")
         }
     }
 
     var detail: String {
         switch self {
         case .reviewLimit:
-            return String(localized: "You reviewed 100 unique recommendations. Unlock Keptora Pro to keep reviewing without limits.")
+            return L10n.tr("You reviewed 100 unique recommendations. Unlock Keptora Pro to keep reviewing without limits.")
         case .safetyPlan:
-            return String(localized: "This plan contains recommendations outside the free 100-review allowance. Pro keeps every future plan unlimited and reversible.")
+            return L10n.tr("This plan contains recommendations outside the free 100-review allowance. Pro keeps every future plan unlimited and reversible.")
         case .settings:
-            return String(localized: "One purchase unlocks unlimited review decisions and Safety Plans on your supported Apple devices using the purchasing Apple Account.")
+            return L10n.tr("One purchase unlocks unlimited review decisions and Safety Plans on your supported Apple devices using the purchasing Apple Account.")
         }
     }
 }

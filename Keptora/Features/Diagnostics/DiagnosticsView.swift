@@ -106,7 +106,7 @@ struct DiagnosticsView: View {
                 Text("Export a structured JSON snapshot for debugging. It contains no image bytes, thumbnails, hashes, file contents, or account identifiers.")
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button(showFilePaths ? "Copy Diagnostics" : "Copy Redacted Diagnostics") { model.copyDiagnostics() }
+                    Button(showFilePaths ? LocalizedStringKey("Copy Diagnostics") : LocalizedStringKey("Copy Redacted Diagnostics")) { model.copyDiagnostics() }
                     Button("Export Diagnostics…") { model.exportDiagnostics() }
                         .buttonStyle(.borderedProminent)
                 }

@@ -105,14 +105,17 @@ struct HomeView: View {
                             }
                         }
                         Spacer()
-                        Button(outcome.groups.isEmpty ? "Choose Another Folder" : "Review Duplicates") {
-                            if outcome.groups.isEmpty {
+                        if outcome.groups.isEmpty {
+                            Button("Choose Another Folder") {
                                 model.chooseFolder()
-                            } else {
+                            }
+                            .buttonStyle(.borderedProminent)
+                        } else {
+                            Button("Review Duplicates") {
                                 model.selectedRoute = .review
                             }
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
                     }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {

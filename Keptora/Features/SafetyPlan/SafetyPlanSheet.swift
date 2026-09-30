@@ -185,9 +185,15 @@ struct SafetyPlanSheet: View {
 
     private var footer: some View {
         HStack {
-            Text(model.isCommittingCleanup ? "Verifying and moving reviewed files…" : "You can restore this plan later from Quarantine & Restore.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if model.isCommittingCleanup {
+                Text("Verifying and moving reviewed files…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("You can restore this plan later from Quarantine & Restore.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
             Button("Export Plan…") { model.exportPendingSafetyPlan() }
                 .disabled(model.pendingPlan == nil || model.isCommittingCleanup || model.safetyPlanFreshness?.permitsCommit != true)

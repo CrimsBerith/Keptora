@@ -101,7 +101,7 @@ struct OnboardingView: View {
                     }
                     .accessibilityIdentifier("mac.onboarding.back")
                 }
-                Button(page == pages.count - 1 ? "Get Started" : "Continue") {
+                Button(page == pages.count - 1 ? LocalizedStringKey("Get Started") : LocalizedStringKey("Continue")) {
                     if page == pages.count - 1 {
                         model.completeOnboarding()
                         Task { @MainActor in

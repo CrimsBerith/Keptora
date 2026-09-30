@@ -2,6 +2,7 @@ import UniformTypeIdentifiers
 @preconcurrency import AppKit
 import Combine
 import Foundation
+import KeptoraCore
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -112,7 +113,7 @@ final class AppModel: ObservableObject {
     }
     var exactGroupPositionLabel: String {
         guard !duplicateGroups.isEmpty else { return "" }
-        return "Set \(currentExactGroupIndex + 1) of \(duplicateGroups.count)"
+        return L10n.format("Set %1$lld of %2$lld", Int64(currentExactGroupIndex + 1), Int64(duplicateGroups.count))
     }
 
     var currentSimilarityGroupIndex: Int {
@@ -121,7 +122,7 @@ final class AppModel: ObservableObject {
     }
     var similarityGroupPositionLabel: String {
         guard !similarityGroups.isEmpty else { return "" }
-        return "Group \(currentSimilarityGroupIndex + 1) of \(similarityGroups.count)"
+        return L10n.format("Group %1$lld of %2$lld", Int64(currentSimilarityGroupIndex + 1), Int64(similarityGroups.count))
     }
     var canNavigateSimilarityGroups: Bool { selectedRoute == .review && !reviewModeIsExact && similarityGroups.count > 1 }
 
@@ -337,13 +338,13 @@ final class AppModel: ObservableObject {
                     phase: .completed, processed: outcome.discoveredImages, total: outcome.discoveredImages,
                     indexed: outcome.indexed, reused: outcome.reused, failed: outcome.failed,
                     comparedPairs: outcome.comparedPairs, currentItem: nil,
-                    message: "\(outcome.groups.count) review-only similar sets ready · \(outcome.failed) safely skipped"
+                    message: L10n.format("%1$lld review-only similar sets ready · %2$lld safely skipped", Int64(outcome.groups.count), Int64(outcome.failed))
                 )
             } catch is CancellationError {
                 recordPerformance(label: "Similarity analysis", itemCount: similarityProgress.processed, startedAt: startedAt, result: "cancelled")
                 similarityProgress = SimilarityProgress(
                     phase: .cancelled, processed: 0, total: 0, indexed: 0, reused: 0, failed: 0,
-                    comparedPairs: 0, currentItem: nil, message: "Similarity analysis was cancelled safely"
+                    comparedPairs: 0, currentItem: nil, message: L10n.tr("Similarity analysis was cancelled safely")
                 )
             } catch {
                 recordPerformance(label: "Similarity analysis", itemCount: similarityProgress.processed, startedAt: startedAt, result: "failed")

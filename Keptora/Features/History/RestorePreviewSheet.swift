@@ -147,9 +147,15 @@ struct RestorePreviewSheet: View {
 
     private var footer: some View {
         HStack {
-            Text(model.restoringPlanID == nil ? "Nothing moves until you confirm this verified preview." : "Restoring verified files…")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if model.restoringPlanID == nil {
+                Text("Nothing moves until you confirm this verified preview.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Restoring verified files…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
             Button("Cancel") { model.cancelRestorePreview() }
                 .keyboardShortcut(.cancelAction)

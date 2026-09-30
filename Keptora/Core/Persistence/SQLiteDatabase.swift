@@ -1,4 +1,5 @@
 import Foundation
+import KeptoraCore
 import SQLite3
 
 private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -22,12 +23,12 @@ actor SQLiteDatabase {
 
         var errorDescription: String? {
             switch self {
-            case .open(let message): return "Database could not be opened: \(message)"
-            case .execute(let message): return "Database operation failed: \(message)"
-            case .prepare(let message): return "Database statement could not be prepared: \(message)"
-            case .bind(let message): return "Database value could not be written: \(message)"
-            case .protectedCanonical: return "This file is the protected keeper. Choose another keeper before adding it to the Safety Plan."
-            case .invalidDecisionTarget: return "The selected file no longer belongs to this duplicate group."
+            case .open(let message): return L10n.format("Database could not be opened: %@", message)
+            case .execute(let message): return L10n.format("Database operation failed: %@", message)
+            case .prepare(let message): return L10n.format("Database statement could not be prepared: %@", message)
+            case .bind(let message): return L10n.format("Database value could not be written: %@", message)
+            case .protectedCanonical: return L10n.tr("This file is the protected keeper. Choose another keeper before adding it to the Safety Plan.")
+            case .invalidDecisionTarget: return L10n.tr("The selected file no longer belongs to this duplicate group.")
             }
         }
     }

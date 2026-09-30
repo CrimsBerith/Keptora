@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import KeptoraCore
 import StoreKit
 
 @MainActor
@@ -48,16 +49,16 @@ final class StoreEntitlementController: ObservableObject {
         return trimmedProductID.isEmpty || trimmedProductID.contains("yourcompany") || trimmedProductID.contains("example")
     }
     var entitlementLabel: String {
-        if isLifetimeUnlocked { return "Unlocked" }
-        return lifetimeProduct?.displayPrice ?? "Product configuration required"
+        if isLifetimeUnlocked { return L10n.tr("Unlocked") }
+        return lifetimeProduct?.displayPrice ?? L10n.tr("Product configuration required")
     }
     var purchaseButtonLabel: String {
-        if isLifetimeUnlocked { return String(localized: "Purchased") }
-        return lifetimeProduct.map { String(localized: "Unlock for \($0.displayPrice)") } ?? String(localized: "Lifetime Product Unavailable")
+        if isLifetimeUnlocked { return L10n.tr("Purchased") }
+        return lifetimeProduct.map { L10n.format("Unlock for %@", $0.displayPrice) } ?? L10n.tr("Lifetime Product Unavailable")
     }
     var trialLabel: String {
-        if isLifetimeUnlocked { return "Unlimited reviews" }
-        return "\(accessPolicy.freeReviewsRemaining) of \(AccessPolicy.freeReviewLimit) free reviews remaining"
+        if isLifetimeUnlocked { return L10n.tr("Unlimited reviews") }
+        return L10n.format("%1$lld of %2$lld free reviews remaining", Int64(accessPolicy.freeReviewsRemaining), Int64(AccessPolicy.freeReviewLimit))
     }
 
     func canReview(_ assetID: AssetID) -> Bool { accessPolicy.allowsReview(assetID: assetID) }
@@ -127,10 +128,10 @@ final class StoreEntitlementController: ObservableObject {
         do {
             lifetimeProduct = try await Product.products(for: [Self.lifetimeProductID]).first
             if lifetimeProduct == nil {
-                statusMessage = "The StoreKit product was not returned. Verify the product ID, agreements, availability, and StoreKit configuration."
+                statusMessage = L10n.tr("The StoreKit product was not returned. Verify the product ID, agreements, availability, and StoreKit configuration.")
             }
         } catch {
-            statusMessage = "StoreKit refresh failed: \(error.localizedDescription)"
+            statusMessage = L10n.format("StoreKit refresh failed: %@", error.localizedDescription)
         }
     }
 
@@ -144,17 +145,17 @@ final class StoreEntitlementController: ObservableObject {
                 let transaction = try verified(verification)
                 await transaction.finish()
                 await refreshEntitlement()
-                statusMessage = "Keptora Pro is unlocked on this Apple Account."
+                statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
                 isShowingPaywall = false
             case .pending:
-                statusMessage = "Purchase is pending approval."
+                statusMessage = L10n.tr("Purchase is pending approval.")
             case .userCancelled:
-                statusMessage = "Purchase cancelled."
+                statusMessage = L10n.tr("Purchase cancelled.")
             @unknown default:
-                statusMessage = "Purchase returned an unknown state."
+                statusMessage = L10n.tr("Purchase returned an unknown state.")
             }
         } catch {
-            statusMessage = "Purchase failed: \(error.localizedDescription)"
+            statusMessage = L10n.format("Purchase failed: %@", error.localizedDescription)
         }
     }
 
@@ -193,6 +194,6 @@ final class StoreEntitlementController: ObservableObject {
 
     private enum StoreError: LocalizedError {
         case failedVerification
-        var errorDescription: String? { "The App Store transaction could not be verified." }
+        var errorDescription: String? { L10n.tr("The App Store transaction could not be verified.") }
     }
 }

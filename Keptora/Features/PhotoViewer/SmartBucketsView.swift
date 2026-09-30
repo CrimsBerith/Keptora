@@ -77,7 +77,7 @@ private enum SmartBucketRule {
             let screenshotKeywords = [
                 "screenshot", "screen shot", "screen_shot", "ekran resmi", "ekran goruntusu",
                 "ekran görüntüsü", "bildschirmfoto", "capture d’écran", "capture d'ecran",
-                "captura de pantalla", "schermafbeelding"
+                "capture-ecran", "captura de pantalla", "schermafbeelding", "pantallazo", "schermata"
             ]
             let hasScreenshotName = screenshotKeywords.contains { name.contains($0) }
             let hasScreenshotPrefix = name.hasPrefix("screen") || name.hasPrefix("ekran") || name.hasPrefix("capture")
@@ -85,7 +85,8 @@ private enum SmartBucketRule {
         case "receipts":
             let receiptKeywords = [
                 "receipt", "fatura", "kdv", "slip", "invoice", "bill",
-                "rechnung", "quittung", "facture", "recibo", "beleg"
+                "rechnung", "quittung", "facture", "recibo", "beleg",
+                "dekont", "makbuz", "quittance", "ticket", "bon", "nota", "justificatif"
             ]
             return receiptKeywords.contains { name.contains($0) }
         case "heavy_media":
@@ -358,7 +359,7 @@ public struct SmartBucketsDashboardView: View {
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                 
-                Text("\(totalCount) clutter items identified across \(cards.count) categories")
+                Text(L10n.format("%1$lld clutter items identified across %2$lld categories", Int64(totalCount), Int64(cards.count)))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

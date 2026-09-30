@@ -1,4 +1,5 @@
 import Foundation
+import KeptoraCore
 
 actor QuarantineCoordinator {
     enum CleanupError: LocalizedError {
@@ -18,19 +19,19 @@ actor QuarantineCoordinator {
 
         var errorDescription: String? {
             switch self {
-            case .noSelectedItems: return "Add at least one non-canonical duplicate to the Safety Plan first."
-            case .sourceOutsideRoot(let url): return "The file is outside the selected source folder: \(url.lastPathComponent)"
-            case .canonicalWouldBeRemoved(let groupID): return "The protected keeper would be removed from group \(groupID). Choose another keeper first."
-            case .sourceMissing(let url): return "The source file is no longer available: \(url.path)"
-            case .destinationOccupied(let url): return "The quarantine destination already exists: \(url.path)"
-            case .contentChanged(let url): return "The file changed after review and was not moved: \(url.lastPathComponent)"
-            case .originalOccupied(let url): return "The original path is occupied, so Keptora did not overwrite it: \(url.path)"
-            case .manifestUnavailable(let planID): return "The signed manifest is unavailable for plan \(planID)."
-            case .manifestInvalid(let planID): return "The signed manifest failed verification for plan \(planID)."
+            case .noSelectedItems: return L10n.tr("Add at least one non-canonical duplicate to the Safety Plan first.")
+            case .sourceOutsideRoot(let url): return L10n.format("The file is outside the selected source folder: %@", url.lastPathComponent)
+            case .canonicalWouldBeRemoved(let groupID): return L10n.format("The protected keeper would be removed from group %@. Choose another keeper first.", groupID)
+            case .sourceMissing(let url): return L10n.format("The source file is no longer available: %@", url.path)
+            case .destinationOccupied(let url): return L10n.format("The quarantine destination already exists: %@", url.path)
+            case .contentChanged(let url): return L10n.format("The file changed after review and was not moved: %@", url.lastPathComponent)
+            case .originalOccupied(let url): return L10n.format("The original path is occupied, so Keptora did not overwrite it: %@", url.path)
+            case .manifestUnavailable(let planID): return L10n.format("The signed manifest is unavailable for plan %@.", planID)
+            case .manifestInvalid(let planID): return L10n.format("The signed manifest failed verification for plan %@.", planID)
             case .familyWouldBeOrphaned(let message): return message
-            case .sourceVolumeUnavailable: return "The selected source volume is unavailable. Reconnect it before continuing."
-            case .sourceVolumeChanged(let expected, let actual): return "The source path now belongs to a different volume. Expected \(expected), found \(actual)."
-            case .staleSafetyPlan: return "The Safety Plan is stale because exact-review decisions changed after preparation. Regenerate it before moving files."
+            case .sourceVolumeUnavailable: return L10n.tr("The selected source volume is unavailable. Reconnect it before continuing.")
+            case .sourceVolumeChanged(let expected, let actual): return L10n.format("The source path now belongs to a different volume. Expected %@, found %@.", expected, actual)
+            case .staleSafetyPlan: return L10n.tr("The Safety Plan is stale because exact-review decisions changed after preparation. Regenerate it before moving files.")
             }
         }
     }

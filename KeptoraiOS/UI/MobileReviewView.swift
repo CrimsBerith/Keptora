@@ -37,9 +37,15 @@ struct MobileReviewView: View {
                         ProgressView()
                             .scaleEffect(1.2)
                             .tint(MobileKeptoraDesign.cyan)
-                        Text(store.isAnalyzing ? "Analyzing similar items…" : "Scanning library…")
-                            .font(.system(.headline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.primary)
+                        if store.isAnalyzing {
+                            Text("Analyzing similar items…")
+                                .font(.system(.headline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.primary)
+                        } else {
+                            Text("Scanning library…")
+                                .font(.system(.headline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.primary)
+                        }
                         Text("Your review items will appear as soon as scanning finishes.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
@@ -174,7 +180,11 @@ struct MobileReviewView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
-                        Text(media == .videos ? "Select All Safe Videos" : "Select All Safe Photos")
+                        if media == .videos {
+                            Text("Select All Safe Videos")
+                        } else {
+                            Text("Select All Safe Photos")
+                        }
                     }
                 }
                 .buttonStyle(.borderedProminent)

@@ -24,9 +24,9 @@ struct PaywallView: View {
 
                         // Headline
                         VStack(spacing: 8) {
-                            Text(store.paywallReason.title)
+                            Text(store.paywallReason.titleKey)
                                 .font(KeptoraDesign.titleFont)
-                            Text(store.paywallReason.detail)
+                            Text(store.paywallReason.detailKey)
                                 .font(.title3)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)

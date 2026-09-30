@@ -91,6 +91,7 @@
 		C02864EACDF705F063943BE7 /* ManifestSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6388D83E93574733AF355104 /* ManifestSigner.swift */; };
 		C41B4620F19FD2CA6BDEC91A /* ReviewSessionCheckpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA63995F2CC7995BB8B42E6D /* ReviewSessionCheckpointTests.swift */; };
 		C52A7D1EF462E27AC235B5AC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AE1278DFA4EA6E22DB0E92C /* InfoPlist.strings */; };
+		9AE1278DFA4EA6E22DB0E92D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AE1278DFA4EA6E22DB0E92C /* InfoPlist.strings */; };
 		C626039D67F02D9420466F03 /* PhotoLibraryAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D392DC814C1CEAF9A36D312 /* PhotoLibraryAdapter.swift */; };
 		C910EF420417DE3A67FFF6E7 /* MobileReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E19BE3E9CF6A7ACBD7A4C5 /* MobileReviewView.swift */; };
 		C9E406E4BC3F33760085569B /* DemoLibraryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F585FFE7D2A41E7E66AA279 /* DemoLibraryFactory.swift */; };
@@ -928,6 +929,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				74A040452123E3960456BF4A /* Assets.xcassets in Resources */,
+				9AE1278DFA4EA6E22DB0E92D /* InfoPlist.strings in Resources */,
 				8E5298D7C5F1390EAB394FA1 /* Localizable.xcstrings in Resources */,
 				606F5A4A6BAF41E7039F94D5 /* PrivacyInfo.xcprivacy in Resources */,
 			);

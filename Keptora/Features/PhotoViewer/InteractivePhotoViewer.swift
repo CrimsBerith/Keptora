@@ -546,8 +546,13 @@ public struct InteractivePhotoViewerView: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: alreadyCleaned ? "checkmark" : "trash.fill")
-                        Text(alreadyCleaned ? "In plan" : "Clean (⌘⌫)")
-                            .font(.system(size: 11, weight: .semibold))
+                        if alreadyCleaned {
+                            Text("In plan")
+                                .font(.system(size: 11, weight: .semibold))
+                        } else {
+                            Text("Clean (⌘⌫)")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
                     }
                     .foregroundStyle(.white)
                 }
