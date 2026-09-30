@@ -91,11 +91,38 @@ public enum PhysicalArchiveExporter: Sendable {
             var targetFile = targetSubdir.appendingPathComponent(sourceURL.lastPathComponent)
             
             if fileManager.fileExists(atPath: targetFile.path) {
-                if config.skipDuplicates {
+                var isExactDuplicate = false
+                if let srcAttr = try? fileManager.attributesOfItem(atPath: sourceURL.path),
+                   let dstAttr = try? fileManager.attributesOfItem(atPath: targetFile.path) {
+                    let srcSize = srcAttr[.size] as? Int64 ?? (srcAttr[.size] as? NSNumber)?.int64Value ?? -1
+                    let dstSize = dstAttr[.size] as? Int64 ?? (dstAttr[.size] as? NSNumber)?.int64Value ?? -2
+                    if srcSize == dstSize {
+                        let srcMod = srcAttr[.modificationDate] as? Date
+                        let dstMod = dstAttr[.modificationDate] as? Date
+                        if let srcMod, let dstMod, abs(srcMod.timeIntervalSince(dstMod)) < 1.0 {
+                            isExactDuplicate = true
+                        } else if let srcHash = try? await StreamingSHA256.file(at: sourceURL, progress: { _ in }),
+                                  let dstHash = try? await StreamingSHA256.file(at: targetFile, progress: { _ in }),
+                                  srcHash.digest == dstHash.digest {
+                            isExactDuplicate = true
+                        }
+                    }
+                }
+                
+                if config.skipDuplicates && isExactDuplicate {
                     processed += 1
+                    if processed % 5 == 0 || processed == total {
+                        progress(PhysicalExportProgress(
+                            processedCount: processed,
+                            totalCount: total,
+                            bytesTransferred: totalBytes,
+                            currentFilename: asset.displayName,
+                            isCancelled: false
+                        ))
+                    }
                     continue
                 } else {
-                    // Generate unique destination name (e.g. photo_1.jpg) to avoid collision
+                    // Different file with same name: generate unique destination name to avoid collision
                     let baseName = sourceURL.deletingPathExtension().lastPathComponent
                     let ext = sourceURL.pathExtension
                     var counter = 1

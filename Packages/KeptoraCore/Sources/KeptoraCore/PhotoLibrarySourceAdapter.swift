@@ -130,9 +130,22 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     return fallbackHasher.finish()
                 }
             }
-            if !allowNetwork { throw UniversalScanError.networkRequired(asset.displayName) }
+            if let cancellation = error as? CancellationError { throw cancellation }
+            if Task.isCancelled { throw CancellationError() }
+            if !allowNetwork && Self.isNetworkAccessRequired(error) {
+                throw UniversalScanError.networkRequired(asset.displayName)
+            }
             throw error
         }
+    }
+
+    private static func isNetworkAccessRequired(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "PHPhotosErrorDomain" && (ns.code == 3164 || ns.code == 3169) {
+            return true
+        }
+        let desc = ns.localizedDescription.lowercased()
+        return desc.contains("network") || desc.contains("icloud") || desc.contains("download")
     }
 
     public func similarityImage(
@@ -260,16 +273,26 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         options: PHAssetResourceRequestOptions,
         dataReceived: @escaping @Sendable (Data) -> Void
     ) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            PHAssetResourceManager.default().requestData(
-                for: resource,
-                options: options,
-                dataReceivedHandler: dataReceived,
-                completionHandler: { error in
-                    if let error { continuation.resume(throwing: error) }
-                    else { continuation.resume(returning: ()) }
-                }
-            )
+        final class RequestBox: @unchecked Sendable {
+            var requestID: PHAssetResourceDataRequestID?
+        }
+        let box = RequestBox()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                box.requestID = PHAssetResourceManager.default().requestData(
+                    for: resource,
+                    options: options,
+                    dataReceivedHandler: dataReceived,
+                    completionHandler: { error in
+                        if let error { continuation.resume(throwing: error) }
+                        else { continuation.resume(returning: ()) }
+                    }
+                )
+            }
+        } onCancel: {
+            if let id = box.requestID {
+                PHAssetResourceManager.default().cancelDataRequest(id)
+            }
         }
     }
 

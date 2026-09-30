@@ -13,10 +13,12 @@ struct DirectoryPicker: UIViewControllerRepresentable {
         return picker
     }
 
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
+        context.coordinator.completion = completion
+    }
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let completion: (URL?) -> Void
+        var completion: (URL?) -> Void
         init(completion: @escaping (URL?) -> Void) { self.completion = completion }
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             completion(urls.first)

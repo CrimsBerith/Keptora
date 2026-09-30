@@ -13,6 +13,7 @@ final class StoreEntitlementController: ObservableObject {
     @Published var isShowingPaywall = false
     @Published private(set) var paywallReason: PaywallReason = .settings
     @Published private(set) var reviewedAssetIDs: Set<String>
+    private var reservedAssetIDs: Set<String> = []
 
     private let defaults: UserDefaults
     private let reviewedAssetsKey = "Keptora.Trial.ReviewedAssetIDs.v1"
@@ -24,9 +25,14 @@ final class StoreEntitlementController: ObservableObject {
         transactionUpdatesTask = Task { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
-                guard case .verified(let transaction) = result else { continue }
-                await transaction.finish()
-                await self.refreshEntitlement()
+                switch result {
+                case .verified(let transaction):
+                    await transaction.finish()
+                    await self.refreshEntitlement()
+                case .unverified(let transaction, let error):
+                    self.statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
+                    await transaction.finish()
+                }
             }
         }
     }
@@ -34,7 +40,7 @@ final class StoreEntitlementController: ObservableObject {
     deinit { transactionUpdatesTask?.cancel() }
 
     var accessPolicy: AccessPolicy {
-        AccessPolicy(isLifetimeUnlocked: isLifetimeUnlocked, reviewedAssetIDs: reviewedAssetIDs)
+        AccessPolicy(isLifetimeUnlocked: isLifetimeUnlocked, reviewedAssetIDs: reviewedAssetIDs.union(reservedAssetIDs))
     }
 
     var requiresProductConfiguration: Bool {
@@ -61,6 +67,7 @@ final class StoreEntitlementController: ObservableObject {
             presentPaywall(.reviewLimit)
             return false
         }
+        reservedAssetIDs.insert(assetID.rawValue)
         return true
     }
 
@@ -73,10 +80,16 @@ final class StoreEntitlementController: ObservableObject {
             presentPaywall(.reviewLimit)
             return false
         }
+        for id in assetIDs {
+            reservedAssetIDs.insert(id.rawValue)
+        }
         return true
     }
 
     func recordReviews(_ assetIDs: [AssetID]) {
+        for id in assetIDs {
+            reservedAssetIDs.remove(id.rawValue)
+        }
         guard !isLifetimeUnlocked else { return }
         var changed = false
         for assetID in assetIDs {
@@ -84,6 +97,12 @@ final class StoreEntitlementController: ObservableObject {
         }
         guard changed else { return }
         defaults.set(Array(reviewedAssetIDs).sorted(), forKey: reviewedAssetsKey)
+    }
+
+    func releaseReservedReviews(_ assetIDs: [AssetID]) {
+        for id in assetIDs {
+            reservedAssetIDs.remove(id.rawValue)
+        }
     }
 
     func authorizeSafetyPlan(assetIDs: [AssetID]) -> Bool {

@@ -82,6 +82,7 @@ actor ScanCoordinator {
         var reused = startIndex > 0 ? session.reused : 0
         var skipped = 0
         var lastCursor = startIndex > 0 ? descriptors[startIndex - 1].stableKey : nil
+        var lastProgressEmit = Date.distantPast
 
         do {
             for descriptor in descriptors.dropFirst(startIndex) {
@@ -108,17 +109,21 @@ actor ScanCoordinator {
 
                 processed += 1
                 lastCursor = descriptor.stableKey
-                await progress(
-                    ScanProgress(
-                        phase: .hashing,
-                        processed: processed,
-                        total: descriptors.count,
-                        currentItem: descriptor.displayName,
-                        message: skipped > 0
-                            ? "\(hashed) hashed · \(reused) reused · \(skipped) skipped"
-                            : "\(hashed) hashed · \(reused) reused"
+                let now = Date()
+                if processed == descriptors.count || now.timeIntervalSince(lastProgressEmit) >= 0.1 {
+                    lastProgressEmit = now
+                    await progress(
+                        ScanProgress(
+                            phase: .hashing,
+                            processed: processed,
+                            total: descriptors.count,
+                            currentItem: descriptor.displayName,
+                            message: skipped > 0
+                                ? "\(hashed) hashed · \(reused) reused · \(skipped) skipped"
+                                : "\(hashed) hashed · \(reused) reused"
+                        )
                     )
-                )
+                }
                 if processed % checkpointInterval == 0 {
                     try await database.updateScanCheckpoint(
                         id: session.id,

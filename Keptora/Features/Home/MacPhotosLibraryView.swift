@@ -345,9 +345,11 @@ struct MacPhotosLibraryView: View {
         }
         .confirmationDialog(isSimilarVideoMode ? "Remove selected similar videos from Photos?" : "Remove exact copies from Photos?", isPresented: $showCleanupConfirmation) {
             Button("Remove from Photos", role: .destructive) {
+                let assetIDs = (isSimilarVideoMode ? photos.selectedSimilarVideoAssetIDs : photos.selectedAssetIDs).map { AssetID(rawValue: $0) }
                 Task {
                     if isSimilarVideoMode { await photos.removeSelectedSimilarVideosFromPhotos() }
                     else { await photos.removeSelectedFromPhotos() }
+                    entitlement.recordReviews(assetIDs)
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -473,8 +475,10 @@ struct MacPhotosLibraryView: View {
                         .buttonStyle(.borderedProminent)
                         .accessibilityIdentifier("mac.photos.exact.selectAll")
                         Button("Remove from Photos") {
-                            if entitlement.isLifetimeUnlocked { showCleanupConfirmation = true }
-                            else { entitlement.presentPaywall(.safetyPlan) }
+                            let assetIDs = photos.selectedAssetIDs.map { AssetID(rawValue: $0) }
+                            if entitlement.authorizeSafetyPlan(assetIDs: assetIDs) {
+                                showCleanupConfirmation = true
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(photos.selectedAssetIDs.isEmpty)
@@ -532,8 +536,10 @@ struct MacPhotosLibraryView: View {
                             }
                             .accessibilityIdentifier("mac.photos.similarVideo.selectAll")
                             Button("Remove from Photos") {
-                                if entitlement.isLifetimeUnlocked { showCleanupConfirmation = true }
-                                else { entitlement.presentPaywall(.safetyPlan) }
+                                let assetIDs = photos.selectedSimilarVideoAssetIDs.map { AssetID(rawValue: $0) }
+                                if entitlement.authorizeSafetyPlan(assetIDs: assetIDs) {
+                                    showCleanupConfirmation = true
+                                }
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(photos.selectedSimilarVideoAssetIDs.isEmpty)

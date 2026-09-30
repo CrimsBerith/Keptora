@@ -218,9 +218,11 @@ final class AppModel: ObservableObject {
             }
             try await reloadDatabaseState()
             restoreReviewCheckpointIfPresent()
+            #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-keptoraSelectionUITesting") {
                 loadDemoLibrary()
             }
+            #endif
         } catch {
             isPrepared = false
             present(error)
@@ -1020,7 +1022,7 @@ final class AppModel: ObservableObject {
             generatedAt: Date(),
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0",
             buildNumber: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "182",
-            implementationPhase: "5S",
+            implementationPhase: Bundle.main.object(forInfoDictionaryKey: "KEPTORA_IMPLEMENTATION_PHASE") as? String ?? "Production",
             operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
             architecture: Self.architectureLabel,
             scanState: scanProgress.label,
@@ -1211,13 +1213,24 @@ final class AppModel: ObservableObject {
         isShowingError = true
     }
 
+    private var lastScanProgressUpdateTime = Date.distantPast
+    private var lastSimilarityProgressUpdateTime = Date.distantPast
+
     private func updateScanProgress(_ progress: ScanProgress) {
         guard scanProgress.isRunning else { return }
-        scanProgress = progress
+        let now = Date()
+        if now.timeIntervalSince(lastScanProgressUpdateTime) >= 0.1 || progress.processed == progress.total {
+            lastScanProgressUpdateTime = now
+            scanProgress = progress
+        }
     }
 
     private func updateSimilarityProgress(_ progress: SimilarityProgress) {
-        similarityProgress = progress
+        let now = Date()
+        if now.timeIntervalSince(lastSimilarityProgressUpdateTime) >= 0.1 || progress.processed == progress.total {
+            lastSimilarityProgressUpdateTime = now
+            similarityProgress = progress
+        }
     }
 }
 

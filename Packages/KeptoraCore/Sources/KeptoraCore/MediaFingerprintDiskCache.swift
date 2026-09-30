@@ -41,6 +41,7 @@ public actor MediaFingerprintDiskCache {
     
     private var entries: [String: CacheEntry] = [:]
     private var isDirty = false
+    private var hasLoaded = false
     private let cacheURL: URL
     private let maxEntries = 50_000
     
@@ -54,10 +55,10 @@ public actor MediaFingerprintDiskCache {
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             self.cacheURL = folder.appendingPathComponent("media_fingerprints_v1.json")
         }
-        Task { await loadFromDisk() }
     }
     
     public func get(assetID: String, modificationDate: Date?, byteCount: Int64?) -> CacheEntry? {
+        ensureLoaded()
         let key = cacheKey(assetID: assetID, modificationDate: modificationDate, byteCount: byteCount)
         return entries[key]
     }
@@ -68,6 +69,7 @@ public actor MediaFingerprintDiskCache {
         byteCount: Int64?,
         entry: CacheEntry
     ) {
+        ensureLoaded()
         let key = cacheKey(assetID: assetID, modificationDate: modificationDate, byteCount: byteCount)
         entries[key] = entry
         isDirty = true
@@ -78,6 +80,7 @@ public actor MediaFingerprintDiskCache {
     }
     
     public func persistToDisk() {
+        ensureLoaded()
         guard isDirty else { return }
         do {
             let data = try JSONEncoder().encode(entries)
@@ -89,6 +92,7 @@ public actor MediaFingerprintDiskCache {
     }
     
     public func clear() {
+        hasLoaded = true
         entries.removeAll()
         isDirty = true
         persistToDisk()
@@ -100,15 +104,20 @@ public actor MediaFingerprintDiskCache {
         return "\(assetID):\(Int64(modTime)):\(bytes)"
     }
     
-    private func loadFromDisk() {
+    private func ensureLoaded() {
+        guard !hasLoaded else { return }
+        hasLoaded = true
         guard FileManager.default.fileExists(atPath: cacheURL.path) else { return }
         do {
             let data = try Data(contentsOf: cacheURL)
             let loaded = try JSONDecoder().decode([String: CacheEntry].self, from: data)
-            self.entries = loaded
-            self.isDirty = false
+            for (k, v) in loaded {
+                if entries[k] == nil {
+                    entries[k] = v
+                }
+            }
         } catch {
-            self.entries = [:]
+            // Non-fatal cache decode error
         }
     }
     

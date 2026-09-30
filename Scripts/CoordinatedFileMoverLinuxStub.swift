@@ -2,7 +2,7 @@
 import Foundation
 
 struct CoordinatedFileMover: Sendable {
-    func moveItem(from source: URL, to destination: URL) throws {
+    func moveItem(from source: URL, to destination: URL) async throws {
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         try FileManager.default.moveItem(at: source, to: destination)
     }

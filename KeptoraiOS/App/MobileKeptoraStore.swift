@@ -114,6 +114,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
     private let reviewedAssetsKey = "Keptora.iOS.ReviewedAssets.v1"
     private let freeReviewLimit = 100
+    private var lastProgressUpdateTime = Date.distantPast
 
     init() {
         isPhotosDeniedUITesting = ProcessInfo.processInfo.arguments.contains("-keptoraPhotosDeniedUITesting")
@@ -315,7 +316,12 @@ final class MobileKeptoraStore: ObservableObject {
             // A stale bookmark still resolves; connectFolder re-creates and stores a fresh one.
             connectFolder(url)
         } catch {
-            UserDefaults.standard.removeObject(forKey: bookmarkKey)
+            let ns = error as NSError
+            if ns.domain == NSCocoaErrorDomain && (ns.code == NSFileNoSuchFileError || ns.code == NSFileReadNoSuchFileError) {
+                UserDefaults.standard.removeObject(forKey: bookmarkKey)
+            } else {
+                errorMessage = String(localized: "Could not access previously connected folder: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -360,7 +366,11 @@ final class MobileKeptoraStore: ObservableObject {
                     progress: { processed, total, current in
                         Task { @MainActor [weak self] in
                             guard let self, case .scanning = self.scanState else { return }
-                            self.scanState = .scanning(processed: processed, total: total, current: current)
+                            let now = Date()
+                            if processed == 0 || processed == total || now.timeIntervalSince(self.lastProgressUpdateTime) >= 0.1 {
+                                self.lastProgressUpdateTime = now
+                                self.scanState = .scanning(processed: processed, total: total, current: current)
+                            }
                         }
                     }
                 )

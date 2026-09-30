@@ -41,9 +41,20 @@ private enum SmartBucketRule {
         let ext = asset.fileURL.pathExtension.lowercased()
         switch bucketID {
         case "screenshots":
-            return name.contains("screen") || name.contains("ekran") || ext == "png"
+            let screenshotKeywords = [
+                "screenshot", "screen shot", "screen_shot", "ekran resmi", "ekran goruntusu",
+                "ekran görüntüsü", "bildschirmfoto", "capture d’écran", "capture d'ecran",
+                "captura de pantalla", "schermafbeelding"
+            ]
+            let hasScreenshotName = screenshotKeywords.contains { name.contains($0) }
+            let hasScreenshotPrefix = name.hasPrefix("screen") || name.hasPrefix("ekran") || name.hasPrefix("capture")
+            return hasScreenshotName || hasScreenshotPrefix
         case "receipts":
-            return ["receipt", "fatura", "kdv", "slip", "invoice", "bill"].contains { name.contains($0) }
+            let receiptKeywords = [
+                "receipt", "fatura", "kdv", "slip", "invoice", "bill",
+                "rechnung", "quittung", "facture", "recibo", "beleg"
+            ]
+            return receiptKeywords.contains { name.contains($0) }
         case "heavy_media":
             return asset.byteCount > 40_000_000 || ["mov", "mp4", "m4v"].contains(ext)
         case "bursts":

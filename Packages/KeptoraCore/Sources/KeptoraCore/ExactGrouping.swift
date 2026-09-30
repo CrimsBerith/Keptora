@@ -66,6 +66,7 @@ public actor UniversalExactScanner {
 
         var lastCheckpointEmission = Date()
         var pendingEntriesCount = 0
+        var lastProgressEmission = Date.distantPast
 
         func emitCheckpointIfNeeded(force: Bool = false) {
             guard !completedEntries.isEmpty else { return }
@@ -79,7 +80,11 @@ public actor UniversalExactScanner {
 
         for (index, asset) in assets.enumerated() {
             try Task.checkCancellation()
-            progress(index, assets.count, asset.displayName)
+            let now = Date()
+            if index == 0 || index == assets.count - 1 || now.timeIntervalSince(lastProgressEmission) >= 0.1 {
+                lastProgressEmission = now
+                progress(index, assets.count, asset.displayName)
+            }
             if let prior = resumableEntries[asset.id], Self.sameRevision(asset, prior.sourceAsset) {
                 groupsByFingerprint[prior.fingerprint, default: []].append(prior.fingerprintedAsset)
                 completedEntries.append(prior)

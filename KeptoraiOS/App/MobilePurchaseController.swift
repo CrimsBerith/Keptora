@@ -8,7 +8,7 @@ final class MobilePurchaseController: ObservableObject {
     @Published private(set) var product: Product?
     @Published private(set) var isUnlocked = false
     @Published private(set) var isWorking = false
-    @Published var statusMessage: String?
+    @Published private(set) var statusMessage: String?
 
     private var updatesTask: Task<Void, Never>?
 
@@ -16,9 +16,15 @@ final class MobilePurchaseController: ObservableObject {
         updatesTask = Task { [weak self] in
             await self?.refreshEntitlement()
             for await update in Transaction.updates {
-                guard let self, case .verified(let transaction) = update else { continue }
-                await transaction.finish()
-                await self.refreshEntitlement()
+                guard let self else { return }
+                switch update {
+                case .verified(let transaction):
+                    await transaction.finish()
+                    await self.refreshEntitlement()
+                case .unverified(let transaction, let error):
+                    self.statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
+                    await transaction.finish()
+                }
             }
         }
     }

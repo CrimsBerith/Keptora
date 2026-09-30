@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#endif
 
 /// Low-overhead on-device folder watchdog that monitors directories (e.g. Downloads, Desktop)
 /// for incoming duplicate files using DispatchSource with near-zero energy impact.
@@ -15,6 +18,10 @@ public actor FolderWatchdogService {
     private var knownDigests: Set<String> = []
     
     public init() {}
+
+    deinit {
+        source?.cancel()
+    }
     
     /// Updates the known digest set for instant matching.
     public func setKnownDigests(_ digests: Set<String>) {
@@ -48,7 +55,7 @@ public actor FolderWatchdogService {
             }
         }
         
-        dispatchSource.setCancelHandler { [fd] in
+        dispatchSource.setCancelHandler {
             close(fd)
         }
         
@@ -63,10 +70,8 @@ public actor FolderWatchdogService {
             source.cancel()
             self.source = nil
         }
-        if fileDescriptor >= 0 {
-            close(fileDescriptor)
-            fileDescriptor = -1
-        }
+        // File descriptor is closed asynchronously by dispatchSource cancel handler.
+        fileDescriptor = -1
         status = .stopped
     }
     
@@ -92,10 +97,13 @@ public actor FolderWatchdogService {
             
             // Check digest if file has completed writing
             if let data = try? Data(contentsOf: file, options: .mappedIfSafe) {
-                let digest = data.prefix(1024 * 1024).map { String(format: "%02x", $0) }.joined()
+                #if canImport(CryptoKit)
+                let hash = SHA256.hash(data: data)
+                let digest = hash.map { String(format: "%02x", $0) }.joined()
                 if self.knownDigests.contains(digest) {
                     onDuplicateDetected(file.lastPathComponent, digest)
                 }
+                #endif
             }
         }
     }

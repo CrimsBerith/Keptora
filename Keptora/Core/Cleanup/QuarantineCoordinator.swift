@@ -226,7 +226,7 @@ actor QuarantineCoordinator {
             for sibling in siblings {
                 if FileManager.default.fileExists(atPath: sibling.quarantineURL.path),
                    !FileManager.default.fileExists(atPath: sibling.originalURL.path) {
-                    try? fileMover.moveItem(from: sibling.quarantineURL, to: sibling.originalURL)
+                    try? await fileMover.moveItem(from: sibling.quarantineURL, to: sibling.originalURL)
                 }
                 try? await database.revertOperationToOriginal(
                     operationID: sibling.id,
@@ -260,7 +260,7 @@ actor QuarantineCoordinator {
                     throw CleanupError.contentChanged(operation.originalURL)
                 }
                 try FileManager.default.createDirectory(at: operation.quarantineURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try fileMover.moveItem(from: operation.originalURL, to: operation.quarantineURL)
+                try await fileMover.moveItem(from: operation.originalURL, to: operation.quarantineURL)
                 movedOnDisk = true
                 do {
                     try await database.markOperationQuarantined(
@@ -271,7 +271,7 @@ actor QuarantineCoordinator {
                 } catch {
                     // Keep database and disk in agreement when persistence fails after a move.
                     if !FileManager.default.fileExists(atPath: operation.originalURL.path) {
-                        try? fileMover.moveItem(from: operation.quarantineURL, to: operation.originalURL)
+                        try? await fileMover.moveItem(from: operation.quarantineURL, to: operation.originalURL)
                     }
                     movedOnDisk = false
                     throw error
@@ -288,7 +288,7 @@ actor QuarantineCoordinator {
                 if movedOnDisk,
                    FileManager.default.fileExists(atPath: operation.quarantineURL.path),
                    !FileManager.default.fileExists(atPath: operation.originalURL.path) {
-                    try? fileMover.moveItem(from: operation.quarantineURL, to: operation.originalURL)
+                    try? await fileMover.moveItem(from: operation.quarantineURL, to: operation.originalURL)
                 }
                 try? await database.markOperationFailed(operationID: operation.id, message: error.localizedDescription)
 
@@ -451,7 +451,7 @@ actor QuarantineCoordinator {
                     throw CleanupError.contentChanged(quarantined)
                 }
                 try FileManager.default.createDirectory(at: original.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try fileMover.moveItem(from: quarantined, to: original)
+                try await fileMover.moveItem(from: quarantined, to: original)
                 do {
                     try await database.markOperationRestored(
                         operationID: operation.operationID,
@@ -462,7 +462,7 @@ actor QuarantineCoordinator {
                     if FileManager.default.fileExists(atPath: original.path),
                        !FileManager.default.fileExists(atPath: quarantined.path) {
                         try? FileManager.default.createDirectory(at: quarantined.deletingLastPathComponent(), withIntermediateDirectories: true)
-                        try? fileMover.moveItem(from: original, to: quarantined)
+                        try? await fileMover.moveItem(from: original, to: quarantined)
                     }
                     throw error
                 }

@@ -1,6 +1,8 @@
 import Foundation
 
 struct CoordinatedFileMover: Sendable {
+    private static let ioQueue = DispatchQueue(label: "com.alfagolab.keptora.file-mover", qos: .userInitiated)
+
     enum MoveError: LocalizedError {
         case coordination(String)
         case move(String)
@@ -13,7 +15,20 @@ struct CoordinatedFileMover: Sendable {
         }
     }
 
-    func moveItem(from source: URL, to destination: URL) throws {
+    func moveItem(from source: URL, to destination: URL) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Self.ioQueue.async {
+                do {
+                    try performMove(from: source, to: destination)
+                    continuation.resume(returning: ())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func performMove(from source: URL, to destination: URL) throws {
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         let destinationParent = destination.deletingLastPathComponent()
         let coordinator = NSFileCoordinator(filePresenter: nil)
