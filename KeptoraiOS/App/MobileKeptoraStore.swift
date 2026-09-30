@@ -113,19 +113,19 @@ final class MobileKeptoraStore: ObservableObject {
     private var scanFingerprintsByAssetID: [String: UniversalExactFingerprint] = [:]
     private let isPhotosDeniedUITesting: Bool
 
-    private let bookmarkKey = "Keptora.iOS.SourceBookmark.v1"
-    private let historyKey = "Keptora.iOS.CleanupHistory.v1"
-    private let scanCheckpointKey = "Keptora.iOS.ScanCheckpoint.v1"
+    private let bookmarkKey = AppStorageKeys.iOSSourceBookmark
+    private let historyKey = AppStorageKeys.iOSCleanupHistory
+    private let scanCheckpointKey = AppStorageKeys.iOSScanCheckpoint
     nonisolated private var scanCheckpointFileURL: URL? {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
             .appendingPathComponent("scan_checkpoint.json")
     }
-    private let reviewedAssetsKey = "Keptora.iOS.ReviewedAssets.v1"
-    private let freeReviewLimit = 100
+    private let reviewedAssetsKey = AppStorageKeys.iOSReviewedAssets
+    private let freeReviewLimit = AppStoreConfiguration.freeReviewLimit
     private var lastProgressUpdateTime = Date.distantPast
 
     init() {
-        isPhotosDeniedUITesting = ProcessInfo.processInfo.arguments.contains("-keptoraPhotosDeniedUITesting")
+        isPhotosDeniedUITesting = LaunchArguments.contains(LaunchArguments.photosDeniedUITesting)
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let decoded = try? JSONDecoder().decode([CleanupHistoryEntry].self, from: data) {
             history = decoded
@@ -133,11 +133,11 @@ final class MobileKeptoraStore: ObservableObject {
         let checkpointFileExists = scanCheckpointFileURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
         hasScanCheckpoint = checkpointFileExists || UserDefaults.standard.data(forKey: scanCheckpointKey) != nil
         reviewedAssetIDs = Set(UserDefaults.standard.stringArray(forKey: reviewedAssetsKey) ?? [])
-        if ProcessInfo.processInfo.arguments.contains("-keptoraThousandsStressUITesting") {
+        if LaunchArguments.contains(LaunchArguments.thousandsStressUITesting) {
             seedThousandsStressUITesting()
-        } else if ProcessInfo.processInfo.arguments.contains("-keptoraComprehensiveUITesting") {
+        } else if LaunchArguments.contains(LaunchArguments.comprehensiveUITesting) {
             seedComprehensiveReviewForUITesting()
-        } else if ProcessInfo.processInfo.arguments.contains("-keptoraVideoReviewUITesting") {
+        } else if LaunchArguments.contains(LaunchArguments.videoReviewUITesting) {
             seedVideoReviewForUITesting()
         } else if isPhotosDeniedUITesting {
             authorization = .denied
@@ -222,9 +222,9 @@ final class MobileKeptoraStore: ObservableObject {
 
     func handleAppLaunchAuthorization() async {
         guard !isPhotosDeniedUITesting,
-              !ProcessInfo.processInfo.arguments.contains("-keptoraComprehensiveUITesting"),
-              !ProcessInfo.processInfo.arguments.contains("-keptoraVideoReviewUITesting"),
-              !ProcessInfo.processInfo.arguments.contains("-keptoraThousandsStressUITesting") else { return }
+              !LaunchArguments.contains(LaunchArguments.comprehensiveUITesting),
+              !LaunchArguments.contains(LaunchArguments.videoReviewUITesting),
+              !LaunchArguments.contains(LaunchArguments.thousandsStressUITesting) else { return }
         
         if case .folder = source { return }
         
@@ -527,69 +527,14 @@ final class MobileKeptoraStore: ObservableObject {
         selectedAssetIDs.removeAll()
     }
 
-    func cleanupSelection() async {
+    private func executeCleanup(
+        selection: [UniversalMediaAsset],
+        capturedBytes: Int64,
+        resolveFolderCandidates: (URL) async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)],
+        onSuccess: () -> Void
+    ) async {
         guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
-        let selection = selectedSafeAssets
         guard !selection.isEmpty else { return }
-        let capturedBytes = selectedBytes
-        isCleaningUp = true
-        defer { isCleaningUp = false }
-        do {
-            switch source {
-            case .photos:
-                let identifiers = selection.compactMap { asset -> String? in
-                    guard case .photoLibrary(let identifier) = asset.reference else { return nil }
-                    return identifier
-                }
-                try await photosAdapter.deleteExactAssets(localIdentifiers: identifiers)
-                history.insert(
-                    CleanupHistoryEntry(
-                        id: UUID(),
-                        kind: .photosRecentlyDeleted,
-                        createdAt: Date(),
-                        itemCount: selection.count,
-                        byteCount: capturedBytes,
-                        folderRecord: nil,
-                        restoredAt: nil
-                    ), at: 0
-                )
-            case .folder(let root):
-                let digestByAsset = Dictionary(exactGroups.flatMap { group in
-                    group.assets.map { ($0.id, group.digest) }
-                }, uniquingKeysWith: { first, _ in first })
-                let candidates = selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
-                    guard let digest = digestByAsset[asset.id] else { return nil }
-                    return (asset, digest)
-                }
-                let record = try await folderCleanup.quarantine(root: root, selections: candidates)
-                history.insert(
-                    CleanupHistoryEntry(
-                        id: record.id,
-                        kind: .folderQuarantine,
-                        createdAt: record.createdAt,
-                        itemCount: record.operations.count,
-                        byteCount: capturedBytes,
-                        folderRecord: record,
-                        restoredAt: nil
-                    ), at: 0
-                )
-            case .none:
-                return
-            }
-            persistHistory()
-            selectedAssetIDs.removeAll()
-            startScan(allowNetwork: lastScanAllowedNetwork)
-        } catch {
-            guard !Self.isUserCancellation(error) else { return }
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func cleanupSimilarVideoSelection() async {
-        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
-        let selection = selectedSimilarVideoAssets
-        guard !selection.isEmpty else { return }
-        let capturedBytes = selectedSimilarVideoBytes
         isCleaningUp = true
         defer { isCleaningUp = false }
         do {
@@ -612,14 +557,7 @@ final class MobileKeptoraStore: ObservableObject {
                     ), at: 0
                 )
             case .folder(let root):
-                try await verifyUnchanged(selection)
-                let candidates = selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
-                    guard let digest = scanFingerprintsByAssetID[asset.id]?.digest else { return nil }
-                    return (asset, digest)
-                }
-                guard candidates.count == selection.count else {
-                    throw UniversalScanError.cleanupNotPermitted("A video could not be reverified. Scan again before cleanup.")
-                }
+                let candidates = try await resolveFolderCandidates(root)
                 let record = try await folderCleanup.quarantine(root: root, selections: candidates)
                 history.insert(
                     CleanupHistoryEntry(
@@ -636,12 +574,58 @@ final class MobileKeptoraStore: ObservableObject {
                 return
             }
             persistHistory()
-            selectedSimilarVideoAssetIDs.removeAll()
+            onSuccess()
             startScan(allowNetwork: lastScanAllowedNetwork)
         } catch {
             guard !Self.isUserCancellation(error) else { return }
             errorMessage = error.localizedDescription
         }
+    }
+
+    func cleanupSelection() async {
+        let selection = selectedSafeAssets
+        let capturedBytes = selectedBytes
+        await executeCleanup(
+            selection: selection,
+            capturedBytes: capturedBytes,
+            resolveFolderCandidates: { [weak self] _ in
+                guard let self else { return [] }
+                let digestByAsset = Dictionary(self.exactGroups.flatMap { group in
+                    group.assets.map { ($0.id, group.digest) }
+                }, uniquingKeysWith: { first, _ in first })
+                return selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
+                    guard let digest = digestByAsset[asset.id] else { return nil }
+                    return (asset, digest)
+                }
+            },
+            onSuccess: { [weak self] in
+                self?.selectedAssetIDs.removeAll()
+            }
+        )
+    }
+
+    func cleanupSimilarVideoSelection() async {
+        let selection = selectedSimilarVideoAssets
+        let capturedBytes = selectedSimilarVideoBytes
+        await executeCleanup(
+            selection: selection,
+            capturedBytes: capturedBytes,
+            resolveFolderCandidates: { [weak self] _ in
+                guard let self else { return [] }
+                try await self.verifyUnchanged(selection)
+                let candidates = selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
+                    guard let digest = self.scanFingerprintsByAssetID[asset.id]?.digest else { return nil }
+                    return (asset, digest)
+                }
+                guard candidates.count == selection.count else {
+                    throw UniversalScanError.cleanupNotPermitted("A video could not be reverified. Scan again before cleanup.")
+                }
+                return candidates
+            },
+            onSuccess: { [weak self] in
+                self?.selectedSimilarVideoAssetIDs.removeAll()
+            }
+        )
     }
 
     private static func isUserCancellation(_ error: Error) -> Bool {
@@ -751,25 +735,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     private func withScannedByteCount(_ asset: UniversalMediaAsset) -> UniversalMediaAsset {
         guard let fingerprint = scanFingerprintsByAssetID[asset.id] else { return asset }
-        return UniversalMediaAsset(
-            id: asset.id,
-            sourceID: asset.sourceID,
-            reference: asset.reference,
-            displayName: asset.displayName,
-            mediaKind: asset.mediaKind,
-            byteCount: fingerprint.byteCount,
-            pixelWidth: asset.pixelWidth,
-            pixelHeight: asset.pixelHeight,
-            duration: asset.duration,
-            creationDate: asset.creationDate,
-            modificationDate: asset.modificationDate,
-            isFavorite: asset.isFavorite,
-            isHidden: asset.isHidden,
-            hasAdjustments: asset.hasAdjustments,
-            isSharedLibraryAsset: asset.isSharedLibraryAsset,
-            hasAlbumMembership: asset.hasAlbumMembership,
-            requiresNetwork: asset.requiresNetwork
-        )
+        return asset.with(byteCount: fingerprint.byteCount)
     }
 
     private func verifyUnchanged(_ selection: [UniversalMediaAsset]) async throws {

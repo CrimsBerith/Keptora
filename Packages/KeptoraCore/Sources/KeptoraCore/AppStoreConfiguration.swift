@@ -2,6 +2,7 @@ import Foundation
 
 public enum AppStoreConfiguration {
     public static let fallbackLifetimeProductID = "com.keptora.app.pro.lifetime"
+    public static let freeReviewLimit = 100
 
     public static var defaultLifetimeProductID: String {
         if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_LIFETIME_PRODUCT_ID") as? String {

@@ -100,7 +100,7 @@ private enum SmartBucketRule {
 }
 
 /// Dashboard view for intelligent categorization and smart actionable cleanup buckets.
-public struct SmartBucketsDashboardView: View {
+struct SmartBucketsDashboardView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
     
@@ -206,7 +206,7 @@ public struct SmartBucketsDashboardView: View {
         return result
     }
     
-    public init() {}
+    init() {}
     
     public var body: some View {
         // Computed once per render or cached across duplicateGroups changes.

@@ -7,12 +7,8 @@ enum KeptoraDesign {
     static let pagePadding: CGFloat = 28
     static let cardRadius: CGFloat = 20
     static let compactRadius: CGFloat = 12
-    static let sidebarWidth: CGFloat = 230
 
     // MARK: – Semantic colours (adaptive)
-    static let graphite = Color(nsColor: .labelColor)
-    static let ink      = Color(nsColor: .textColor)
-
     // Keptora aurora palette
     static let accent   = Color(red: 0.34, green: 0.28, blue: 0.96)
     static let violet   = Color(red: 0.58, green: 0.25, blue: 0.94)
@@ -38,15 +34,6 @@ enum KeptoraDesign {
         colors: [cyan, accent, violet],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    static let heroGradient = LinearGradient(
-        colors: [
-            Color(red: 0.07, green: 0.12, blue: 0.33),
-            Color(red: 0.23, green: 0.14, blue: 0.52),
-            Color(red: 0.48, green: 0.16, blue: 0.45)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
     static let borderGradient = LinearGradient(
         colors: [Color.white.opacity(0.42), cyan.opacity(0.34), violet.opacity(0.18)],
         startPoint: .topLeading,
@@ -57,7 +44,6 @@ enum KeptoraDesign {
     static let canvas          = Color(nsColor: .windowBackgroundColor)
     static let elevated        = Color(nsColor: .controlBackgroundColor)
     static let quiet           = Color(nsColor: .underPageBackgroundColor)
-    static let ticketIdle      = Color(nsColor: .controlBackgroundColor).opacity(0.52)
     static let ticketSelected  = accent.opacity(0.14)
     static let reviewFloor     = Color(nsColor: .underPageBackgroundColor).opacity(0.62)
     static let drawerSurface   = Color(nsColor: .windowBackgroundColor)
@@ -73,11 +59,9 @@ enum KeptoraDesign {
     static let animFast   = Animation.easeOut(duration: 0.16)
     static let animMedium = Animation.easeInOut(duration: 0.26)
     static let animSpring = Animation.spring(response: 0.38, dampingFraction: 0.72)
-    static let animRoute  = Animation.easeInOut(duration: 0.20)
 
     // MARK: – Layout constants
     static let drawerWidth:  CGFloat = 320
-    static let shellHeight:  CGFloat = 52
 }
 
 /// Soft glow used by the backdrops. A radial gradient looks like the old blurred circle but costs

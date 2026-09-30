@@ -1,4 +1,5 @@
 import Foundation
+import KeptoraCore
 
 struct VolumeIdentity: Hashable, Codable, Sendable {
     let stableID: String
@@ -20,7 +21,7 @@ struct VolumeIdentity: Hashable, Codable, Sendable {
         let volumeURL = values.volume ?? url
         let rootPath = volumeURL.standardizedFileURL.path
         let uuid = values.volumeUUIDString
-        let fallback = stableDigest(rootPath)
+        let fallback = StableDigest.fnv1a64(rootPath)
         return VolumeIdentity(
             stableID: uuid.map { "volume:\($0.lowercased())" } ?? "volume-path:\(fallback)",
             uuid: uuid,
@@ -33,15 +34,6 @@ struct VolumeIdentity: Hashable, Codable, Sendable {
 
     func matches(_ other: VolumeIdentity) -> Bool {
         stableID == other.stableID
-    }
-
-    private static func stableDigest(_ value: String) -> String {
-        var hash: UInt64 = 14695981039346656037
-        for byte in value.utf8 {
-            hash ^= UInt64(byte)
-            hash &*= 1099511628211
-        }
-        return String(hash, radix: 16)
     }
 }
 

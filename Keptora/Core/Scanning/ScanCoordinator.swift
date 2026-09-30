@@ -1,4 +1,5 @@
 import Foundation
+import KeptoraCore
 
 actor ScanCoordinator {
     private let database: SQLiteDatabase
@@ -194,15 +195,6 @@ actor ScanCoordinator {
     }
 
     private static func assetIdentifier(sourceID: SourceID, stableKey: String) -> String {
-        "asset:" + stableDigest(sourceID.rawValue + "|" + stableKey)
-    }
-
-    private static func stableDigest(_ value: String) -> String {
-        var hash: UInt64 = 14695981039346656037
-        for byte in value.utf8 {
-            hash ^= UInt64(byte)
-            hash &*= 1099511628211
-        }
-        return String(hash, radix: 16)
+        "asset:" + StableDigest.fnv1a64(sourceID.rawValue + "|" + stableKey)
     }
 }

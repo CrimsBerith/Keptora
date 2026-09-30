@@ -57,10 +57,10 @@ final class AppModel: ObservableObject {
     private var activeBatchTask: Task<Void, Never>?
     private let volumeObservers = WorkspaceObserverBag()
     private var expectedVolume: VolumeIdentity?
-    private let bookmarkDefaultsKey = "Keptora.SourceBookmark.v1"
-    private let volumeDefaultsKey = "Keptora.SourceVolume.v1"
-    private let onboardingCompletedKey = "Keptora.Onboarding.Completed.v1"
-    private let reviewCheckpointDefaultsKey = "Keptora.ReviewCheckpoint.v1"
+    private let bookmarkDefaultsKey = AppStorageKeys.sourceBookmark
+    private let volumeDefaultsKey = AppStorageKeys.sourceVolume
+    private let onboardingCompletedKey = AppStorageKeys.onboardingCompleted
+    private let reviewCheckpointDefaultsKey = AppStorageKeys.reviewCheckpoint
 
     private var currentSimilaritySensitivity: SimilaritySensitivityPreset {
         SimilaritySensitivityPreset.stored()
@@ -209,7 +209,7 @@ final class AppModel: ObservableObject {
         // The SwiftUI window and the AppKit fallback window both call this; run it once.
         guard !isPrepared else { return }
         isPrepared = true
-        let isPortfolioUITesting = ProcessInfo.processInfo.arguments.contains("-portfolioUITesting")
+        let isPortfolioUITesting = LaunchArguments.contains(LaunchArguments.portfolioUITesting)
         isShowingOnboarding = !isPortfolioUITesting && !UserDefaults.standard.bool(forKey: onboardingCompletedKey)
         do {
             try await database.initialize()
@@ -225,7 +225,7 @@ final class AppModel: ObservableObject {
             try await reloadDatabaseState()
             restoreReviewCheckpointIfPresent()
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-keptoraSelectionUITesting") {
+            if LaunchArguments.contains(LaunchArguments.selectionUITesting) {
                 loadDemoLibrary()
             }
             #endif
@@ -705,34 +705,7 @@ final class AppModel: ObservableObject {
         guard !isPreparingSafetyPlan, !isCommittingCleanup else { return }
         guard access.authorizeSafetyPlan(assetIDs: plannedAssets.map(\.id)) else { return }
         guard let sourceURL else { return }
-        isPreparingSafetyPlan = true
-        Task { [weak self] in
-            guard let self else { return }
-            defer { self.isPreparingSafetyPlan = false }
-            if let active = self.activeBatchTask {
-                _ = await active.value
-            }
-            do {
-                let plan = try await self.bookmarkStore.withAccess(to: sourceURL) {
-                    try await self.cleanupCoordinator.preparePlan(sourceRoot: sourceURL)
-                }
-                let lineage = SafetyPlanLineageEngine.nextIdentity(records: safetyPlanLineage, sourceRoot: plan.sourceRoot)
-                let enriched = plan.withLineage(lineage)
-                appendSafetyPlanLineage(for: enriched, state: .prepared)
-                pendingPlan = enriched
-                safetyPlanFreshness = SafetyPlanFreshnessAssessment(
-                    state: .current,
-                    expectedFingerprint: enriched.decisionSnapshotFingerprint,
-                    currentFingerprint: enriched.decisionSnapshotFingerprint ?? "",
-                    expectedOperationCount: enriched.operations.count,
-                    currentOperationCount: enriched.operations.count
-                )
-                isShowingSafetyPlan = true
-                try await reloadDatabaseState()
-            } catch {
-                present(error)
-            }
-        }
+        generatePlan(sourceURL: sourceURL)
     }
 
     func refreshSafetyPlanFreshness() {
@@ -755,34 +728,43 @@ final class AppModel: ObservableObject {
         guard !isPreparingSafetyPlan, !isCommittingCleanup else { return }
         guard let oldPlan = pendingPlan else { return }
         guard access.authorizeSafetyPlan(assetIDs: plannedAssets.map(\.id)) else { return }
-        isPreparingSafetyPlan = true
         markSafetyPlanLineage(oldPlan, state: .superseded)
         pendingPlan = nil
         safetyPlanFreshness = nil
+        guard let sourceURL else { return }
+        generatePlan(sourceURL: sourceURL, discardOldPlanID: oldPlan.id)
+    }
+
+    private func generatePlan(sourceURL: URL, discardOldPlanID: String? = nil) {
+        isPreparingSafetyPlan = true
         Task { [weak self] in
             guard let self else { return }
             defer { self.isPreparingSafetyPlan = false }
-            try? await database.discardDraftCleanupPlan(oldPlan.id)
-            guard let sourceURL else { return }
+            if let active = self.activeBatchTask {
+                _ = await active.value
+            }
+            if let discardOldPlanID {
+                try? await self.database.discardDraftCleanupPlan(discardOldPlanID)
+            }
             do {
                 let plan = try await self.bookmarkStore.withAccess(to: sourceURL) {
                     try await self.cleanupCoordinator.preparePlan(sourceRoot: sourceURL)
                 }
-                let lineage = SafetyPlanLineageEngine.nextIdentity(records: safetyPlanLineage, sourceRoot: plan.sourceRoot)
+                let lineage = SafetyPlanLineageEngine.nextIdentity(records: self.safetyPlanLineage, sourceRoot: plan.sourceRoot)
                 let enriched = plan.withLineage(lineage)
-                appendSafetyPlanLineage(for: enriched, state: .prepared)
-                pendingPlan = enriched
-                safetyPlanFreshness = SafetyPlanFreshnessAssessment(
+                self.appendSafetyPlanLineage(for: enriched, state: .prepared)
+                self.pendingPlan = enriched
+                self.safetyPlanFreshness = SafetyPlanFreshnessAssessment(
                     state: .current,
                     expectedFingerprint: enriched.decisionSnapshotFingerprint,
                     currentFingerprint: enriched.decisionSnapshotFingerprint ?? "",
                     expectedOperationCount: enriched.operations.count,
                     currentOperationCount: enriched.operations.count
                 )
-                isShowingSafetyPlan = true
-                try await reloadDatabaseState()
+                self.isShowingSafetyPlan = true
+                try await self.reloadDatabaseState()
             } catch {
-                present(error)
+                self.present(error)
             }
         }
     }
@@ -971,7 +953,7 @@ final class AppModel: ObservableObject {
     }
 
     var displayVersion: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
+        let version = Bundle.main.appVersionString
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "182"
         return "\(version) (\(build))"
     }
@@ -1012,7 +994,7 @@ final class AppModel: ObservableObject {
     }
 
     func makeDiagnosticsSnapshot() -> DiagnosticsSnapshot {
-        let showPaths = UserDefaults.standard.bool(forKey: "Keptora.ShowFilePaths")
+        let showPaths = UserDefaults.standard.bool(forKey: AppStorageKeys.showFilePaths)
         let paths = [sourceURL?.path, NSHomeDirectory()].compactMap { $0 }
         let sourceReference: String
         if let sourceURL { sourceReference = showPaths ? sourceURL.path : "<selected-folder-redacted>" }
@@ -1026,7 +1008,7 @@ final class AppModel: ObservableObject {
         let rawError = errorMessage.map { DiagnosticsRedactor.redact($0, sensitivePaths: paths) }
         return DiagnosticsSnapshot(
             generatedAt: Date(),
-            appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0",
+            appVersion: Bundle.main.appVersionString,
             buildNumber: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "182",
             implementationPhase: Bundle.main.object(forInfoDictionaryKey: "KEPTORA_IMPLEMENTATION_PHASE") as? String ?? "Production",
             operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
@@ -1080,12 +1062,16 @@ final class AppModel: ObservableObject {
             ?? SourceIdentity.folderID(for: sourceURL)
     }
 
-    private static func loadQuarantineVerificationLineage(from directory: URL) -> [QuarantineVerificationLineageRecord] {
-        let url = directory.appendingPathComponent("QuarantineVerificationLineage.json")
+    private static func loadJSONLineage<T: Decodable>(named filename: String, from directory: URL) -> [T] {
+        let url = directory.appendingPathComponent(filename)
         guard let data = try? Data(contentsOf: url) else { return [] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([QuarantineVerificationLineageRecord].self, from: data)) ?? []
+        return (try? decoder.decode([T].self, from: data)) ?? []
+    }
+
+    private static func loadQuarantineVerificationLineage(from directory: URL) -> [QuarantineVerificationLineageRecord] {
+        loadJSONLineage(named: "QuarantineVerificationLineage.json", from: directory)
     }
 
     private func persistQuarantineVerificationLineage() {
@@ -1110,11 +1096,7 @@ final class AppModel: ObservableObject {
     }
 
     private static func loadSafetyPlanLineage(from directory: URL) -> [SafetyPlanLineageRecord] {
-        let url = directory.appendingPathComponent("SafetyPlanLineage.json")
-        guard let data = try? Data(contentsOf: url) else { return [] }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([SafetyPlanLineageRecord].self, from: data)) ?? []
+        loadJSONLineage(named: "SafetyPlanLineage.json", from: directory)
     }
 
     private func persistSafetyPlanLineage() {
@@ -1151,7 +1133,7 @@ final class AppModel: ObservableObject {
     }
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
+        Bundle.main.appVersionString
     }
 
     private func restoreBookmarkIfPresent() throws {

@@ -253,25 +253,7 @@ private final class MacPhotosLibraryStore: ObservableObject {
 
     private func withScannedByteCount(_ asset: UniversalMediaAsset) -> UniversalMediaAsset {
         guard let fingerprint = scanFingerprintsByAssetID[asset.id] else { return asset }
-        return UniversalMediaAsset(
-            id: asset.id,
-            sourceID: asset.sourceID,
-            reference: asset.reference,
-            displayName: asset.displayName,
-            mediaKind: asset.mediaKind,
-            byteCount: fingerprint.byteCount,
-            pixelWidth: asset.pixelWidth,
-            pixelHeight: asset.pixelHeight,
-            duration: asset.duration,
-            creationDate: asset.creationDate,
-            modificationDate: asset.modificationDate,
-            isFavorite: asset.isFavorite,
-            isHidden: asset.isHidden,
-            hasAdjustments: asset.hasAdjustments,
-            isSharedLibraryAsset: asset.isSharedLibraryAsset,
-            hasAlbumMembership: asset.hasAlbumMembership,
-            requiresNetwork: asset.requiresNetwork
-        )
+        return asset.with(byteCount: fingerprint.byteCount)
     }
 }
 

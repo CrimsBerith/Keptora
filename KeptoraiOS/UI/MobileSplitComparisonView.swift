@@ -3,9 +3,9 @@ import SwiftUI
 
 /// Interactive Split-Slider Loupe that allows side-by-side / overlapping pixel comparison
 /// between two visually similar images with synchronized pinch-to-zoom.
-public struct MobileSplitComparisonView: View {
-    public let assetA: UniversalMediaAsset
-    public let assetB: UniversalMediaAsset
+struct MobileSplitComparisonView: View {
+    let assetA: UniversalMediaAsset
+    let assetB: UniversalMediaAsset
     
     @Environment(\.dismiss) private var dismiss
     @State private var splitRatio: CGFloat = 0.5
@@ -14,7 +14,7 @@ public struct MobileSplitComparisonView: View {
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
     
-    public init(assetA: UniversalMediaAsset, assetB: UniversalMediaAsset) {
+    init(assetA: UniversalMediaAsset, assetB: UniversalMediaAsset) {
         self.assetA = assetA
         self.assetB = assetB
     }

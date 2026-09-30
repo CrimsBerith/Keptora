@@ -1,7 +1,7 @@
 import SwiftUI
 import KeptoraCore
 
-public struct MobilePhotoInspectorSheet: View {
+struct MobilePhotoInspectorSheet: View {
     @Environment(\.dismiss) private var dismiss
     let asset: UniversalMediaAsset
     
@@ -11,7 +11,7 @@ public struct MobilePhotoInspectorSheet: View {
     @State private var lastOffset: CGSize = .zero
     @State private var showInfo = false
     
-    public init(asset: UniversalMediaAsset) {
+    init(asset: UniversalMediaAsset) {
         self.asset = asset
     }
     

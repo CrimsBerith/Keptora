@@ -712,14 +712,7 @@ struct ReviewStudioView: View {
 
     private func openViewer(for asset: ReviewAsset, in group: ReviewGroup) {
         let all = group.assets.isEmpty ? [asset] : group.assets
-        let items: [ViewerPhotoItem] = all.map {
-            ViewerPhotoItem(
-                id: $0.id.rawValue,
-                fileURL: $0.fileURL,
-                displayName: $0.displayName,
-                byteCount: $0.byteCount
-            )
-        }
+        let items: [ViewerPhotoItem] = all.map { ViewerPhotoItem($0) }
         let initialIdx = items.firstIndex(where: { $0.id == asset.id.rawValue }) ?? 0
         activeViewerContext = StudioViewerContext(
             id: "exact-\(group.id)-\(asset.id.rawValue)",
@@ -730,14 +723,7 @@ struct ReviewStudioView: View {
 
     private func openViewer(for member: SimilarityReviewMember, in group: SimilarityReviewGroup) {
         let all = group.members.isEmpty ? [member] : group.members
-        let items: [ViewerPhotoItem] = all.map {
-            ViewerPhotoItem(
-                id: $0.asset.id.rawValue,
-                fileURL: $0.asset.fileURL,
-                displayName: $0.asset.displayName,
-                byteCount: $0.asset.byteCount
-            )
-        }
+        let items: [ViewerPhotoItem] = all.map { ViewerPhotoItem($0.asset) }
         let initialIdx = items.firstIndex(where: { $0.id == member.asset.id.rawValue }) ?? 0
         activeViewerContext = StudioViewerContext(
             id: "similar-\(group.id)-\(member.asset.id.rawValue)",
@@ -748,18 +734,8 @@ struct ReviewStudioView: View {
 
     private func openComparisonViewer(anchor: SimilarityReviewMember, selected: SimilarityReviewMember, initialIndex: Int, groupID: String) {
         let items = [
-            ViewerPhotoItem(
-                id: anchor.asset.id.rawValue,
-                fileURL: anchor.asset.fileURL,
-                displayName: anchor.asset.displayName,
-                byteCount: anchor.asset.byteCount
-            ),
-            ViewerPhotoItem(
-                id: selected.asset.id.rawValue,
-                fileURL: selected.asset.fileURL,
-                displayName: selected.asset.displayName,
-                byteCount: selected.asset.byteCount
-            )
+            ViewerPhotoItem(anchor.asset),
+            ViewerPhotoItem(selected.asset)
         ]
         let targetID = initialIndex == 0 ? anchor.asset.id.rawValue : selected.asset.id.rawValue
         activeViewerContext = StudioViewerContext(

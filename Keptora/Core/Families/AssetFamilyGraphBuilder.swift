@@ -1,10 +1,11 @@
 import Foundation
+import KeptoraCore
 
 struct AssetFamilyGraphBuilder: Sendable {
-    private let rawExtensions: Set<String> = ["dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2"]
-    private let renderedExtensions: Set<String> = ["jpg", "jpeg", "heic", "heif", "png", "tif", "tiff", "webp"]
+    private let rawExtensions: Set<String> = SupportedMediaExtensions.rawImages
+    private let renderedExtensions: Set<String> = SupportedMediaExtensions.standardImages
     private let motionExtensions: Set<String> = ["mov"]
-    private let sidecarExtensions: Set<String> = ["xmp", "aae"]
+    private let sidecarExtensions: Set<String> = SupportedMediaExtensions.sidecars
 
     func build(from assets: [AssetDescriptor]) -> [AssetFamily] {
         let grouped = Dictionary(grouping: assets) { asset in
@@ -50,7 +51,7 @@ struct AssetFamilyGraphBuilder: Sendable {
 
         let directory = first.fileURL.deletingLastPathComponent().standardizedFileURL.path
         let stem = normalizedStem(for: first.fileURL)
-        let familyID = "family:" + stableDigest(first.sourceID.rawValue + "|" + directory + "|" + stem + "|" + kind.rawValue)
+        let familyID = "family:" + StableDigest.fnv1a64(first.sourceID.rawValue + "|" + directory + "|" + stem + "|" + kind.rawValue)
         let familyMembers = members.sorted { $0.fileURL.path < $1.fileURL.path }.map { asset in
             AssetFamilyMember(
                 assetID: asset.id,
@@ -117,14 +118,5 @@ struct AssetFamilyGraphBuilder: Sendable {
             of: #"(?i)(?:^|[_\- ])burst[_\- ]?\d+$"#,
             options: .regularExpression
         ) != nil
-    }
-
-    private func stableDigest(_ value: String) -> String {
-        var hash: UInt64 = 14695981039346656037
-        for byte in value.utf8 {
-            hash ^= UInt64(byte)
-            hash &*= 1099511628211
-        }
-        return String(hash, radix: 16)
     }
 }

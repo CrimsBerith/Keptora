@@ -424,6 +424,64 @@ final class KeptoraCoreTests: XCTestCase {
             isFavorite: favorite
         )
     }
+
+    func testStableDigestFNV1a64MatchesKnownVectors() {
+        // FNV-1a 64-bit offset basis in hex is cbf29ce484222325
+        XCTAssertEqual(StableDigest.fnv1a64(""), "cbf29ce484222325")
+        // Same string produces same digest deterministically
+        let digest1 = StableDigest.fnv1a64("folder:/Volumes/Media/Photos")
+        let digest2 = StableDigest.fnv1a64("folder:/Volumes/Media/Photos")
+        XCTAssertEqual(digest1, digest2)
+        XCTAssertFalse(digest1.isEmpty)
+        // Different strings produce different digests
+        XCTAssertNotEqual(StableDigest.fnv1a64("asset:1"), StableDigest.fnv1a64("asset:2"))
+    }
+
+    func testSupportedMediaExtensionsIntegrity() {
+        XCTAssertTrue(SupportedMediaExtensions.standardImages.contains("jpg"))
+        XCTAssertTrue(SupportedMediaExtensions.standardImages.contains("heic"))
+        XCTAssertTrue(SupportedMediaExtensions.rawImages.contains("dng"))
+        XCTAssertTrue(SupportedMediaExtensions.rawImages.contains("cr2"))
+        XCTAssertTrue(SupportedMediaExtensions.videos.contains("mov"))
+        XCTAssertTrue(SupportedMediaExtensions.videos.contains("mp4"))
+        XCTAssertTrue(SupportedMediaExtensions.sidecars.contains("xmp"))
+        XCTAssertTrue(SupportedMediaExtensions.allImages.contains("jpg"))
+        XCTAssertTrue(SupportedMediaExtensions.allImages.contains("dng"))
+        XCTAssertTrue(SupportedMediaExtensions.allMedia.contains("mov"))
+        XCTAssertTrue(SupportedMediaExtensions.allMediaAndSidecars.contains("xmp"))
+    }
+
+    func testUniversalMediaAssetWithCopyHelper() {
+        let original = UniversalMediaAsset(
+            id: "asset-1",
+            sourceID: "src-1",
+            reference: .file(URL(fileURLWithPath: "/tmp/img.jpg")),
+            displayName: "img.jpg",
+            mediaKind: .image,
+            byteCount: 1024,
+            pixelWidth: 1920,
+            pixelHeight: 1080,
+            duration: nil,
+            isFavorite: false,
+            requiresNetwork: true
+        )
+
+        let modified = original.with(byteCount: 2048, isFavorite: true, requiresNetwork: false)
+        XCTAssertEqual(modified.id, original.id)
+        XCTAssertEqual(modified.sourceID, original.sourceID)
+        XCTAssertEqual(modified.displayName, original.displayName)
+        XCTAssertEqual(modified.byteCount, 2048)
+        XCTAssertEqual(modified.requiresNetwork, false)
+        XCTAssertEqual(modified.isFavorite, true)
+        XCTAssertEqual(modified.pixelWidth, 1920)
+    }
+
+    func testBundleAppVersionAndStoreConfig() {
+        XCTAssertFalse(Bundle.main.appVersionString.isEmpty)
+        XCTAssertEqual(AppStoreConfiguration.freeReviewLimit, 100)
+        XCTAssertEqual(LaunchArguments.portfolioUITesting, "-portfolioUITesting")
+        XCTAssertEqual(AppStorageKeys.appLanguage, "Keptora.AppLanguage")
+    }
 }
 
 private actor CountingSourceAdapter: SourceAdapter {

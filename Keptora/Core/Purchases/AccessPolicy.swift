@@ -2,7 +2,7 @@ import Foundation
 import KeptoraCore
 
 struct AccessPolicy: Equatable, Sendable {
-    static let freeReviewLimit = 100
+    static let freeReviewLimit = AppStoreConfiguration.freeReviewLimit
 
     let isLifetimeUnlocked: Bool
     let reviewedAssetIDs: Set<String>

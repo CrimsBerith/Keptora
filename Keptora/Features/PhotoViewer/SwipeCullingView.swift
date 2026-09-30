@@ -167,12 +167,12 @@ public final class SwipeCullingState: ObservableObject {
 }
 
 /// Tinder-style swipe culling studio for lightning-fast photo decluttering.
-public struct SwipeCullingStudioView: View {
+struct SwipeCullingStudioView: View {
     // Owned here so progress survives parent re-renders (the sheet content closure is re-evaluated
     // whenever the model publishes).
     @StateObject private var state: SwipeCullingState
-    public var onCommitPlan: (_ cleanupItems: [SwipeCardItem]) -> Void
-    public var onClose: () -> Void
+    var onCommitPlan: (_ cleanupItems: [SwipeCardItem]) -> Void
+    var onClose: () -> Void
     
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragOffset: CGSize = .zero
@@ -180,7 +180,7 @@ public struct SwipeCullingStudioView: View {
     @State private var isAnimating = false
     @State private var showDiscardAlert = false
     
-    public init(
+    init(
         items: [SwipeCardItem],
         onCommitPlan: @escaping (_ cleanupItems: [SwipeCardItem]) -> Void,
         onClose: @escaping () -> Void

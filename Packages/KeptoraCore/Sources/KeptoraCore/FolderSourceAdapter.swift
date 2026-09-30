@@ -7,17 +7,13 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
     public nonisolated let capabilities: PlatformCapabilities
     public nonisolated let rootURL: URL
 
-    private let supportedExtensions: Set<String> = [
-        "jpg", "jpeg", "heic", "heif", "png", "tif", "tiff", "gif", "bmp", "webp",
-        "dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2",
-        "mov", "mp4", "m4v", "avi", "mkv"
-    ]
+    private let supportedExtensions: Set<String> = SupportedMediaExtensions.allMedia
 
     public init(rootURL: URL, cleanupAvailable: Bool) {
         self.rootURL = rootURL
         let kind: LibrarySource.Kind = rootURL.path.contains("CloudStorage") ? .fileProvider : .folder
         self.source = LibrarySource(
-            id: "folder:\(Self.stableDigest(rootURL.standardizedFileURL.path))",
+            id: "folder:\(StableDigest.fnv1a64(rootURL.standardizedFileURL.path))",
             kind: kind,
             displayName: rootURL.lastPathComponent
         )
@@ -55,11 +51,11 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
             guard supportedExtensions.contains(ext) else { continue }
             let values = try? url.resourceValues(forKeys: keys)
             guard values?.isRegularFile == true else { continue }
-            let kind: UniversalMediaKind = ["mov", "mp4", "m4v", "avi", "mkv"].contains(ext) ? .video : .image
+            let kind: UniversalMediaKind = SupportedMediaExtensions.videos.contains(ext) ? .video : .image
             let stablePath = url.standardizedFileURL.path
             assets.append(
                 UniversalMediaAsset(
-                    id: "file:\(Self.stableDigest(source.id + "|" + stablePath))",
+                    id: "file:\(StableDigest.fnv1a64(source.id + "|" + stablePath))",
                     sourceID: source.id,
                     reference: .file(url),
                     displayName: url.lastPathComponent,
@@ -111,11 +107,5 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
             avAsset: AVURLAsset(url: url),
             maximumPixelSize: maximumPixelSize
         )
-    }
-
-    private static func stableDigest(_ value: String) -> String {
-        var hash: UInt64 = 14695981039346656037
-        for byte in value.utf8 { hash ^= UInt64(byte); hash &*= 1099511628211 }
-        return String(hash, radix: 16)
     }
 }

@@ -136,6 +136,45 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
     public var isProtectedFromGlobalSelection: Bool {
         isFavorite || isHidden || hasAdjustments || isSharedLibraryAsset || hasAlbumMembership
     }
+
+    public func with(
+        sourceID: String? = nil,
+        reference: MediaAssetReference? = nil,
+        displayName: String? = nil,
+        mediaKind: UniversalMediaKind? = nil,
+        byteCount: Int64?? = nil,
+        pixelWidth: Int? = nil,
+        pixelHeight: Int? = nil,
+        duration: TimeInterval?? = nil,
+        creationDate: Date?? = nil,
+        modificationDate: Date?? = nil,
+        isFavorite: Bool? = nil,
+        isHidden: Bool? = nil,
+        hasAdjustments: Bool? = nil,
+        isSharedLibraryAsset: Bool? = nil,
+        hasAlbumMembership: Bool? = nil,
+        requiresNetwork: Bool? = nil
+    ) -> UniversalMediaAsset {
+        UniversalMediaAsset(
+            id: self.id,
+            sourceID: sourceID ?? self.sourceID,
+            reference: reference ?? self.reference,
+            displayName: displayName ?? self.displayName,
+            mediaKind: mediaKind ?? self.mediaKind,
+            byteCount: byteCount != nil ? byteCount! : self.byteCount,
+            pixelWidth: pixelWidth ?? self.pixelWidth,
+            pixelHeight: pixelHeight ?? self.pixelHeight,
+            duration: duration != nil ? duration! : self.duration,
+            creationDate: creationDate != nil ? creationDate! : self.creationDate,
+            modificationDate: modificationDate != nil ? modificationDate! : self.modificationDate,
+            isFavorite: isFavorite ?? self.isFavorite,
+            isHidden: isHidden ?? self.isHidden,
+            hasAdjustments: hasAdjustments ?? self.hasAdjustments,
+            isSharedLibraryAsset: isSharedLibraryAsset ?? self.isSharedLibraryAsset,
+            hasAlbumMembership: hasAlbumMembership ?? self.hasAlbumMembership,
+            requiresNetwork: requiresNetwork ?? self.requiresNetwork
+        )
+    }
 }
 
 public struct UniversalExactFingerprint: Hashable, Codable, Sendable {

@@ -4,10 +4,10 @@ import UniformTypeIdentifiers
 import AppKit
 
 /// Sheet allowing users to export and organize their photo library into structured Finder folders.
-public struct PhysicalArchiveExportSheet: View {
-    public let assets: [UniversalMediaAsset]
-    public let sourceURL: URL?
-    public var onClose: () -> Void
+struct PhysicalArchiveExportSheet: View {
+    let assets: [UniversalMediaAsset]
+    let sourceURL: URL?
+    var onClose: () -> Void
     
     @State private var destinationURL: URL?
     @State private var selectedStructure: PhysicalExportConfiguration.OrganizationStructure = .yearAndMonth
@@ -18,7 +18,7 @@ public struct PhysicalArchiveExportSheet: View {
     @State private var isCompleted: Bool = false
     @State private var errorMessage: String?
     
-    public init(assets: [UniversalMediaAsset], sourceURL: URL? = nil, onClose: @escaping () -> Void) {
+    init(assets: [UniversalMediaAsset], sourceURL: URL? = nil, onClose: @escaping () -> Void) {
         self.assets = assets
         self.sourceURL = sourceURL
         self.onClose = onClose

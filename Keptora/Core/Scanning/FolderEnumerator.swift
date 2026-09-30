@@ -1,8 +1,9 @@
 import Foundation
+import KeptoraCore
 
 struct SourceExclusionPolicy: Sendable {
-    static let folderDefaultsKey = "Keptora.ExcludedFolderNames"
-    static let extensionDefaultsKey = "Keptora.ExcludedExtensions"
+    static let folderDefaultsKey = AppStorageKeys.excludedFolderNames
+    static let extensionDefaultsKey = AppStorageKeys.excludedExtensions
 
     let folderNames: Set<String>
     let extensions: Set<String>
@@ -60,12 +61,7 @@ struct SourceExclusionPolicy: Sendable {
 }
 
 struct FolderEnumerator: Sendable {
-    private let supportedExtensions: Set<String> = [
-        "jpg", "jpeg", "heic", "heif", "png", "tif", "tiff", "gif", "bmp", "webp",
-        "dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2",
-        "mov", "mp4", "m4v", "avi", "mkv",
-        "xmp", "aae"
-    ]
+    private let supportedExtensions: Set<String> = SupportedMediaExtensions.allMediaAndSidecars
 
     func mediaFiles(in root: URL) throws -> [URL] {
         let keys: [URLResourceKey] = [.isRegularFileKey, .isHiddenKey, .fileSizeKey, .contentModificationDateKey]
@@ -90,11 +86,10 @@ struct FolderEnumerator: Sendable {
     }
 
     func mediaKind(for url: URL) -> MediaKind {
-        switch SourceExclusionPolicy.normalizeExtension(url.pathExtension) {
-        case "mov", "mp4", "m4v", "avi", "mkv": return .video
-        case "xmp", "aae": return .sidecar
-        case "jpg", "jpeg", "heic", "heif", "png", "tif", "tiff", "gif", "bmp", "webp", "dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2": return .image
-        default: return .unknown
-        }
+        let ext = SourceExclusionPolicy.normalizeExtension(url.pathExtension)
+        if SupportedMediaExtensions.videos.contains(ext) { return .video }
+        if SupportedMediaExtensions.sidecars.contains(ext) { return .sidecar }
+        if SupportedMediaExtensions.allImages.contains(ext) { return .image }
+        return .unknown
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import KeptoraCore
 
 struct SimilarityGroupBuilder: Sendable {
     let maximumMembersPerGroup: Int
@@ -45,7 +46,7 @@ struct SimilarityGroupBuilder: Sendable {
             let maximumDistance = members.map(\.distanceToAnchor).max() ?? 0
             guard let tier = profile.tier(for: maximumDistance) else { continue }
             let memberIDs = members.map { $0.asset.id.rawValue }.sorted().joined(separator: "|")
-            let id = "similar:\(stableDigest(profile.id + "|" + memberIDs))"
+            let id = "similar:\(StableDigest.fnv1a64(profile.id + "|" + memberIDs))"
             groups.append(
                 SimilarityReviewGroup(
                     id: id,
@@ -75,14 +76,5 @@ struct SimilarityGroupBuilder: Sendable {
         case .strong: return 1
         case .review: return 2
         }
-    }
-
-    private func stableDigest(_ value: String) -> String {
-        var hash: UInt64 = 14695981039346656037
-        for byte in value.utf8 {
-            hash ^= UInt64(byte)
-            hash &*= 1099511628211
-        }
-        return String(hash, radix: 16)
     }
 }

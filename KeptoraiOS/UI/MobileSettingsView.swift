@@ -6,13 +6,13 @@ struct MobileSettingsView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("Keptora.AppLanguage") private var selectedLanguage: String = AppLanguage.system.rawValue
+    @AppStorage(AppStorageKeys.appLanguage) private var selectedLanguage: String = AppLanguage.system.rawValue
     @State private var isConfirmingClearCache = false
     @State private var cacheClearedFeedback = false
 
     /// Read from the bundle so the label can never drift from the shipped build.
     private var appVersionLabel: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–"
+        let version = Bundle.main.appVersionString
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–"
         return "\(version) (\(build))"
     }

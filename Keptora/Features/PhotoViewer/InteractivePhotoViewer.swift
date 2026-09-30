@@ -4,64 +4,68 @@ import ImageIO
 import AppKit
 
 /// Model representing a photo currently displayed in the Interactive Photo Viewer.
-public struct ViewerPhotoItem: Identifiable, Hashable, Sendable {
-    public let id: String
-    public let fileURL: URL
-    public let displayName: String
-    public let byteCount: Int64?
+struct ViewerPhotoItem: Identifiable, Hashable, Sendable {
+    let id: String
+    let fileURL: URL
+    let displayName: String
+    let byteCount: Int64?
     
-    public init(id: String, fileURL: URL, displayName: String, byteCount: Int64? = nil) {
+    init(id: String, fileURL: URL, displayName: String, byteCount: Int64? = nil) {
         self.id = id
         self.fileURL = fileURL
         self.displayName = displayName
         self.byteCount = byteCount
     }
+
+    init(_ asset: ReviewAsset) {
+        self.init(id: asset.id.rawValue, fileURL: asset.fileURL, displayName: asset.displayName, byteCount: asset.byteCount)
+    }
 }
 
 /// State controller for the interactive photo viewer.
 @MainActor
-public final class PhotoViewerState: ObservableObject {
-    @Published public var items: [ViewerPhotoItem]
-    @Published public var selectedIndex: Int
-    @Published public var zoomScale: CGFloat = 1.0
-    @Published public var panOffset: CGSize = .zero
-    @Published public var showInspector: Bool = false
-    @Published public var isSideBySideComparing: Bool = false
-    @Published public var compareTargetIndex: Int? = nil
-    @Published public var isSlideshowPlaying: Bool = false
-    @Published public var rotationAngle: Double = 0.0
+final class PhotoViewerState: ObservableObject {
+    @Published var items: [ViewerPhotoItem]
+    @Published var selectedIndex: Int
+    @Published var zoomScale: CGFloat = 1.0
+    @Published var panOffset: CGSize = .zero
+    @Published var showInspector: Bool = false
+    @Published var isSideBySideComparing: Bool = false
+    @Published var compareTargetIndex: Int? = nil
+    @Published var isSlideshowPlaying: Bool = false
+    @Published var rotationAngle: Double = 0.0
     /// Photos already sent to the cleanup plan from this viewer session.
-    @Published public private(set) var cleanedIDs: Set<String> = []
+    @Published private(set) var cleanedIDs: Set<String> = []
     
-    public init(items: [ViewerPhotoItem], initialIndex: Int = 0) {
+    init(items: [ViewerPhotoItem], initialIndex: Int = 0) {
         self.items = items
         self.selectedIndex = max(0, min(initialIndex, items.count - 1))
     }
     
-    public var currentItem: ViewerPhotoItem? {
+    var currentItem: ViewerPhotoItem? {
         guard items.indices.contains(selectedIndex) else { return nil }
         return items[selectedIndex]
     }
     
-    public var compareItem: ViewerPhotoItem? {
+    var compareItem: ViewerPhotoItem? {
         guard let idx = compareTargetIndex, items.indices.contains(idx) else { return nil }
         return items[idx]
     }
     
-    public func next() {
+    func next() {
         guard !items.isEmpty else { return }
         selectedIndex = (selectedIndex + 1) % items.count
         resetTransform()
     }
     
-    public func previous() {
+    func previous() {
         guard !items.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + items.count) % items.count
         resetTransform()
     }
     
     /// Records a photo as cleaned and moves to the next one without wrapping back to the start.
-    public func markCleaned(_ item: ViewerPhotoItem) {
+    func markCleaned(_ item: ViewerPhotoItem) {
         cleanedIDs.insert(item.id)
         if selectedIndex < items.count - 1 {
             selectedIndex += 1
@@ -69,13 +73,13 @@ public final class PhotoViewerState: ObservableObject {
         }
     }
     
-    public func resetTransform() {
+    func resetTransform() {
         zoomScale = 1.0
         panOffset = .zero
         rotationAngle = 0.0
     }
     
-    public func toggle100PercentZoom() {
+    func toggle100PercentZoom() {
         if zoomScale > 1.05 {
             zoomScale = 1.0
             panOffset = .zero
@@ -84,16 +88,16 @@ public final class PhotoViewerState: ObservableObject {
         }
     }
     
-    public func rotateClockwise() {
+    func rotateClockwise() {
         rotationAngle = (rotationAngle + 90.0).truncatingRemainder(dividingBy: 360.0)
     }
 }
 
 /// Full-screen cinematic photo viewer with gestures, EXIF inspector, and comparison mode.
-public struct InteractivePhotoViewerView: View {
-    @ObservedObject public var state: PhotoViewerState
-    public var onCleanOrDelete: ((ViewerPhotoItem) -> Void)?
-    public var onClose: () -> Void
+struct InteractivePhotoViewerView: View {
+    @ObservedObject var state: PhotoViewerState
+    var onCleanOrDelete: ((ViewerPhotoItem) -> Void)?
+    var onClose: () -> Void
     
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var loadedImage: NSImage?
@@ -107,7 +111,7 @@ public struct InteractivePhotoViewerView: View {
     @State private var isLoadFailed: Bool = false
     @State private var isCompareFailed: Bool = false
     
-    public init(
+    init(
         state: PhotoViewerState,
         onCleanOrDelete: ((ViewerPhotoItem) -> Void)? = nil,
         onClose: @escaping () -> Void
@@ -117,7 +121,7 @@ public struct InteractivePhotoViewerView: View {
         self.onClose = onClose
     }
     
-    public var body: some View {
+    var body: some View {
         ZStack {
             // Immersive dark backdrop
             Color.black.ignoresSafeArea()
@@ -725,16 +729,16 @@ private struct FilmstripThumbnail: View {
 }
 
 /// Rich EXIF and Camera Inspector Drawer.
-public struct PhotoInspectorDrawer: View {
-    public let metadata: DetailedPhotoMetadata?
-    public let item: ViewerPhotoItem?
-    public let onMetadataChanged: (() -> Void)?
-    public let onClose: () -> Void
+struct PhotoInspectorDrawer: View {
+    let metadata: DetailedPhotoMetadata?
+    let item: ViewerPhotoItem?
+    let onMetadataChanged: (() -> Void)?
+    let onClose: () -> Void
     @State private var pendingAction: MetadataAction?
     @State private var isWorking = false
     @State private var resultMessage: String?
 
-    public init(
+    init(
         metadata: DetailedPhotoMetadata?,
         item: ViewerPhotoItem?,
         onMetadataChanged: (() -> Void)? = nil,
@@ -804,7 +808,7 @@ public struct PhotoInspectorDrawer: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Label("Photo Details", systemImage: "info.circle")
