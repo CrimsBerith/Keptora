@@ -452,7 +452,7 @@ public struct SmartBucketCard: View {
                 }
             }
             .padding(16)
-            .frame(height: 155)
+            .frame(minHeight: 155)
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color(nsColor: .controlBackgroundColor))
@@ -463,6 +463,8 @@ public struct SmartBucketCard: View {
                     .shadow(color: .black.opacity(0.03), radius: 6, y: 2)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(KeptoraCardButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

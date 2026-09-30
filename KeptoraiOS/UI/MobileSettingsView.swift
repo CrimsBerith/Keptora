@@ -7,6 +7,15 @@ struct MobileSettingsView: View {
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dismiss) private var dismiss
     @AppStorage("Keptora.AppLanguage") private var selectedLanguage: String = AppLanguage.system.rawValue
+    @State private var isConfirmingClearCache = false
+    @State private var cacheClearedFeedback = false
+
+    /// Read from the bundle so the label can never drift from the shipped build.
+    private var appVersionLabel: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–"
+        return "\(version) (\(build))"
+    }
 
     var body: some View {
         Form {
@@ -127,9 +136,7 @@ struct MobileSettingsView: View {
 
             Section {
                 Button(role: .destructive) {
-                    Task {
-                        await MediaFingerprintDiskCache.shared.clear()
-                    }
+                    isConfirmingClearCache = true
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "trash")
@@ -137,13 +144,29 @@ struct MobileSettingsView: View {
                     }
                 }
                 .accessibilityIdentifier("ios.settings.clearCache")
+                .confirmationDialog(
+                    "Clear the scan cache?",
+                    isPresented: $isConfirmingClearCache,
+                    titleVisibility: .visible
+                ) {
+                    Button("Clear Cache", role: .destructive) {
+                        Task {
+                            await MediaFingerprintDiskCache.shared.clear()
+                            cacheClearedFeedback.toggle()
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Your photos and decisions are not touched. The next scan will take longer because fingerprints are recomputed.")
+                }
+                .sensoryFeedback(.success, trigger: cacheClearedFeedback)
             } header: {
                 Text("Maintenance")
                     .font(MobileKeptoraDesign.labelFont)
             }
 
             Section {
-                LabeledContent("Version", value: "1.0.0 (182)")
+                LabeledContent("Version", value: appVersionLabel)
                 Text("Keptora by AlfagoLab")
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)

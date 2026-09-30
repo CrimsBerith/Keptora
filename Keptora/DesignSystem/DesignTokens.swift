@@ -80,20 +80,31 @@ enum KeptoraDesign {
     static let shellHeight:  CGFloat = 52
 }
 
+/// Soft glow used by the backdrops. A radial gradient looks like the old blurred circle but costs
+/// no offscreen blur pass, which mattered when it sat behind every scrolling screen.
+struct KeptoraGlow: View {
+    let color: Color
+    let diameter: CGFloat
+
+    var body: some View {
+        RadialGradient(
+            colors: [color, color.opacity(0)],
+            center: .center,
+            startRadius: 0,
+            endRadius: diameter * 0.8
+        )
+        .frame(width: diameter * 1.6, height: diameter * 1.6)
+    }
+}
+
 struct KeptoraBackdrop: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 KeptoraDesign.canvas
-                Circle()
-                    .fill(KeptoraDesign.violet.opacity(0.13))
-                    .frame(width: min(proxy.size.width * 0.62, 720))
-                    .blur(radius: 95)
+                KeptoraGlow(color: KeptoraDesign.violet.opacity(0.13), diameter: min(proxy.size.width * 0.62, 720))
                     .offset(x: proxy.size.width * 0.30, y: -proxy.size.height * 0.35)
-                Circle()
-                    .fill(KeptoraDesign.cyan.opacity(0.10))
-                    .frame(width: min(proxy.size.width * 0.52, 600))
-                    .blur(radius: 110)
+                KeptoraGlow(color: KeptoraDesign.cyan.opacity(0.10), diameter: min(proxy.size.width * 0.52, 600))
                     .offset(x: -proxy.size.width * 0.34, y: proxy.size.height * 0.34)
             }
         }
@@ -165,8 +176,7 @@ struct PremiumCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous)
                     .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
             }
-            .shadow(color: KeptoraDesign.violet.opacity(0.08), radius: 24, y: 10)
-            .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
+            .shadow(color: .black.opacity(0.07), radius: 10, y: 4)
     }
 }
 
@@ -428,5 +438,24 @@ extension View {
     /// Like `.animation(_:value:)`, but disabled when the user turned on Reduce Motion.
     func keptoraAnimation<Value: Equatable>(_ animation: Animation, value: Value) -> some View {
         modifier(KeptoraAnimationModifier(animation: animation, value: value))
+    }
+}
+
+// MARK: - Hover / pressed feedback
+
+/// Plain button that lifts slightly on hover and dips when pressed (Reduce Motion aware).
+struct KeptoraCardButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .brightness(isHovered && !configuration.isPressed ? 0.02 : 0)
+            .shadow(color: .black.opacity(isHovered ? 0.10 : 0), radius: 8, y: 3)
+            .animation(reduceMotion ? nil : KeptoraDesign.animFast, value: isHovered)
+            .animation(reduceMotion ? nil : KeptoraDesign.animFast, value: configuration.isPressed)
+            .onHover { isHovered = $0 }
+            .contentShape(Rectangle())
     }
 }

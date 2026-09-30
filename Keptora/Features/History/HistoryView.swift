@@ -33,12 +33,36 @@ struct HistoryView: View {
                             Picker("Status", selection: $filter) {
                                 ForEach(HistoryFilter.allCases) { option in Text(LocalizedStringKey(option.rawValue)).tag(option) }
                             }
+                            .labelsHidden()
+                            .accessibilityLabel("Status filter")
                             .frame(width: 180)
                         }
 
-                        LazyVStack(spacing: 14) {
-                            ForEach(filteredHistory) { item in
-                                historyCard(item)
+                        // Filtered once per render; the property walks the whole history.
+                        let items = filteredHistory
+                        if items.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.title)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                                Text("No matching plans")
+                                    .font(.headline)
+                                Text("Try a different search or status filter.")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                Button("Clear Filters") {
+                                    query = ""
+                                    filter = .all
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            LazyVStack(spacing: 14) {
+                                ForEach(items) { item in
+                                    historyCard(item)
+                                }
                             }
                         }
                     }
@@ -56,7 +80,8 @@ struct HistoryView: View {
         let active = model.cleanupHistory.filter { $0.canRestore }
         let activeFiles = active.reduce(0) { $0 + $1.operationCount }
         let activeBytes = active.reduce(Int64(0)) { $0 + $1.estimatedBytes }
-        return HStack(spacing: 12) {
+        // Adaptive grid: five metrics in one row truncate at the minimum window width.
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
             summaryMetric("Active plans", active.count.formatted(), "shippingbox")
             summaryMetric("Tracked files", activeFiles.formatted(), "doc.on.doc")
             summaryMetric("Restorable space", ByteCountFormatter.string(fromByteCount: activeBytes, countStyle: .file), "internaldrive")

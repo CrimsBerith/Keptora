@@ -77,12 +77,12 @@ enum MobileKeptoraDesign {
     )
 
     // MARK: – Typography Tokens (Rounded Design)
-    static let titleFont   = Font.system(size: 32, weight: .bold,     design: .rounded)
-    static let sectionFont = Font.system(size: 16, weight: .semibold, design: .rounded)
-    static let labelFont   = Font.system(size: 11, weight: .bold,     design: .rounded)
+    static let titleFont   = Font.system(.largeTitle, design: .rounded).weight(.bold)
+    static let sectionFont = Font.system(.headline, design: .rounded)
+    static let labelFont   = Font.system(.caption2, design: .rounded).weight(.bold)
     static let bodyFont    = Font.system(.body,   design: .rounded)
     static let captionFont = Font.system(.caption, design: .rounded)
-    static let metricFont  = Font.system(size: 24, weight: .bold,     design: .rounded)
+    static let metricFont  = Font.system(.title2, design: .rounded).weight(.bold)
 
     // MARK: – Animation Presets
     static let animFast   = Animation.easeOut(duration: 0.16)
@@ -97,28 +97,22 @@ struct MobileAuroraBackground: View {
         GeometryReader { proxy in
             ZStack {
                 MobileKeptoraDesign.pageGradient
-                
-                Circle()
-                    .fill(MobileKeptoraDesign.violet.opacity(0.14))
-                    .frame(width: max(proxy.size.width * 0.95, 340))
-                    .blur(radius: 80)
+                glow(MobileKeptoraDesign.violet.opacity(0.14), max(proxy.size.width * 0.95, 340))
                     .offset(x: proxy.size.width * 0.38, y: -proxy.size.height * 0.34)
-
-                Circle()
-                    .fill(MobileKeptoraDesign.cyan.opacity(0.11))
-                    .frame(width: max(proxy.size.width * 0.85, 300))
-                    .blur(radius: 85)
+                glow(MobileKeptoraDesign.cyan.opacity(0.11), max(proxy.size.width * 0.85, 300))
                     .offset(x: -proxy.size.width * 0.40, y: proxy.size.height * 0.32)
-
-                Circle()
-                    .fill(MobileKeptoraDesign.coral.opacity(0.07))
-                    .frame(width: max(proxy.size.width * 0.65, 240))
-                    .blur(radius: 70)
+                glow(MobileKeptoraDesign.coral.opacity(0.07), max(proxy.size.width * 0.65, 240))
                     .offset(x: proxy.size.width * 0.20, y: proxy.size.height * 0.15)
             }
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+    }
+
+    /// Radial gradient instead of a blurred circle: same look, no offscreen blur pass behind every list.
+    private func glow(_ color: Color, _ diameter: CGFloat) -> some View {
+        RadialGradient(colors: [color, color.opacity(0)], center: .center, startRadius: 0, endRadius: diameter * 0.8)
+            .frame(width: diameter * 1.6, height: diameter * 1.6)
     }
 }
 

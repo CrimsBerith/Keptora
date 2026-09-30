@@ -478,7 +478,7 @@ private struct ExactGroupPage: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 130)
+            .padding(.bottom, 40)
         }
     }
 }
@@ -506,7 +506,7 @@ private struct MobileAssetCard: View {
                         .overlay(alignment: .bottomLeading) {
                             if asset.mediaKind == .video {
                                 Label(asset.formattedDuration, systemImage: "play.fill")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.bold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 5).padding(.vertical, 3)
                                     .background(.black.opacity(0.68), in: Capsule())
@@ -551,7 +551,7 @@ private struct MobileAssetCard: View {
 
                     HStack {
                         Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                            .font(.system(.caption2, design: .rounded).weight(.medium))
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                         
@@ -631,7 +631,7 @@ private struct MobileAssetCard: View {
     private var assetStatusBadge: some View {
         if isKeeper {
             Text("Keeper")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -641,7 +641,7 @@ private struct MobileAssetCard: View {
                 .background(MobileKeptoraDesign.mint.opacity(0.14), in: Capsule())
         } else if asset.isProtectedFromGlobalSelection {
             Text("Protected")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -651,7 +651,7 @@ private struct MobileAssetCard: View {
                 .background(MobileKeptoraDesign.amber.opacity(0.14), in: Capsule())
         } else {
             Text("Copy")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -769,7 +769,7 @@ private struct SimilarVideoGroupPage: View {
                 .overlay { RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(MobileKeptoraDesign.accent.opacity(0.14), lineWidth: 1) }
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 130)
+            .padding(.bottom, 40)
         }
     }
 }
@@ -797,7 +797,7 @@ private struct SimilarVideoAssetCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(alignment: .bottomLeading) {
                         Label(asset.formattedDuration, systemImage: "play.fill")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(.caption2, design: .rounded).weight(.bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5).padding(.vertical, 3)
                             .background(.black.opacity(0.68), in: Capsule())
@@ -810,14 +810,14 @@ private struct SimilarVideoAssetCard: View {
 
                 HStack {
                     Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.medium))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                     
                     Spacer()
                     
                     Text(statusLabel)
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                         .textCase(.uppercase)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -1018,7 +1018,7 @@ private struct SimilarityGroupPage: View {
 
                             HStack {
                                 Label("Review only", systemImage: "eye")
-                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
                                     .foregroundStyle(.secondary)
                             }
                         }

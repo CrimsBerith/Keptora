@@ -69,6 +69,15 @@ struct MobilePaywallView: View {
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.restorePurchases")
 
+                            // Purchase / restore outcomes (cancelled, pending, failed) were previously invisible here.
+                            if let status = purchase.statusMessage {
+                                Text(status)
+                                    .font(.system(.footnote, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .accessibilityIdentifier("ios.paywall.status")
+                            }
+
                             HStack(spacing: 12) {
                                 if let privacyURL = URL(string: "https://alfagolab.com/keptora/privacy") {
                                     Link(String(localized: "Privacy Policy"), destination: privacyURL)
