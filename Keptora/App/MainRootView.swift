@@ -26,15 +26,9 @@ struct MainRootView: View {
                 .padding(.horizontal, 9)
 
                 proFooter
-                    .sheet(isPresented: $model.isShowingRestorePreview) {
-                        RestorePreviewSheet().environmentObject(model)
-                    }
             }
             .background(KeptoraSidebarBackdrop())
             .navigationSplitViewColumnWidth(min: 184, ideal: 208, max: 232)
-            .sheet(isPresented: $model.isShowingOnboarding) {
-                OnboardingView().environmentObject(model)
-            }
         } detail: {
             ZStack {
                 KeptoraBackdrop()
@@ -86,6 +80,13 @@ struct MainRootView: View {
         .accessibilityIdentifier("keptora.root")
         .sheet(isPresented: $store.isShowingPaywall) {
             PaywallView().environmentObject(store)
+        }
+        // Presented from the root (not a sidebar subview) so they are not tied to sidebar visibility.
+        .sheet(isPresented: $model.isShowingRestorePreview) {
+            RestorePreviewSheet().environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingOnboarding) {
+            OnboardingView().environmentObject(model)
         }
         .onAppear {
             if model.selectedRoute == nil { model.selectedRoute = .home }

@@ -33,6 +33,27 @@ public struct SmartBucketCardItem: Identifiable, Sendable {
     }
 }
 
+/// Single source of truth for which extra copies belong in which smart bucket, shared by the
+/// bucket counts and the swipe deck so the two can never disagree.
+private enum SmartBucketRule {
+    static func matches(_ bucketID: String, asset: ReviewAsset, group: ReviewGroup) -> Bool {
+        let name = asset.displayName.lowercased()
+        let ext = asset.fileURL.pathExtension.lowercased()
+        switch bucketID {
+        case "screenshots":
+            return name.contains("screen") || name.contains("ekran") || ext == "png"
+        case "receipts":
+            return ["receipt", "fatura", "kdv", "slip", "invoice", "bill"].contains { name.contains($0) }
+        case "heavy_media":
+            return asset.byteCount > 40_000_000 || ["mov", "mp4", "m4v"].contains(ext)
+        case "bursts":
+            return group.assets.count >= 3
+        default:
+            return true
+        }
+    }
+}
+
 /// Dashboard view for intelligent categorization and smart actionable cleanup buckets.
 public struct SmartBucketsDashboardView: View {
     @EnvironmentObject private var model: AppModel
@@ -57,24 +78,22 @@ public struct SmartBucketsDashboardView: View {
 
         for group in model.duplicateGroups {
             for asset in group.assets where asset.id != group.canonicalAssetID {
-                let name = asset.displayName.lowercased()
-                let ext = asset.fileURL.pathExtension.lowercased()
                 exactCopiesCount += 1
                 exactCopiesBytes += asset.byteCount
 
-                if name.contains("screen") || name.contains("ekran") || ext == "png" {
+                if SmartBucketRule.matches("screenshots", asset: asset, group: group) {
                     screenshotsCount += 1
                     screenshotsBytes += asset.byteCount
                 }
-                if name.contains("receipt") || name.contains("fatura") || name.contains("kdv") || name.contains("slip") || name.contains("invoice") || name.contains("bill") {
+                if SmartBucketRule.matches("receipts", asset: asset, group: group) {
                     receiptsCount += 1
                     receiptsBytes += asset.byteCount
                 }
-                if asset.byteCount > 40_000_000 || ["mov", "mp4", "m4v"].contains(ext) {
+                if SmartBucketRule.matches("heavy_media", asset: asset, group: group) {
                     heavyCount += 1
                     heavyBytes += asset.byteCount
                 }
-                if group.assets.count >= 3 {
+                if SmartBucketRule.matches("bursts", asset: asset, group: group) {
                     burstCount += 1
                     burstBytes += asset.byteCount
                 }
@@ -144,7 +163,9 @@ public struct SmartBucketsDashboardView: View {
     public init() {}
     
     public var body: some View {
-        ScrollView {
+        // Computed once per render (it walks every duplicate group).
+        let cards = dynamicCards
+        return ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header
                 VStack(alignment: .leading, spacing: 6) {
@@ -165,11 +186,11 @@ public struct SmartBucketsDashboardView: View {
                     emptyStateCard
                 } else {
                     // Storage impact summary banner
-                    totalSavingsBanner
+                    totalSavingsBanner(cards: cards)
                     
                     // Grid of Smart Buckets
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 16)], spacing: 16) {
-                        ForEach(dynamicCards) { card in
+                        ForEach(cards) { card in
                             SmartBucketCard(card: card, isSelected: selectedBucketID == card.id) {
                                 selectedBucketID = card.id
                                 startSwipeCulling(for: card.id)
@@ -183,7 +204,7 @@ public struct SmartBucketsDashboardView: View {
         .alert("No Scanned Photos Found", isPresented: $showingNoItemsAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Please scan a folder or your Apple Photos library first from Home to review and swipe-to-delete photos.")
+            Text("Nothing in this category needs review yet. Scan a folder or your Apple Photos library from Home first, or pick another category.")
         }
         .sheet(isPresented: Binding(
             get: { activeSwipeCards != nil },
@@ -191,7 +212,7 @@ public struct SmartBucketsDashboardView: View {
         )) {
             if let cards = activeSwipeCards {
                 SwipeCullingStudioView(
-                    state: SwipeCullingState(items: cards),
+                    items: cards,
                     onCommitPlan: { cleanupItems in
                         let cleanupAssetIDs = cleanupItems.map { AssetID(rawValue: $0.id) }
                         model.applySwipeDecisions(cleanupAssetIDs: cleanupAssetIDs, access: store)
@@ -272,9 +293,12 @@ public struct SmartBucketsDashboardView: View {
         )
     }
 
-    private var totalSavingsBanner: some View {
-        let totalBytes = dynamicCards.filter(\.isDeclutter).reduce(0) { $0 + $1.reclaimableBytes }
-        let totalCount = dynamicCards.filter(\.isDeclutter).reduce(0) { $0 + $1.count }
+    private func totalSavingsBanner(cards: [SmartBucketCardItem]) -> some View {
+        // Buckets overlap (a screenshot copy is also an exact copy), so summing them would count
+        // the same file several times. The exact-copy bucket contains every candidate exactly once.
+        let union = cards.first { $0.id == "exact_duplicates" }
+        let totalBytes = union?.reclaimableBytes ?? 0
+        let totalCount = union?.count ?? 0
         
         return HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
@@ -287,7 +311,7 @@ public struct SmartBucketsDashboardView: View {
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                Text("\(totalCount) clutter items identified across \(dynamicCards.count) categories")
+                Text("\(totalCount) clutter items identified across \(cards.count) categories")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -333,24 +357,13 @@ public struct SmartBucketsDashboardView: View {
                 var color: Color = .orange
                 
                 if let bucketID {
-                    let ext = asset.fileURL.pathExtension.lowercased()
-                    let name = asset.displayName.lowercased()
-                    if bucketID == "screenshots" {
-                        guard name.contains("screen") || name.contains("ekran") || ext == "png" else { continue }
-                        label = "Screenshot"
-                        color = .blue
-                    } else if bucketID == "receipts" {
-                        guard name.contains("receipt") || name.contains("fatura") || name.contains("kdv") || name.contains("slip") || name.contains("invoice") || name.contains("bill") else { continue }
-                        label = "Document"
-                        color = .orange
-                    } else if bucketID == "heavy_media" {
-                        guard asset.byteCount > 40_000_000 || ["mov", "mp4", "m4v"].contains(ext) else { continue }
-                        label = "Heavy Video"
-                        color = .purple
-                    } else if bucketID == "bursts" {
-                        guard group.assets.count >= 3 else { continue }
-                        label = "Burst"
-                        color = .indigo
+                    guard SmartBucketRule.matches(bucketID, asset: asset, group: group) else { continue }
+                    switch bucketID {
+                    case "screenshots": label = "Screenshot"; color = .blue
+                    case "receipts": label = "Document"; color = .orange
+                    case "heavy_media": label = "Heavy Video"; color = .purple
+                    case "bursts": label = "Burst"; color = .indigo
+                    default: break
                     }
                 }
                 

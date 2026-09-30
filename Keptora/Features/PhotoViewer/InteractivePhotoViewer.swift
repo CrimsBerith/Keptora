@@ -30,6 +30,8 @@ public final class PhotoViewerState: ObservableObject {
     @Published public var compareTargetIndex: Int? = nil
     @Published public var isSlideshowPlaying: Bool = false
     @Published public var rotationAngle: Double = 0.0
+    /// Photos already sent to the cleanup plan from this viewer session.
+    @Published public private(set) var cleanedIDs: Set<String> = []
     
     public init(items: [ViewerPhotoItem], initialIndex: Int = 0) {
         self.items = items
@@ -56,6 +58,15 @@ public final class PhotoViewerState: ObservableObject {
         guard !items.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + items.count) % items.count
         resetTransform()
+    }
+    
+    /// Records a photo as cleaned and moves to the next one without wrapping back to the start.
+    public func markCleaned(_ item: ViewerPhotoItem) {
+        cleanedIDs.insert(item.id)
+        if selectedIndex < items.count - 1 {
+            selectedIndex += 1
+            resetTransform()
+        }
     }
     
     public func resetTransform() {
@@ -92,6 +103,7 @@ public struct InteractivePhotoViewerView: View {
     
     @State private var baseZoomScale: CGFloat = 1.0
     @State private var basePanOffset: CGSize = .zero
+    @State private var pinchStartScale: CGFloat?
     
     public init(
         state: PhotoViewerState,
@@ -161,14 +173,13 @@ public struct InteractivePhotoViewerView: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: state.showInspector)
         .animation(.easeInOut(duration: 0.2), value: state.isSideBySideComparing)
-        .onAppear { loadCurrentAsset() }
+        .task(id: state.selectedIndex) { await loadCurrentAsset() }
+        .task(id: state.compareTargetIndex) { await loadCompareAsset() }
         .onChange(of: state.selectedIndex) { _ in
             baseZoomScale = 1.0
             basePanOffset = .zero
             state.resetTransform()
-            loadCurrentAsset()
         }
-        .onChange(of: state.compareTargetIndex) { _ in loadCompareAsset() }
         .sheet(isPresented: $isShowingSwipeStudio) {
             let cards = state.items.map { item in
                 SwipeCardItem(
@@ -179,7 +190,7 @@ public struct InteractivePhotoViewerView: View {
                 )
             }
             SwipeCullingStudioView(
-                state: SwipeCullingState(items: cards),
+                items: cards,
                 onCommitPlan: { cleanupItems in
                     for c in cleanupItems {
                         if let match = state.items.first(where: { $0.id == c.id }) {
@@ -209,9 +220,14 @@ public struct InteractivePhotoViewerView: View {
                         .gesture(
                             MagnificationGesture()
                                 .onChanged { value in
-                                    state.zoomScale = max(0.8, min(baseZoomScale * value, 8.0))
+                                    // Anchor on the scale when the pinch began, so toolbar zoom
+                                    // buttons and double-click zoom can never leave a stale base.
+                                    let start = pinchStartScale ?? state.zoomScale
+                                    pinchStartScale = start
+                                    state.zoomScale = max(0.8, min(start * value, 8.0))
                                 }
                                 .onEnded { _ in
+                                    pinchStartScale = nil
                                     baseZoomScale = state.zoomScale
                                 }
                         )
@@ -421,13 +437,14 @@ public struct InteractivePhotoViewerView: View {
 
             // Clean Current Photo Button
             if let current = state.currentItem, onCleanOrDelete != nil {
+                let alreadyCleaned = state.cleanedIDs.contains(current.id)
                 Button(action: {
                     onCleanOrDelete?(current)
-                    withAnimation { state.next() }
+                    withAnimation(reduceMotion ? nil : .default) { state.markCleaned(current) }
                 }) {
                     HStack(spacing: 4) {
-                        Image(systemName: "trash.fill")
-                        Text("Clean (⌫)")
+                        Image(systemName: alreadyCleaned ? "checkmark" : "trash.fill")
+                        Text(alreadyCleaned ? "In plan" : "Clean (⌫)")
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -438,6 +455,7 @@ public struct InteractivePhotoViewerView: View {
                 .background(Color.red.opacity(0.85))
                 .cornerRadius(8)
                 .keyboardShortcut(.delete, modifiers: [])
+                .disabled(alreadyCleaned)
                 .help("Add current photo to cleanup plan and view next")
             }
         }
@@ -452,9 +470,12 @@ public struct InteractivePhotoViewerView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 8) {
-                    ForEach(state.items.indices, id: \.self) { idx in
-                        let item = state.items[idx]
-                        FilmstripThumbnail(url: item.fileURL, isSelected: idx == state.selectedIndex) {
+                    ForEach(Array(state.items.enumerated()), id: \.element.id) { idx, item in
+                        FilmstripThumbnail(
+                            url: item.fileURL,
+                            isSelected: idx == state.selectedIndex,
+                            isCleaned: state.cleanedIDs.contains(item.id)
+                        ) {
                             state.selectedIndex = idx
                         }
                         .id(idx)
@@ -476,39 +497,33 @@ public struct InteractivePhotoViewerView: View {
     
     // MARK: - Actions
     
-    private func loadCurrentAsset() {
+    private func loadCurrentAsset() async {
         guard let item = state.currentItem else { return }
-        let targetID = item.id
         let url = item.fileURL
+        // Drop the previous photo immediately so it is never shown under the new title.
+        loadedImage = nil
+        metadata = nil
         
-        Task {
-            let (img, meta) = await Task.detached(priority: .userInitiated) { () -> (NSImage?, DetailedPhotoMetadata?) in
-                let loadedImg = NSImage(contentsOf: url)
-                let extractedMeta = PhotoMetadataExtractor.extract(from: url)
-                return (loadedImg, extractedMeta)
-            }.value
-            
-            if self.state.currentItem?.id == targetID {
-                self.loadedImage = img
-                self.metadata = meta
-            }
-        }
+        let (img, meta) = await Task.detached(priority: .userInitiated) { () -> (NSImage?, DetailedPhotoMetadata?) in
+            (ViewerImageLoader.image(at: url), PhotoMetadataExtractor.extract(from: url))
+        }.value
+        
+        // .task(id:) cancels this when the selection changes, so a slow load cannot overwrite a newer one.
+        guard !Task.isCancelled else { return }
+        loadedImage = img
+        metadata = meta
     }
     
-    private func loadCompareAsset() {
-        guard let item = state.compareItem else { return }
-        let targetID = item.id
-        let url = item.fileURL
-        
-        Task {
-            let img = await Task.detached(priority: .userInitiated) { () -> NSImage? in
-                return NSImage(contentsOf: url)
-            }.value
-            
-            if self.state.compareItem?.id == targetID {
-                self.compareImage = img
-            }
+    private func loadCompareAsset() async {
+        guard let item = state.compareItem else {
+            compareImage = nil
+            return
         }
+        let url = item.fileURL
+        compareImage = nil
+        let img = await Task.detached(priority: .userInitiated) { ViewerImageLoader.image(at: url) }.value
+        guard !Task.isCancelled else { return }
+        compareImage = img
     }
     
     private func revealCurrentInFinder() {
@@ -517,10 +532,31 @@ public struct InteractivePhotoViewerView: View {
     }
 }
 
+/// Decodes viewer images with a bounded pixel size and EXIF orientation applied,
+/// instead of inflating the full-resolution bitmap (RAW/HEIC can be hundreds of MB).
+enum ViewerImageLoader {
+    static let maximumPixelSize = 4096
+
+    static func image(at url: URL) -> NSImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize
+        ]
+        if let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+           let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+            return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        }
+        return NSImage(contentsOf: url)
+    }
+}
+
 /// Thumbnail item in the filmstrip.
 private struct FilmstripThumbnail: View {
     let url: URL
     let isSelected: Bool
+    var isCleaned: Bool = false
     let onSelect: () -> Void
     
     @State private var thumb: NSImage?
@@ -537,6 +573,12 @@ private struct FilmstripThumbnail: View {
                 }
             }
             .frame(width: 52, height: 52)
+            .overlay {
+                if isCleaned {
+                    Color.black.opacity(0.45)
+                    Image(systemName: "trash.fill").foregroundStyle(.white)
+                }
+            }
             .cornerRadius(6)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)

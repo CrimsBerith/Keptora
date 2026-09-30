@@ -124,7 +124,7 @@ struct ReviewStudioView: View {
                 }
             }
             SwipeCullingStudioView(
-                state: SwipeCullingState(items: cards),
+                items: cards,
                 onCommitPlan: { cleanupItems in
                     model.applySwipeDecisions(
                         cleanupAssetIDs: cleanupItems.map { AssetID(rawValue: $0.id) },
