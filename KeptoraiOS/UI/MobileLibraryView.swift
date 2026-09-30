@@ -35,6 +35,8 @@ struct MobileLibraryView: View {
                     }
                     .frame(width: 36, height: 36)
                     .shadow(color: MobileKeptoraDesign.violet.opacity(0.30), radius: 8, y: 3)
+                    .padding(4)
+                    .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Settings")
                 .accessibilityIdentifier("ios.library.settings")

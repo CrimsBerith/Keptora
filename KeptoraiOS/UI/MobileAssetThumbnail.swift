@@ -6,20 +6,29 @@ import SwiftUI
 
 struct MobileAssetThumbnail: View {
     let asset: UniversalMediaAsset
+    /// Longest edge requested from PhotoKit; grid cells use the default, full-screen viewers pass more.
+    var pixelSize: CGFloat = 500
     @State private var image: UIImage?
+    @State private var didFinish = false
 
     var body: some View {
         ZStack {
             Color(uiColor: .tertiarySystemFill)
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
+            } else if !didFinish {
+                ProgressView()
             } else {
                 Image(systemName: asset.mediaKind == .video ? "video.fill" : "photo")
                     .font(.largeTitle).foregroundStyle(.secondary)
             }
         }
         .clipped()
-        .task(id: asset.id) { await load() }
+        .task(id: asset.id) {
+            didFinish = false
+            await load()
+            if !Task.isCancelled { didFinish = true }
+        }
     }
 
     private func load() async {
@@ -28,7 +37,7 @@ struct MobileAssetThumbnail: View {
             if asset.mediaKind == .video {
                 let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
                 generator.appliesPreferredTrackTransform = true
-                generator.maximumSize = CGSize(width: 600, height: 600)
+                generator.maximumSize = CGSize(width: max(pixelSize, 600), height: max(pixelSize, 600))
                 if let frame = try? await generator.image(at: CMTime(seconds: 0.2, preferredTimescale: 600)).image {
                     image = UIImage(cgImage: frame)
                 }
@@ -38,7 +47,7 @@ struct MobileAssetThumbnail: View {
                 guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                       let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                         kCGImageSourceCreateThumbnailFromImageAlways: true,
-                        kCGImageSourceThumbnailMaxPixelSize: 600,
+                        kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 600),
                         kCGImageSourceCreateThumbnailWithTransform: true
                       ] as CFDictionary) else { return nil }
                 return UIImage(cgImage: cgImage)
@@ -46,28 +55,63 @@ struct MobileAssetThumbnail: View {
         case .photoLibrary(let localIdentifier):
             let result = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
             guard let photo = result.firstObject else { return }
-            image = await withCheckedContinuation { continuation in
-                let options = PHImageRequestOptions()
-                options.deliveryMode = .highQualityFormat
-                options.resizeMode = .fast
-                options.isNetworkAccessAllowed = false
-                var hasResumed = false
-                PHImageManager.default().requestImage(
-                    for: photo,
-                    targetSize: CGSize(width: 500, height: 500),
-                    contentMode: .aspectFill,
-                    options: options
-                ) { image, info in
-                    let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                    if !hasResumed && (!degraded || image != nil) {
-                        hasResumed = true
-                        continuation.resume(returning: image)
-                    } else if !hasResumed && image == nil {
-                        hasResumed = true
-                        continuation.resume(returning: nil)
+            let request = PhotoImageRequest()
+            let size = CGSize(width: pixelSize, height: pixelSize)
+            // Cancelling the SwiftUI task (cell scrolled away) must also cancel the PhotoKit request,
+            // otherwise fast scrolling queues up hundreds of decodes.
+            image = await withTaskCancellationHandler {
+                await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .highQualityFormat
+                    options.resizeMode = .fast
+                    options.isNetworkAccessAllowed = false
+                    let id = PHImageManager.default().requestImage(
+                        for: photo,
+                        targetSize: size,
+                        contentMode: .aspectFill,
+                        options: options
+                    ) { image, info in
+                        let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                        // A degraded image is only a preview; wait for the final one unless PhotoKit
+                        // reports an error or cancellation.
+                        let failed = info?[PHImageErrorKey] != nil || (info?[PHImageCancelledKey] as? Bool) == true
+                        if degraded && image != nil && !failed { return }
+                        request.resumeOnce { continuation.resume(returning: image) }
                     }
+                    request.setID(id)
                 }
+            } onCancel: {
+                request.cancel()
             }
         }
+    }
+}
+
+/// Thread-safe holder so the cancellation handler can cancel the in-flight PhotoKit request and the
+/// completion handler can resume its continuation exactly once.
+private final class PhotoImageRequest: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requestID = PHInvalidImageRequestID
+    private var didResume = false
+    private var wasCancelled = false
+
+    func setID(_ id: PHImageRequestID) {
+        lock.lock(); defer { lock.unlock() }
+        requestID = id
+        if wasCancelled { PHImageManager.default().cancelImageRequest(id) }
+    }
+
+    func cancel() {
+        lock.lock(); defer { lock.unlock() }
+        wasCancelled = true
+        if requestID != PHInvalidImageRequestID { PHImageManager.default().cancelImageRequest(requestID) }
+    }
+
+    func resumeOnce(_ body: () -> Void) {
+        lock.lock()
+        let shouldResume = !didResume
+        didResume = true
+        lock.unlock()
+        if shouldResume { body() }
     }
 }

@@ -429,9 +429,13 @@ private struct ExactGroupPage: View {
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex == 0)
+                            .accessibilityLabel("Previous set")
 
                             Button(action: {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -442,9 +446,13 @@ private struct ExactGroupPage: View {
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex >= totalPages - 1)
+                            .accessibilityLabel("Next set")
                         }
                     }
                     .padding(.horizontal, 4)
@@ -524,7 +532,9 @@ private struct MobileAssetCard: View {
                             .foregroundStyle(.white)
                     }
                     .frame(width: 36, height: 36)
+                    .padding(4)
                     .contentShape(Rectangle())
+                    .padding(-4)
                     .shadow(radius: 3)
                 }
                 .buttonStyle(.plain)
@@ -698,9 +708,13 @@ private struct SimilarVideoGroupPage: View {
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex == 0)
+                            .accessibilityLabel("Previous set")
 
                             Button(action: {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -711,9 +725,13 @@ private struct SimilarVideoGroupPage: View {
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex >= totalPages - 1)
+                            .accessibilityLabel("Next set")
                         }
                     }
                     .padding(.horizontal, 4)
@@ -857,7 +875,9 @@ private struct SimilarVideoAssetCard: View {
                         .foregroundStyle(.white)
                 }
                 .frame(width: 36, height: 36)
+                .padding(4)
                 .contentShape(Rectangle())
+                .padding(-4)
                 .shadow(radius: 3)
             }
             .buttonStyle(.plain)
@@ -920,9 +940,13 @@ private struct SimilarityGroupPage: View {
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex == 0)
+                            .accessibilityLabel("Previous set")
 
                             Button(action: {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -933,9 +957,13 @@ private struct SimilarityGroupPage: View {
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex >= totalPages - 1)
+                            .accessibilityLabel("Next set")
                         }
                     }
                     .padding(.horizontal, 4)
@@ -1095,7 +1123,7 @@ private struct MobileSimilarityCompareView: View {
     @ViewBuilder
     private var comparisonAssets: some View {
         ForEach(Array(group.assets.prefix(2))) { asset in
-            MobileAssetThumbnail(asset: asset)
+            MobileAssetThumbnail(asset: asset, pixelSize: 1600)
                 .scaledToFit()
                 .scaleEffect(scale)
                 .offset(offset)
