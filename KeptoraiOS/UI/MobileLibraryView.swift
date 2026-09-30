@@ -14,11 +14,15 @@ struct MobileLibraryView: View {
                     hero
                     sourceSection
                     if store.source != .none { scanSection }
-                    if !store.exactGroups.isEmpty { resultSection }
+                    if !store.exactGroups.isEmpty {
+                        resultSection
+                    } else if store.scanState == .completed && !store.isAnalyzing {
+                        noDuplicatesSection
+                    }
                     privacyStrip
                 }
                 .padding(.horizontal, MobileKeptoraDesign.pagePadding)
-                .padding(.bottom, 96)
+                .padding(.bottom, 24)
             }
         }
         .navigationTitle("Library")
@@ -35,6 +39,8 @@ struct MobileLibraryView: View {
                     }
                     .frame(width: 36, height: 36)
                     .shadow(color: MobileKeptoraDesign.violet.opacity(0.30), radius: 8, y: 3)
+                    .padding(4)
+                    .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Settings")
                 .accessibilityIdentifier("ios.library.settings")
@@ -316,6 +322,26 @@ struct MobileLibraryView: View {
 
     @ViewBuilder
     private var scanSection: some View {
+        if store.isAnalyzing {
+            // Exact scan is done but similarity passes still run: do not offer a new scan yet.
+            HStack(spacing: 10) {
+                ProgressView().tint(MobileKeptoraDesign.cyan)
+                Text("Analyzing similar photos and videos…")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                Spacer()
+                Button("Cancel", role: .cancel) { store.cancelScan() }
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(MobileKeptoraDesign.danger)
+            }
+            .keptoraPanel(tint: MobileKeptoraDesign.cyan)
+            .accessibilityElement(children: .combine)
+        } else {
+            scanStateSection
+        }
+    }
+
+    @ViewBuilder
+    private var scanStateSection: some View {
         switch store.scanState {
         case .scanning(let processed, let total, let current):
             VStack(alignment: .leading, spacing: 14) {
@@ -454,6 +480,25 @@ struct MobileLibraryView: View {
         .keptoraPanel(tint: MobileKeptoraDesign.mint)
     }
 
+    /// Shown when a scan finished without finding any exact copies, so the screen is not just blank.
+    private var noDuplicatesSection: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.largeTitle)
+                .foregroundStyle(MobileKeptoraDesign.mint)
+                .accessibilityHidden(true)
+            Text("No exact copies found")
+                .font(.system(.title3, design: .rounded).weight(.bold))
+            Text("Nothing in \(store.source.title) is a byte-identical duplicate. Similar photos, if any, appear in Review.")
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .keptoraPanel(tint: MobileKeptoraDesign.mint)
+        .accessibilityElement(children: .combine)
+    }
+
     // MARK: – Privacy Strip
 
     private var privacyStrip: some View {
@@ -467,7 +512,7 @@ struct MobileLibraryView: View {
             .frame(width: 30, height: 30)
 
             Text("Private by design. No account, ads, analytics, or photo upload.")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(.caption, design: .rounded).weight(.medium))
                 .foregroundStyle(MobileKeptoraDesign.accent)
         }
         .padding(.horizontal, 14)

@@ -109,6 +109,8 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                 }
             }
             return accumulator.finish()
+        } catch let cancellation as CancellationError {
+            throw cancellation
         } catch {
             if photo.mediaType == .image {
                 let imgOptions = PHImageRequestOptions()

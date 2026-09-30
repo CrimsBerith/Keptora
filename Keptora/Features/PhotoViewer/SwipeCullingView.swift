@@ -115,20 +115,23 @@ public final class SwipeCullingState: ObservableObject {
 
 /// Tinder-style swipe culling studio for lightning-fast photo decluttering.
 public struct SwipeCullingStudioView: View {
-    @ObservedObject public var state: SwipeCullingState
+    // Owned here so progress survives parent re-renders (the sheet content closure is re-evaluated
+    // whenever the model publishes).
+    @StateObject private var state: SwipeCullingState
     public var onCommitPlan: (_ cleanupItems: [SwipeCardItem]) -> Void
     public var onClose: () -> Void
     
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragOffset: CGSize = .zero
     @State private var cardImages: [String: NSImage] = [:]
+    @State private var isAnimating = false
     
     public init(
-        state: SwipeCullingState,
+        items: [SwipeCardItem],
         onCommitPlan: @escaping (_ cleanupItems: [SwipeCardItem]) -> Void,
         onClose: @escaping () -> Void
     ) {
-        self.state = state
+        _state = StateObject(wrappedValue: SwipeCullingState(items: items))
         self.onCommitPlan = onCommitPlan
         self.onClose = onClose
     }
@@ -227,6 +230,8 @@ public struct SwipeCullingStudioView: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+            .keyboardShortcut(.cancelAction)
             
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -335,6 +340,7 @@ public struct SwipeCullingStudioView: View {
             isTop ?
             DragGesture()
                 .onChanged { value in
+                    guard !isAnimating else { return }
                     dragOffset = value.translation
                 }
                 .onEnded { value in
@@ -347,32 +353,11 @@ public struct SwipeCullingStudioView: View {
                     let isThrowUp = value.translation.height < -threshold || (value.translation.height < -40 && predictedY < -180)
 
                     if isThrowRight {
-                        // Throw Right -> Keep
-                        withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.7)) {
-                            dragOffset = CGSize(width: 850, height: value.translation.height)
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            state.performSwipe(.keep)
-                            dragOffset = .zero
-                        }
+                        commit(.keep, offset: CGSize(width: 850, height: value.translation.height))
                     } else if isThrowLeft {
-                        // Throw Left -> Clean / Delete
-                        withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.7)) {
-                            dragOffset = CGSize(width: -850, height: value.translation.height)
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            state.performSwipe(.cleanup)
-                            dragOffset = .zero
-                        }
+                        commit(.cleanup, offset: CGSize(width: -850, height: value.translation.height))
                     } else if isThrowUp {
-                        // Throw Up -> Skip
-                        withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.7)) {
-                            dragOffset = CGSize(width: value.translation.width, height: -850)
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            state.performSwipe(.skip)
-                            dragOffset = .zero
-                        }
+                        commit(.skip, offset: CGSize(width: value.translation.width, height: -850))
                     } else {
                         // Snap back to center
                         withAnimation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.7)) {
@@ -381,6 +366,11 @@ public struct SwipeCullingStudioView: View {
                     }
                 } : nil
         )
+        // Dragging is not available to VoiceOver / Switch Control users; expose the same actions.
+        .accessibilityLabel(Text(card.displayName))
+        .accessibilityAction(named: Text("Keep")) { if isTop { commit(.keep, offset: CGSize(width: 850, height: 0)) } }
+        .accessibilityAction(named: Text("Add to cleanup plan")) { if isTop { commit(.cleanup, offset: CGSize(width: -850, height: 0)) } }
+        .accessibilityAction(named: Text("Skip")) { if isTop { commit(.skip, offset: CGSize(width: 0, height: -850)) } }
         .task(id: card.id) {
             if cardImages[card.id] == nil {
                 let url = card.fileURL
@@ -402,6 +392,24 @@ public struct SwipeCullingStudioView: View {
         }
     }
     
+    /// Single entry point for every swipe (drag, buttons, keys). Ignores re-entrant calls while
+    /// the previous card is still flying off, so a key repeat cannot dismiss two cards.
+    private func commit(_ direction: SwipeCullingDirection, offset: CGSize) {
+        guard !isAnimating, state.currentCard != nil else { return }
+        isAnimating = true
+        withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.7)) {
+            dragOffset = offset
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: reduceMotion ? 0 : 220_000_000)
+            state.performSwipe(direction)
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { dragOffset = .zero }
+            isAnimating = false
+        }
+    }
+
     // MARK: - Badges
     
     private var keepBadgeOverlay: some View {
@@ -415,7 +423,7 @@ public struct SwipeCullingStudioView: View {
                 .foregroundColor(.green)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
+                .background(Color.black.opacity(0.62))
                 .cornerRadius(10)
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green, lineWidth: 2))
                 .padding(20)
@@ -437,7 +445,7 @@ public struct SwipeCullingStudioView: View {
                 .foregroundColor(.red)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
+                .background(Color.black.opacity(0.62))
                 .cornerRadius(10)
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red, lineWidth: 2))
                 .padding(20)
@@ -457,7 +465,7 @@ public struct SwipeCullingStudioView: View {
             .foregroundColor(.blue)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(.ultraThinMaterial)
+            .background(Color.black.opacity(0.62))
             .cornerRadius(8)
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
             .padding(.bottom, 24)
@@ -470,13 +478,7 @@ public struct SwipeCullingStudioView: View {
         HStack(spacing: 24) {
             // Swipe Left / Clean Button
             Button(action: {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                    dragOffset = CGSize(width: -800, height: 0)
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    state.performSwipe(.cleanup)
-                    dragOffset = .zero
-                }
+                commit(.cleanup, offset: CGSize(width: -800, height: 0))
             }) {
                 VStack(spacing: 4) {
                     Image(systemName: "trash.fill")
@@ -509,18 +511,12 @@ public struct SwipeCullingStudioView: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(state.history.isEmpty)
+            .disabled(state.history.isEmpty || isAnimating)
             .keyboardShortcut("z", modifiers: [.command])
             
             // Skip Button
             Button(action: {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                    dragOffset = CGSize(width: 0, height: -800)
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    state.performSwipe(.skip)
-                    dragOffset = .zero
-                }
+                commit(.skip, offset: CGSize(width: 0, height: -800))
             }) {
                 VStack(spacing: 4) {
                     Image(systemName: "arrow.up")
@@ -539,13 +535,7 @@ public struct SwipeCullingStudioView: View {
             
             // Swipe Right / Keep Button
             Button(action: {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                    dragOffset = CGSize(width: 800, height: 0)
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    state.performSwipe(.keep)
-                    dragOffset = .zero
-                }
+                commit(.keep, offset: CGSize(width: 800, height: 0))
             }) {
                 VStack(spacing: 4) {
                     Image(systemName: "checkmark")

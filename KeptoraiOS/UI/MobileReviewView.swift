@@ -429,9 +429,13 @@ private struct ExactGroupPage: View {
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex == 0)
+                            .accessibilityLabel("Previous set")
 
                             Button(action: {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -442,9 +446,13 @@ private struct ExactGroupPage: View {
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex >= totalPages - 1)
+                            .accessibilityLabel("Next set")
                         }
                     }
                     .padding(.horizontal, 4)
@@ -470,7 +478,7 @@ private struct ExactGroupPage: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 130)
+            .padding(.bottom, 40)
         }
     }
 }
@@ -498,7 +506,7 @@ private struct MobileAssetCard: View {
                         .overlay(alignment: .bottomLeading) {
                             if asset.mediaKind == .video {
                                 Label(asset.formattedDuration, systemImage: "play.fill")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.bold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 5).padding(.vertical, 3)
                                     .background(.black.opacity(0.68), in: Capsule())
@@ -524,7 +532,9 @@ private struct MobileAssetCard: View {
                             .foregroundStyle(.white)
                     }
                     .frame(width: 36, height: 36)
+                    .padding(4)
                     .contentShape(Rectangle())
+                    .padding(-4)
                     .shadow(radius: 3)
                 }
                 .buttonStyle(.plain)
@@ -541,7 +551,7 @@ private struct MobileAssetCard: View {
 
                     HStack {
                         Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                            .font(.system(.caption2, design: .rounded).weight(.medium))
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                         
@@ -621,7 +631,7 @@ private struct MobileAssetCard: View {
     private var assetStatusBadge: some View {
         if isKeeper {
             Text("Keeper")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -631,7 +641,7 @@ private struct MobileAssetCard: View {
                 .background(MobileKeptoraDesign.mint.opacity(0.14), in: Capsule())
         } else if asset.isProtectedFromGlobalSelection {
             Text("Protected")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -641,7 +651,7 @@ private struct MobileAssetCard: View {
                 .background(MobileKeptoraDesign.amber.opacity(0.14), in: Capsule())
         } else {
             Text("Copy")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -698,9 +708,13 @@ private struct SimilarVideoGroupPage: View {
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex == 0)
+                            .accessibilityLabel("Previous set")
 
                             Button(action: {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -711,9 +725,13 @@ private struct SimilarVideoGroupPage: View {
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex >= totalPages - 1)
+                            .accessibilityLabel("Next set")
                         }
                     }
                     .padding(.horizontal, 4)
@@ -751,7 +769,7 @@ private struct SimilarVideoGroupPage: View {
                 .overlay { RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(MobileKeptoraDesign.accent.opacity(0.14), lineWidth: 1) }
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 130)
+            .padding(.bottom, 40)
         }
     }
 }
@@ -779,7 +797,7 @@ private struct SimilarVideoAssetCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(alignment: .bottomLeading) {
                         Label(asset.formattedDuration, systemImage: "play.fill")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(.caption2, design: .rounded).weight(.bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5).padding(.vertical, 3)
                             .background(.black.opacity(0.68), in: Capsule())
@@ -792,14 +810,14 @@ private struct SimilarVideoAssetCard: View {
 
                 HStack {
                     Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.medium))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                     
                     Spacer()
                     
                     Text(statusLabel)
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                         .textCase(.uppercase)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -857,7 +875,9 @@ private struct SimilarVideoAssetCard: View {
                         .foregroundStyle(.white)
                 }
                 .frame(width: 36, height: 36)
+                .padding(4)
                 .contentShape(Rectangle())
+                .padding(-4)
                 .shadow(radius: 3)
             }
             .buttonStyle(.plain)
@@ -920,9 +940,13 @@ private struct SimilarityGroupPage: View {
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex == 0)
+                            .accessibilityLabel("Previous set")
 
                             Button(action: {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -933,9 +957,13 @@ private struct SimilarityGroupPage: View {
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
                                     .frame(width: 30, height: 30)
                                     .background(.ultraThinMaterial, in: Circle())
+                                    .padding(7)
+                                    .contentShape(Rectangle())
+                                    .padding(-7)
                             }
                             .buttonStyle(.plain)
                             .disabled(pageIndex >= totalPages - 1)
+                            .accessibilityLabel("Next set")
                         }
                     }
                     .padding(.horizontal, 4)
@@ -990,7 +1018,7 @@ private struct SimilarityGroupPage: View {
 
                             HStack {
                                 Label("Review only", systemImage: "eye")
-                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -1095,7 +1123,7 @@ private struct MobileSimilarityCompareView: View {
     @ViewBuilder
     private var comparisonAssets: some View {
         ForEach(Array(group.assets.prefix(2))) { asset in
-            MobileAssetThumbnail(asset: asset)
+            MobileAssetThumbnail(asset: asset, pixelSize: 1600)
                 .scaledToFit()
                 .scaleEffect(scale)
                 .offset(offset)

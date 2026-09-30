@@ -195,9 +195,9 @@ private final class MacPhotosLibraryStore: ObservableObject {
         let selection = selectedAssets
         guard !selection.isEmpty else { return }
         do {
-            let digestByAsset = Dictionary(uniqueKeysWithValues: exactGroups.flatMap { group in
+            let digestByAsset = Dictionary(exactGroups.flatMap { group in
                 group.assets.map { ($0.id, group.digest) }
-            })
+            }, uniquingKeysWith: { first, _ in first })
             for asset in selection {
                 let fresh = try await adapter.exactFingerprint(
                     for: asset,

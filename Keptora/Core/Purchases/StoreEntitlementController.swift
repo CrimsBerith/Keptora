@@ -102,9 +102,11 @@ final class StoreEntitlementController: ObservableObject {
     func refresh() async {
         isWorking = true
         defer { isWorking = false }
+        // Entitlements are cached locally by StoreKit, so resolve them first: a paying user
+        // must stay unlocked even when the product query fails offline.
+        await refreshEntitlement()
         do {
             lifetimeProduct = try await Product.products(for: [Self.lifetimeProductID]).first
-            await refreshEntitlement()
             if lifetimeProduct == nil {
                 statusMessage = "The StoreKit product was not returned. Verify the product ID, agreements, availability, and StoreKit configuration."
             }

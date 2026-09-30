@@ -22,7 +22,7 @@ public struct MobilePhotoInspectorSheet: View {
                 
                 // Interactive Zoomable Image
                 GeometryReader { proxy in
-                    MobileAssetThumbnail(asset: asset)
+                    MobileAssetThumbnail(asset: asset, pixelSize: 1600)
                         .aspectRatio(contentMode: .fit)
                         .scaleEffect(scale)
                         .offset(offset)

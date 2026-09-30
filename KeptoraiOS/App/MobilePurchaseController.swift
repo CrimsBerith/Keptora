@@ -28,9 +28,10 @@ final class MobilePurchaseController: ObservableObject {
     func refresh() async {
         isWorking = true
         defer { isWorking = false }
+        // Resolve cached entitlements first so an offline product query cannot lock out a paying user.
+        await refreshEntitlement()
         do {
             product = try await Product.products(for: [Self.productID]).first
-            await refreshEntitlement()
         } catch {
             statusMessage = error.localizedDescription
         }

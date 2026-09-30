@@ -301,10 +301,7 @@ final class MobileKeptoraStore: ObservableObject {
                 relativeTo: nil,
                 bookmarkDataIsStale: &stale
             )
-            guard !stale else {
-                UserDefaults.standard.removeObject(forKey: bookmarkKey)
-                return
-            }
+            // A stale bookmark still resolves; connectFolder re-creates and stores a fresh one.
             connectFolder(url)
         } catch {
             UserDefaults.standard.removeObject(forKey: bookmarkKey)
@@ -332,7 +329,10 @@ final class MobileKeptoraStore: ObservableObject {
                     imageProvider = photosAdapter
                     videoProvider = photosAdapter
                 case .folder:
-                    guard let folder = activeFolderAdapter else { return }
+                    guard let folder = activeFolderAdapter else {
+                        scanState = .failed(String(localized: "The selected folder is no longer available."))
+                        return
+                    }
                     adapter = folder
                     imageProvider = folder
                     videoProvider = folder
@@ -377,6 +377,8 @@ final class MobileKeptoraStore: ObservableObject {
                         }
                     )
                     currentSimilarityGroupIndex = 0
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     similarityGroups = []
                 }
@@ -400,6 +402,8 @@ final class MobileKeptoraStore: ObservableObject {
                             }
                         }
                     )
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     similarVideoGroups = []
                 }
@@ -415,10 +419,15 @@ final class MobileKeptoraStore: ObservableObject {
         }
     }
 
+    /// True while the similarity passes are still running after the exact scan completed.
+    var isAnalyzing: Bool { similarityProgress != nil || videoSimilarityProgress != nil }
+
     func cancelScan() {
         scanTask?.cancel()
         scanTask = nil
         scanState = .idle
+        similarityProgress = nil
+        videoSimilarityProgress = nil
         clearScanCheckpoint()
     }
 
@@ -512,9 +521,9 @@ final class MobileKeptoraStore: ObservableObject {
                     ), at: 0
                 )
             case .folder(let root):
-                let digestByAsset = Dictionary(uniqueKeysWithValues: exactGroups.flatMap { group in
+                let digestByAsset = Dictionary(exactGroups.flatMap { group in
                     group.assets.map { ($0.id, group.digest) }
-                })
+                }, uniquingKeysWith: { first, _ in first })
                 let candidates = selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
                     guard let digest = digestByAsset[asset.id] else { return nil }
                     return (asset, digest)

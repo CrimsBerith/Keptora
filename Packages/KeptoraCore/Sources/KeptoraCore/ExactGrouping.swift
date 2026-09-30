@@ -59,7 +59,7 @@ public actor UniversalExactScanner {
         var skippedNetwork = 0
         let resumableEntries: [String: UniversalScanCheckpoint.Entry]
         if let checkpoint, checkpoint.sourceID == adapter.source.id, checkpoint.allowNetwork == allowNetwork {
-            resumableEntries = Dictionary(uniqueKeysWithValues: checkpoint.entries.map { ($0.sourceAsset.id, $0) })
+            resumableEntries = Dictionary(checkpoint.entries.map { ($0.sourceAsset.id, $0) }, uniquingKeysWith: { _, latest in latest })
         } else {
             resumableEntries = [:]
         }
@@ -113,7 +113,7 @@ public actor UniversalExactScanner {
             assets,
             groups,
             skippedNetwork,
-            Dictionary(uniqueKeysWithValues: completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) })
+            Dictionary(completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) }, uniquingKeysWith: { _, latest in latest })
         )
     }
 
@@ -126,7 +126,9 @@ public actor UniversalExactScanner {
 
 enum StreamingSHA256 {
     static func file(at url: URL, progress: @escaping @Sendable (Int64) -> Void) async throws -> UniversalExactFingerprint {
-        try await Task.detached(priority: .utility) {
+        // Task.detached does not inherit cancellation, so forward it explicitly; otherwise
+        // cancelling a scan would keep hashing a multi-gigabyte file to the end.
+        let work = Task.detached(priority: .utility) { () -> UniversalExactFingerprint in
             let values = try url.resourceValues(forKeys: [.isRegularFileKey])
             guard values.isRegularFile == true else { throw UniversalScanError.inaccessibleAsset(url.lastPathComponent) }
             let handle = try FileHandle(forReadingFrom: url)
@@ -141,6 +143,11 @@ enum StreamingSHA256 {
             }
             let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
             return UniversalExactFingerprint(digest: digest, byteCount: bytes)
-        }.value
+        }
+        return try await withTaskCancellationHandler {
+            try await work.value
+        } onCancel: {
+            work.cancel()
+        }
     }
 }

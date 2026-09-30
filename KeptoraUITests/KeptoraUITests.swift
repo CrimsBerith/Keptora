@@ -154,15 +154,14 @@ final class KeptoraUITests: XCTestCase {
     func testReviewDrawersReconciliationAndSafetyPlanClose() throws {
         let app = launchSelectionFixture()
 
-        let more = element(withIdentifier: "mac.review.more", in: app)
-        XCTAssertTrue(more.waitForExistence(timeout: 12))
-        more.tap()
         let reviewQueue = element(withIdentifier: "mac.review.queue.open", in: app)
-        XCTAssertTrue(reviewQueue.waitForExistence(timeout: 3))
+        XCTAssertTrue(reviewQueue.waitForExistence(timeout: 12))
         reviewQueue.tap()
         XCTAssertTrue(app.buttons["mac.review.drawer.close"].waitForExistence(timeout: 4))
         app.buttons["mac.review.drawer.close"].tap()
 
+        let more = element(withIdentifier: "mac.review.more", in: app)
+        XCTAssertTrue(more.waitForExistence(timeout: 3))
         more.tap()
         let reconcile = element(withIdentifier: "mac.review.reconciliation.open", in: app)
         XCTAssertTrue(reconcile.waitForExistence(timeout: 3))

@@ -42,6 +42,12 @@ actor ManifestSigner {
               let publicKey = try? Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData) else {
             return false
         }
+        // Pin to this device's signing key. Otherwise anyone able to edit a manifest could
+        // re-sign it with their own key and have the envelope vouch for itself.
+        if FileManager.default.fileExists(atPath: keyURL.path) {
+            guard let local = try? signingKey(),
+                  local.publicKey.rawRepresentation == publicKeyData else { return false }
+        }
         return publicKey.isValidSignature(signature, for: payload)
     }
 
@@ -65,8 +71,12 @@ actor ManifestSigner {
 
         let key = Curve25519.Signing.PrivateKey()
         try FileManager.default.createDirectory(at: keyURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try key.rawRepresentation.write(to: keyURL, options: [.atomic])
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: keyURL.path)
+        // Create with 0600 from the start instead of chmod-ing after an atomic write.
+        guard FileManager.default.createFile(
+            atPath: keyURL.path,
+            contents: key.rawRepresentation,
+            attributes: [.posixPermissions: 0o600]
+        ) else { throw SignerError.invalidStoredKey }
         cachedKey = key
         return key
     }

@@ -196,12 +196,19 @@ final class AppModel: ObservableObject {
         )
     }
 
+    private var isPrepared = false
+
     func prepare() async {
+        // The SwiftUI window and the AppKit fallback window both call this; run it once.
+        guard !isPrepared else { return }
+        isPrepared = true
         let isPortfolioUITesting = ProcessInfo.processInfo.arguments.contains("-portfolioUITesting")
         isShowingOnboarding = !isPortfolioUITesting && !UserDefaults.standard.bool(forKey: onboardingCompletedKey)
         do {
             try await database.initialize()
-            try restoreBookmarkIfPresent()
+            // An unresolvable bookmark (folder deleted or moved) leaves no source selected;
+            // it must not prevent history and decisions from loading.
+            try? restoreBookmarkIfPresent()
             refreshSourceAvailability()
             if let sourceURL, sourceAvailability.isAvailable {
                 recoveryIssues = try await bookmarkStore.withAccess(to: sourceURL) {
@@ -214,6 +221,7 @@ final class AppModel: ObservableObject {
                 loadDemoLibrary()
             }
         } catch {
+            isPrepared = false
             present(error)
         }
     }
@@ -416,18 +424,27 @@ final class AppModel: ObservableObject {
     func setDecision(_ decision: ReviewDecision, for assetID: AssetID, access: StoreEntitlementController) {
         guard access.authorizeReview(assetID) else { return }
         guard let group = duplicateGroups.first(where: { group in group.assets.contains(where: { $0.id == assetID }) }) else { return }
-        access.recordReview(assetID)
+        // The canonical keeper can never be queued for quarantine.
+        if decision == .quarantinePlan, assetID == group.canonicalAssetID { return }
         decisions[assetID] = decision
         activeBatchTask = Task { [weak self] in
             guard let self else { return }
             do {
                 try await database.setDecision(groupID: group.id, assetID: assetID, decision: decision)
+                // Only count against the free allowance once the decision is durably stored.
+                access.recordReview(assetID)
                 try await reloadDatabaseState()
                 checkpointReviewSession()
             } catch {
+                await rollbackOptimisticDecisions()
                 present(error)
             }
         }
+    }
+
+    /// Replaces optimistic in-memory decisions with what the database actually holds.
+    private func rollbackOptimisticDecisions() async {
+        do { try await reloadDatabaseState() } catch { present(error) }
     }
 
     func applyBatchAction(_ action: ExactGroupBatchAction, to groupID: String, access: StoreEntitlementController) {
@@ -436,7 +453,6 @@ final class AppModel: ObservableObject {
         guard !extras.isEmpty else { return }
         let assetIDs = extras.map(\.id)
         guard access.authorizeReviews(assetIDs) else { return }
-        access.recordReviews(assetIDs)
         let decision: ReviewDecision = action == .planSafeExtras ? .quarantinePlan : .skip
         for id in assetIDs {
             decisions[id] = decision
@@ -451,9 +467,11 @@ final class AppModel: ObservableObject {
                     extraAssetIDs: assetIDs,
                     action: action
                 )
+                access.recordReviews(assetIDs)
                 try await reloadDatabaseState()
                 checkpointReviewSession()
             } catch {
+                await rollbackOptimisticDecisions()
                 present(error)
             }
         }
@@ -472,7 +490,6 @@ final class AppModel: ObservableObject {
             group.assets.filter { $0.id != group.canonicalAssetID }.map(\.id)
         }
         guard !allAssetIDs.isEmpty, access.authorizeReviews(allAssetIDs) else { return }
-        access.recordReviews(allAssetIDs)
         let decision: ReviewDecision = action == .planSafeExtras ? .quarantinePlan : .skip
         for id in allAssetIDs {
             decisions[id] = decision
@@ -491,9 +508,11 @@ final class AppModel: ObservableObject {
                         action: action
                     )
                 }
+                access.recordReviews(allAssetIDs)
                 try await reloadDatabaseState()
                 checkpointReviewSession()
             } catch {
+                await rollbackOptimisticDecisions()
                 present(error)
             }
         }
@@ -516,7 +535,6 @@ final class AppModel: ObservableObject {
         }
 
         guard !safeAssetIDs.isEmpty, access.authorizeReviews(safeAssetIDs) else { return }
-        access.recordReviews(safeAssetIDs)
 
         for id in safeAssetIDs {
             decisions[id] = .quarantinePlan
@@ -528,11 +546,13 @@ final class AppModel: ObservableObject {
                 for id in safeAssetIDs {
                     if let group = self.duplicateGroups.first(where: { g in g.assets.contains(where: { $0.id == id }) }) {
                         try await self.database.setDecision(groupID: group.id, assetID: id, decision: .quarantinePlan)
+                        access.recordReview(id)
                     }
                 }
                 try await self.reloadDatabaseState()
                 self.checkpointReviewSession()
             } catch {
+                await self.rollbackOptimisticDecisions()
                 self.present(error)
             }
         }
@@ -622,7 +642,7 @@ final class AppModel: ObservableObject {
             defer { isPreparingDemoLibrary = false }
             do {
                 let url = try DemoLibraryFactory.prepare(in: applicationSupportDirectory)
-                UserDefaults.standard.removeObject(forKey: bookmarkDefaultsKey)
+                // Keep the user's real bookmark unless the demo bookmark was created successfully.
                 if let bookmark = try? bookmarkStore.makeBookmark(for: url) {
                     UserDefaults.standard.set(bookmark, forKey: bookmarkDefaultsKey)
                 }
@@ -1128,8 +1148,10 @@ final class AppModel: ObservableObject {
             expectedVolume = try? JSONDecoder().decode(VolumeIdentity.self, from: data)
         }
         if resolved.stale {
-            let refreshed = try bookmarkStore.makeBookmark(for: resolved.url)
-            UserDefaults.standard.set(refreshed, forKey: bookmarkDefaultsKey)
+            // Best effort: a failed refresh must not stop the database state from loading.
+            if let refreshed = try? bookmarkStore.makeBookmark(for: resolved.url) {
+                UserDefaults.standard.set(refreshed, forKey: bookmarkDefaultsKey)
+            }
         }
     }
 

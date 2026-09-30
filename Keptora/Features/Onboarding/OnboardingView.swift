@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page = 0
 
     private let pages: [OnboardingPage] = [
@@ -44,7 +45,7 @@ struct OnboardingView: View {
                 .shadow(color: item.accent.opacity(0.28), radius: 22, y: 10)
                 .id("art-\(page)")
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
-                .animation(KeptoraDesign.animMedium, value: page)
+                .keptoraAnimation(KeptoraDesign.animMedium, value: page)
                 .accessibilityHidden(true)
 
             // Kopya
@@ -70,7 +71,7 @@ struct OnboardingView: View {
                     .id("detail-\(page)")
             }
             .padding(.top, 26)
-            .animation(KeptoraDesign.animMedium, value: page)
+            .keptoraAnimation(KeptoraDesign.animMedium, value: page)
 
             // Dot indicator
             HStack(spacing: 8) {
@@ -78,7 +79,7 @@ struct OnboardingView: View {
                     Capsule()
                         .fill(index == page ? item.accent : Color.secondary.opacity(0.22))
                         .frame(width: index == page ? 28 : 8, height: 8)
-                        .animation(KeptoraDesign.animSpring, value: page)
+                        .keptoraAnimation(KeptoraDesign.animSpring, value: page)
                 }
             }
             .padding(.top, 26)
@@ -95,7 +96,7 @@ struct OnboardingView: View {
                 Spacer()
                 if page > 0 {
                     Button("Back") {
-                        withAnimation(KeptoraDesign.animMedium) { page -= 1 }
+                        withAnimation(reduceMotion ? nil : KeptoraDesign.animMedium) { page -= 1 }
                     }
                     .accessibilityIdentifier("mac.onboarding.back")
                 }
@@ -104,13 +105,13 @@ struct OnboardingView: View {
                         model.completeOnboarding()
                         model.chooseFolder()
                     } else {
-                        withAnimation(KeptoraDesign.animMedium) { page += 1 }
+                        withAnimation(reduceMotion ? nil : KeptoraDesign.animMedium) { page += 1 }
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(item.accent)
                 .keyboardShortcut(.defaultAction)
-                .animation(KeptoraDesign.animFast, value: page)
+                .keptoraAnimation(KeptoraDesign.animFast, value: page)
                 .accessibilityIdentifier("mac.onboarding.continue")
             }
             .padding(20)

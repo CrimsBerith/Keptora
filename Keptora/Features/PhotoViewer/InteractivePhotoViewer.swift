@@ -30,6 +30,8 @@ public final class PhotoViewerState: ObservableObject {
     @Published public var compareTargetIndex: Int? = nil
     @Published public var isSlideshowPlaying: Bool = false
     @Published public var rotationAngle: Double = 0.0
+    /// Photos already sent to the cleanup plan from this viewer session.
+    @Published public private(set) var cleanedIDs: Set<String> = []
     
     public init(items: [ViewerPhotoItem], initialIndex: Int = 0) {
         self.items = items
@@ -56,6 +58,15 @@ public final class PhotoViewerState: ObservableObject {
         guard !items.isEmpty else { return }
         selectedIndex = (selectedIndex - 1 + items.count) % items.count
         resetTransform()
+    }
+    
+    /// Records a photo as cleaned and moves to the next one without wrapping back to the start.
+    public func markCleaned(_ item: ViewerPhotoItem) {
+        cleanedIDs.insert(item.id)
+        if selectedIndex < items.count - 1 {
+            selectedIndex += 1
+            resetTransform()
+        }
     }
     
     public func resetTransform() {
@@ -92,6 +103,7 @@ public struct InteractivePhotoViewerView: View {
     
     @State private var baseZoomScale: CGFloat = 1.0
     @State private var basePanOffset: CGSize = .zero
+    @State private var pinchStartScale: CGFloat?
     
     public init(
         state: PhotoViewerState,
@@ -161,14 +173,13 @@ public struct InteractivePhotoViewerView: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: state.showInspector)
         .animation(.easeInOut(duration: 0.2), value: state.isSideBySideComparing)
-        .onAppear { loadCurrentAsset() }
+        .task(id: state.selectedIndex) { await loadCurrentAsset() }
+        .task(id: state.compareTargetIndex) { await loadCompareAsset() }
         .onChange(of: state.selectedIndex) { _ in
             baseZoomScale = 1.0
             basePanOffset = .zero
             state.resetTransform()
-            loadCurrentAsset()
         }
-        .onChange(of: state.compareTargetIndex) { _ in loadCompareAsset() }
         .sheet(isPresented: $isShowingSwipeStudio) {
             let cards = state.items.map { item in
                 SwipeCardItem(
@@ -179,7 +190,7 @@ public struct InteractivePhotoViewerView: View {
                 )
             }
             SwipeCullingStudioView(
-                state: SwipeCullingState(items: cards),
+                items: cards,
                 onCommitPlan: { cleanupItems in
                     for c in cleanupItems {
                         if let match = state.items.first(where: { $0.id == c.id }) {
@@ -209,9 +220,14 @@ public struct InteractivePhotoViewerView: View {
                         .gesture(
                             MagnificationGesture()
                                 .onChanged { value in
-                                    state.zoomScale = max(0.8, min(baseZoomScale * value, 8.0))
+                                    // Anchor on the scale when the pinch began, so toolbar zoom
+                                    // buttons and double-click zoom can never leave a stale base.
+                                    let start = pinchStartScale ?? state.zoomScale
+                                    pinchStartScale = start
+                                    state.zoomScale = max(0.8, min(start * value, 8.0))
                                 }
                                 .onEnded { _ in
+                                    pinchStartScale = nil
                                     baseZoomScale = state.zoomScale
                                 }
                         )
@@ -282,6 +298,7 @@ public struct InteractivePhotoViewerView: View {
             }
             .buttonStyle(.plain)
             .help("Close viewer (Esc)")
+            .accessibilityLabel("Close viewer (Esc)")
             
             if let item = state.currentItem {
                 HStack(spacing: 10) {
@@ -307,6 +324,7 @@ public struct InteractivePhotoViewerView: View {
                             }
                             .buttonStyle(.plain)
                             .help("Previous photo (←)")
+                            .accessibilityLabel("Previous photo (←)")
                             
                             Button(action: { state.next() }) {
                                 Image(systemName: "chevron.right")
@@ -317,6 +335,7 @@ public struct InteractivePhotoViewerView: View {
                             }
                             .buttonStyle(.plain)
                             .help("Next photo (→)")
+                            .accessibilityLabel("Next photo (→)")
                         }
                     }
                 }
@@ -369,9 +388,11 @@ public struct InteractivePhotoViewerView: View {
             if state.items.count > 1 {
                 Button(action: {
                     state.isSideBySideComparing.toggle()
-                    if state.isSideBySideComparing && state.compareTargetIndex == nil {
-                        state.compareTargetIndex = (state.selectedIndex + 1) % state.items.count
-                        loadCompareAsset()
+                    if state.isSideBySideComparing {
+                        if state.compareTargetIndex == nil {
+                            state.compareTargetIndex = (state.selectedIndex + 1) % state.items.count
+                        }
+                        Task { await loadCompareAsset() }
                     }
                 }) {
                     Image(systemName: state.isSideBySideComparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
@@ -418,16 +439,18 @@ public struct InteractivePhotoViewerView: View {
             .background(.ultraThinMaterial)
             .cornerRadius(8)
             .help("Launch fast Tinder-style swipe culling for these photos")
+            .accessibilityLabel("Launch fast Tinder-style swipe culling for these photos")
 
             // Clean Current Photo Button
             if let current = state.currentItem, onCleanOrDelete != nil {
+                let alreadyCleaned = state.cleanedIDs.contains(current.id)
                 Button(action: {
                     onCleanOrDelete?(current)
-                    withAnimation { state.next() }
+                    withAnimation(reduceMotion ? nil : .default) { state.markCleaned(current) }
                 }) {
                     HStack(spacing: 4) {
-                        Image(systemName: "trash.fill")
-                        Text("Clean (⌫)")
+                        Image(systemName: alreadyCleaned ? "checkmark" : "trash.fill")
+                        Text(alreadyCleaned ? "In plan" : "Clean (⌫)")
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -438,7 +461,9 @@ public struct InteractivePhotoViewerView: View {
                 .background(Color.red.opacity(0.85))
                 .cornerRadius(8)
                 .keyboardShortcut(.delete, modifiers: [])
+                .disabled(alreadyCleaned)
                 .help("Add current photo to cleanup plan and view next")
+                .accessibilityLabel("Add current photo to cleanup plan and view next")
             }
         }
         .padding(.horizontal, 16)
@@ -452,9 +477,12 @@ public struct InteractivePhotoViewerView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 8) {
-                    ForEach(state.items.indices, id: \.self) { idx in
-                        let item = state.items[idx]
-                        FilmstripThumbnail(url: item.fileURL, isSelected: idx == state.selectedIndex) {
+                    ForEach(Array(state.items.enumerated()), id: \.element.id) { idx, item in
+                        FilmstripThumbnail(
+                            url: item.fileURL,
+                            isSelected: idx == state.selectedIndex,
+                            isCleaned: state.cleanedIDs.contains(item.id)
+                        ) {
                             state.selectedIndex = idx
                         }
                         .id(idx)
@@ -476,39 +504,33 @@ public struct InteractivePhotoViewerView: View {
     
     // MARK: - Actions
     
-    private func loadCurrentAsset() {
+    private func loadCurrentAsset() async {
         guard let item = state.currentItem else { return }
-        let targetID = item.id
         let url = item.fileURL
+        // Drop the previous photo immediately so it is never shown under the new title.
+        loadedImage = nil
+        metadata = nil
         
-        Task {
-            let (img, meta) = await Task.detached(priority: .userInitiated) { () -> (NSImage?, DetailedPhotoMetadata?) in
-                let loadedImg = NSImage(contentsOf: url)
-                let extractedMeta = PhotoMetadataExtractor.extract(from: url)
-                return (loadedImg, extractedMeta)
-            }.value
-            
-            if self.state.currentItem?.id == targetID {
-                self.loadedImage = img
-                self.metadata = meta
-            }
-        }
+        let (img, meta) = await Task.detached(priority: .userInitiated) { () -> (NSImage?, DetailedPhotoMetadata?) in
+            (ViewerImageLoader.image(at: url), PhotoMetadataExtractor.extract(from: url))
+        }.value
+        
+        // .task(id:) cancels this when the selection changes, so a slow load cannot overwrite a newer one.
+        guard !Task.isCancelled else { return }
+        loadedImage = img
+        metadata = meta
     }
     
-    private func loadCompareAsset() {
-        guard let item = state.compareItem else { return }
-        let targetID = item.id
-        let url = item.fileURL
-        
-        Task {
-            let img = await Task.detached(priority: .userInitiated) { () -> NSImage? in
-                return NSImage(contentsOf: url)
-            }.value
-            
-            if self.state.compareItem?.id == targetID {
-                self.compareImage = img
-            }
+    private func loadCompareAsset() async {
+        guard let item = state.compareItem else {
+            compareImage = nil
+            return
         }
+        let url = item.fileURL
+        compareImage = nil
+        let img = await Task.detached(priority: .userInitiated) { ViewerImageLoader.image(at: url) }.value
+        guard !Task.isCancelled else { return }
+        compareImage = img
     }
     
     private func revealCurrentInFinder() {
@@ -517,10 +539,31 @@ public struct InteractivePhotoViewerView: View {
     }
 }
 
+/// Decodes viewer images with a bounded pixel size and EXIF orientation applied,
+/// instead of inflating the full-resolution bitmap (RAW/HEIC can be hundreds of MB).
+enum ViewerImageLoader {
+    static let maximumPixelSize = 4096
+
+    static func image(at url: URL) -> NSImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize
+        ]
+        if let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+           let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+            return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        }
+        return NSImage(contentsOf: url)
+    }
+}
+
 /// Thumbnail item in the filmstrip.
 private struct FilmstripThumbnail: View {
     let url: URL
     let isSelected: Bool
+    var isCleaned: Bool = false
     let onSelect: () -> Void
     
     @State private var thumb: NSImage?
@@ -537,6 +580,12 @@ private struct FilmstripThumbnail: View {
                 }
             }
             .frame(width: 52, height: 52)
+            .overlay {
+                if isCleaned {
+                    Color.black.opacity(0.45)
+                    Image(systemName: "trash.fill").foregroundStyle(.white)
+                }
+            }
             .cornerRadius(6)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
@@ -568,13 +617,71 @@ public struct PhotoInspectorDrawer: View {
     public let metadata: DetailedPhotoMetadata?
     public let item: ViewerPhotoItem?
     public let onClose: () -> Void
-    
+    @State private var pendingAction: MetadataAction?
+    @State private var isWorking = false
+    @State private var resultMessage: String?
+
     public init(metadata: DetailedPhotoMetadata?, item: ViewerPhotoItem?, onClose: @escaping () -> Void) {
         self.metadata = metadata
         self.item = item
         self.onClose = onClose
     }
-    
+
+    private enum MetadataAction: Identifiable {
+        case fixDate(Date)
+        case stripLocationCopy
+
+        var id: String {
+            switch self {
+            case .fixDate: return "fixDate"
+            case .stripLocationCopy: return "stripLocationCopy"
+            }
+        }
+    }
+
+    /// Runs the confirmed metadata action off the main thread and reports the outcome.
+    /// GPS removal writes a new copy next to the original; the original is never rewritten.
+    @MainActor
+    private func perform(_ action: MetadataAction) {
+        guard let url = item?.fileURL, !isWorking else { return }
+        isWorking = true
+        Task {
+            let message: String
+            do {
+                message = try await Task.detached(priority: .userInitiated) { () -> String in
+                    switch action {
+                    case .fixDate(let date):
+                        try FileManager.default.setAttributes([.creationDate: date], ofItemAtPath: url.path)
+                        return String(localized: "Creation date updated from the filename.")
+                    case .stripLocationCopy:
+                        let copyURL = Self.uniqueCopyURL(for: url)
+                        try MetadataDoctorEngine.stripLocationData(from: url, destinationURL: copyURL)
+                        return String(localized: "Saved a copy without location data: \(copyURL.lastPathComponent)")
+                    }
+                }.value
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            } catch {
+                message = String(localized: "Could not complete the change: \(error.localizedDescription)")
+            }
+            resultMessage = message
+            isWorking = false
+        }
+    }
+
+    nonisolated private static func uniqueCopyURL(for url: URL) -> URL {
+        let directory = url.deletingLastPathComponent()
+        let base = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        var index = 1
+        while true {
+            let suffix = index == 1 ? " (no location)" : " (no location \(index))"
+            let name = ext.isEmpty ? base + suffix : base + suffix + "." + ext
+            let candidate = directory.appendingPathComponent(name)
+            if !FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+            index += 1
+        }
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -587,6 +694,7 @@ public struct PhotoInspectorDrawer: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close photo details")
             }
             .padding(.bottom, 4)
             
@@ -630,8 +738,7 @@ public struct PhotoInspectorDrawer: View {
                         if let item, MetadataDoctorEngine.inferDateFromFilename(item.fileURL.lastPathComponent) != nil {
                             Button(action: {
                                 if let inferred = MetadataDoctorEngine.inferDateFromFilename(item.fileURL.lastPathComponent) {
-                                    try? FileManager.default.setAttributes([.creationDate: inferred], ofItemAtPath: item.fileURL.path)
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                    pendingAction = .fixDate(inferred)
                                 }
                             }) {
                                 HStack(spacing: 6) {
@@ -659,14 +766,11 @@ public struct PhotoInspectorDrawer: View {
                             }
                             
                             Button(action: {
-                                if let url = item?.fileURL {
-                                    try? MetadataDoctorEngine.stripLocationData(from: url, destinationURL: url)
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                }
+                                pendingAction = .stripLocationCopy
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "location.slash.fill")
-                                    Text("Strip GPS Location (Privacy)")
+                                    Text("Save Copy Without GPS Location")
                                 }
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.white)
@@ -677,7 +781,7 @@ public struct PhotoInspectorDrawer: View {
                             }
                             .buttonStyle(.plain)
                             .padding(.top, 4)
-                            .help("Remove location coordinates to protect privacy when sharing")
+                            .help("Save a new copy without location coordinates. The original file is not changed.")
                         }
                     } else {
                         Text("Reading EXIF parameters...")
@@ -692,6 +796,49 @@ public struct PhotoInspectorDrawer: View {
         .background(.ultraThinMaterial)
         .cornerRadius(16)
         .padding(16)
+        .disabled(isWorking)
+        .confirmationDialog(
+            pendingAction.map(Self.confirmationTitle) ?? "",
+            isPresented: Binding(get: { pendingAction != nil }, set: { if !$0 { pendingAction = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingAction
+        ) { action in
+            Button(Self.confirmButtonTitle(for: action)) { perform(action) }
+            Button("Cancel", role: .cancel) {}
+        } message: { action in
+            Text(Self.confirmationMessage(for: action))
+        }
+        .alert(
+            "Photo Details",
+            isPresented: Binding(get: { resultMessage != nil }, set: { if !$0 { resultMessage = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(resultMessage ?? "")
+        }
+    }
+
+    private static func confirmationTitle(for action: MetadataAction) -> String {
+        switch action {
+        case .fixDate: return String(localized: "Change the file's creation date?")
+        case .stripLocationCopy: return String(localized: "Save a copy without location?")
+        }
+    }
+
+    private static func confirmButtonTitle(for action: MetadataAction) -> String {
+        switch action {
+        case .fixDate: return String(localized: "Change Date")
+        case .stripLocationCopy: return String(localized: "Save Copy")
+        }
+    }
+
+    private static func confirmationMessage(for action: MetadataAction) -> String {
+        switch action {
+        case .fixDate(let date):
+            return String(localized: "This modifies the original file on disk and sets its creation date to \(date.formatted(date: .abbreviated, time: .shortened)).")
+        case .stripLocationCopy:
+            return String(localized: "A new file without GPS coordinates will be saved next to the original. The original is not changed.")
+        }
     }
     
     private func sectionHeader(title: String, icon: String) -> some View {

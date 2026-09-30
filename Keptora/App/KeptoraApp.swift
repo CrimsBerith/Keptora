@@ -109,13 +109,13 @@ struct KeptoraApp: App {
                     .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
                 Divider()
                 Button("Keep Focused Photo") { appDelegate.model.applyFocusedDecision(.keep, access: appDelegate.store) }
-                    .keyboardShortcut("1", modifiers: [.command])
+                    .keyboardShortcut("1", modifiers: [.command, .option])
                     .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
                 Button("Add Focused Photo to Safety Plan") { appDelegate.model.applyFocusedDecision(.quarantinePlan, access: appDelegate.store) }
-                    .keyboardShortcut("2", modifiers: [.command])
+                    .keyboardShortcut("2", modifiers: [.command, .option])
                     .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
                 Button("Skip Focused Photo") { appDelegate.model.applyFocusedDecision(.skip, access: appDelegate.store) }
-                    .keyboardShortcut("3", modifiers: [.command])
+                    .keyboardShortcut("3", modifiers: [.command, .option])
                     .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
                 Divider()
                 Button("Select All Safe Copies") { appDelegate.model.applyBatchActionToAllExactGroups(.planSafeExtras, access: appDelegate.store) }
@@ -129,7 +129,7 @@ struct KeptoraApp: App {
                     .keyboardShortcut("r", modifiers: [.command, .option])
                     .disabled(!appDelegate.model.hasResumableReviewSession)
             }
-            CommandMenu("View") {
+            CommandMenu("Go") {
                 Button("Library") { appDelegate.model.selectedRoute = .home }
                     .keyboardShortcut("1", modifiers: [.command])
                 Button("Review Studio") { appDelegate.model.selectedRoute = .review }
@@ -142,7 +142,7 @@ struct KeptoraApp: App {
                     .keyboardShortcut("5", modifiers: [.command])
                 Divider()
                 Button("Review Safety Plan…") { appDelegate.model.isShowingSafetyPlan = true }
-                    .keyboardShortcut("s", modifiers: [.command, .shift])
+                    .keyboardShortcut("s", modifiers: [.command, .option])
                 Button("Restore From Quarantine…") { appDelegate.model.isShowingRestorePreview = true }
                     .keyboardShortcut("z", modifiers: [.command, .option])
             }

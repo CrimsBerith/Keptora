@@ -29,14 +29,14 @@ public struct MobileSplitComparisonView: View {
                     Color.black.ignoresSafeArea()
                     
                     // Background: Image B (Right side)
-                    MobileAssetThumbnail(asset: assetB)
+                    MobileAssetThumbnail(asset: assetB, pixelSize: 1600)
                         .scaledToFit()
                         .scaleEffect(scale)
                         .offset(offset)
                         .frame(width: width, height: height)
                     
                     // Foreground: Image A (Left side clipped by slider)
-                    MobileAssetThumbnail(asset: assetA)
+                    MobileAssetThumbnail(asset: assetA, pixelSize: 1600)
                         .scaledToFit()
                         .scaleEffect(scale)
                         .offset(offset)
@@ -48,31 +48,42 @@ public struct MobileSplitComparisonView: View {
                             }
                         )
                     
-                    // Interactive Divider Bar
-                    Rectangle()
-                        .fill(Color.white.opacity(0.85))
-                        .frame(width: 2.5)
-                        .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 0)
-                        .position(x: width * splitRatio, y: height / 2)
-                        .overlay(
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 32, height: 32)
-                                .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
-                                .overlay(
-                                    Image(systemName: "arrow.left.and.right")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(Color.black)
-                                )
-                                .position(x: width * splitRatio, y: height / 2)
-                        )
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let newRatio = value.location.x / width
-                                    splitRatio = min(max(newRatio, 0.05), 0.95)
-                                }
-                        )
+                    // Interactive Divider: a 44 pt wide hit area around the visible 2.5 pt bar
+                    ZStack {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.85))
+                            .frame(width: 2.5)
+                            .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 0)
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 32, height: 32)
+                            .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
+                            .overlay(
+                                Image(systemName: "arrow.left.and.right")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color.black)
+                            )
+                    }
+                    .frame(width: 44, height: height)
+                    .contentShape(Rectangle())
+                    .position(x: width * splitRatio, y: height / 2)
+                    // High priority so dragging the divider never also pans the images.
+                    .highPriorityGesture(
+                        DragGesture(coordinateSpace: .named("splitCanvas"))
+                            .onChanged { value in
+                                splitRatio = min(max(value.location.x / max(width, 1), 0.05), 0.95)
+                            }
+                    )
+                    .accessibilityElement()
+                    .accessibilityLabel(Text("Comparison divider"))
+                    .accessibilityValue(Text("\(Int(splitRatio * 100)) percent"))
+                    .accessibilityAdjustableAction { direction in
+                        switch direction {
+                        case .increment: splitRatio = min(splitRatio + 0.05, 0.95)
+                        case .decrement: splitRatio = max(splitRatio - 0.05, 0.05)
+                        @unknown default: break
+                        }
+                    }
                     
                     // Top floating labels
                     VStack {
@@ -99,18 +110,30 @@ public struct MobileSplitComparisonView: View {
                         Spacer()
                     }
                 }
+                .coordinateSpace(name: "splitCanvas")
                 .clipped()
                 .simultaneousGesture(
                     MagnificationGesture()
-                        .onChanged { val in scale = min(max(lastScale * val, 1.0), 6.0) }
-                        .onEnded { _ in lastScale = scale }
+                        .onChanged { val in
+                            scale = min(max(lastScale * val, 1.0), 6.0)
+                            offset = clamped(offset, in: proxy.size)
+                        }
+                        .onEnded { _ in
+                            lastScale = scale
+                            lastOffset = offset
+                        }
                 )
                 .simultaneousGesture(
                     DragGesture()
                         .onChanged { val in
-                            offset = CGSize(
-                                width: lastOffset.width + val.translation.width,
-                                height: lastOffset.height + val.translation.height
+                            // Panning only makes sense once zoomed in.
+                            guard scale > 1.0 else { return }
+                            offset = clamped(
+                                CGSize(
+                                    width: lastOffset.width + val.translation.width,
+                                    height: lastOffset.height + val.translation.height
+                                ),
+                                in: proxy.size
                             )
                         }
                         .onEnded { _ in lastOffset = offset }
@@ -137,5 +160,15 @@ public struct MobileSplitComparisonView: View {
                 }
             }
         }
+    }
+
+    /// Keeps the zoomed image from being dragged out of view.
+    private func clamped(_ value: CGSize, in size: CGSize) -> CGSize {
+        let maxX = size.width * (scale - 1) / 2
+        let maxY = size.height * (scale - 1) / 2
+        return CGSize(
+            width: min(max(value.width, -maxX), maxX),
+            height: min(max(value.height, -maxY), maxY)
+        )
     }
 }
