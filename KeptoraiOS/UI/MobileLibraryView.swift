@@ -165,20 +165,37 @@ struct MobileLibraryView: View {
             .accessibilityIdentifier("library.source.photos")
 
             if store.authorization == .limited, store.source == .photos {
-                HStack(spacing: 12) {
-                    Image(systemName: "photo.badge.exclamationmark")
-                        .font(.headline)
-                        .foregroundStyle(MobileKeptoraDesign.amber)
-                    
-                    Text("Limited Photos access")
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    
-                    Spacer()
-                    
-                    Button("Manage Access") { store.manageLimitedPhotosAccess() }
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                        .foregroundStyle(MobileKeptoraDesign.accent)
-                        .accessibilityIdentifier("ios.library.managePhotosAccess")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "photo.badge.exclamationmark")
+                            .font(.headline)
+                            .foregroundStyle(MobileKeptoraDesign.amber)
+                        
+                        Text("Limited Photos access")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        
+                        Spacer()
+                        
+                        Button("Manage Access") { store.manageLimitedPhotosAccess() }
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(MobileKeptoraDesign.accent)
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("ios.library.managePhotosAccess")
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "photo.badge.exclamationmark")
+                                .font(.headline)
+                                .foregroundStyle(MobileKeptoraDesign.amber)
+                            Text("Limited Photos access")
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        }
+                        Button("Manage Access") { store.manageLimitedPhotosAccess() }
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(MobileKeptoraDesign.accent)
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("ios.library.managePhotosAccess")
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -193,28 +210,51 @@ struct MobileLibraryView: View {
             }
 
             if store.authorization == .denied || store.authorization == .restricted {
-                HStack(spacing: 12) {
-                    Image(systemName: "hand.raised.fill")
-                        .font(.headline)
-                        .foregroundStyle(MobileKeptoraDesign.danger)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(store.authorization == .denied ? LocalizedStringKey("Photos access disabled") : LocalizedStringKey("Photos access restricted"))
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(Color.primary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "hand.raised.fill")
+                            .font(.headline)
+                            .foregroundStyle(MobileKeptoraDesign.danger)
                         
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(store.authorization == .denied ? LocalizedStringKey("Photos access disabled") : LocalizedStringKey("Photos access restricted"))
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(Color.primary)
+                            
+                            Text(photosAccessHint)
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(Color.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        if store.canOpenPhotosSettings {
+                            Button("Open Settings") { store.openPhotosSettings() }
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(MobileKeptoraDesign.accent)
+                                .frame(minHeight: 44)
+                                .accessibilityIdentifier("ios.library.openSettings")
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "hand.raised.fill")
+                                .font(.headline)
+                                .foregroundStyle(MobileKeptoraDesign.danger)
+                            Text(store.authorization == .denied ? LocalizedStringKey("Photos access disabled") : LocalizedStringKey("Photos access restricted"))
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(Color.primary)
+                        }
                         Text(photosAccessHint)
                             .font(.system(.caption, design: .rounded))
                             .foregroundStyle(Color.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    if store.canOpenPhotosSettings {
-                        Button("Open Settings") { store.openPhotosSettings() }
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(MobileKeptoraDesign.accent)
-                            .accessibilityIdentifier("ios.library.openSettings")
+                        if store.canOpenPhotosSettings {
+                            Button("Open Settings") { store.openPhotosSettings() }
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(MobileKeptoraDesign.accent)
+                                .frame(minHeight: 44)
+                                .accessibilityIdentifier("ios.library.openSettings")
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -332,6 +372,7 @@ struct MobileLibraryView: View {
                 Button("Cancel", role: .cancel) { store.cancelScan() }
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     .foregroundStyle(MobileKeptoraDesign.danger)
+                    .frame(minHeight: 44)
             }
             .keptoraPanel(tint: MobileKeptoraDesign.cyan)
             .accessibilityElement(children: .combine)
@@ -357,6 +398,7 @@ struct MobileLibraryView: View {
                     Button("Cancel", role: .cancel) { store.cancelScan() }
                         .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundStyle(MobileKeptoraDesign.danger)
+                        .frame(minHeight: 44)
                 }
 
                 ProgressView(value: Double(processed), total: Double(max(total, 1)))
@@ -462,7 +504,7 @@ struct MobileLibraryView: View {
             }
 
             Button {
-                store.selectedTab = 1
+                store.selectedTab = .review
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles.rectangle.stack.fill")

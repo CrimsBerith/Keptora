@@ -4,6 +4,14 @@ import Photos
 import PhotosUI
 import UIKit
 
+enum MobileTab: Int, CaseIterable, Identifiable {
+    case library = 0
+    case review = 1
+    case history = 2
+
+    var id: Int { rawValue }
+}
+
 enum MobileModalRoute: String, Identifiable {
     case filePicker
     case settings
@@ -78,7 +86,7 @@ final class MobileKeptoraStore: ObservableObject {
     @Published var selectedSimilarVideoAssetIDs: Set<String> = []
     @Published var currentGroupIndex = 0
     @Published var currentSimilarityGroupIndex = 0
-    @Published var selectedTab: Int = 0
+    @Published var selectedTab: MobileTab = .library
     @Published var modalRoute: MobileModalRoute?
     @Published var isShowingPhotosPermissionHelp = false
     @Published var errorMessage: String?
@@ -276,8 +284,12 @@ final class MobileKeptoraStore: ObservableObject {
     func manageLimitedPhotosAccess() {
         guard authorization == .limited,
               let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
-              let presenter = scene.keyWindow?.rootViewController else { return }
-        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter)
+              let root = scene.keyWindow?.rootViewController else { return }
+        var top = root
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: top)
     }
 
     func connectFolder(_ url: URL) {
@@ -653,6 +665,11 @@ final class MobileKeptoraStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func deleteHistory(at offsets: IndexSet) {
+        history.remove(atOffsets: offsets)
+        persistHistory()
     }
 
     private func persistHistory() {

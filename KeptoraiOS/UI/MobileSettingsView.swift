@@ -183,7 +183,6 @@ struct MobileSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Done") { dismiss() }
-                    .frame(minWidth: 44, minHeight: 44)
                     .accessibilityLabel("Close Settings screen")
                     .accessibilityIdentifier("ios.settings.close")
             }

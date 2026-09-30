@@ -62,6 +62,7 @@ struct MobilePaywallView: View {
                             Button("Restore Purchases") { Task { await purchase.restore() } }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
+                                .frame(minHeight: 44)
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.restorePurchases")
 
@@ -79,6 +80,7 @@ struct MobilePaywallView: View {
                                     Link(String(localized: "Privacy Policy"), destination: privacyURL)
                                         .font(.system(.caption, design: .rounded))
                                         .foregroundStyle(.secondary)
+                                        .padding(.vertical, 8)
                                 }
                                 Text("•")
                                     .font(.system(.caption, design: .rounded))
@@ -87,6 +89,7 @@ struct MobilePaywallView: View {
                                     Link(String(localized: "Terms of Use"), destination: termsURL)
                                         .font(.system(.caption, design: .rounded))
                                         .foregroundStyle(.secondary)
+                                        .padding(.vertical, 8)
                                 }
                             }
                             .padding(.top, 4)
@@ -101,7 +104,6 @@ struct MobilePaywallView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
-                        .frame(minWidth: 44, minHeight: 44)
                         .accessibilityLabel("Close Keptora Pro screen")
                         .accessibilityIdentifier("ios.paywall.close")
                 }

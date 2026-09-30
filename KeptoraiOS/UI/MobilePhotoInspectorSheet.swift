@@ -22,8 +22,7 @@ public struct MobilePhotoInspectorSheet: View {
                 
                 // Interactive Zoomable Image
                 GeometryReader { proxy in
-                    MobileAssetThumbnail(asset: asset, pixelSize: 1600)
-                        .aspectRatio(contentMode: .fit)
+                    MobileAssetThumbnail(asset: asset, pixelSize: 1600, contentMode: .fit)
                         .scaleEffect(scale)
                         .offset(offset)
                         .frame(width: proxy.size.width, height: proxy.size.height)
@@ -33,22 +32,29 @@ public struct MobilePhotoInspectorSheet: View {
                                     scale = min(max(lastScale * value, 1.0), 4.5)
                                 }
                                 .onEnded { _ in
-                                    if scale < 1.0 {
+                                    if scale <= 1.0 {
                                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                             scale = 1.0
                                             offset = .zero
                                         }
+                                        lastScale = 1.0
+                                        lastOffset = .zero
+                                    } else {
+                                        lastScale = scale
                                     }
-                                    lastScale = scale
                                 }
                         )
                         .simultaneousGesture(
                             DragGesture()
                                 .onChanged { value in
                                     if scale > 1.0 {
+                                        let maxX = max(0, (proxy.size.width * (scale - 1)) / 2)
+                                        let maxY = max(0, (proxy.size.height * (scale - 1)) / 2)
+                                        let targetX = lastOffset.width + value.translation.width
+                                        let targetY = lastOffset.height + value.translation.height
                                         offset = CGSize(
-                                            width: lastOffset.width + value.translation.width,
-                                            height: lastOffset.height + value.translation.height
+                                            width: min(max(targetX, -maxX), maxX),
+                                            height: min(max(targetY, -maxY), maxY)
                                         )
                                     }
                                 }
@@ -57,7 +63,9 @@ public struct MobilePhotoInspectorSheet: View {
                                 }
                         )
                         .onTapGesture(count: 2) {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.prepare()
+                            generator.impactOccurred()
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                 if scale > 1.0 {
                                     scale = 1.0
@@ -79,7 +87,9 @@ public struct MobilePhotoInspectorSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.prepare()
+                        generator.impactOccurred()
                         dismiss()
                     }) {
                         Image(systemName: "xmark.circle.fill")
@@ -90,7 +100,9 @@ public struct MobilePhotoInspectorSheet: View {
                 
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.prepare()
+                        generator.impactOccurred()
                         showInfo.toggle()
                     }) {
                         Image(systemName: "info.circle.fill")
@@ -118,11 +130,12 @@ private struct AssetMetadataSheet: View {
             List {
                 Section(header: Text("Photo Specifications")) {
                     LabeledContent("Dimensions", value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
-                    LabeledContent("Resolution", value: String(format: "%.1f MP", Double(asset.pixelWidth * asset.pixelHeight) / 1_000_000.0))
+                    let mp = Double(Int64(asset.pixelWidth) * Int64(asset.pixelHeight)) / 1_000_000.0
+                    LabeledContent("Resolution", value: String(format: "%.1f MP", mp))
                     if let bytes = asset.byteCount {
                         LabeledContent("File Size", value: ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
                     }
-                    LabeledContent("Kind", value: asset.mediaKind == .image ? "Photo" : "Video")
+                    LabeledContent("Kind", value: asset.mediaKind == .image ? String(localized: "Photo") : String(localized: "Video"))
                     if let duration = asset.duration {
                         LabeledContent("Duration", value: String(format: "%.1f s", duration))
                     }
@@ -135,8 +148,8 @@ private struct AssetMetadataSheet: View {
                 }
                 
                 Section(header: Text("Safety & Protection")) {
-                    LabeledContent("Favorite", value: asset.isFavorite ? "Yes" : "No")
-                    LabeledContent("Protected", value: asset.isProtectedFromGlobalSelection ? "Protected" : "Eligible for Cleanup")
+                    LabeledContent("Favorite", value: asset.isFavorite ? String(localized: "Yes") : String(localized: "No"))
+                    LabeledContent("Protected", value: asset.isProtectedFromGlobalSelection ? String(localized: "Protected") : String(localized: "Eligible for Cleanup"))
                 }
             }
             .navigationTitle("Details")

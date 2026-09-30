@@ -29,15 +29,13 @@ public struct MobileSplitComparisonView: View {
                     Color.black.ignoresSafeArea()
                     
                     // Background: Image B (Right side)
-                    MobileAssetThumbnail(asset: assetB, pixelSize: 1600)
-                        .scaledToFit()
+                    MobileAssetThumbnail(asset: assetB, pixelSize: 1600, contentMode: .fit)
                         .scaleEffect(scale)
                         .offset(offset)
                         .frame(width: width, height: height)
                     
                     // Foreground: Image A (Left side clipped by slider)
-                    MobileAssetThumbnail(asset: assetA, pixelSize: 1600)
-                        .scaledToFit()
+                    MobileAssetThumbnail(asset: assetA, pixelSize: 1600, contentMode: .fit)
                         .scaleEffect(scale)
                         .offset(offset)
                         .frame(width: width, height: height)
@@ -156,6 +154,7 @@ public struct MobileSplitComparisonView: View {
                             splitRatio = 0.5
                         }
                     }
+                    .disabled(scale == 1.0 && offset == .zero && splitRatio == 0.5)
                     .accessibilityIdentifier("ios.splitComparison.reset")
                 }
             }

@@ -7,6 +7,7 @@ struct MobileReviewView: View {
 
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var mode: Mode = .exact
     @State private var media: Media = .photos
     @State private var exactPage = 0
@@ -30,14 +31,29 @@ struct MobileReviewView: View {
         ZStack {
             MobileAuroraBackground()
             Group {
-                if store.assets.isEmpty {
+                if store.assets.isEmpty && (store.scanState.isScanning || store.isAnalyzing) {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(MobileKeptoraDesign.cyan)
+                        Text(store.isAnalyzing ? "Analyzing similar items…" : "Scanning library…")
+                            .font(.system(.headline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("Your review items will appear as soon as scanning finishes.")
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if store.assets.isEmpty {
                     ContentUnavailableView {
                         Label("Nothing to review yet", systemImage: "photo.stack")
                     } description: {
                         Text("Choose Apple Photos or a folder to find duplicates and declutter your library.")
                     } actions: {
                         Button {
-                            store.selectedTab = 0
+                            store.selectedTab = .library
                         } label: {
                             Text("Go to Library")
                                 .font(.headline)
@@ -48,20 +64,18 @@ struct MobileReviewView: View {
                     }
                 } else {
                     VStack(spacing: 6) {
-                        VStack(spacing: 8) {
-                            Picker("Review mode", selection: $mode) {
-                                Text("Exact copies").tag(Mode.exact)
-                                Text("Similar").tag(Mode.similar)
+                        Group {
+                            if verticalSizeClass == .compact {
+                                HStack(spacing: 10) {
+                                    reviewModePicker
+                                    mediaTypePicker
+                                }
+                            } else {
+                                VStack(spacing: 8) {
+                                    reviewModePicker
+                                    mediaTypePicker
+                                }
                             }
-                            .pickerStyle(.segmented)
-                            .accessibilityIdentifier("ios.review.mode")
-
-                            Picker("Media type", selection: $media) {
-                                Label("Photos", systemImage: "photo").tag(Media.photos)
-                                Label("Videos", systemImage: "video").tag(Media.videos)
-                            }
-                            .pickerStyle(.segmented)
-                            .accessibilityIdentifier("ios.review.media")
                         }
                         .padding(10)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -91,19 +105,19 @@ struct MobileReviewView: View {
             store.clearExactSelection()
             store.clearSimilarVideoSelection()
         }
-        .onChange(of: filteredExactGroups.count) {
-            if exactPage >= filteredExactGroups.count {
-                exactPage = max(0, filteredExactGroups.count - 1)
+        .onChange(of: filteredExactGroups.map(\.id)) { _, ids in
+            if exactPage >= ids.count {
+                exactPage = max(0, ids.count - 1)
             }
         }
-        .onChange(of: store.similarityGroups.count) {
-            if similarPhotoPage >= store.similarityGroups.count {
-                similarPhotoPage = max(0, store.similarityGroups.count - 1)
+        .onChange(of: store.similarityGroups.map(\.id)) { _, ids in
+            if similarPhotoPage >= ids.count {
+                similarPhotoPage = max(0, ids.count - 1)
             }
         }
-        .onChange(of: store.similarVideoGroups.count) {
-            if similarVideoPage >= store.similarVideoGroups.count {
-                similarVideoPage = max(0, store.similarVideoGroups.count - 1)
+        .onChange(of: store.similarVideoGroups.map(\.id)) { _, ids in
+            if similarVideoPage >= ids.count {
+                similarVideoPage = max(0, ids.count - 1)
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -125,6 +139,24 @@ struct MobileReviewView: View {
         } message: {
             Text(cleanupMessage)
         }
+    }
+
+    private var reviewModePicker: some View {
+        Picker("Review mode", selection: $mode) {
+            Text("Exact copies").tag(Mode.exact)
+            Text("Similar").tag(Mode.similar)
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("ios.review.mode")
+    }
+
+    private var mediaTypePicker: some View {
+        Picker("Media type", selection: $media) {
+            Label("Photos", systemImage: "photo").tag(Media.photos)
+            Label("Videos", systemImage: "video").tag(Media.videos)
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("ios.review.media")
     }
 
     // MARK: – Visible Selection Actions
@@ -221,19 +253,15 @@ struct MobileReviewView: View {
                     description: Text("Keptora did not find byte-for-byte copies for this media type.")
                 )
             } else {
-                TabView(selection: $exactPage) {
-                    ForEach(Array(filteredExactGroups.enumerated()), id: \.element.id) { index, group in
-                        ExactGroupPage(
-                            group: group,
-                            pageIndex: index,
-                            totalPages: filteredExactGroups.count,
-                            onPrevious: { if exactPage > 0 { withAnimation { exactPage -= 1 } } },
-                            onNext: { if exactPage < filteredExactGroups.count - 1 { withAnimation { exactPage += 1 } } }
-                        )
-                        .tag(index)
-                    }
+                GroupPager(items: filteredExactGroups, selection: $exactPage) { index, group in
+                    ExactGroupPage(
+                        group: group,
+                        pageIndex: index,
+                        totalPages: filteredExactGroups.count,
+                        onPrevious: { if exactPage > 0 { withAnimation { exactPage -= 1 } } },
+                        onNext: { if exactPage < filteredExactGroups.count - 1 { withAnimation { exactPage += 1 } } }
+                    )
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
     }
@@ -260,19 +288,15 @@ struct MobileReviewView: View {
                     Text("Visual suggestions are kept separate from exact cleanup and can never be selected for removal.")
                 }
             } else {
-                TabView(selection: $similarPhotoPage) {
-                    ForEach(Array(store.similarityGroups.enumerated()), id: \.element.id) { index, group in
-                        SimilarityGroupPage(
-                            group: group,
-                            pageIndex: index,
-                            totalPages: store.similarityGroups.count,
-                            onPrevious: { if similarPhotoPage > 0 { withAnimation { similarPhotoPage -= 1 } } },
-                            onNext: { if similarPhotoPage < store.similarityGroups.count - 1 { withAnimation { similarPhotoPage += 1 } } }
-                        )
-                        .tag(index)
-                    }
+                GroupPager(items: store.similarityGroups, selection: $similarPhotoPage) { index, group in
+                    SimilarityGroupPage(
+                        group: group,
+                        pageIndex: index,
+                        totalPages: store.similarityGroups.count,
+                        onPrevious: { if similarPhotoPage > 0 { withAnimation { similarPhotoPage -= 1 } } },
+                        onNext: { if similarPhotoPage < store.similarityGroups.count - 1 { withAnimation { similarPhotoPage += 1 } } }
+                    )
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
     }
@@ -296,19 +320,15 @@ struct MobileReviewView: View {
                     Text("Keptora did not find videos with matching duration, shape, and sampled frames.")
                 }
             } else {
-                TabView(selection: $similarVideoPage) {
-                    ForEach(Array(store.similarVideoGroups.enumerated()), id: \.element.id) { index, group in
-                        SimilarVideoGroupPage(
-                            group: group,
-                            pageIndex: index,
-                            totalPages: store.similarVideoGroups.count,
-                            onPrevious: { if similarVideoPage > 0 { withAnimation { similarVideoPage -= 1 } } },
-                            onNext: { if similarVideoPage < store.similarVideoGroups.count - 1 { withAnimation { similarVideoPage += 1 } } }
-                        )
-                        .tag(index)
-                    }
+                GroupPager(items: store.similarVideoGroups, selection: $similarVideoPage) { index, group in
+                    SimilarVideoGroupPage(
+                        group: group,
+                        pageIndex: index,
+                        totalPages: store.similarVideoGroups.count,
+                        onPrevious: { if similarVideoPage > 0 { withAnimation { similarVideoPage -= 1 } } },
+                        onNext: { if similarVideoPage < store.similarVideoGroups.count - 1 { withAnimation { similarVideoPage += 1 } } }
+                    )
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
     }
@@ -316,31 +336,61 @@ struct MobileReviewView: View {
     // MARK: – Bottom Floating Cleanup Bar
 
     private var cleanupBar: some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(selectedCount.formatted()) selected")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
-                Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
-                    .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                if isSimilarVideoMode { store.clearSimilarVideoSelection() }
-                else { store.clearExactSelection() }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Clear Selection")
-            .accessibilityIdentifier(isSimilarVideoMode ? "review.similarVideo.clearSelection" : "review.exact.clearSelection")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(selectedCount.formatted()) selected")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                    Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
+                        .font(.system(.caption, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    if isSimilarVideoMode { store.clearSimilarVideoSelection() }
+                    else { store.clearExactSelection() }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear Selection")
+                .accessibilityIdentifier(isSimilarVideoMode ? "review.similarVideo.clearSelection" : "review.exact.clearSelection")
 
-            Button("Review Cleanup") { showCleanupConfirmation = true }
-                .buttonStyle(MobilePrimaryButtonStyle())
-                .accessibilityIdentifier("ios.cleanup.review")
+                Button("Review Cleanup") { showCleanupConfirmation = true }
+                    .buttonStyle(MobilePrimaryButtonStyle())
+                    .accessibilityIdentifier("ios.cleanup.review")
+            }
+            VStack(spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(selectedCount.formatted()) selected")
+                            .font(.system(.headline, design: .rounded).weight(.bold))
+                        Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        if isSimilarVideoMode { store.clearSimilarVideoSelection() }
+                        else { store.clearExactSelection() }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear Selection")
+                    .accessibilityIdentifier(isSimilarVideoMode ? "review.similarVideo.clearSelection" : "review.exact.clearSelection")
+                }
+                Button("Review Cleanup") { showCleanupConfirmation = true }
+                    .buttonStyle(MobilePrimaryButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("ios.cleanup.review")
+            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
@@ -391,6 +441,24 @@ struct MobileReviewView: View {
     }
 }
 
+// MARK: – Generic Group Pager
+
+private struct GroupPager<Item: Identifiable, PageContent: View>: View {
+    let items: [Item]
+    @Binding var selection: Int
+    @ViewBuilder let content: (Int, Item) -> PageContent
+
+    var body: some View {
+        TabView(selection: $selection) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                content(index, item)
+                    .tag(index)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+    }
+}
+
 // MARK: – Exact Group Page
 
 private struct ExactGroupPage: View {
@@ -400,6 +468,9 @@ private struct ExactGroupPage: View {
     let totalPages: Int
     let onPrevious: () -> Void
     let onNext: () -> Void
+
+    @State private var activeInspectorAsset: UniversalMediaAsset?
+    @State private var activeSafetyAsset: UniversalMediaAsset?
 
     var body: some View {
         ScrollView {
@@ -473,12 +544,54 @@ private struct ExactGroupPage: View {
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 10) {
                     ForEach(group.assets) { asset in
-                        MobileAssetCard(asset: asset, group: group)
+                        MobileAssetCard(
+                            asset: asset,
+                            group: group,
+                            onInspect: { activeInspectorAsset = asset },
+                            onSafetyDetails: { activeSafetyAsset = asset }
+                        )
                     }
                 }
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 40)
+        }
+        .fullScreenCover(item: $activeInspectorAsset) { asset in
+            MobilePhotoInspectorSheet(asset: asset)
+        }
+        .sheet(item: $activeSafetyAsset) { asset in
+            SafetyDetailsSheet(asset: asset, isKeeper: asset.id == group.keeperID)
+        }
+    }
+}
+
+// MARK: – Safety Details Sheet
+
+private struct SafetyDetailsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let asset: UniversalMediaAsset
+    let isKeeper: Bool
+
+    var body: some View {
+        NavigationStack {
+            List {
+                LabeledContent("Status", value: isKeeper ? String(localized: "Protected keeper") : String(localized: "Byte-for-byte exact copy"))
+                LabeledContent("Name", value: asset.displayName)
+                LabeledContent("Size", value: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
+                LabeledContent("Resolution", value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
+                if let date = asset.creationDate { LabeledContent("Created", value: date.formatted()) }
+                Section {
+                    Text("Keptora verified this item byte for byte. It can be selected because another protected copy remains in this exact group.")
+                } header: { Text("Why this is safe") }
+            }
+            .navigationTitle("Asset Details")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .accessibilityLabel("Close Asset Details screen")
+                        .accessibilityIdentifier("ios.assetDetails.close")
+                }
+            }
         }
     }
 }
@@ -490,8 +603,8 @@ private struct MobileAssetCard: View {
     @EnvironmentObject private var purchase: MobilePurchaseController
     let asset: UniversalMediaAsset
     let group: UniversalExactGroup
-    @State private var showSafetyDetails = false
-    @State private var showInspector = false
+    let onInspect: () -> Void
+    let onSafetyDetails: () -> Void
 
     private var isKeeper: Bool { asset.id == group.keeperID }
     private var isSelected: Bool { store.selectedAssetIDs.contains(asset.id) }
@@ -516,7 +629,7 @@ private struct MobileAssetCard: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
-                .accessibilityLabel(String(localized: "Toggle selection for \(asset.displayName)"))
+                .accessibilityLabel(String(format: String(localized: "%@ photo"), asset.displayName))
                 .accessibilityIdentifier("review.exact.asset.\(asset.id)")
 
                 Button(action: toggle) {
@@ -539,7 +652,7 @@ private struct MobileAssetCard: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
-                .accessibilityLabel(isSelected ? "Deselect \(asset.displayName)" : "Select \(asset.displayName)")
+                .accessibilityLabel(String(format: String(localized: "Toggle selection for %@"), asset.displayName))
                 .accessibilityIdentifier("review.exact.checkbox.\(asset.id)")
             }
 
@@ -564,6 +677,7 @@ private struct MobileAssetCard: View {
             }
             .buttonStyle(.plain)
             .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
+            .accessibilityHidden(true)
         }
         .padding(7)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
@@ -582,48 +696,22 @@ private struct MobileAssetCard: View {
         }
         .shadow(color: isSelected ? MobileKeptoraDesign.violet.opacity(0.24) : Color.black.opacity(0.04), radius: 12, y: 6)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(String(localized: "\(asset.displayName), \(isKeeper ? String(localized: "protected keeper") : String(localized: "exact copy"))"))
+        .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "protected keeper") : String(localized: "exact copy")))
         .accessibilityIdentifier("review.exact.container.\(asset.id)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .contextMenu {
             Button {
-                showInspector = true
+                onInspect()
             } label: {
                 Label("Inspect Photo", systemImage: "arrow.up.left.and.arrow.down.right")
             }
             
             Button {
-                showSafetyDetails = true
+                onSafetyDetails()
             } label: {
                 Label("Why this is safe", systemImage: "shield.lefthalf.filled")
             }
             .accessibilityIdentifier("ios.assetDetails.open")
-        }
-        .fullScreenCover(isPresented: $showInspector) {
-            MobilePhotoInspectorSheet(asset: asset)
-        }
-        .sheet(isPresented: $showSafetyDetails, onDismiss: { showSafetyDetails = false }) {
-            NavigationStack {
-                List {
-                    LabeledContent("Status", value: isKeeper ? "Protected keeper" : "Byte-for-byte exact copy")
-                    LabeledContent("Name", value: asset.displayName)
-                    LabeledContent("Size", value: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                    LabeledContent("Resolution", value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
-                    if let date = asset.creationDate { LabeledContent("Created", value: date.formatted()) }
-                    Section {
-                        Text("Keptora verified this item byte for byte. It can be selected because another protected copy remains in this exact group.")
-                    } header: { Text("Why this is safe") }
-                }
-                .navigationTitle("Asset Details")
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { showSafetyDetails = false }
-                            .frame(minWidth: 44, minHeight: 44)
-                            .accessibilityLabel("Close Asset Details screen")
-                            .accessibilityIdentifier("ios.assetDetails.close")
-                    }
-                }
-            }
         }
     }
 
@@ -679,6 +767,8 @@ private struct SimilarVideoGroupPage: View {
     let totalPages: Int
     let onPrevious: () -> Void
     let onNext: () -> Void
+
+    @State private var activeInspectorAsset: UniversalMediaAsset?
 
     var body: some View {
         ScrollView {
@@ -752,7 +842,11 @@ private struct SimilarVideoGroupPage: View {
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 10) {
                     ForEach(group.assets) { asset in
-                        SimilarVideoAssetCard(asset: asset, group: group)
+                        SimilarVideoAssetCard(
+                            asset: asset,
+                            group: group,
+                            onInspect: { activeInspectorAsset = asset }
+                        )
                     }
                 }
 
@@ -771,6 +865,9 @@ private struct SimilarVideoGroupPage: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 40)
         }
+        .fullScreenCover(item: $activeInspectorAsset) { asset in
+            MobilePhotoInspectorSheet(asset: asset)
+        }
     }
 }
 
@@ -781,7 +878,7 @@ private struct SimilarVideoAssetCard: View {
     @EnvironmentObject private var purchase: MobilePurchaseController
     let asset: UniversalMediaAsset
     let group: UniversalSimilarityGroup
-    @State private var showInspector = false
+    let onInspect: () -> Void
 
     private var isKeeper: Bool { asset.id == group.keeperID }
     private var isProtected: Bool { asset.isProtectedFromGlobalSelection }
@@ -846,18 +943,15 @@ private struct SimilarVideoAssetCard: View {
         }
         .buttonStyle(.plain)
         .disabled(isKeeper || isProtected)
-        .accessibilityLabel("\(asset.displayName), \(isKeeper ? String(localized: "protected keeper") : String(localized: "similar video candidate"))")
+        .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "protected keeper") : String(localized: "similar video candidate")))
         .accessibilityIdentifier("review.similarVideo.asset.\(asset.id)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .contextMenu {
             Button {
-                showInspector = true
+                onInspect()
             } label: {
                 Label("Inspect Video", systemImage: "arrow.up.left.and.arrow.down.right")
             }
-        }
-        .fullScreenCover(isPresented: $showInspector) {
-            MobilePhotoInspectorSheet(asset: asset)
         }
         .overlay(alignment: .topTrailing) {
             Button(action: toggle) {
@@ -882,7 +976,7 @@ private struct SimilarVideoAssetCard: View {
             }
             .buttonStyle(.plain)
             .disabled(isKeeper || isProtected)
-            .accessibilityLabel(isSelected ? "Deselect \(asset.displayName)" : "Select \(asset.displayName)")
+            .accessibilityLabel(String(format: String(localized: "Toggle selection for %@"), asset.displayName))
             .accessibilityIdentifier("review.similarVideo.checkbox.\(asset.id)")
         }
     }
@@ -903,14 +997,19 @@ private struct SimilarVideoAssetCard: View {
 
 // MARK: – Similarity Group Page
 
+private enum SimilarityCompareModal: Identifiable {
+    case sideBySide
+    case splitLoupe
+    var id: Int { hashValue }
+}
+
 private struct SimilarityGroupPage: View {
     let group: UniversalSimilarityGroup
     let pageIndex: Int
     let totalPages: Int
     let onPrevious: () -> Void
     let onNext: () -> Void
-    @State private var isComparing = false
-    @State private var isSplitComparing = false
+    @State private var activeCompareModal: SimilarityCompareModal?
 
     var body: some View {
         ScrollView {
@@ -979,7 +1078,7 @@ private struct SimilarityGroupPage: View {
                 .padding(.horizontal, 4)
 
                 HStack(spacing: 10) {
-                    Button { isComparing = true } label: {
+                    Button { activeCompareModal = .sideBySide } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "rectangle.split.2x1")
                                 .font(.system(size: 15, weight: .semibold))
@@ -991,7 +1090,7 @@ private struct SimilarityGroupPage: View {
                     .accessibilityIdentifier("ios.similarityComparison.open")
 
                     if group.assets.count >= 2 {
-                        Button { isSplitComparing = true } label: {
+                        Button { activeCompareModal = .splitLoupe } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "slider.horizontal.below.rectangle")
                                     .font(.system(size: 15, weight: .semibold))
@@ -1035,12 +1134,14 @@ private struct SimilarityGroupPage: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 40)
         }
-        .fullScreenCover(isPresented: $isComparing) {
-            MobileSimilarityCompareView(group: group)
-        }
-        .fullScreenCover(isPresented: $isSplitComparing) {
-            if group.assets.count >= 2 {
-                MobileSplitComparisonView(assetA: group.assets[0], assetB: group.assets[1])
+        .fullScreenCover(item: $activeCompareModal) { modal in
+            switch modal {
+            case .sideBySide:
+                MobileSimilarityCompareView(group: group)
+            case .splitLoupe:
+                if group.assets.count >= 2 {
+                    MobileSplitComparisonView(assetA: group.assets[0], assetB: group.assets[1])
+                }
             }
         }
     }
@@ -1050,6 +1151,7 @@ private struct SimilarityGroupPage: View {
 
 private struct MobileSimilarityCompareView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     let group: UniversalSimilarityGroup
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
@@ -1082,22 +1184,23 @@ private struct MobileSimilarityCompareView: View {
                 )
             }
             .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 8) {
-                    Image(systemName: "eye.fill")
-                        .font(.system(size: 13, weight: .bold))
-                    Text("Review-only comparison")
-                        .font(.system(.footnote, design: .rounded).weight(.semibold))
+                if verticalSizeClass != .compact {
+                    HStack(spacing: 8) {
+                        Image(systemName: "eye.fill")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Review-only comparison")
+                            .font(.system(.footnote, design: .rounded).weight(.semibold))
+                    }
+                    .foregroundStyle(MobileKeptoraDesign.cyan)
+                    .frame(maxWidth: .infinity, minHeight: 46)
+                    .background(.ultraThinMaterial)
                 }
-                .foregroundStyle(MobileKeptoraDesign.cyan)
-                .frame(maxWidth: .infinity, minHeight: 46)
-                .background(.ultraThinMaterial)
             }
             .navigationTitle("Similar Comparison")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
-                        .frame(minWidth: 44, minHeight: 44)
                         .accessibilityLabel("Close Similar Comparison screen")
                         .accessibilityIdentifier("ios.similarityComparison.close")
                 }
@@ -1123,8 +1226,7 @@ private struct MobileSimilarityCompareView: View {
     @ViewBuilder
     private var comparisonAssets: some View {
         ForEach(Array(group.assets.prefix(2))) { asset in
-            MobileAssetThumbnail(asset: asset, pixelSize: 1600)
-                .scaledToFit()
+            MobileAssetThumbnail(asset: asset, pixelSize: 1600, contentMode: .fit)
                 .scaleEffect(scale)
                 .offset(offset)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
