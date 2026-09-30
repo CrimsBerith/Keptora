@@ -124,32 +124,83 @@ struct MobileAuroraBackground: View {
 
 // MARK: – Brand Mark
 
+/// Keptora logo. Two photo frames: the translucent one behind is the duplicate that is set aside,
+/// the solid one in front with a check mark is the keeper. Mirrors AppStore/AppIcon/logo/*.svg
+/// (iOS copy of the macOS KeptoraLogoMark; geometry is expressed in the 1024-pt art space of those files).
 struct MobileBrandMark: View {
     let size: CGFloat
+    var showsShadow: Bool = true
+
+    private var s: CGFloat { size / 1024 }
+    private var corner: CGFloat { size * 0.2237 }
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                .fill(MobileKeptoraDesign.brandGradient)
-            
-            // Specular light reflection
-            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.098, green: 0.761, blue: 0.949),
+                             Color(red: 0.294, green: 0.247, blue: 0.918),
+                             Color(red: 0.608, green: 0.184, blue: 0.878)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing))
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(RadialGradient(
+                    colors: [Color(red: 1.0, green: 0.31, blue: 0.60).opacity(0.50), .clear],
+                    center: UnitPoint(x: 0.92, y: 0.96), startRadius: 0, endRadius: size * 0.60))
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(RadialGradient(
+                    colors: [Color.white.opacity(0.38), .clear],
+                    center: UnitPoint(x: 0.16, y: 0.10), startRadius: 0, endRadius: size * 0.65))
+
+            // Duplicate that is set aside
+            RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
+                .fill(Color.white.opacity(0.24))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
+                        .stroke(Color.white.opacity(0.62), lineWidth: max(0.5, 16 * s))
+                }
+                .frame(width: 380 * s, height: 380 * s)
+                .rotationEffect(.degrees(-8))
+                .position(x: 422 * s, y: 412 * s)
+
+            // Keeper
+            RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [.white, Color(red: 0.914, green: 0.894, blue: 1.0)],
+                    startPoint: .top, endPoint: .bottom))
+                .frame(width: 380 * s, height: 380 * s)
+                .shadow(color: Color(red: 0.10, green: 0.04, blue: 0.36).opacity(0.45),
+                        radius: 30 * s, y: 26 * s)
+                .position(x: 602 * s, y: 612 * s)
+
+            MobileCheckShape()
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.55), Color.clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: max(1, size * 0.02)
-                )
-
-            Image(systemName: "camera.filters")
-                .font(.system(size: size * 0.44, weight: .semibold))
-                .foregroundStyle(.white)
-                .shadow(color: Color.black.opacity(0.20), radius: 3, y: 1.5)
+                        colors: [Color(red: 0.118, green: 0.608, blue: 0.961),
+                                 Color(red: 0.357, green: 0.247, blue: 0.941),
+                                 Color(red: 0.886, green: 0.235, blue: 0.604)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing),
+                    style: StrokeStyle(lineWidth: 64 * s, lineCap: .round, lineJoin: .round))
+                .frame(width: size, height: size)
         }
         .frame(width: size, height: size)
-        .shadow(color: MobileKeptoraDesign.violet.opacity(0.36), radius: size * 0.26, y: size * 0.10)
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.white.opacity(0.28), lineWidth: max(0.5, size * 0.003))
+        }
+        .shadow(color: MobileKeptoraDesign.violet.opacity(showsShadow ? 0.32 : 0), radius: size * 0.20, y: size * 0.08)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct MobileCheckShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = rect.width / 1024
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX + 520 * s, y: rect.minY + 616 * s))
+        p.addLine(to: CGPoint(x: rect.minX + 584 * s, y: rect.minY + 680 * s))
+        p.addLine(to: CGPoint(x: rect.minX + 694 * s, y: rect.minY + 548 * s))
+        return p
     }
 }
 

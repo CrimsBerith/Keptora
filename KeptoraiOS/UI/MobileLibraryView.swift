@@ -81,7 +81,7 @@ struct MobileLibraryView: View {
                 .blur(radius: 18)
                 .offset(x: -80, y: -40)
 
-            Image(systemName: "camera.filters")
+            Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 108, weight: .ultraLight))
                 .foregroundStyle(.white.opacity(0.09))
                 .offset(x: -12, y: 14)

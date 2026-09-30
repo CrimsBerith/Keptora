@@ -107,15 +107,7 @@ struct MainRootView: View {
 
     private var brandHeader: some View {
         HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(KeptoraDesign.iconGradient)
-                    .frame(width: 40, height: 40)
-                    .shadow(color: KeptoraDesign.accentGlow, radius: 10, y: 4)
-                Image(systemName: "camera.filters")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
+            KeptoraLogoMark(size: 40)
             VStack(alignment: .leading, spacing: 1) {
                 Text("KEPTORA")
                     .font(.system(.headline, design: .rounded).weight(.bold))

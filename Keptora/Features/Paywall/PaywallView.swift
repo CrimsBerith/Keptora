@@ -6,18 +6,20 @@ struct PaywallView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            ScrollView {
             VStack(spacing: 20) {
-                // Hero icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(KeptoraDesign.accentGradient)
-                    Image(systemName: "sparkles.rectangle.stack.fill")
-                        .font(.system(size: 48, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .frame(width: 108, height: 108)
-                .shadow(color: KeptoraDesign.accentGlow, radius: 18, y: 6)
+                // Hero illustration
+                Image("paywall_hero")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 400)
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
+                    }
+                    .shadow(color: KeptoraDesign.accentGlow, radius: 22, y: 8)
+                    .accessibilityHidden(true)
 
                 // Headline
                 VStack(spacing: 8) {
@@ -69,6 +71,7 @@ struct PaywallView: View {
                 }
             }
             .padding(28)
+            }
 
             Divider()
 

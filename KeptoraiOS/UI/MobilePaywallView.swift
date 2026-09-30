@@ -10,21 +10,17 @@ struct MobilePaywallView: View {
                 MobileAuroraBackground()
                 ScrollView {
                     VStack(spacing: 24) {
-                        ZStack {
-                            Circle()
-                                .fill(MobileKeptoraDesign.violet.opacity(0.20))
-                                .frame(width: 175, height: 175)
-                                .blur(radius: 18)
-
-                            MobileBrandMark(size: 110)
-
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundStyle(.white)
-                                .shadow(color: MobileKeptoraDesign.violet, radius: 8)
-                                .offset(x: 44, y: -42)
-                        }
-                        .padding(.top, 10)
+                        Image("paywall_hero")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                    .stroke(MobileKeptoraDesign.borderGradient, lineWidth: 1)
+                            }
+                            .shadow(color: MobileKeptoraDesign.accentGlow, radius: 20, y: 8)
+                            .accessibilityHidden(true)
 
                         VStack(spacing: 6) {
                             Text("Keptora Pro")

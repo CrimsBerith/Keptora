@@ -1,3 +1,4 @@
+// DEPRECATED (Sep 2026): this script draws the old "camera.filters" icon. The current icon is produced from AppStore/AppIcon/logo/*.svg — do not run this against the asset catalog.
 import AppKit
 import CoreGraphics
 import Foundation

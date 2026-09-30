@@ -10,4 +10,5 @@ ValidationArtifacts/Mac/
 Packages/*/.build/
 xcuserdata/
 *.moved-aside
+Claude outputs/
 

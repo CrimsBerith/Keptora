@@ -305,109 +305,84 @@ struct KeptoraSheetCloseButton: View {
     }
 }
 
-// MARK: – Dynamic Brand Dock Icon
+// MARK: – Brand Logo Mark
 
-@MainActor
-enum KeptoraBrandIcon {
-    static func makeDockIcon(size: CGFloat = 512) -> NSImage {
-        let image = NSImage(size: NSSize(width: size, height: size))
-        image.lockFocus()
-        
-        guard let ctx = NSGraphicsContext.current?.cgContext else {
-            image.unlockFocus()
-            return image
+/// Keptora logo. Two photo frames: the translucent one behind is the duplicate that is set aside,
+/// the solid one in front with a check mark is the keeper. Mirrors AppStore/AppIcon/logo/*.svg
+/// (geometry is expressed in the 1024-pt art space of those files).
+struct KeptoraLogoMark: View {
+    var size: CGFloat = 40
+    var showsShadow: Bool = true
+
+    private var s: CGFloat { size / 1024 }
+    private var corner: CGFloat { size * 0.2237 }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.098, green: 0.761, blue: 0.949),
+                             Color(red: 0.294, green: 0.247, blue: 0.918),
+                             Color(red: 0.608, green: 0.184, blue: 0.878)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing))
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(RadialGradient(
+                    colors: [Color(red: 1.0, green: 0.31, blue: 0.60).opacity(0.50), .clear],
+                    center: UnitPoint(x: 0.92, y: 0.96), startRadius: 0, endRadius: size * 0.60))
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(RadialGradient(
+                    colors: [Color.white.opacity(0.38), .clear],
+                    center: UnitPoint(x: 0.16, y: 0.10), startRadius: 0, endRadius: size * 0.65))
+
+            // Duplicate that is set aside
+            RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
+                .fill(Color.white.opacity(0.24))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
+                        .stroke(Color.white.opacity(0.62), lineWidth: max(0.5, 16 * s))
+                }
+                .frame(width: 380 * s, height: 380 * s)
+                .rotationEffect(.degrees(-8))
+                .position(x: 422 * s, y: 412 * s)
+
+            // Keeper
+            RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [.white, Color(red: 0.914, green: 0.894, blue: 1.0)],
+                    startPoint: .top, endPoint: .bottom))
+                .frame(width: 380 * s, height: 380 * s)
+                .shadow(color: Color(red: 0.10, green: 0.04, blue: 0.36).opacity(0.45),
+                        radius: 30 * s, y: 26 * s)
+                .position(x: 602 * s, y: 612 * s)
+
+            KeptoraCheckShape()
+                .stroke(
+                    LinearGradient(
+                        colors: [Color(red: 0.118, green: 0.608, blue: 0.961),
+                                 Color(red: 0.357, green: 0.247, blue: 0.941),
+                                 Color(red: 0.886, green: 0.235, blue: 0.604)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing),
+                    style: StrokeStyle(lineWidth: 64 * s, lineCap: .round, lineJoin: .round))
+                .frame(width: size, height: size)
         }
-        
-        ctx.setAllowsAntialiasing(true)
-        ctx.setShouldAntialias(true)
-        ctx.interpolationQuality = .high
-        
-        // Standard macOS dock squircle proportions (approx 82% of tile canvas)
-        let margin = size * 0.09
-        let squircleRect = CGRect(x: margin, y: margin, width: size - 2 * margin, height: size - 2 * margin)
-        let cornerRadius = squircleRect.width * 0.224
-        
-        // Drop shadow for dock presence
-        ctx.saveGState()
-        let shadowColor = NSColor(red: 0.20, green: 0.10, blue: 0.45, alpha: 0.35).cgColor
-        ctx.setShadow(offset: CGSize(width: 0, height: -size * 0.02), blur: size * 0.045, color: shadowColor)
-        
-        let path = CGPath(roundedRect: squircleRect, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
-        ctx.addPath(path)
-        ctx.setFillColor(NSColor.black.cgColor)
-        ctx.fillPath()
-        ctx.restoreGState()
-        
-        // Main Aurora Brand Gradient
-        ctx.saveGState()
-        ctx.addPath(path)
-        ctx.clip()
-        
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let colors = [
-            NSColor(red: 0.12, green: 0.72, blue: 0.94, alpha: 1.0).cgColor, // Cyan
-            NSColor(red: 0.38, green: 0.32, blue: 0.98, alpha: 1.0).cgColor, // Royal Accent
-            NSColor(red: 0.62, green: 0.28, blue: 0.96, alpha: 1.0).cgColor  // Violet
-        ] as CFArray
-        let locations: [CGFloat] = [0.0, 0.48, 1.0]
-        
-        if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: locations) {
-            ctx.drawLinearGradient(
-                gradient,
-                start: CGPoint(x: squircleRect.minX, y: squircleRect.maxY),
-                end: CGPoint(x: squircleRect.maxX, y: squircleRect.minY),
-                options: []
-            )
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.white.opacity(0.28), lineWidth: max(0.5, size * 0.003))
         }
-        
-        // Soft top-left specular highlight
-        let highlightColors = [
-            NSColor.white.withAlphaComponent(0.24).cgColor,
-            NSColor.white.withAlphaComponent(0.0).cgColor
-        ] as CFArray
-        if let highlightGrad = CGGradient(colorsSpace: colorSpace, colors: highlightColors, locations: [0.0, 1.0]) {
-            ctx.drawLinearGradient(
-                highlightGrad,
-                start: CGPoint(x: squircleRect.minX, y: squircleRect.maxY),
-                end: CGPoint(x: squircleRect.midX, y: squircleRect.midY),
-                options: []
-            )
-        }
-        ctx.restoreGState()
-        
-        // Subtle border rim
-        ctx.saveGState()
-        let strokePath = CGPath(roundedRect: squircleRect.insetBy(dx: size * 0.003, dy: size * 0.003),
-                                cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
-        ctx.addPath(strokePath)
-        ctx.setLineWidth(size * (1.5 / 512.0))
-        ctx.setStrokeColor(NSColor.white.withAlphaComponent(0.30).cgColor)
-        ctx.strokePath()
-        ctx.restoreGState()
-        
-        // Crisp "camera.filters" SF Symbol centered in pure white
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: size * 0.42, weight: .semibold)
-            .applying(.init(paletteColors: [.white]))
-        if let symbolImage = NSImage(systemSymbolName: "camera.filters", accessibilityDescription: nil)?
-            .withSymbolConfiguration(symbolConfig) {
-            
-            let symbolSize = symbolImage.size
-            let targetRect = CGRect(
-                x: (size - symbolSize.width) / 2.0,
-                y: (size - symbolSize.height) / 2.0 + (size * 0.005),
-                width: symbolSize.width,
-                height: symbolSize.height
-            )
-            
-            ctx.saveGState()
-            let symbolShadow = NSColor.black.withAlphaComponent(0.22).cgColor
-            ctx.setShadow(offset: CGSize(width: 0, height: -size * 0.01), blur: size * 0.02, color: symbolShadow)
-            
-            symbolImage.draw(in: targetRect, from: .zero, operation: .sourceOver, fraction: 1.0)
-            ctx.restoreGState()
-        }
-        
-        image.unlockFocus()
-        return image
+        .shadow(color: KeptoraDesign.violet.opacity(showsShadow ? 0.32 : 0), radius: size * 0.20, y: size * 0.08)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct KeptoraCheckShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = rect.width / 1024
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX + 520 * s, y: rect.minY + 616 * s))
+        p.addLine(to: CGPoint(x: rect.minX + 584 * s, y: rect.minY + 680 * s))
+        p.addLine(to: CGPoint(x: rect.minX + 694 * s, y: rect.minY + 548 * s))
+        return p
     }
 }

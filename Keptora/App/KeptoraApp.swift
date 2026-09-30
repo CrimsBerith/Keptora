@@ -8,13 +8,7 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
     let store = StoreEntitlementController()
     private var fallbackWindow: NSWindow?
 
-    override init() {
-        super.init()
-        NSApp?.applicationIconImage = KeptoraBrandIcon.makeDockIcon()
-    }
-
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.applicationIconImage = KeptoraBrandIcon.makeDockIcon()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.showMainWindowIfNeeded()
         }
