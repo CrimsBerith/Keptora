@@ -268,6 +268,7 @@ struct HomeView: View {
             MetricTile(title: "Exact Groups", value: model.databaseSummary.duplicateGroups.formatted(), systemImage: "square.on.square")
             MetricTile(title: "Space to Reclaim", value: ByteCountFormatter.string(fromByteCount: model.databaseSummary.reclaimableBytes, countStyle: .file), systemImage: "internaldrive")
             MetricTile(title: "Recoverable", value: model.databaseSummary.quarantinedAssets.formatted(), systemImage: "arrow.uturn.backward.circle")
+                .help("Files safely moved to recovery bin — restorable at any time")
             MetricTile(title: "Total Indexed", value: model.databaseSummary.indexedAssets.formatted(), systemImage: "externaldrive.badge.checkmark")
         }
     }
@@ -307,6 +308,12 @@ struct HomeView: View {
             .buttonStyle(.bordered)
             .help("Scan Apple Photos library for duplicates")
             .accessibilityIdentifier("mac.library.photos")
+            Button { model.showOnboarding() } label: {
+                Label("How It Works", systemImage: "questionmark.circle")
+            }
+            .buttonStyle(.bordered)
+            .help("View Keptora safety principles and features guide")
+            .accessibilityIdentifier("mac.library.howItWorks")
         }
     }
 

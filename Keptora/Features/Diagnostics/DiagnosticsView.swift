@@ -56,7 +56,7 @@ struct DiagnosticsView: View {
                     .foregroundStyle(.secondary)
 
                 if model.performanceSamples.isEmpty {
-                    Text("Run a scan, similarity analysis, quarantine commit, or restore to create a local sample.")
+                    Text("Run a scan, similarity analysis, cleanup, or restore to create a local sample.")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(Array(model.performanceSamples.suffix(5).reversed())) { sample in

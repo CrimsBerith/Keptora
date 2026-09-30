@@ -16,6 +16,7 @@ enum MobileModalRoute: String, Identifiable {
     case filePicker
     case settings
     case paywall
+    case onboarding
 
     var id: String { rawValue }
 }

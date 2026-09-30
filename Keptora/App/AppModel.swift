@@ -832,7 +832,7 @@ final class AppModel: ObservableObject {
                 let result = try await self.bookmarkStore.withAccess(to: sourceURL) {
                     try await self.cleanupCoordinator.commit(plan, appVersion: self.appVersion)
                 }
-                recordPerformance(label: "Quarantine commit", itemCount: result.movedCount + result.failedCount, startedAt: startedAt, result: result.failedCount == 0 ? "completed" : "partial")
+                recordPerformance(label: "Cleanup commit", itemCount: result.movedCount + result.failedCount, startedAt: startedAt, result: result.failedCount == 0 ? "completed" : "partial")
                 if let verification = result.verification { appendQuarantineVerification(verification) }
                 markSafetyPlanLineage(plan, state: result.movedCount > 0 ? .committed : .failed)
                 pendingPlan = nil

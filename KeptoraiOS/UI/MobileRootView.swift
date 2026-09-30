@@ -3,6 +3,7 @@ import SwiftUI
 struct MobileRootView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
+    @AppStorage("hasSeenMobileOnboarding") private var hasSeenMobileOnboarding = false
 
     var body: some View {
         TabView(selection: $store.selectedTab) {
@@ -20,6 +21,11 @@ struct MobileRootView: View {
                 .accessibilityIdentifier("tab.history")
         }
         .tint(MobileKeptoraDesign.accent)
+        .onAppear {
+            if !hasSeenMobileOnboarding {
+                store.present(.onboarding)
+            }
+        }
         .sheet(item: $store.modalRoute) { route in
             MobileModalHost(route: route)
         }
@@ -51,6 +57,8 @@ private struct MobileModalHost: View {
                 NavigationStack { MobileSettingsView() }
             case .paywall:
                 MobilePaywallView()
+            case .onboarding:
+                MobileOnboardingView()
             }
         }
         .alert("Something went wrong", isPresented: Binding(

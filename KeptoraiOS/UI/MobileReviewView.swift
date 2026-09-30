@@ -15,6 +15,7 @@ struct MobileReviewView: View {
     @State private var similarPhotoPage = 0
     @State private var similarVideoPage = 0
     @State private var showCleanupConfirmation = false
+    @State private var showPostCleanupNotice = false
 
     private var filteredExactGroups: [UniversalExactGroup] {
         store.exactGroups.filter { $0.assets.first?.mediaKind == (media == .photos ? .image : .video) }
@@ -138,6 +139,7 @@ struct MobileReviewView: View {
                 Task {
                     if isSimilarVideoMode { await store.cleanupSimilarVideoSelection() }
                     else { await store.cleanupSelection() }
+                    showPostCleanupNotice = true
                 }
             }
             .accessibilityIdentifier("ios.cleanup.confirm")
@@ -145,6 +147,18 @@ struct MobileReviewView: View {
                 .accessibilityIdentifier("ios.cleanup.cancel")
         } message: {
             Text(cleanupMessage)
+        }
+        .confirmationDialog(
+            "Cleanup Completed",
+            isPresented: $showPostCleanupNotice,
+            titleVisibility: .visible
+        ) {
+            Button("View in History") {
+                store.selectedTab = .history
+            }
+            Button("Done", role: .cancel) {}
+        } message: {
+            Text("Keeper photos remain safe in your library. Cleaned copies are safely restorable at any time.")
         }
     }
 
@@ -353,9 +367,20 @@ struct MobileReviewView: View {
                     Text("\(selectedCount.formatted()) selected")
                         .font(.system(.headline, design: .rounded).weight(.bold))
                         .contentTransition(.numericText())
-                    Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
-                        .font(.system(.caption, design: .rounded).weight(.medium))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 5) {
+                        Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                        Text("•")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.uturn.backward.circle.fill")
+                            Text("Restorable")
+                        }
+                        .font(.system(.caption2, design: .rounded).weight(.semibold))
+                        .foregroundStyle(MobileKeptoraDesign.mint)
+                    }
                 }
                 Spacer()
                 Button {
@@ -381,9 +406,20 @@ struct MobileReviewView: View {
                         Text("\(selectedCount.formatted()) selected")
                             .font(.system(.headline, design: .rounded).weight(.bold))
                             .contentTransition(.numericText())
-                        Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
-                            .font(.system(.caption, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 5) {
+                            Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
+                                .font(.system(.caption, design: .rounded).weight(.medium))
+                                .foregroundStyle(.secondary)
+                            Text("•")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.uturn.backward.circle.fill")
+                                Text("Restorable")
+                            }
+                            .font(.system(.caption2, design: .rounded).weight(.semibold))
+                            .foregroundStyle(MobileKeptoraDesign.mint)
+                        }
                     }
                     Spacer()
                     Button {
@@ -447,9 +483,9 @@ struct MobileReviewView: View {
         )
         switch store.source {
         case .photos:
-            return summary + " " + String(localized: "With iCloud Photos, removal syncs to your other devices. Photos keeps items in Recently Deleted for up to 30 days.")
+            return summary + "\n\n" + String(localized: "✓ Restorable at any time: Protected keepers stay intact. Removed photos move to Recently Deleted for up to 30 days.")
         default:
-            return summary + " " + String(localized: "The protected keeper stays in place. Files move to a safe, recoverable Keptora Bin.")
+            return summary + "\n\n" + String(localized: "✓ Restorable at any time: Protected keepers stay intact. Copies move safely to Keptora Safe Bin.")
         }
     }
 }

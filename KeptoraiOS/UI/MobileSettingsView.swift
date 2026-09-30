@@ -100,8 +100,22 @@ struct MobileSettingsView: View {
                 Label("Exact copies require SHA-256 byte-level proof.", systemImage: "checkmark.seal")
                 Label("Similar photos are review-only and never enter cleanup.", systemImage: "hand.raised")
                 Label("Photos cleanup uses Apple's Recently Deleted flow.", systemImage: "photo.on.rectangle")
+                Label("Folder cleanup uses Keptora Safe Recovery Bin.", systemImage: "shippingbox")
+                Button {
+                    dismiss()
+                    store.selectedTab = .history
+                } label: {
+                    HStack {
+                        Label("View History & Recovery Bin", systemImage: "clock.arrow.circlepath")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .accessibilityIdentifier("ios.settings.history")
             } header: {
-                Text("Safety")
+                Text("Safety & Recovery")
                     .font(MobileKeptoraDesign.labelFont)
             }
 
@@ -164,6 +178,19 @@ struct MobileSettingsView: View {
             }
 
             Section {
+                Button {
+                    store.present(.onboarding)
+                } label: {
+                    HStack {
+                        Label("How Keptora Works", systemImage: "sparkles")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .accessibilityIdentifier("ios.settings.howItWorks")
+
                 LabeledContent("Version", value: appVersionLabel)
                 Text("Keptora by AlfagoLab")
                     .font(.system(.footnote, design: .rounded))

@@ -97,11 +97,11 @@ struct HistoryView: View {
 
         // Adaptive grid: five metrics in one row truncate at the minimum window width.
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-            summaryMetric("Active plans", activeCount.formatted(), "shippingbox")
-            summaryMetric("Files in bin", activeFiles.formatted(), "doc.on.doc")
-            summaryMetric("Restorable space", ByteCountFormatter.string(fromByteCount: activeBytes, countStyle: .file), "internaldrive")
-            summaryMetric("Signed manifests", signedManifestCount.formatted(), "signature")
-            summaryMetric("Verified states", verifiedStatesCount.formatted(), "checkmark.shield")
+            summaryMetric("Active plans", activeCount.formatted(), "shippingbox", help: "Completed cleanup plans with restorable files")
+            summaryMetric("Files in bin", activeFiles.formatted(), "doc.on.doc", help: "Total files safely stored in recovery bin")
+            summaryMetric("Restorable space", ByteCountFormatter.string(fromByteCount: activeBytes, countStyle: .file), "internaldrive", help: "Disk space occupied by recoverable files")
+            summaryMetric("Signed manifests", signedManifestCount.formatted(), "signature", help: "Plans with cryptographically verified checksum manifests")
+            summaryMetric("Files confirmed in bin", verifiedStatesCount.formatted(), "checkmark.shield", help: "Number of duplicate files verified safe and confirmed in the recovery bin")
         }
     }
 
@@ -223,7 +223,7 @@ struct HistoryView: View {
         }
     }
 
-    private func summaryMetric(_ title: String, _ value: String, _ image: String) -> some View {
+    private func summaryMetric(_ title: String, _ value: String, _ image: String, help: String? = nil) -> some View {
         HStack(spacing: 9) {
             Image(systemName: image).foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
@@ -234,6 +234,7 @@ struct HistoryView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .help(help ?? title)
     }
 
     private func statusImage(_ state: CleanupPlanState) -> String {

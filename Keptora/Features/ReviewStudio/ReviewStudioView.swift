@@ -66,6 +66,7 @@ struct ReviewStudioView: View {
     @State private var showGlobalSelectConfirmation = false
     @State private var isShowingSwipeCulling = false
     @State private var activeViewerContext: StudioViewerContext? = nil
+    @State private var toastMessage: String? = nil
 
     var body: some View {
         ZStack {
@@ -94,6 +95,24 @@ struct ReviewStudioView: View {
                     inspector
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if let toastMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(toastMessage)
+                        .font(.subheadline.weight(.medium))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.ultraThickMaterial, in: Capsule())
+                .overlay(Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 1))
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
+                .padding(.bottom, 64)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(100)
             }
         }
         .background(KeptoraDesign.canvas)
@@ -167,11 +186,21 @@ struct ReviewStudioView: View {
         .alert("Select all safe copies?", isPresented: $showGlobalSelectConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Add to Safety Plan") {
+                let count = model.allSafeCopyCount
                 model.applyBatchActionToAllExactGroups(.planSafeExtras, access: store)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    toastMessage = "Added \(count) copies to cleanup plan — fully restorable"
+                }
+                Task {
+                    try? await Task.sleep(nanoseconds: 3_500_000_000)
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        if toastMessage != nil { toastMessage = nil }
+                    }
+                }
             }
             .accessibilityIdentifier("mac.folder.exact.confirmSelectAll")
         } message: {
-            Text("This will add \(model.allSafeCopyCount.formatted()) copies totaling \(ByteCountFormatter.string(fromByteCount: model.allSafeCopyBytes, countStyle: .file)) from every exact group. Protected keepers stay untouched, and nothing moves until you confirm the Safety Plan.")
+            Text("This will add \(model.allSafeCopyCount.formatted()) copies totaling \(ByteCountFormatter.string(fromByteCount: model.allSafeCopyBytes, countStyle: .file)) from every exact group. Protected keepers stay untouched, and nothing moves until you confirm the Safety Plan. All cleaned files can be safely restored at any time.")
         }
     }
 
@@ -183,6 +212,7 @@ struct ReviewStudioView: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 175)
+            .help(mode == .exact ? "Exact byte-for-byte duplicate sets safe for automated or 1-click cleanup" : "Visual comparison only — no automated cleanup actions")
 
             Divider().frame(height: 20)
 
@@ -303,12 +333,13 @@ struct ReviewStudioView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!model.canApplyAllExactGroups)
-                .help("Add every non-keeper duplicate across all sets to the Safety Plan")
+                .help("Add every non-keeper duplicate across all sets to the Safety Plan — fully restorable")
                 .accessibilityIdentifier("mac.folder.exact.selectAll")
             } else {
                 Label("\(model.similarityGroups.count) groups", systemImage: "sparkles.rectangle.stack")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .help("Visual similarity groups for side-by-side comparison — visual review only")
             }
 
             Divider().frame(height: 20)
@@ -332,7 +363,7 @@ struct ReviewStudioView: View {
                 Button {
                     showDecisionReconciliation = true
                 } label: {
-                    Label("Safety & Audit Log…", systemImage: "shield.lefthalf.filled")
+                    Label("Cleanup History…", systemImage: "clock.arrow.circlepath")
                 }
                 .accessibilityIdentifier("mac.review.reconciliation.open")
 
@@ -1045,10 +1076,10 @@ struct ReviewStudioView: View {
                         Button {
                             showDecisionEvidence = true
                         } label: {
-                            Label("Why This Is Safe…", systemImage: "checkmark.shield")
+                            Label("View Photo Details", systemImage: "info.circle")
                         }
                         .controlSize(.small)
-                        .help("This asset has not been explicitly reviewed yet.")
+                        .help("View file metadata and comparison details before deciding.")
                     }
 
                     Divider()
@@ -1186,7 +1217,7 @@ private struct ReviewAssetCard: View {
                                     .font(.system(size: 15, weight: .bold))
                                     .foregroundStyle(decision == .quarantinePlan ? Color.orange : Color.secondary)
                                 if decision == .quarantinePlan {
-                                    Text("Plan")
+                                    Text("Add to Cleanup")
                                         .font(.caption2.weight(.bold))
                                         .foregroundStyle(Color.orange)
                                 }

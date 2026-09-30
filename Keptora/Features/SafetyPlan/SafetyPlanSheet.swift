@@ -88,11 +88,6 @@ struct SafetyPlanSheet: View {
                     .background((freshness.permitsCommit ? Color.green : Color.orange).opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
 
-                if let lineage = plan.lineage {
-                    Label("Safety Plan lineage R\(lineage.revisionNumber) · \(lineage.lineageID.prefix(10))", systemImage: "link")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                }
 
                 Label("Original keeper photos remain in place. Every duplicate copy is verified before moving, and photo families (like RAW+JPEG or Live Photos) stay together.", systemImage: "checkmark.shield.fill")
                     .font(.callout)
@@ -163,16 +158,23 @@ struct SafetyPlanSheet: View {
                     }
                 }
 
-                if let volume = plan.sourceVolume {
-                    Text("Volume: \(volume.name) · \(volume.stableID)")
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .textSelection(.enabled)
-                }
-                Text("Safe recovery bin: \(plan.quarantineRoot.path)")
+                DisclosureGroup("Advanced Details") {
+                    VStack(alignment: .leading, spacing: 5) {
+                        if let lineage = plan.lineage {
+                            Text("Plan Revision: R\(lineage.revisionNumber) · \(lineage.lineageID)")
+                        }
+                        if let volume = plan.sourceVolume {
+                            Text("Volume: \(volume.name) · \(volume.stableID)")
+                        }
+                        Text("Recovery Bin: \(plan.quarantineRoot.path)")
+                    }
                     .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .textSelection(.enabled)
+                    .padding(.top, 4)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
                 Toggle("I understand original photos are preserved and copies can be restored at any time.", isOn: $confirmed)
                     .toggleStyle(.checkbox)
