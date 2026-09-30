@@ -392,6 +392,27 @@ final class KeptoraCoreTests: XCTestCase {
         }
     }
 
+    func testAppStoreConfigurationDefaultsAndFallbacks() {
+        XCTAssertEqual(AppStoreConfiguration.fallbackLifetimeProductID, "com.keptora.app.pro.lifetime")
+        XCTAssertFalse(AppStoreConfiguration.defaultLifetimeProductID.isEmpty)
+        XCTAssertEqual(AppStoreConfiguration.privacyPolicyURL.scheme, "https")
+        XCTAssertEqual(AppStoreConfiguration.supportURL.scheme, "https")
+        XCTAssertEqual(AppStoreConfiguration.termsOfUseURL.scheme, "https")
+        XCTAssertEqual(AppStoreConfiguration.marketingURL.scheme, "https")
+        XCTAssertTrue(AppStoreConfiguration.privacyPolicyURL.absoluteString.contains("alfagolab.com"))
+        XCTAssertTrue(AppStoreConfiguration.termsOfUseURL.absoluteString.contains("apple.com") || AppStoreConfiguration.termsOfUseURL.absoluteString.contains("alfagolab.com"))
+    }
+
+    func testUniversalScanErrorDescriptions() {
+        let errUnavailable = UniversalScanError.resourceUnavailable("IMG_0001.HEIC")
+        XCTAssertNotNil(errUnavailable.errorDescription)
+        XCTAssertTrue(errUnavailable.errorDescription?.contains("IMG_0001.HEIC") == true)
+
+        let errCancelled = UniversalScanError.downloadCancelled("IMG_0002.HEIC")
+        XCTAssertNotNil(errCancelled.errorDescription)
+        XCTAssertTrue(errCancelled.errorDescription?.contains("IMG_0002.HEIC") == true)
+    }
+
     private func asset(id: String, favorite: Bool = false) -> UniversalMediaAsset {
         UniversalMediaAsset(
             id: id,

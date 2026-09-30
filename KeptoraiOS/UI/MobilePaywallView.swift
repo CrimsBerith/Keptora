@@ -1,3 +1,4 @@
+import KeptoraCore
 import SwiftUI
 
 struct MobilePaywallView: View {
@@ -59,6 +60,16 @@ struct MobilePaywallView: View {
                             .disabled(purchase.product == nil || purchase.isWorking)
                             .accessibilityIdentifier("ios.paywall.purchase")
 
+                            if purchase.product == nil && !purchase.isUnlocked {
+                                Button(String(localized: "Retry Loading Product")) {
+                                    Task { await purchase.refresh() }
+                                }
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(MobileKeptoraDesign.accent)
+                                .disabled(purchase.isWorking)
+                                .accessibilityIdentifier("ios.paywall.retry")
+                            }
+
                             Button("Restore Purchases") { Task { await purchase.restore() } }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
@@ -76,21 +87,17 @@ struct MobilePaywallView: View {
                             }
 
                             HStack(spacing: 12) {
-                                if let privacyURL = URL(string: "https://alfagolab.com/keptora/privacy") {
-                                    Link(String(localized: "Privacy Policy"), destination: privacyURL)
-                                        .font(.system(.caption, design: .rounded))
-                                        .foregroundStyle(.secondary)
-                                        .padding(.vertical, 8)
-                                }
+                                Link(String(localized: "Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
+                                    .font(.system(.caption, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.vertical, 8)
                                 Text("•")
                                     .font(.system(.caption, design: .rounded))
                                     .foregroundStyle(.tertiary)
-                                if let termsURL = URL(string: "https://alfagolab.com/keptora") {
-                                    Link(String(localized: "Terms of Use"), destination: termsURL)
-                                        .font(.system(.caption, design: .rounded))
-                                        .foregroundStyle(.secondary)
-                                        .padding(.vertical, 8)
-                                }
+                                Link(String(localized: "Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
+                                    .font(.system(.caption, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.vertical, 8)
                             }
                             .padding(.top, 4)
                         }
@@ -110,6 +117,11 @@ struct MobilePaywallView: View {
             }
             .onChange(of: purchase.isUnlocked) { _, unlocked in
                 if unlocked { dismiss() }
+            }
+            .task {
+                if purchase.product == nil {
+                    await purchase.refresh()
+                }
             }
         }
     }

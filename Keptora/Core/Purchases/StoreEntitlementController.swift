@@ -5,7 +5,7 @@ import StoreKit
 
 @MainActor
 final class StoreEntitlementController: ObservableObject {
-    static let lifetimeProductID = Bundle.main.object(forInfoDictionaryKey: "APP_LIFETIME_PRODUCT_ID") as? String ?? "com.keptora.app.pro.lifetime"
+    static let lifetimeProductID = AppStoreConfiguration.defaultLifetimeProductID
 
     @Published private(set) var lifetimeProduct: Product?
     @Published private(set) var isLifetimeUnlocked = false
@@ -28,10 +28,10 @@ final class StoreEntitlementController: ObservableObject {
                 guard let self else { return }
                 switch result {
                 case .verified(let transaction):
-                    await transaction.finish()
                     await self.refreshEntitlement()
+                    await transaction.finish()
                 case .unverified(let transaction, let error):
-                    self.statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
+                    self.statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
                     await transaction.finish()
                 }
             }
@@ -122,6 +122,7 @@ final class StoreEntitlementController: ObservableObject {
     func refresh() async {
         isWorking = true
         defer { isWorking = false }
+        statusMessage = nil
         // Entitlements are cached locally by StoreKit, so resolve them first: a paying user
         // must stay unlocked even when the product query fails offline.
         await refreshEntitlement()
@@ -139,12 +140,13 @@ final class StoreEntitlementController: ObservableObject {
         guard let lifetimeProduct, !isLifetimeUnlocked else { return }
         isWorking = true
         defer { isWorking = false }
+        statusMessage = nil
         do {
             switch try await lifetimeProduct.purchase() {
             case .success(let verification):
                 let transaction = try verified(verification)
-                await transaction.finish()
                 await refreshEntitlement()
+                await transaction.finish()
                 statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
                 isShowingPaywall = false
             case .pending:
@@ -162,15 +164,16 @@ final class StoreEntitlementController: ObservableObject {
     func restorePurchases() async {
         isWorking = true
         defer { isWorking = false }
+        statusMessage = nil
         do {
             try await AppStore.sync()
             await refreshEntitlement()
             statusMessage = isLifetimeUnlocked
-                ? "Purchase restored."
-                : "No lifetime purchase was found for this Apple Account."
+                ? L10n.tr("Purchase restored.")
+                : L10n.tr("No lifetime purchase was found for this Apple Account.")
             if isLifetimeUnlocked { isShowingPaywall = false }
         } catch {
-            statusMessage = "Restore failed: \(error.localizedDescription)"
+            statusMessage = L10n.format("Restore failed: %@", error.localizedDescription)
         }
     }
 

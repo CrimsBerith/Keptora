@@ -1,3 +1,4 @@
+import KeptoraCore
 import SwiftUI
 
 struct PaywallView: View {
@@ -82,15 +83,22 @@ struct PaywallView: View {
                         .keyboardShortcut(.cancelAction)
                         .accessibilityIdentifier("mac.paywall.close")
                     Spacer()
-                    Link("Privacy Policy", destination: privacyURL)
+                    Link("Privacy Policy", destination: AppStoreConfiguration.privacyPolicyURL)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text("•")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
-                    Link("Terms of Use", destination: termsURL)
+                    Link("Terms of Use", destination: AppStoreConfiguration.termsOfUseURL)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if store.lifetimeProduct == nil && !store.isLifetimeUnlocked {
+                        Button("Retry Loading") {
+                            Task { await store.refresh() }
+                        }
+                        .disabled(store.isWorking)
+                        .accessibilityIdentifier("mac.paywall.retry")
+                    }
                     Button("Restore Purchases") { Task { await store.restorePurchases() } }
                         .disabled(store.isWorking)
                     Button {
@@ -127,24 +135,6 @@ struct PaywallView: View {
         }
         .frame(minWidth: 540, idealWidth: 640, minHeight: 480, idealHeight: 580)
         .task { if store.lifetimeProduct == nil { await store.refresh() } }
-    }
-
-    private var privacyURL: URL {
-        if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_PRIVACY_POLICY_URL") as? String,
-           let url = URL(string: configured),
-           url.scheme == "https", !(url.host?.isEmpty ?? true) {
-            return url
-        }
-        return URL(string: "https://alfagolab.com/keptora/privacy")!
-    }
-
-    private var termsURL: URL {
-        if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_TERMS_OF_USE_URL") as? String,
-           let url = URL(string: configured),
-           url.scheme == "https", !(url.host?.isEmpty ?? true) {
-            return url
-        }
-        return URL(string: "https://alfagolab.com/keptora/terms")!
     }
 
     private func feature(_ text: String, image: String) -> some View {

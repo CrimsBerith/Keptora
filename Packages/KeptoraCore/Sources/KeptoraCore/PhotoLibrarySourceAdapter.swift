@@ -97,6 +97,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
         let options = PHAssetResourceRequestOptions()
         options.isNetworkAccessAllowed = allowNetwork
+        if allowNetwork {
+            options.progressHandler = { downloadProgress in
+                _ = downloadProgress
+            }
+        }
         let accumulator = LockedPhotoHasher()
 
         do {
@@ -135,6 +140,12 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             if !allowNetwork && Self.isNetworkAccessRequired(error) {
                 throw UniversalScanError.networkRequired(asset.displayName)
             }
+            if Self.isResourceUnavailable(error) {
+                throw UniversalScanError.resourceUnavailable(asset.displayName)
+            }
+            if Self.isDownloadCancelled(error) {
+                throw UniversalScanError.downloadCancelled(asset.displayName)
+            }
             throw error
         }
     }
@@ -146,6 +157,27 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
         let desc = ns.localizedDescription.lowercased()
         return desc.contains("network") || desc.contains("icloud") || desc.contains("download")
+    }
+
+    private static func isResourceUnavailable(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "PHPhotosErrorDomain" && ns.code == 3169 {
+            return true
+        }
+        let desc = ns.localizedDescription.lowercased()
+        return desc.contains("unavailable") || desc.contains("not available")
+    }
+
+    private static func isDownloadCancelled(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "PHPhotosErrorDomain" && ns.code == 3054 {
+            return true
+        }
+        if ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError {
+            return true
+        }
+        let desc = ns.localizedDescription.lowercased()
+        return desc.contains("cancelled") || desc.contains("canceled")
     }
 
     public func similarityImage(
@@ -165,7 +197,15 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let data: Data = try await withCheckedThrowingContinuation { continuation in
             PHImageManager.default().requestImageDataAndOrientation(for: photo, options: options) { data, _, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
-                    continuation.resume(throwing: error)
+                    if !allowNetwork && Self.isNetworkAccessRequired(error) {
+                        continuation.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
+                    } else if Self.isResourceUnavailable(error) {
+                        continuation.resume(throwing: UniversalScanError.resourceUnavailable(asset.displayName))
+                    } else if Self.isDownloadCancelled(error) {
+                        continuation.resume(throwing: UniversalScanError.downloadCancelled(asset.displayName))
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else if let data {
                     continuation.resume(returning: data)
                 } else {
@@ -227,7 +267,15 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let avAsset: AVAsset = try await withCheckedThrowingContinuation { continuation in
             PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
-                    continuation.resume(throwing: error)
+                    if !allowNetwork && Self.isNetworkAccessRequired(error) {
+                        continuation.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
+                    } else if Self.isResourceUnavailable(error) {
+                        continuation.resume(throwing: UniversalScanError.resourceUnavailable(asset.displayName))
+                    } else if Self.isDownloadCancelled(error) {
+                        continuation.resume(throwing: UniversalScanError.downloadCancelled(asset.displayName))
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else if let avAsset {
                     continuation.resume(returning: avAsset)
                 } else if allowNetwork {

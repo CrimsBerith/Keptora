@@ -1,3 +1,4 @@
+import KeptoraCore
 import SwiftUI
 
 private enum SettingsStorageKeys {
@@ -141,28 +142,11 @@ struct SettingsView: View {
 }
 
 private struct KeptoraReleaseLinks: View {
-    private var privacy: URL {
-        if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_PRIVACY_POLICY_URL") as? String,
-           let url = URL(string: configured),
-           url.scheme == "https", !(url.host?.isEmpty ?? true) {
-            return url
-        }
-        return URL(string: "https://alfagolab.com/keptora/privacy")!
-    }
-
-    private var support: URL {
-        if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_SUPPORT_URL") as? String,
-           let url = URL(string: configured),
-           url.scheme == "https", !(url.host?.isEmpty ?? true) {
-            return url
-        }
-        return URL(string: "https://alfagolab.com/keptora/support")!
-    }
-
     var body: some View {
         Section("Links") {
-            Link("Privacy Policy", destination: privacy)
-            Link("Support", destination: support)
+            Link("Privacy Policy", destination: AppStoreConfiguration.privacyPolicyURL)
+            Link("Support", destination: AppStoreConfiguration.supportURL)
+            Link("Terms of Use", destination: AppStoreConfiguration.termsOfUseURL)
         }
     }
 }

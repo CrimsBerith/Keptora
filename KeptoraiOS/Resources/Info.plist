@@ -41,6 +41,8 @@
 	<string>https://alfagolab.com/keptora/privacy</string>
 	<key>APP_SUPPORT_URL</key>
 	<string>https://alfagolab.com/keptora/support</string>
+	<key>APP_TERMS_OF_USE_URL</key>
+	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
 	<key>APP_MARKETING_URL</key>
 	<string>https://alfagolab.com/keptora</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

@@ -109,14 +109,12 @@ struct MobileSettingsView: View {
                 LabeledContent(String(localized: "Photo upload")) { Text(String(localized: "Never")) }
                 LabeledContent(String(localized: "Account")) { Text(String(localized: "Not required")) }
                 LabeledContent(String(localized: "Analytics")) { Text(String(localized: "None")) }
-                if let privacyURL = URL(string: "https://alfagolab.com/keptora/privacy") {
-                    Link(String(localized: "Privacy Policy"), destination: privacyURL)
-                        .accessibilityIdentifier("ios.settings.privacy")
-                }
-                if let supportURL = URL(string: "https://alfagolab.com/keptora/support") {
-                    Link(String(localized: "Support"), destination: supportURL)
-                        .accessibilityIdentifier("ios.settings.support")
-                }
+                Link(String(localized: "Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
+                    .accessibilityIdentifier("ios.settings.privacy")
+                Link(String(localized: "Support"), destination: AppStoreConfiguration.supportURL)
+                    .accessibilityIdentifier("ios.settings.support")
+                Link(String(localized: "Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
+                    .accessibilityIdentifier("ios.settings.terms")
             } header: {
                 Text(String(localized: "Privacy"))
                     .font(MobileKeptoraDesign.labelFont)

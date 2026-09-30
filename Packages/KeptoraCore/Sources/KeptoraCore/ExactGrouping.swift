@@ -4,6 +4,8 @@ import Foundation
 public enum UniversalScanError: LocalizedError, Sendable {
     case inaccessibleAsset(String)
     case networkRequired(String)
+    case resourceUnavailable(String)
+    case downloadCancelled(String)
     case sourcePermissionDenied
     case unsupportedReference
     case cleanupNotPermitted(String)
@@ -12,6 +14,8 @@ public enum UniversalScanError: LocalizedError, Sendable {
         switch self {
         case .inaccessibleAsset(let name): return L10n.format("Keptora could not read %@.", name)
         case .networkRequired(let name): return L10n.format("%@ is stored in iCloud and requires an approved download.", name)
+        case .resourceUnavailable(let name): return L10n.format("%@ is unavailable on this device or iCloud.", name)
+        case .downloadCancelled(let name): return L10n.format("Download of %@ was cancelled.", name)
         case .sourcePermissionDenied: return L10n.tr("Keptora does not have permission to access this source.")
         case .unsupportedReference: return L10n.tr("This source reference is not supported.")
         case .cleanupNotPermitted(let reason): return reason
@@ -122,6 +126,8 @@ public actor UniversalExactScanner {
                 pendingEntriesCount += 1
                 emitCheckpointIfNeeded()
             } catch UniversalScanError.networkRequired {
+                skippedNetwork += 1
+            } catch UniversalScanError.resourceUnavailable {
                 skippedNetwork += 1
             }
         }

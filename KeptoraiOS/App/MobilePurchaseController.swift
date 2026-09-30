@@ -1,9 +1,10 @@
+import KeptoraCore
 import StoreKit
 import SwiftUI
 
 @MainActor
 final class MobilePurchaseController: ObservableObject {
-    static let productID = "com.keptora.app.pro.lifetime"
+    static let productID = AppStoreConfiguration.defaultLifetimeProductID
 
     @Published private(set) var product: Product?
     @Published private(set) var isUnlocked = false
@@ -19,8 +20,8 @@ final class MobilePurchaseController: ObservableObject {
                 guard let self else { return }
                 switch update {
                 case .verified(let transaction):
-                    await transaction.finish()
                     await self.refreshEntitlement()
+                    await transaction.finish()
                 case .unverified(let transaction, let error):
                     self.statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
                     await transaction.finish()
@@ -34,28 +35,37 @@ final class MobilePurchaseController: ObservableObject {
     func refresh() async {
         isWorking = true
         defer { isWorking = false }
+        statusMessage = nil
         // Resolve cached entitlements first so an offline product query cannot lock out a paying user.
         await refreshEntitlement()
         do {
             product = try await Product.products(for: [Self.productID]).first
+            if product == nil {
+                statusMessage = String(localized: "StoreKit product unavailable. Check internet connection and try again.")
+            }
         } catch {
             statusMessage = error.localizedDescription
         }
     }
 
     func purchase() async {
-        guard let product else { return }
+        guard let product, !isUnlocked else { return }
         isWorking = true
         defer { isWorking = false }
+        statusMessage = nil
         do {
             switch try await product.purchase() {
             case .success(.verified(let transaction)):
-                await transaction.finish()
                 await refreshEntitlement()
+                await transaction.finish()
+                statusMessage = String(localized: "Keptora Pro is unlocked on this Apple Account.")
+            case .success(.unverified(let transaction, let error)):
+                statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
+                await transaction.finish()
             case .pending:
                 statusMessage = String(localized: "Purchase is pending approval.")
             case .userCancelled:
-                break
+                statusMessage = String(localized: "Purchase cancelled.")
             default:
                 statusMessage = String(localized: "The purchase could not be verified.")
             }
@@ -67,6 +77,7 @@ final class MobilePurchaseController: ObservableObject {
     func restore() async {
         isWorking = true
         defer { isWorking = false }
+        statusMessage = nil
         do {
             try await AppStore.sync()
             await refreshEntitlement()
