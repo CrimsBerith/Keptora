@@ -267,7 +267,7 @@ struct HomeView: View {
             MetricTile(title: "Active Assets", value: model.databaseSummary.activeAssets.formatted(), systemImage: "photo.stack")
             MetricTile(title: "Exact Groups", value: model.databaseSummary.duplicateGroups.formatted(), systemImage: "square.on.square")
             MetricTile(title: "Space to Reclaim", value: ByteCountFormatter.string(fromByteCount: model.databaseSummary.reclaimableBytes, countStyle: .file), systemImage: "internaldrive")
-            MetricTile(title: "Quarantined", value: model.databaseSummary.quarantinedAssets.formatted(), systemImage: "shippingbox")
+            MetricTile(title: "Recoverable", value: model.databaseSummary.quarantinedAssets.formatted(), systemImage: "arrow.uturn.backward.circle")
             MetricTile(title: "Total Indexed", value: model.databaseSummary.indexedAssets.formatted(), systemImage: "externaldrive.badge.checkmark")
         }
     }

@@ -3,7 +3,7 @@ import SwiftUI
 struct HistoryView: View {
     private enum HistoryFilter: String, CaseIterable, Identifiable {
         case all = "All"
-        case quarantined = "In Quarantine"
+        case quarantined = "In Recovery Bin"
         case restored = "Restored"
         case attention = "Needs Attention"
         var id: String { rawValue }
@@ -72,7 +72,7 @@ struct HistoryView: View {
                 .background(KeptoraDesign.canvas)
             }
         }
-        .navigationTitle("History & Quarantine")
+        .navigationTitle("History & Restore")
         .accessibilityIdentifier("mac.page.history")
     }
 
@@ -98,7 +98,7 @@ struct HistoryView: View {
         // Adaptive grid: five metrics in one row truncate at the minimum window width.
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
             summaryMetric("Active plans", activeCount.formatted(), "shippingbox")
-            summaryMetric("Tracked files", activeFiles.formatted(), "doc.on.doc")
+            summaryMetric("Files in bin", activeFiles.formatted(), "doc.on.doc")
             summaryMetric("Restorable space", ByteCountFormatter.string(fromByteCount: activeBytes, countStyle: .file), "internaldrive")
             summaryMetric("Signed manifests", signedManifestCount.formatted(), "signature")
             summaryMetric("Verified states", verifiedStatesCount.formatted(), "checkmark.shield")

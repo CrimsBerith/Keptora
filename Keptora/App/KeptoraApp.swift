@@ -136,7 +136,7 @@ struct KeptoraApp: App {
                     .keyboardShortcut("2", modifiers: [.command])
                 Button("Smart Categories") { appDelegate.model.selectedRoute = .smartBuckets }
                     .keyboardShortcut("3", modifiers: [.command])
-                Button("History & Quarantine") { appDelegate.model.selectedRoute = .history }
+                Button("History & Restore") { appDelegate.model.selectedRoute = .history }
                     .keyboardShortcut("4", modifiers: [.command])
                 Button("Insights") { appDelegate.model.selectedRoute = .insights }
                     .keyboardShortcut("5", modifiers: [.command])

@@ -13,7 +13,7 @@ struct MobileHistoryView: View {
                     ContentUnavailableView {
                         Label("No cleanup history", systemImage: "clock.badge.checkmark")
                     } description: {
-                        Text("Completed cleanup and quarantine actions will appear here with full restoration records.")
+                        Text("Completed cleanup actions will appear here with full restoration records.")
                     } actions: {
                         Button {
                             store.selectedTab = .library
@@ -51,7 +51,7 @@ struct MobileHistoryView: View {
                                             Text("Photos Recently Deleted")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         } else {
-                                            Text("Keptora Quarantine")
+                                            Text("Keptora Safe Bin")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         }
                                         Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
@@ -135,7 +135,7 @@ struct MobileHistoryView: View {
                 }
             }
         } message: {
-            Text("This will move quarantined files back to their original locations.")
+            Text("This will move files back to their original locations.")
         }
     }
 

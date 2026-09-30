@@ -90,7 +90,7 @@ struct ReviewStudioView: View {
         }
         .overlay(alignment: .trailing) {
             if isEvidencePresented {
-                drawerSurface(title: mode == .exact ? "Exact Evidence" : "Similarity Evidence", systemImage: "doc.text.magnifyingglass") {
+                drawerSurface(title: mode == .exact ? "Photo Details" : "Similarity Details", systemImage: "info.circle") {
                     inspector
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -313,26 +313,26 @@ struct ReviewStudioView: View {
 
             Divider().frame(height: 20)
 
-            // Evidence Drawer Toggle
+            // Photo Details & Inspector Toggle
             Button {
                 withAnimation(.easeInOut(duration: 0.18)) {
                     isQueuePresented = false
                     isEvidencePresented.toggle()
                 }
             } label: {
-                Label("Evidence", systemImage: "doc.text.magnifyingglass")
+                Label("Inspector", systemImage: "sidebar.trailing")
             }
             .buttonStyle(.bordered)
             .background(isEvidencePresented ? KeptoraDesign.accent.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .disabled(mode == .exact ? model.selectedGroup == nil : model.selectedSimilarityGroup == nil)
-            .help("Toggle evidence and metadata inspector")
+            .help("Toggle photo details and safety inspector")
 
             // Secondary Tools Menu
             Menu {
                 Button {
                     showDecisionReconciliation = true
                 } label: {
-                    Label("Quarantine Reconciliation…", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Safety & Audit Log…", systemImage: "shield.lefthalf.filled")
                 }
                 .accessibilityIdentifier("mac.review.reconciliation.open")
 
@@ -983,10 +983,9 @@ struct ReviewStudioView: View {
         if let group = model.selectedGroup {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Evidence")
+                    Text("Group Details")
                         .font(.headline)
-                    InspectorRow(label: "Confidence", value: "Exact")
-                    InspectorRow(label: "Algorithm", value: "SHA-256 v1")
+                    InspectorRow(label: "Match", value: "100% Identical")
                     InspectorRow(label: "Members", value: group.assets.count.formatted())
                     InspectorRow(label: "Recoverable", value: ByteCountFormatter.string(fromByteCount: group.reclaimableBytes, countStyle: .file))
 
@@ -1008,7 +1007,7 @@ struct ReviewStudioView: View {
                             .font(.callout.weight(.medium))
                         Text(group.assets.first?.id == keeper.id
                              ? "Default keeper: the oldest modified copy, then the shortest stable path. Choose Keep on another copy to override it."
-                             : "You selected this copy as the keeper. Keptora blocks it from quarantine until you choose another keeper.")
+                             : "You selected this copy as the keeper. Keptora protects it and will never delete this file.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Button("Reveal Keeper in Finder") { model.reveal(keeper) }
@@ -1016,12 +1015,15 @@ struct ReviewStudioView: View {
                     }
 
                     Divider()
-                    Text("Digest")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(group.digest)
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
+                    DisclosureGroup("Checksum (SHA-256)") {
+                        Text(group.digest)
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .padding(.top, 4)
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
 
                     if let evidence = model.selectedDecisionEvidence {
                         HStack(spacing: 8) {
@@ -1034,7 +1036,7 @@ struct ReviewStudioView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Button("Decision Evidence…") { showDecisionEvidence = true }
+                            Button("Why This Is Safe…") { showDecisionEvidence = true }
                                 .controlSize(.small)
                         }
                         .padding(10)
@@ -1043,7 +1045,7 @@ struct ReviewStudioView: View {
                         Button {
                             showDecisionEvidence = true
                         } label: {
-                            Label("Decision Evidence…", systemImage: "doc.text.magnifyingglass")
+                            Label("Why This Is Safe…", systemImage: "checkmark.shield")
                         }
                         .controlSize(.small)
                         .help("This asset has not been explicitly reviewed yet.")
@@ -1058,7 +1060,7 @@ struct ReviewStudioView: View {
                             Text(model.plannedAssets.count.formatted())
                                 .font(.headline.monospacedDigit())
                         }
-                        Text("\(ByteCountFormatter.string(fromByteCount: model.plannedBytes, countStyle: .file)) selected for reversible quarantine.")
+                        Text("\(ByteCountFormatter.string(fromByteCount: model.plannedBytes, countStyle: .file)) selected for safe cleanup.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                         Button {
@@ -1083,7 +1085,7 @@ struct ReviewStudioView: View {
         if let group = model.selectedSimilarityGroup {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Similarity evidence")
+                    Text("Similarity Details")
                         .font(.headline)
                     InspectorRow(label: "Tier", value: group.tier.label)
                     InspectorRow(label: "Maximum distance", value: group.maximumDistance.formatted(.number.precision(.fractionLength(4))))
@@ -1095,7 +1097,7 @@ struct ReviewStudioView: View {
                     Divider()
                     Label("Review-only policy", systemImage: "hand.raised.square.fill")
                         .font(.headline)
-                    Text("Feature-print distance is evidence of visual resemblance, not proof that two files are interchangeable. Similar groups have no Keep, Quarantine, or automatic cleanup action.")
+                    Text("Visually similar photos are grouped for comparison. Keptora never deletes them automatically; you choose whether to keep or remove each photo.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
 
@@ -1446,7 +1448,7 @@ private struct DecisionEvidenceSheet: View {
                 .frame(width: 54, height: 54)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Decision Evidence")
+                    Text("Why This Is Safe")
                         .font(.title2.weight(.semibold))
                     Text(asset?.displayName ?? "No focused asset")
                         .font(.callout)
@@ -1467,36 +1469,39 @@ private struct DecisionEvidenceSheet: View {
                         Label(evidence.proofState.label, systemImage: evidence.proofState.systemImage)
                             .font(.headline)
                         Text(evidence.proofState == .verifiedExactPlan
-                             ? "This planned copy matches the exact-set SHA-256 digest and is not the protected keeper. Keptora will still re-hash it immediately before quarantine."
+                             ? "This copy is a 100% byte-for-byte identical duplicate. Your original keeper file remains safe and untouched."
                              : evidence.proofState == .protectedKeeper || evidence.proofState == .selectedKeeper
-                             ? "This copy is the protected keeper. Keptora blocks it from quarantine until another keeper is selected."
+                             ? "This copy is your protected original keeper. Keptora protects it and will never delete this file."
                              : evidence.proofState == .reviewedSkip
-                             ? "This byte-identical copy was reviewed but intentionally left out of the Safety Plan."
-                             : "The recorded decision cannot currently be proven from the selected exact-set state. Review it again before creating a Safety Plan.")
+                             ? "This duplicate was reviewed and kept in place."
+                             : "Review this file again before adding it to a Safety Plan.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
 
-                        GroupBox("Decision provenance") {
+                        GroupBox("Review details") {
                             VStack(spacing: 9) {
                                 evidenceRow("Action", evidence.decision.label)
                                 evidenceRow("Reason", evidence.reasonLabel)
-                                evidenceRow("Actor", evidence.actor == "user" ? "User" : "Keptora safety rule")
-                                evidenceRow("Recorded", evidence.decidedAt.formatted(date: .abbreviated, time: .standard))
+                                evidenceRow("Decided by", evidence.actor == "user" ? "User" : "Keptora safety rule")
+                                evidenceRow("Date", evidence.decidedAt.formatted(date: .abbreviated, time: .standard))
                             }
                             .padding(.vertical, 4)
                         }
 
-                        GroupBox("Exact-copy proof") {
+                        GroupBox("Safety verification") {
                             VStack(spacing: 9) {
-                                evidenceRow("Algorithm", "SHA-256 v1")
-                                evidenceRow("Keeper", evidence.canonicalAssetID.rawValue == asset.id.rawValue ? "This file" : "Separate protected copy")
-                                evidenceRow("Bytes", ByteCountFormatter.string(fromByteCount: asset.byteCount, countStyle: .file))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Digest").font(.caption).foregroundStyle(.secondary)
+                                evidenceRow("Match verification", "100% Exact byte match")
+                                evidenceRow("Keeper status", evidence.canonicalAssetID.rawValue == asset.id.rawValue ? "Protected keeper (kept)" : "Safe duplicate (can be removed)")
+                                evidenceRow("File size", ByteCountFormatter.string(fromByteCount: asset.byteCount, countStyle: .file))
+                                DisclosureGroup("Technical Checksum (SHA-256)") {
                                     Text(evidence.exactDigest)
                                         .font(.system(.caption2, design: .monospaced))
+                                        .foregroundStyle(.secondary)
                                         .textSelection(.enabled)
+                                        .padding(.top, 4)
                                 }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             }
                             .padding(.vertical, 4)
                         }
@@ -1506,7 +1511,7 @@ private struct DecisionEvidenceSheet: View {
                                 VStack(spacing: 9) {
                                     evidenceRow("Family", familyKind)
                                     evidenceRow("Role", evidence.familyRole ?? "Unknown")
-                                    Text("Family safety is checked again when the Safety Plan is prepared; all-or-nothing families are blocked if a move would separate required components.")
+                                    Text("Family safety is verified when the Safety Plan is prepared; photo pairs (like RAW+JPEG or Live Photos) are kept together safely.")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -1514,7 +1519,7 @@ private struct DecisionEvidenceSheet: View {
                             }
                         }
 
-                        Label("Similarity suggestions never enter this evidence path and can never be auto-added to cleanup.", systemImage: "hand.raised.fill")
+                        Label("Similar photo suggestions are never deleted automatically.", systemImage: "shield.fill")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -1522,9 +1527,9 @@ private struct DecisionEvidenceSheet: View {
                 }
             } else {
                 KeptoraUnavailableView(
-                    "No recorded decision",
-                    systemImage: "doc.text.magnifyingglass",
-                    description: "Choose Keep, Add to Plan, or Skip for the focused exact copy. Keptora will record the reason and show its evidence here."
+                    "No decision recorded yet",
+                    systemImage: "checkmark.shield",
+                    description: "Choose Keep, Add to Plan, or Skip for this copy. Keptora will record the reason and show safety details here."
                 )
                 .padding(30)
             }

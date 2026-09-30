@@ -420,18 +420,18 @@ struct MobileReviewView: View {
         if isSimilarVideoMode {
             return store.source == .photos
                 ? String(localized: "Remove selected similar videos from Photos?")
-                : String(localized: "Move selected similar videos to Keptora Quarantine?")
+                : String(localized: "Move selected similar videos to Keptora Bin?")
         }
         switch store.source {
         case .photos: return String(localized: "Remove exact copies from Photos?")
-        default: return String(localized: "Move exact copies to Keptora Quarantine?")
+        default: return String(localized: "Move exact copies to Keptora Bin?")
         }
     }
 
     private var cleanupButtonTitle: String {
         switch store.source {
         case .photos: return String(localized: "Remove from Photos")
-        default: return String(localized: "Move to Quarantine")
+        default: return String(localized: "Move to Bin")
         }
     }
 
@@ -449,7 +449,7 @@ struct MobileReviewView: View {
         case .photos:
             return summary + " " + String(localized: "With iCloud Photos, removal syncs to your other devices. Photos keeps items in Recently Deleted for up to 30 days.")
         default:
-            return summary + " " + String(localized: "The protected keeper stays in place. Files move to a reversible Keptora Quarantine folder.")
+            return summary + " " + String(localized: "The protected keeper stays in place. Files move to a safe, recoverable Keptora Bin.")
         }
     }
 }

@@ -45,9 +45,9 @@ struct SafetyPlanSheet: View {
             .frame(width: 54, height: 54)
 
             VStack(alignment: .leading, spacing: 5) {
-                Text("Review Safety Plan")
+                Text("Review Safe Cleanup")
                     .font(.title2.weight(.semibold))
-                Text("Keptora will move reviewed copies into a hidden quarantine folder beside the originals. Nothing is permanently deleted.")
+                Text("Keptora moves reviewed duplicate copies into a safe recovery bin. Your original photos are kept safe and untouched.")
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -63,8 +63,8 @@ struct SafetyPlanSheet: View {
                     planMetric(title: "Files", value: plan.operations.count.formatted(), image: "doc.on.doc")
                     planMetric(title: "Space", value: ByteCountFormatter.string(fromByteCount: plan.estimatedBytes, countStyle: .file), image: "internaldrive")
                     planMetric(title: "Recovery", value: "Restorable", image: "arrow.uturn.backward.circle")
-                    planMetric(title: "Decision proof", value: "\(plan.provenanceCount)/\(plan.operations.count)", image: "checkmark.seal")
-                    planMetric(title: "Revision", value: "R\(plan.lineage?.revisionNumber ?? 1)", image: "point.3.connected.trianglepath.dotted")
+                    planMetric(title: "Verified", value: "\(plan.provenanceCount)/\(plan.operations.count)", image: "checkmark.seal")
+                    planMetric(title: "Plan", value: "#\(plan.lineage?.revisionNumber ?? 1)", image: "point.3.connected.trianglepath.dotted")
                 }
 
                 if let freshness = model.safetyPlanFreshness {
@@ -94,7 +94,7 @@ struct SafetyPlanSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Label("Every operation carries its exact-review decision provenance and protected keeper identity into the signed manifest. RAW/sidecar and Live Photo families must move together. Each file is re-hashed immediately before it moves.", systemImage: "checkmark.shield.fill")
+                Label("Original keeper photos remain in place. Every duplicate copy is verified before moving, and photo families (like RAW+JPEG or Live Photos) stay together.", systemImage: "checkmark.shield.fill")
                     .font(.callout)
                     .foregroundStyle(.secondary)
 
@@ -169,12 +169,12 @@ struct SafetyPlanSheet: View {
                         .foregroundStyle(.tertiary)
                         .textSelection(.enabled)
                 }
-                Text("Quarantine: \(plan.quarantineRoot.path)")
+                Text("Safe recovery bin: \(plan.quarantineRoot.path)")
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .textSelection(.enabled)
 
-                Toggle("I reviewed the destination, protected keepers, and recovery path.", isOn: $confirmed)
+                Toggle("I understand original photos are preserved and copies can be restored at any time.", isOn: $confirmed)
                     .toggleStyle(.checkbox)
             }
             .padding(22)
@@ -186,11 +186,11 @@ struct SafetyPlanSheet: View {
     private var footer: some View {
         HStack {
             if model.isCommittingCleanup {
-                Text("Verifying and moving reviewed files…")
+                Text("Verifying and safely moving duplicate files…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("You can restore this plan later from Quarantine & Restore.")
+                Text("You can restore these files at any time from History & Restore.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -209,7 +209,7 @@ struct SafetyPlanSheet: View {
                         .controlSize(.small)
                         .frame(minWidth: 110)
                 } else {
-                    Label("Move to Quarantine", systemImage: "shippingbox.fill")
+                    Label("Move to Safe Bin", systemImage: "shippingbox.fill")
                 }
             }
             .buttonStyle(.borderedProminent)
