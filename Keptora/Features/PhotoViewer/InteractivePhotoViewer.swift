@@ -298,6 +298,7 @@ public struct InteractivePhotoViewerView: View {
             }
             .buttonStyle(.plain)
             .help("Close viewer (Esc)")
+            .accessibilityLabel("Close viewer (Esc)")
             
             if let item = state.currentItem {
                 HStack(spacing: 10) {
@@ -323,6 +324,7 @@ public struct InteractivePhotoViewerView: View {
                             }
                             .buttonStyle(.plain)
                             .help("Previous photo (←)")
+                            .accessibilityLabel("Previous photo (←)")
                             
                             Button(action: { state.next() }) {
                                 Image(systemName: "chevron.right")
@@ -333,6 +335,7 @@ public struct InteractivePhotoViewerView: View {
                             }
                             .buttonStyle(.plain)
                             .help("Next photo (→)")
+                            .accessibilityLabel("Next photo (→)")
                         }
                     }
                 }
@@ -434,6 +437,7 @@ public struct InteractivePhotoViewerView: View {
             .background(.ultraThinMaterial)
             .cornerRadius(8)
             .help("Launch fast Tinder-style swipe culling for these photos")
+            .accessibilityLabel("Launch fast Tinder-style swipe culling for these photos")
 
             // Clean Current Photo Button
             if let current = state.currentItem, onCleanOrDelete != nil {
@@ -457,6 +461,7 @@ public struct InteractivePhotoViewerView: View {
                 .keyboardShortcut(.delete, modifiers: [])
                 .disabled(alreadyCleaned)
                 .help("Add current photo to cleanup plan and view next")
+                .accessibilityLabel("Add current photo to cleanup plan and view next")
             }
         }
         .padding(.horizontal, 16)
@@ -687,6 +692,7 @@ public struct PhotoInspectorDrawer: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close photo details")
             }
             .padding(.bottom, 4)
             

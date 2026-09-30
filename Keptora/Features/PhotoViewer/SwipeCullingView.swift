@@ -230,6 +230,8 @@ public struct SwipeCullingStudioView: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+            .keyboardShortcut(.cancelAction)
             
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -364,6 +366,11 @@ public struct SwipeCullingStudioView: View {
                     }
                 } : nil
         )
+        // Dragging is not available to VoiceOver / Switch Control users; expose the same actions.
+        .accessibilityLabel(Text(card.displayName))
+        .accessibilityAction(named: Text("Keep")) { if isTop { commit(.keep, offset: CGSize(width: 850, height: 0)) } }
+        .accessibilityAction(named: Text("Add to cleanup plan")) { if isTop { commit(.cleanup, offset: CGSize(width: -850, height: 0)) } }
+        .accessibilityAction(named: Text("Skip")) { if isTop { commit(.skip, offset: CGSize(width: 0, height: -850)) } }
         .task(id: card.id) {
             if cardImages[card.id] == nil {
                 let url = card.fileURL

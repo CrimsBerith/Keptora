@@ -411,3 +411,22 @@ enum KeptoraBrandIcon {
         return image
     }
 }
+
+// MARK: - Motion (Reduce Motion aware)
+
+private struct KeptoraAnimationModifier<Value: Equatable>: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let animation: Animation
+    let value: Value
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? nil : animation, value: value)
+    }
+}
+
+extension View {
+    /// Like `.animation(_:value:)`, but disabled when the user turned on Reduce Motion.
+    func keptoraAnimation<Value: Equatable>(_ animation: Animation, value: Value) -> some View {
+        modifier(KeptoraAnimationModifier(animation: animation, value: value))
+    }
+}

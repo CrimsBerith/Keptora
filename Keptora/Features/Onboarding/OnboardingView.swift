@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page = 0
     @State private var iconBounce = false
 
@@ -51,20 +52,8 @@ struct OnboardingView: View {
             .frame(width: 120, height: 120)
             .shadow(color: item.accent.opacity(0.22), radius: 14, y: 6)
             .accessibilityHidden(true)
-            .onChange(of: page) { _ in
-                withAnimation(KeptoraDesign.animSpring) {
-                    iconBounce = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                    withAnimation(KeptoraDesign.animSpring) { iconBounce = false }
-                }
-            }
-            .onAppear {
-                withAnimation(KeptoraDesign.animSpring.delay(0.1)) { iconBounce = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                    withAnimation(KeptoraDesign.animSpring) { iconBounce = false }
-                }
-            }
+            .onChange(of: page) { _ in bounceIcon() }
+            .onAppear { bounceIcon(afterDelay: 0.1) }
 
             // Kopya
             VStack(spacing: 12) {
@@ -89,7 +78,7 @@ struct OnboardingView: View {
                     .id("detail-\(page)")
             }
             .padding(.top, 26)
-            .animation(KeptoraDesign.animMedium, value: page)
+            .keptoraAnimation(KeptoraDesign.animMedium, value: page)
 
             // Dot indicator
             HStack(spacing: 8) {
@@ -97,7 +86,7 @@ struct OnboardingView: View {
                     Capsule()
                         .fill(index == page ? item.accent : Color.secondary.opacity(0.22))
                         .frame(width: index == page ? 28 : 8, height: 8)
-                        .animation(KeptoraDesign.animSpring, value: page)
+                        .keptoraAnimation(KeptoraDesign.animSpring, value: page)
                 }
             }
             .padding(.top, 26)
@@ -136,6 +125,17 @@ struct OnboardingView: View {
         }
         .frame(minWidth: 720, idealWidth: 760, minHeight: 560, idealHeight: 600)
         .interactiveDismissDisabled()
+    }
+
+    /// One small bounce of the hero icon; skipped entirely when Reduce Motion is on.
+    private func bounceIcon(afterDelay delay: Double = 0) {
+        guard !reduceMotion else { return }
+        Task { @MainActor in
+            if delay > 0 { try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+            withAnimation(KeptoraDesign.animSpring) { iconBounce = true }
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            withAnimation(KeptoraDesign.animSpring) { iconBounce = false }
+        }
     }
 }
 

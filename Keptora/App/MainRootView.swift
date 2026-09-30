@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainRootView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
@@ -152,7 +153,7 @@ struct MainRootView: View {
         let isSelected = (model.selectedRoute ?? .home) == route
         let isHovered  = hoveredRoute == route
         return Button {
-            withAnimation(KeptoraDesign.animFast) { model.selectedRoute = route }
+            withAnimation(reduceMotion ? nil : KeptoraDesign.animFast) { model.selectedRoute = route }
         } label: {
             HStack(spacing: 11) {
                 ZStack {
@@ -165,7 +166,7 @@ struct MainRootView: View {
                         .foregroundStyle(isSelected ? .white : .secondary)
                 }
                 .frame(width: 30, height: 30)
-                .animation(KeptoraDesign.animFast, value: isSelected)
+                .keptoraAnimation(KeptoraDesign.animFast, value: isSelected)
                 Text(route.title)
                     .font(.system(.body, design: .rounded).weight(isSelected ? .semibold : .medium))
                     .foregroundStyle(.primary)
@@ -186,7 +187,7 @@ struct MainRootView: View {
                     : (isHovered ? Color.primary.opacity(0.04) : Color.clear),
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
-            .animation(KeptoraDesign.animFast, value: isHovered)
+            .keptoraAnimation(KeptoraDesign.animFast, value: isHovered)
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(isSelected ? KeptoraDesign.accent.opacity(0.20) : Color.clear)
