@@ -113,9 +113,24 @@ public enum MetadataDoctorEngine: Sendable {
             do {
                 _ = try FileManager.default.replaceItemAt(destinationURL, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly)
             } catch {
-                // Fallback to copy if replaceItemAt is not supported on certain mount points
-                try? FileManager.default.removeItem(at: destinationURL)
-                try FileManager.default.moveItem(at: tempURL, to: destinationURL)
+                // Fallback for mount points where replaceItemAt is unsupported. The original is
+                // moved aside first so a failed move can be rolled back instead of losing it.
+                let backupURL = destinationURL.deletingLastPathComponent()
+                    .appendingPathComponent(".bak_keptora_\(UUID().uuidString)_\(destinationURL.lastPathComponent)")
+                do {
+                    try FileManager.default.moveItem(at: destinationURL, to: backupURL)
+                } catch {
+                    try? FileManager.default.removeItem(at: tempURL)
+                    throw error
+                }
+                do {
+                    try FileManager.default.moveItem(at: tempURL, to: destinationURL)
+                    try? FileManager.default.removeItem(at: backupURL)
+                } catch {
+                    try? FileManager.default.moveItem(at: backupURL, to: destinationURL)
+                    try? FileManager.default.removeItem(at: tempURL)
+                    throw error
+                }
             }
         }
     }

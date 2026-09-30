@@ -6,8 +6,6 @@ struct SettingsView: View {
     @AppStorage("Keptora.CheckpointInterval") private var checkpointInterval = 100
     @AppStorage("Keptora.ShowFilePaths") private var showFilePaths = false
     @AppStorage("Keptora.Feature.Similarity.v1") private var similarityEnabled = true
-    @AppStorage("Keptora.Feature.PhotoKitBytes.v1") private var photoKitProbeEnabled = false
-    @AppStorage("Keptora.Watchdog.Downloads") private var watchdogDownloadsEnabled = false
     @AppStorage(SourceExclusionPolicy.folderDefaultsKey) private var excludedFolders = ""
     @AppStorage(SourceExclusionPolicy.extensionDefaultsKey) private var excludedExtensions = ""
     @AppStorage(SimilaritySensitivityPreset.defaultsKey) private var sensitivityRaw = SimilaritySensitivityPreset.precisionFirst.rawValue
@@ -89,24 +87,7 @@ struct SettingsView: View {
 
             Section("Analysis") {
                 Toggle("Similar photo suggestions", isOn: $similarityEnabled)
-                Toggle("PhotoKit original-byte probe", isOn: $photoKitProbeEnabled)
                 Text("Similar photos are suggestions only. They never enter a cleanup plan.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Background Watchdog") {
-                Toggle("Monitor Downloads folder for incoming duplicates", isOn: $watchdogDownloadsEnabled)
-                if watchdogDownloadsEnabled {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bolt.badge.clock.fill")
-                            .foregroundColor(.green)
-                        Text("Active: Low-energy DispatchSource monitor on ~/Downloads")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Text("Keptora automatically identifies when a newly downloaded image or screenshot is already in your photo library.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

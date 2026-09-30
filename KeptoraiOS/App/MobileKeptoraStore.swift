@@ -512,9 +512,9 @@ final class MobileKeptoraStore: ObservableObject {
                     ), at: 0
                 )
             case .folder(let root):
-                let digestByAsset = Dictionary(uniqueKeysWithValues: exactGroups.flatMap { group in
+                let digestByAsset = Dictionary(exactGroups.flatMap { group in
                     group.assets.map { ($0.id, group.digest) }
-                })
+                }, uniquingKeysWith: { first, _ in first })
                 let candidates = selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
                     guard let digest = digestByAsset[asset.id] else { return nil }
                     return (asset, digest)

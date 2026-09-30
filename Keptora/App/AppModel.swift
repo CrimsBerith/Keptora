@@ -196,7 +196,12 @@ final class AppModel: ObservableObject {
         )
     }
 
+    private var isPrepared = false
+
     func prepare() async {
+        // The SwiftUI window and the AppKit fallback window both call this; run it once.
+        guard !isPrepared else { return }
+        isPrepared = true
         let isPortfolioUITesting = ProcessInfo.processInfo.arguments.contains("-portfolioUITesting")
         isShowingOnboarding = !isPortfolioUITesting && !UserDefaults.standard.bool(forKey: onboardingCompletedKey)
         do {
@@ -214,6 +219,7 @@ final class AppModel: ObservableObject {
                 loadDemoLibrary()
             }
         } catch {
+            isPrepared = false
             present(error)
         }
     }

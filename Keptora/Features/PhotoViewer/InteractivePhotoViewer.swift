@@ -568,13 +568,71 @@ public struct PhotoInspectorDrawer: View {
     public let metadata: DetailedPhotoMetadata?
     public let item: ViewerPhotoItem?
     public let onClose: () -> Void
-    
+    @State private var pendingAction: MetadataAction?
+    @State private var isWorking = false
+    @State private var resultMessage: String?
+
     public init(metadata: DetailedPhotoMetadata?, item: ViewerPhotoItem?, onClose: @escaping () -> Void) {
         self.metadata = metadata
         self.item = item
         self.onClose = onClose
     }
-    
+
+    private enum MetadataAction: Identifiable {
+        case fixDate(Date)
+        case stripLocationCopy
+
+        var id: String {
+            switch self {
+            case .fixDate: return "fixDate"
+            case .stripLocationCopy: return "stripLocationCopy"
+            }
+        }
+    }
+
+    /// Runs the confirmed metadata action off the main thread and reports the outcome.
+    /// GPS removal writes a new copy next to the original; the original is never rewritten.
+    @MainActor
+    private func perform(_ action: MetadataAction) {
+        guard let url = item?.fileURL, !isWorking else { return }
+        isWorking = true
+        Task {
+            let message: String
+            do {
+                message = try await Task.detached(priority: .userInitiated) { () -> String in
+                    switch action {
+                    case .fixDate(let date):
+                        try FileManager.default.setAttributes([.creationDate: date], ofItemAtPath: url.path)
+                        return String(localized: "Creation date updated from the filename.")
+                    case .stripLocationCopy:
+                        let copyURL = Self.uniqueCopyURL(for: url)
+                        try MetadataDoctorEngine.stripLocationData(from: url, destinationURL: copyURL)
+                        return String(localized: "Saved a copy without location data: \(copyURL.lastPathComponent)")
+                    }
+                }.value
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            } catch {
+                message = String(localized: "Could not complete the change: \(error.localizedDescription)")
+            }
+            resultMessage = message
+            isWorking = false
+        }
+    }
+
+    nonisolated private static func uniqueCopyURL(for url: URL) -> URL {
+        let directory = url.deletingLastPathComponent()
+        let base = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        var index = 1
+        while true {
+            let suffix = index == 1 ? " (no location)" : " (no location \(index))"
+            let name = ext.isEmpty ? base + suffix : base + suffix + "." + ext
+            let candidate = directory.appendingPathComponent(name)
+            if !FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+            index += 1
+        }
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -630,8 +688,7 @@ public struct PhotoInspectorDrawer: View {
                         if let item, MetadataDoctorEngine.inferDateFromFilename(item.fileURL.lastPathComponent) != nil {
                             Button(action: {
                                 if let inferred = MetadataDoctorEngine.inferDateFromFilename(item.fileURL.lastPathComponent) {
-                                    try? FileManager.default.setAttributes([.creationDate: inferred], ofItemAtPath: item.fileURL.path)
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                    pendingAction = .fixDate(inferred)
                                 }
                             }) {
                                 HStack(spacing: 6) {
@@ -659,14 +716,11 @@ public struct PhotoInspectorDrawer: View {
                             }
                             
                             Button(action: {
-                                if let url = item?.fileURL {
-                                    try? MetadataDoctorEngine.stripLocationData(from: url, destinationURL: url)
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                }
+                                pendingAction = .stripLocationCopy
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "location.slash.fill")
-                                    Text("Strip GPS Location (Privacy)")
+                                    Text("Save Copy Without GPS Location")
                                 }
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.white)
@@ -677,7 +731,7 @@ public struct PhotoInspectorDrawer: View {
                             }
                             .buttonStyle(.plain)
                             .padding(.top, 4)
-                            .help("Remove location coordinates to protect privacy when sharing")
+                            .help("Save a new copy without location coordinates. The original file is not changed.")
                         }
                     } else {
                         Text("Reading EXIF parameters...")
@@ -692,6 +746,49 @@ public struct PhotoInspectorDrawer: View {
         .background(.ultraThinMaterial)
         .cornerRadius(16)
         .padding(16)
+        .disabled(isWorking)
+        .confirmationDialog(
+            pendingAction.map(Self.confirmationTitle) ?? "",
+            isPresented: Binding(get: { pendingAction != nil }, set: { if !$0 { pendingAction = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingAction
+        ) { action in
+            Button(Self.confirmButtonTitle(for: action)) { perform(action) }
+            Button("Cancel", role: .cancel) {}
+        } message: { action in
+            Text(Self.confirmationMessage(for: action))
+        }
+        .alert(
+            "Photo Details",
+            isPresented: Binding(get: { resultMessage != nil }, set: { if !$0 { resultMessage = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(resultMessage ?? "")
+        }
+    }
+
+    private static func confirmationTitle(for action: MetadataAction) -> String {
+        switch action {
+        case .fixDate: return String(localized: "Change the file's creation date?")
+        case .stripLocationCopy: return String(localized: "Save a copy without location?")
+        }
+    }
+
+    private static func confirmButtonTitle(for action: MetadataAction) -> String {
+        switch action {
+        case .fixDate: return String(localized: "Change Date")
+        case .stripLocationCopy: return String(localized: "Save Copy")
+        }
+    }
+
+    private static func confirmationMessage(for action: MetadataAction) -> String {
+        switch action {
+        case .fixDate(let date):
+            return String(localized: "This modifies the original file on disk and sets its creation date to \(date.formatted(date: .abbreviated, time: .shortened)).")
+        case .stripLocationCopy:
+            return String(localized: "A new file without GPS coordinates will be saved next to the original. The original is not changed.")
+        }
     }
     
     private func sectionHeader(title: String, icon: String) -> some View {

@@ -72,6 +72,10 @@ actor ScanCoordinator {
             )
         }
 
+        // Configurable in Settings; clamped to the same range the stepper allows.
+        let storedInterval = UserDefaults.standard.integer(forKey: "Keptora.CheckpointInterval")
+        let checkpointInterval = storedInterval > 0 ? min(max(storedInterval, 25), 500) : 100
+
         var processed = startIndex
         var hashed = startIndex > 0 ? session.hashed : 0
         var reused = startIndex > 0 ? session.reused : 0
@@ -101,7 +105,7 @@ actor ScanCoordinator {
                         message: "\(hashed) hashed · \(reused) reused"
                     )
                 )
-                if processed % 100 == 0 {
+                if processed % checkpointInterval == 0 {
                     try await database.updateScanCheckpoint(
                         id: session.id,
                         processed: processed,

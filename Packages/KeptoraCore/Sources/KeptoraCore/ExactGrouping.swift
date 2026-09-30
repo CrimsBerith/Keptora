@@ -59,7 +59,7 @@ public actor UniversalExactScanner {
         var skippedNetwork = 0
         let resumableEntries: [String: UniversalScanCheckpoint.Entry]
         if let checkpoint, checkpoint.sourceID == adapter.source.id, checkpoint.allowNetwork == allowNetwork {
-            resumableEntries = Dictionary(uniqueKeysWithValues: checkpoint.entries.map { ($0.sourceAsset.id, $0) })
+            resumableEntries = Dictionary(checkpoint.entries.map { ($0.sourceAsset.id, $0) }, uniquingKeysWith: { _, latest in latest })
         } else {
             resumableEntries = [:]
         }
@@ -113,7 +113,7 @@ public actor UniversalExactScanner {
             assets,
             groups,
             skippedNetwork,
-            Dictionary(uniqueKeysWithValues: completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) })
+            Dictionary(completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) }, uniquingKeysWith: { _, latest in latest })
         )
     }
 

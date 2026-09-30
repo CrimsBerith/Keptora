@@ -713,7 +713,7 @@ enum QuarantineVerificationEngine {
         observed: [QuarantineObservedOperationState],
         checkedAt: Date = .now
     ) -> QuarantineVerificationReport {
-        let byID = Dictionary(uniqueKeysWithValues: observed.map { ($0.operationID, $0) })
+        let byID = Dictionary(observed.map { ($0.operationID, $0) }, uniquingKeysWith: { first, _ in first })
         let checks = manifest.operations.map { operation in
             classify(
                 expected: operation,
