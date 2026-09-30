@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A6A276B9636FEC514296B0C /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630E41AE26D2DC944BA5E160 /* AppModelTests.swift */; };
+		F1DE351B34E099F998E27A52 /* ScanCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B30B29D82D67842B686D9A7 /* ScanCoordinatorTests.swift */; };
+		63ACB68D124C6105EB33B1B5 /* ManifestSignerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A7A171D1F9E1DB4DA43DB6 /* ManifestSignerTests.swift */; };
 		005D72074E110279171AD67F /* SQLiteDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 866CEFC30164C3AC7062B41A /* SQLiteDatabase.swift */; };
 		01FC7A58A26DC192B4189200 /* AssetFamilyGraphBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326EA7A14786A61759908120 /* AssetFamilyGraphBuilder.swift */; };
 		03E5EFAE9C5AFE2C18E319FB /* PerceptualCandidateIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC909A005028E311153D71A0 /* PerceptualCandidateIndex.swift */; };
@@ -145,6 +148,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		630E41AE26D2DC944BA5E160 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		7B30B29D82D67842B686D9A7 /* ScanCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanCoordinatorTests.swift; sourceTree = "<group>"; };
+		F5A7A171D1F9E1DB4DA43DB6 /* ManifestSignerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManifestSignerTests.swift; sourceTree = "<group>"; };
 		0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		01FB6C8ACDCC9E3B5600691F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -315,6 +321,9 @@
 		3AB75412D16B1EC19BE78E05 /* KeptoraTests */ = {
 			isa = PBXGroup;
 			children = (
+				630E41AE26D2DC944BA5E160 /* AppModelTests.swift */,
+				7B30B29D82D67842B686D9A7 /* ScanCoordinatorTests.swift */,
+				F5A7A171D1F9E1DB4DA43DB6 /* ManifestSignerTests.swift */,
 				BBDD9ADD26E13E7AA556A098 /* AccessPolicyTests.swift */,
 				5D71FBC4F04636456993EFC7 /* AssetFamilyGraphTests.swift */,
 				D8E28E72F83827870657A00F /* DiagnosticsRedactionTests.swift */,
@@ -950,6 +959,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A6A276B9636FEC514296B0C /* AppModelTests.swift in Sources */,
+				F1DE351B34E099F998E27A52 /* ScanCoordinatorTests.swift in Sources */,
+				63ACB68D124C6105EB33B1B5 /* ManifestSignerTests.swift in Sources */,
 				D5A0B7F9001D6CD469E8CBA2 /* AccessPolicyTests.swift in Sources */,
 				520B3B8485D5DB7A4D81B788 /* AssetFamilyGraphTests.swift in Sources */,
 				36CE7283B57559C660116ABD /* DiagnosticsRedactionTests.swift in Sources */,

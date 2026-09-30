@@ -1,0 +1,129 @@
+import XCTest
+@testable import Keptora
+
+@MainActor
+final class AppModelTests: XCTestCase {
+    func testKeeperCanNeverBeQueuedForQuarantine() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let model = AppModel(applicationSupportDirectory: directory)
+        await model.prepare()
+
+        let keeperID = AssetID(rawValue: "keeper-1")
+        let copyID = AssetID(rawValue: "copy-1")
+        let groupID = "test-group"
+
+        let keeper = ReviewAsset(
+            id: keeperID, displayName: "keeper.jpg", fileURL: URL(fileURLWithPath: "/tmp/keeper.jpg"),
+            byteCount: 100, modificationDate: Date(), digest: "digest1"
+        )
+        let copy = ReviewAsset(
+            id: copyID, displayName: "copy.jpg", fileURL: URL(fileURLWithPath: "/tmp/copy.jpg"),
+            byteCount: 100, modificationDate: Date(), digest: "digest1"
+        )
+
+        let group = ReviewGroup(
+            id: groupID,
+            kind: "exact",
+            confidence: "high",
+            digest: "digest1",
+            reclaimableBytes: 100,
+            canonicalAssetID: keeperID,
+            assets: [keeper, copy]
+        )
+
+        model.duplicateGroups = [group]
+        let store = StoreEntitlementController()
+
+        // Attempt to mark the canonical keeper as .quarantinePlan
+        model.setDecision(.quarantinePlan, for: keeperID, access: store)
+
+        // It should be blocked synchronously and never stored
+        XCTAssertNil(model.decisions[keeperID])
+        XCTAssertFalse(store.reviewedAssetIDs.contains(keeperID.rawValue))
+
+        // But marking copy as .quarantinePlan should be accepted
+        model.setDecision(.quarantinePlan, for: copyID, access: store)
+        XCTAssertEqual(model.decisions[copyID], .quarantinePlan)
+    }
+
+    func testBatchActionQuarantinePlanProtectsKeeper() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let model = AppModel(applicationSupportDirectory: directory)
+        await model.prepare()
+
+        let keeperID = AssetID(rawValue: "keeper-2")
+        let copy1ID = AssetID(rawValue: "copy-2A")
+        let copy2ID = AssetID(rawValue: "copy-2B")
+        let groupID = "batch-group"
+
+        let keeper = ReviewAsset(
+            id: keeperID, displayName: "keeper.jpg", fileURL: URL(fileURLWithPath: "/tmp/keeper.jpg"),
+            byteCount: 100, modificationDate: Date(), digest: "digest2"
+        )
+        let copy1 = ReviewAsset(
+            id: copy1ID, displayName: "copy1.jpg", fileURL: URL(fileURLWithPath: "/tmp/copy1.jpg"),
+            byteCount: 100, modificationDate: Date(), digest: "digest2"
+        )
+        let copy2 = ReviewAsset(
+            id: copy2ID, displayName: "copy2.jpg", fileURL: URL(fileURLWithPath: "/tmp/copy2.jpg"),
+            byteCount: 100, modificationDate: Date(), digest: "digest2"
+        )
+
+        let group = ReviewGroup(
+            id: groupID,
+            kind: "exact",
+            confidence: "high",
+            digest: "digest2",
+            reclaimableBytes: 200,
+            canonicalAssetID: keeperID,
+            assets: [keeper, copy1, copy2]
+        )
+
+        model.duplicateGroups = [group]
+        let store = StoreEntitlementController()
+
+        model.applyBatchAction(.planSafeExtras, to: groupID, access: store)
+
+        // Extras should be planned
+        XCTAssertEqual(model.decisions[copy1ID], .quarantinePlan)
+        XCTAssertEqual(model.decisions[copy2ID], .quarantinePlan)
+
+        // Keeper must remain completely untouched
+        XCTAssertNil(model.decisions[keeperID])
+    }
+
+    func testUniquingKeysWithPreventsCrashOnDuplicateAssetRecords() {
+        struct StoredDecision {
+            let assetID: AssetID
+            let decision: ReviewDecision
+        }
+
+        let id = AssetID(rawValue: "duplicate-asset")
+        let stored = [
+            StoredDecision(assetID: id, decision: .skip),
+            StoredDecision(assetID: id, decision: .quarantinePlan)
+        ]
+
+        let decisions = Dictionary(stored.map { ($0.assetID, $0.decision) }, uniquingKeysWith: { _, newer in newer })
+        XCTAssertEqual(decisions.count, 1)
+        XCTAssertEqual(decisions[id], .quarantinePlan)
+    }
+
+    func testPrepareIdempotency() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let model = AppModel(applicationSupportDirectory: directory)
+        await model.prepare()
+        let initialGroups = model.duplicateGroups.count
+        await model.prepare()
+        XCTAssertEqual(model.duplicateGroups.count, initialGroups)
+    }
+}

@@ -70,13 +70,13 @@ final class MobileKeptoraStore: ObservableObject {
 
     @Published private(set) var source: SourceSelection = .none
     @Published private(set) var authorization: SourceAuthorization = .notDetermined
-    @Published private(set) var scanState: ScanState = .idle
+    @Published var scanState: ScanState = .idle
     @Published private(set) var assets: [UniversalMediaAsset] = []
     @Published private(set) var exactGroups: [UniversalExactGroup] = []
     @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = []
     @Published private(set) var similarVideoGroups: [UniversalSimilarityGroup] = []
-    @Published private(set) var similarityProgress: (processed: Int, total: Int)?
-    @Published private(set) var videoSimilarityProgress: (processed: Int, total: Int)?
+    @Published var similarityProgress: (processed: Int, total: Int)?
+    @Published var videoSimilarityProgress: (processed: Int, total: Int)?
     @Published private(set) var skippedCloudItems = 0
     @Published private(set) var history: [CleanupHistoryEntry] = []
     @Published private(set) var hasScanCheckpoint = false
@@ -108,7 +108,7 @@ final class MobileKeptoraStore: ObservableObject {
     private var activeFolderScopeURL: URL?
     private var scanTask: Task<Void, Never>?
     private var lastScanAllowedNetwork = false
-    private var suspendedForBackground = false
+    private(set) var suspendedForBackground = false
     private var shouldConnectPhotosWhenAuthorized = false
     private var scanFingerprintsByAssetID: [String: UniversalExactFingerprint] = [:]
     private let isPhotosDeniedUITesting: Bool

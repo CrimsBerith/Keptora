@@ -228,4 +228,114 @@ extension QuarantineCoordinatorTests {
         let candidates = try await database.fetchCleanupCandidates(sourceID: source)
         XCTAssertTrue(candidates.isEmpty, "A restored file must be reviewed again before it can re-enter a plan")
     }
+
+    func testRestoreRejectsPathsOutsideSourceRoot() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let sourceRoot = directory.appendingPathComponent("Library", isDirectory: true)
+        let support = directory.appendingPathComponent("Support", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let database = SQLiteDatabase(url: support.appendingPathComponent("test.sqlite"))
+        try await database.initialize()
+        let sourceVolume = try VolumeIdentity.resolve(for: sourceRoot)
+        let source = SourceIdentity.folderID(for: sourceRoot, volume: sourceVolume)
+        let content = Data("traversal-protection-test".utf8)
+        for index in 0..<2 {
+            let file = sourceRoot.appendingPathComponent("file-\(index).jpg")
+            try content.write(to: file)
+            let asset = AssetDescriptor(
+                id: AssetID(rawValue: "traversal-\(index)"), sourceID: source, stableKey: file.path,
+                displayName: file.lastPathComponent, fileURL: file, mediaKind: .image,
+                byteCount: Int64(content.count), pixelWidth: nil, pixelHeight: nil,
+                creationDate: nil, modificationDate: Date(timeIntervalSince1970: Double(index))
+            )
+            try await database.upsert(asset: asset, fingerprint: try await ExactHasher().hashFile(at: file), scanID: "scan")
+        }
+        try await database.rebuildExactGroups()
+        let duplicateGroups = try await database.fetchDuplicateGroups()
+        let group = try XCTUnwrap(duplicateGroups.first)
+        let selected = try XCTUnwrap(group.assets.first { $0.id != group.canonicalAssetID })
+        try await database.setDecision(groupID: group.id, assetID: selected.id, decision: .quarantinePlan)
+
+        let coordinator = QuarantineCoordinator(database: database, applicationSupportDirectory: support)
+        let plan = try await coordinator.preparePlan(sourceRoot: sourceRoot)
+        let commitResult = try await coordinator.commit(plan, appVersion: "test")
+
+        // Construct a tampered manifest with originalPath pointing outside sourceRoot
+        let outsideTarget = directory.appendingPathComponent("Outside/stolen.jpg")
+        let quarantinedFile = plan.quarantineRoot.appendingPathComponent(selected.fileURL.lastPathComponent)
+        let originalOp = try XCTUnwrap(plan.operations.first)
+        let tamperedOperation = CleanupManifestOperation(
+            operationID: originalOp.id,
+            groupID: group.id,
+            assetID: selected.id.rawValue,
+            originalPath: outsideTarget.path, // Outside sourceRoot!
+            quarantinePath: quarantinedFile.path,
+            byteCount: Int64(content.count),
+            digest: try await ExactHasher().hashFile(at: quarantinedFile).digest
+        )
+        let tamperedManifest = CleanupManifest(
+            schemaVersion: 4,
+            planID: commitResult.planID,
+            sourceRoot: sourceRoot.path,
+            quarantineRoot: plan.quarantineRoot.path,
+            createdAt: Date(),
+            appVersion: "test",
+            operations: [tamperedOperation]
+        )
+        // Seal with the valid signer so cryptographic verification passes, but path boundary check triggers
+        let signer = ManifestSigner(keyURL: support.appendingPathComponent("Keys/manifest-signing.key"))
+        let tamperedEnvelope = try await signer.seal(tamperedManifest)
+        try ManifestSigner.canonicalEncoder.encode(tamperedEnvelope).write(to: commitResult.manifestURL, options: [.atomic])
+
+        let restoreResult = try await coordinator.restore(planID: plan.id)
+        XCTAssertEqual(restoreResult.restoredCount, 0)
+        XCTAssertEqual(restoreResult.failedCount, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: outsideTarget.path))
+    }
+
+    func testRestoreRejectsTamperedManifestFileWithoutValidSignature() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let sourceRoot = directory.appendingPathComponent("Library", isDirectory: true)
+        let support = directory.appendingPathComponent("Support", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let database = SQLiteDatabase(url: support.appendingPathComponent("test.sqlite"))
+        try await database.initialize()
+        let sourceVolume = try VolumeIdentity.resolve(for: sourceRoot)
+        let source = SourceIdentity.folderID(for: sourceRoot, volume: sourceVolume)
+        let content = Data("signature-tamper-test".utf8)
+        for index in 0..<2 {
+            let file = sourceRoot.appendingPathComponent("file-\(index).jpg")
+            try content.write(to: file)
+            let asset = AssetDescriptor(
+                id: AssetID(rawValue: "tamper-\(index)"), sourceID: source, stableKey: file.path,
+                displayName: file.lastPathComponent, fileURL: file, mediaKind: .image,
+                byteCount: Int64(content.count), pixelWidth: nil, pixelHeight: nil,
+                creationDate: nil, modificationDate: Date(timeIntervalSince1970: Double(index))
+            )
+            try await database.upsert(asset: asset, fingerprint: try await ExactHasher().hashFile(at: file), scanID: "scan")
+        }
+        try await database.rebuildExactGroups()
+        let duplicateGroups = try await database.fetchDuplicateGroups()
+        let group = try XCTUnwrap(duplicateGroups.first)
+        let selected = try XCTUnwrap(group.assets.first { $0.id != group.canonicalAssetID })
+        try await database.setDecision(groupID: group.id, assetID: selected.id, decision: .quarantinePlan)
+
+        let coordinator = QuarantineCoordinator(database: database, applicationSupportDirectory: support)
+        let plan = try await coordinator.preparePlan(sourceRoot: sourceRoot)
+        let commitResult = try await coordinator.commit(plan, appVersion: "test")
+
+        // Overwrite manifest with corrupt garbage
+        try Data("corrupt payload".utf8).write(to: commitResult.manifestURL, options: [.atomic])
+
+        do {
+            _ = try await coordinator.restore(planID: plan.id)
+            XCTFail("Restore must reject a corrupt/tampered manifest file")
+        } catch {
+            // Expected to fail validation
+        }
+    }
 }

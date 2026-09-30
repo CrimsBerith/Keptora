@@ -104,4 +104,48 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         // Ensure state remains valid and non-crashing on background
         XCTAssertNil(store.errorMessage)
     }
+
+    func testIsAnalyzingAndCancelScanStateFlow() {
+        let store = MobileKeptoraStore()
+        XCTAssertFalse(store.isAnalyzing)
+
+        store.similarityProgress = (processed: 5, total: 10)
+        XCTAssertTrue(store.isAnalyzing)
+
+        store.cancelScan()
+        XCTAssertFalse(store.isAnalyzing)
+        XCTAssertEqual(store.scanState, .idle)
+        XCTAssertNil(store.similarityProgress)
+        XCTAssertNil(store.videoSimilarityProgress)
+
+        store.videoSimilarityProgress = (processed: 2, total: 4)
+        XCTAssertTrue(store.isAnalyzing)
+
+        store.cancelScan()
+        XCTAssertFalse(store.isAnalyzing)
+        XCTAssertNil(store.videoSimilarityProgress)
+    }
+
+    func testSuspendScanForBackgroundWhenScanningTransitionsToPaused() {
+        let store = MobileKeptoraStore()
+        store.scanState = .scanning(processed: 50, total: 100, current: "img.jpg")
+        store.suspendScanForBackground()
+        XCTAssertEqual(store.scanState, .paused)
+        XCTAssertTrue(store.suspendedForBackground)
+
+        store.cancelScan()
+        XCTAssertEqual(store.scanState, .idle)
+    }
+
+    func testClearSelectionResetsSelectedAssets() {
+        let store = MobileKeptoraStore()
+        store.selectedAssetIDs = ["asset-1", "asset-2"]
+        store.selectedSimilarVideoAssetIDs = ["vid-1"]
+
+        store.clearExactSelection()
+        XCTAssertTrue(store.selectedAssetIDs.isEmpty)
+
+        store.clearSimilarVideoSelection()
+        XCTAssertTrue(store.selectedSimilarVideoAssetIDs.isEmpty)
+    }
 }

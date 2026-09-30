@@ -11,7 +11,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var sourceProvider = "Choose a local or cloud folder"
     @Published private(set) var sourceURL: URL?
     @Published private(set) var scanProgress = ScanProgress.idle
-    @Published private(set) var duplicateGroups: [ReviewGroup] = []
+    @Published var duplicateGroups: [ReviewGroup] = []
     @Published private(set) var similarityGroups: [SimilarityReviewGroup] = []
     @Published var selectedSimilarityGroupID: String?
     @Published private(set) var similarityProgress = SimilarityProgress.idle
@@ -66,9 +66,14 @@ final class AppModel: ObservableObject {
         SimilaritySensitivityPreset.stored()
     }
 
-    init() {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory
-        let directory = base.appendingPathComponent("Keptora", isDirectory: true)
+    init(applicationSupportDirectory customDirectory: URL? = nil) {
+        let directory: URL
+        if let customDirectory {
+            directory = customDirectory
+        } else {
+            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory
+            directory = base.appendingPathComponent("Keptora", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         applicationSupportDirectory = directory
         safetyPlanLineage = Self.loadSafetyPlanLineage(from: directory)

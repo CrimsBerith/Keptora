@@ -211,4 +211,32 @@ final class KeptoraUITests: XCTestCase {
         ]
         XCTAssertTrue(supportedSets.contains(actual), "Mixed or unsupported navigation language: \(actual)")
     }
+
+    func testAccessibilityAuditOnMainViews() throws {
+        guard #available(macOS 14.0, *) else { return }
+        let app = launchSelectionFixture()
+        try app.performAccessibilityAudit(for: [.elementDetection, .hitRegion]) { _ in
+            // Keep genuine audit assertions active while ignoring AppKit container quirks
+            return false
+        }
+    }
+
+    func testAllSupportedLanguagesNavigationCompleteness() throws {
+        let testCases: [(lang: String, loc: String, expected: [String])] = [
+            ("en", "en_US", ["Library", "Review", "History"]),
+            ("tr", "tr_TR", ["Arşiv", "İnceleme", "Geçmiş"]),
+            ("de", "de_DE", ["Mediathek", "Prüfen", "Verlauf"]),
+            ("fr", "fr_FR", ["Photothèque", "Examen", "Historique"])
+        ]
+
+        for item in testCases {
+            let app = launchSelectionFixture(language: item.lang, locale: item.loc)
+            let actual = [
+                app.buttons["mac.sidebar.home"].label,
+                app.buttons["mac.sidebar.review"].label,
+                app.buttons["mac.sidebar.history"].label
+            ]
+            XCTAssertEqual(actual, item.expected, "Navigation localization mismatch for \(item.lang)")
+        }
+    }
 }

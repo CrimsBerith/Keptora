@@ -50,4 +50,45 @@ final class ExactHasherTests: XCTestCase {
         XCTAssertEqual(firstData, copyData)
         XCTAssertEqual(try DemoLibraryFactory.prepare(in: directory), library)
     }
+
+    func testExactHasherCancellationStopsReading() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("large.bin")
+        let data = Data(repeating: 0x42, count: 5 * 1024 * 1024)
+        try data.write(to: file)
+
+        let hasher = ExactHasher()
+        let task = Task {
+            try await hasher.hashFile(at: file, chunkSize: 1024)
+        }
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Cancelled hashing must throw CancellationError")
+        } catch is CancellationError {
+            // Expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testExactHasherRejectsNonRegularFile() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let hasher = ExactHasher()
+        do {
+            _ = try await hasher.hashFile(at: directory)
+            XCTFail("Hashing a directory must fail")
+        } catch ExactHasher.HasherError.notRegularFile(let url) {
+            XCTAssertEqual(url.standardizedFileURL, directory.standardizedFileURL)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }
