@@ -39,8 +39,7 @@ struct PaywallView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     feature("Unlimited exact-duplicate review decisions", image: "infinity")
                     feature("Unlimited reversible Cleanup Plans", image: "arrow.uturn.backward.circle")
-                    feature("Private, on-device processing", image: "lock.shield.fill")
-                    feature("One-time purchase · Privacy-first · No upload", image: "checkmark.shield.fill")
+                    feature("Privacy-first · Nothing is uploaded", image: "checkmark.shield.fill")
                 }
                 .padding(20)
                 .frame(maxWidth: 590, alignment: .leading)
@@ -52,6 +51,7 @@ struct PaywallView: View {
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(.secondary)
 
+#if DEBUG
                 if store.requiresProductConfiguration {
                     Label("StoreKit is using a placeholder product ID. Configure release identifiers before testing purchases.",
                           systemImage: "exclamationmark.triangle.fill")
@@ -59,6 +59,7 @@ struct PaywallView: View {
                         .foregroundStyle(.orange)
                         .frame(maxWidth: 590)
                 }
+#endif
 
                 if let statusMessage = store.statusMessage {
                     Text(statusMessage)

@@ -95,11 +95,13 @@ struct SettingsView: View {
             Section("Keptora Pro") {
                 LabeledContent("Lifetime unlock", value: store.entitlementLabel)
                 LabeledContent("Free allowance", value: store.trialLabel)
+#if DEBUG
                 if store.requiresProductConfiguration {
                     Label("Replace the placeholder bundle and product identifiers before App Store submission.", systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                         .font(.caption)
                 }
+#endif
                 HStack {
                     Button("View Keptora Pro") { store.presentPaywall(.settings) }
                         .buttonStyle(.borderedProminent)
