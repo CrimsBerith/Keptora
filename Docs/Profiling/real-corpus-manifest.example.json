@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "app": "Cullora_Phase_5S_Quarantine_Verification_Lineage",
+  "app": "Keptora_Phase_5S_Quarantine_Verification_Lineage",
   "externalCorpusOnly": true,
   "environmentKey": "CULLORA_REAL_CORPUS_PATH",
   "allowedExtensions": [

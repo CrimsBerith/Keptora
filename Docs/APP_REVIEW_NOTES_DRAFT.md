@@ -2,7 +2,7 @@
 
 ## Product summary
 
-Cullora is a sandboxed, local-first Mac utility for reviewing exact duplicate photo/media files in user-selected folders and external drives. It also shows visually similar images as advisory review groups. Similarity never authorizes cleanup.
+Keptora is a sandboxed, local-first Mac utility for reviewing exact duplicate photo/media files in user-selected folders and external drives. It also shows visually similar images as advisory review groups. Similarity never authorizes cleanup.
 
 ## Account and network
 
@@ -16,7 +16,7 @@ Cullora is a sandboxed, local-first Mac utility for reviewing exact duplicate ph
 - Folder scanning is unlimited.
 - The first 100 **unique** review decisions are free.
 - Changing a decision for an already counted asset does not consume another free review.
-- Cullora Pro unlocks unlimited review and Safety Plans.
+- Keptora Pro unlocks unlimited review and Safety Plans.
 - Restore remains available without a Pro entitlement so a user is never prevented from recovering their own files.
 
 ## Safety model
@@ -34,7 +34,7 @@ Cullora is a sandboxed, local-first Mac utility for reviewing exact duplicate ph
 
 1. Launch the app. Complete the three-page onboarding.
 2. Click **Choose a Folder**.
-3. Select the generated `Cullora_Review_Corpus` folder described in `REVIEW_CORPUS_README.md`.
+3. Select the generated `Keptora_Review_Corpus` folder described in `REVIEW_CORPUS_README.md`.
 4. Start a scan and open **Exact Review**.
 5. Review an exact group and change a non-keeper asset to the cleanup decision.
 6. Open **Similar Review** to inspect a side-by-side pair. Observe that no cleanup action is available there.
@@ -48,14 +48,14 @@ Cullora is a sandboxed, local-first Mac utility for reviewing exact duplicate ph
 
 - Product type: Non-consumable.
 - Product ID: `[REPLACE WITH FINAL PRODUCT ID]`.
-- Display name draft: `Cullora Pro — Lifetime`.
+- Display name draft: `Keptora Pro — Lifetime`.
 - Description draft: `Unlimited review and reversible Safety Plans.`
 - Family Sharing: planned; submit only after enabled and tested.
 - The reviewer should not need a test account.
 
 ## Permissions
 
-Cullora requests user-selected read/write access only after the reviewer chooses a source folder. Photo-library permission is not required for the basic review-corpus flow. Access can be revoked in macOS System Settings.
+Keptora requests user-selected read/write access only after the reviewer chooses a source folder. Photo-library permission is not required for the basic review-corpus flow. Access can be revoked in macOS System Settings.
 
 ## Review contact
 

@@ -31,7 +31,7 @@ func feature(_ image: CGImage) throws -> VNFeaturePrintObservation {
     request.revision = VNGenerateImageFeaturePrintRequestRevision1
     request.imageCropAndScaleOption = .scaleFit
     try VNImageRequestHandler(cgImage: image).perform([request])
-    guard let result = request.results?.first else { throw NSError(domain: "CulloraBenchmark", code: 1) }
+    guard let result = request.results?.first else { throw NSError(domain: "KeptoraBenchmark", code: 1) }
     return result
 }
 

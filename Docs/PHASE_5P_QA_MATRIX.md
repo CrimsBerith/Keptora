@@ -1,4 +1,4 @@
-# Cullora Phase 5P — QA Matrix
+# Keptora Phase 5P — QA Matrix
 
 | Area | Required check | Expected result |
 |---|---|---|

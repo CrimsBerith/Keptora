@@ -1,0 +1,13 @@
+{
+  "cropScale" : "scaleFit",
+  "elapsedSeconds" : 0.86391603946685791,
+  "negativeP05" : 0.42760369181632996,
+  "negativeP50" : 0.70005309581756592,
+  "negativeSamples" : 80,
+  "note" : "Synthetic calibration smoke; replace with labeled real-library pairs before shipping threshold claims.",
+  "phase" : "5I",
+  "positiveP50" : 2.2007417678833008,
+  "positiveP95" : 2.5393452644348145,
+  "positiveSamples" : 80,
+  "visionRevision" : 1
+}

@@ -1,4 +1,4 @@
-# Cullora — Phase P Pre-Mac Submission Coherence
+# Keptora — Phase P Pre-Mac Submission Coherence
 
 Phase P closes avoidable cross-file drift before the project reaches a real Mac. It does not fabricate developer identity or runtime evidence.
 

@@ -1,4 +1,4 @@
-# Release Blockers — Cullora 1.0.0 (181)
+# Release Blockers — Keptora 1.0.0 (181)
 
 These are mandatory blockers:
 
@@ -14,9 +14,9 @@ These are mandatory blockers:
 10. Screenshots must be captured from the final signed-equivalent build.
 11. Archive privacy report and all linked SDK manifests must be reconciled with App Privacy answers.
 12. Code signing, archive export validation, upload, TestFlight/beta, and App Review submission are pending.
-13. Cullora trademark/domain/App Store name clearance is pending.
+13. Keptora trademark/domain/App Store name clearance is pending.
 
-The 1,045-app research metadata backfill is not a Cullora release blocker. Static validation passing is not evidence that these blockers passed.
+The 1,045-app research metadata backfill is not a Keptora release blocker. Static validation passing is not evidence that these blockers passed.
 
 14. Batch review actions require real XCTest/UI validation with free-limit boundaries and rapid repeated clicks.
 15. New Review Insights and filters require VoiceOver, Full Keyboard Access, empty-state, and 100K-group UI responsiveness checks.

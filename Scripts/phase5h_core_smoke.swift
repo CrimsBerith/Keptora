@@ -89,8 +89,8 @@ struct Phase5HCoreSmoke {
         try await database.upsert(asset: aAsset, fingerprint: aFingerprint)
         try await database.upsert(asset: bAsset, fingerprint: bFingerprint)
 
-        let aQuarantine = source.appendingPathComponent(".Cullora Quarantine/plan-a/recovery-a.jpg")
-        let bQuarantine = otherSource.appendingPathComponent(".Cullora Quarantine/plan-b/recovery-b.jpg")
+        let aQuarantine = source.appendingPathComponent(".Keptora Quarantine/plan-a/recovery-a.jpg")
+        let bQuarantine = otherSource.appendingPathComponent(".Keptora Quarantine/plan-b/recovery-b.jpg")
         let aOperation = CleanupOperationPreview(
             id: "op-a", groupID: "group-a", assetID: aAsset.id, displayName: aAsset.displayName,
             originalURL: aOriginal, quarantineURL: aQuarantine, byteCount: aFingerprint.byteCount, digest: aFingerprint.digest

@@ -144,7 +144,7 @@ def run(project_root: Path) -> dict[str, object]:
     assert not cursor_can_resume("b", 2, ["aa", "a", "b", "c", "d"], {"a", "b"})
     assert not cursor_can_resume("b", 2, current, {"a"})
 
-    thumbnail_source = (project_root / "Cullora/Core/Thumbnails/BoundedThumbnailCache.swift").read_text()
+    thumbnail_source = (project_root / "Keptora/Core/Thumbnails/BoundedThumbnailCache.swift").read_text()
     assert "96 * 1024 * 1024" in thumbnail_source
     assert "countLimit: Int = 320" in thumbnail_source
     assert "Data(contentsOf:" not in thumbnail_source

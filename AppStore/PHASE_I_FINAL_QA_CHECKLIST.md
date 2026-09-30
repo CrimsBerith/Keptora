@@ -1,4 +1,4 @@
-# Cullora — Phase I Final QA Checklist
+# Keptora — Phase I Final QA Checklist
 
 - [ ] Phase G Time Profiler trace reviewed
 - [ ] Phase G Allocations trace reviewed

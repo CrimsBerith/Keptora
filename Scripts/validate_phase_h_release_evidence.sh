@@ -29,10 +29,10 @@ SANDBOX="$(plutil -extract com.apple.security.app-sandbox raw -o - "$OUT_DIR/ent
 PRIVACY_COUNT="$(find "$APP_PATH" -name 'PrivacyInfo.xcprivacy' -type f | wc -l | tr -d ' ')"
 [[ "$PRIVACY_COUNT" -ge 1 ]] || { echo "PrivacyInfo.xcprivacy not embedded in archive" >&2; exit 71; }
 {
-  echo "APP=Cullora"
+  echo "APP=Keptora"
   echo "SHELL_IDENTITY=Archive Review Studio"
-  echo "PROJECT=Cullora.xcodeproj"
-  echo "SCHEME=Cullora"
+  echo "PROJECT=Keptora.xcodeproj"
+  echo "SCHEME=Keptora"
   echo "BUNDLE_ID=$BUNDLE_ID"
   echo "SHORT_VERSION=$SHORT_VERSION"
   echo "BUILD_VERSION=$BUILD_VERSION"
@@ -41,4 +41,4 @@ PRIVACY_COUNT="$(find "$APP_PATH" -name 'PrivacyInfo.xcprivacy' -type f | wc -l 
   echo "APP_SANDBOX=PASS"
   echo "RESULT=PASS"
 } >"$OUT_DIR/phase_h_archive_evidence.txt"
-echo "PHASE_H_ARCHIVE_EVIDENCE_PASS app=Cullora"
+echo "PHASE_H_ARCHIVE_EVIDENCE_PASS app=Keptora"

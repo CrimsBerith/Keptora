@@ -1,7 +1,7 @@
-# Cullora — Support Page Web Copy Template
+# Keptora — Support Page Web Copy Template
 
 ## Support
-For help with Cullora, provide the app version, macOS version, a concise description of the issue, and steps to reproduce it. Do not send confidential source documents unless explicitly required and safe to share.
+For help with Keptora, provide the app version, macOS version, a concise description of the issue, and steps to reproduce it. Do not send confidential source documents unless explicitly required and safe to share.
 
 ## Recommended links
 - Privacy: `${PRIVACY_URL}`

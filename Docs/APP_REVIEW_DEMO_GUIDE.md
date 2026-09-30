@@ -1,10 +1,10 @@
-# Cullora App Review Demo Guide
+# Keptora App Review Demo Guide
 
 ## Fastest deterministic review path
 
-1. Launch Cullora and complete the three-page safety tour.
+1. Launch Keptora and complete the three-page safety tour.
 2. On Library Health, choose **Choose Folder** and select the prepared review corpus.
-3. Cullora generates synthetic images locally and runs the real incremental scanner.
+3. Keptora generates synthetic images locally and runs the real incremental scanner.
 4. Open Review Studio.
 5. Use `⌘]` to move between groups and `⌥→` to move focus between photos.
 6. Use `⌘2` to add a focused non-keeper to the reversible Safety Plan, or use **Plan Exact Extras**.

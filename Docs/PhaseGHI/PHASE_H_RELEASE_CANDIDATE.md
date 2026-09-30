@@ -1,4 +1,4 @@
-# Cullora — Phase H Release Candidate Closure
+# Keptora — Phase H Release Candidate Closure
 
 Successor: **P6 — Quarantine Decision Reconciliation**  
 Distinct shell: **Archive Review Studio**
@@ -14,4 +14,4 @@ Acceptance: predecessor + hardening gates, real release configuration validation
 
 
 ## Archived-product evidence hardening
-The release-candidate archive must pass `Scripts/validate_phase_h_release_evidence.sh`. Source configuration alone is insufficient. The archived Cullora bundle must retain the **Archive Review Studio** identity, a strict valid signature, App Sandbox, non-placeholder bundle/version metadata, and an embedded privacy manifest.
+The release-candidate archive must pass `Scripts/validate_phase_h_release_evidence.sh`. Source configuration alone is insufficient. The archived Keptora bundle must retain the **Archive Review Studio** identity, a strict valid signature, App Sandbox, non-placeholder bundle/version metadata, and an embedded privacy manifest.

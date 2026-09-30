@@ -23,4 +23,4 @@ grep -Fq 'Time Profiler' Scripts/run_phase_g_profile_suite.sh
 grep -Fq 'Allocations' Scripts/run_phase_g_profile_suite.sh
 grep -Fq 'Leaks' Scripts/run_phase_g_profile_suite.sh
 printf 'PHASE_G_READINESS_PASS app=%s successor=%s
-' 'Cullora' 'P6'
+' 'Keptora' 'P6'

@@ -1,4 +1,4 @@
-# Cullora Faz 5N Teslim Özeti
+# Keptora Faz 5N Teslim Özeti
 
 **Sürüm:** 0.9.4  
 **Build:** 130

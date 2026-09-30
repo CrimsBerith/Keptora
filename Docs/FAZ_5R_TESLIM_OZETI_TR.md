@@ -1,4 +1,4 @@
-# Cullora Phase 5R — Teslim Özeti
+# Keptora Phase 5R — Teslim Özeti
 
 Phase 5R, Safety Plan hazırlandıktan sonra exact-review kararlarının değişmesi halinde eski planın kullanılmasını engeller.
 

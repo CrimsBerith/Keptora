@@ -6,8 +6,8 @@ need=(
   "Scripts/run_phase_h_release_candidate_macos.sh"
   "Scripts/validate_phase_g_readiness.sh"
   "Scripts/validate_phase5s_release_config.py"
-  "Cullora.xcodeproj"
-  "Cullora.xcodeproj/xcshareddata/xcschemes/Cullora.xcscheme"
+  "Keptora.xcodeproj"
+  "Keptora.xcodeproj/xcshareddata/xcschemes/Keptora.xcscheme"
   "Docs/PhaseGHI/PHASE_G_REAL_CORPUS_INSTRUMENTS.md"
   "AppStore/APP_STORE_METADATA.md"
   "AppStore/APP_REVIEW_NOTES.md"
@@ -44,7 +44,7 @@ grep -Fq 'validate_app.txt' Scripts/validate_phase_i_submission_evidence.sh
 grep -Fq 'testflight_install_launch.txt' Scripts/validate_phase_i_submission_evidence.sh
 grep -Fq 'Archive Review Studio' Docs/PhaseGHI/PHASE_H_I_EVIDENCE_PROTOCOL.md
 printf 'PHASE_H_I_READINESS_PASS app=%s
-' "Cullora"
+' "Keptora"
 # Phase I final closure source hardening
 for f in Scripts/validate_phase_i_source_qa.py Scripts/prepare_phase_i_final_qa_bundle.sh Scripts/validate_phase_i_final_submission.sh Docs/PhaseGHI/PHASE_I_FINAL_CLOSURE_PROTOCOL.md AppStore/PHASE_I_SUBMISSION_EVIDENCE_MATRIX.md; do
   [[ -e "$f" ]] || { echo "missing $f" >&2; exit 52; }

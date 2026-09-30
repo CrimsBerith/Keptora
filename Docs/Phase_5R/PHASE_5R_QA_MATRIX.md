@@ -1,4 +1,4 @@
-# Cullora Phase 5R QA Matrix
+# Keptora Phase 5R QA Matrix
 
 ## Safety Plan freshness
 - Prepare plan and commit without decision change -> commit permitted.

@@ -33,7 +33,7 @@
 - Similar-photo groups remain review-only.
 - Batch planning remains SHA-256 exact-only.
 - No permanent delete API was added.
-- Demo data is generated inside Cullora's container and is safe to recreate.
+- Demo data is generated inside Keptora's container and is safe to recreate.
 - Free review authorization still occurs before persistence.
 
 ## Release validation still required on Mac

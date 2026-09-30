@@ -5,7 +5,7 @@ Purpose: bind each successor surface to its own application state without introd
 | App | Live source | Successor surface | Validation |
 |---|---|---|---|
 | RelaySeal | Current sealed handoff / lifecycle / verification | Delivery Exception Resolution Desk | PASS |
-| Cullora | Current cleanup safety plan / quarantine verification | Quarantine Decision Reconciliation | PASS |
+| Keptora | Current cleanup safety plan / quarantine verification | Quarantine Decision Reconciliation | PASS |
 | Aurelio Metadata | Current governed release / active policy / exceptions | Metadata Policy Drift Observatory | PASS 28/28 static |
 | AtlasTrace GPX | Current reviewed route decision / route evidence | Journey Evidence Replay | PASS |
 | Bracketelier | Current tournament / selected match / closeout evidence | Event Incident & Appeal Desk | PASS |

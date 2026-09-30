@@ -1,4 +1,4 @@
-# Cullora_Phase_5S_Quarantine_Verification_Lineage — Real Corpus & Instruments Profile
+# Keptora_Phase_5S_Quarantine_Verification_Lineage — Real Corpus & Instruments Profile
 
 - UI identity: **Archive Review Studio**. Profiling must not replace or homogenize the product shell.
 - Corpus intent: photo libraries spanning duplicates, near-duplicates, bursts, edited variants and large originals.
@@ -10,11 +10,11 @@
 - Do not claim a real-corpus PASS until the local Mac corpus and trace have actually been run.
 
 ## Signpost spans
-- `CulloraEnumerateLibrary`
-- `CulloraFingerprintAssets`
-- `CulloraGroupSimilarity`
-- `CulloraQuarantineCommit`
-- `CulloraHealthSnapshot`
+- `KeptoraEnumerateLibrary`
+- `KeptoraFingerprintAssets`
+- `KeptoraGroupSimilarity`
+- `KeptoraQuarantineCommit`
+- `KeptoraHealthSnapshot`
 
 ## Corpus tiers
 

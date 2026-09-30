@@ -2,7 +2,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROJECT = ROOT / "Cullora.xcodeproj/project.pbxproj"
+PROJECT = ROOT / "Keptora.xcodeproj/project.pbxproj"
 text = PROJECT.read_text()
 
 build_files = """
@@ -50,8 +50,8 @@ if "K20000000000000000000001" not in text:
         "C94001D923A81127C5A56457 /* Features */ = {isa = PBXGroup; children = (K30000000000000000000004 /* Feature Diagnostics */, K30000000000000000000002 /* Onboarding */, K30000000000000000000003 /* Paywall */, "
     )
     text = text.replace(
-        "AA8B3A142902F2DBCB23F71E /* CulloraTests */ = {isa = PBXGroup; children = (",
-        "AA8B3A142902F2DBCB23F71E /* CulloraTests */ = {isa = PBXGroup; children = (K20000000000000000000007 /* AccessPolicyTests.swift */, K20000000000000000000008 /* DiagnosticsRedactionTests.swift */, "
+        "AA8B3A142902F2DBCB23F71E /* KeptoraTests */ = {isa = PBXGroup; children = (",
+        "AA8B3A142902F2DBCB23F71E /* KeptoraTests */ = {isa = PBXGroup; children = (K20000000000000000000007 /* AccessPolicyTests.swift */, K20000000000000000000008 /* DiagnosticsRedactionTests.swift */, "
     )
     text = text.replace(
         "8682261519D15BD64A9E5D31 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (",

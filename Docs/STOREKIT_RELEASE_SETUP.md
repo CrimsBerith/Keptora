@@ -4,8 +4,8 @@
 
 The package contains placeholders:
 
-- App bundle: `com.yourcompany.cullora`
-- Lifetime product: `com.yourcompany.cullora.pro.lifetime`
+- App bundle: `com.yourcompany.keptora`
+- Lifetime product: `com.yourcompany.keptora.pro.lifetime`
 - Development team: empty
 
 Replace them with:
@@ -25,7 +25,7 @@ Create a **Non-Consumable** product with the exact configured product ID.
 
 Recommended working configuration:
 
-- Reference name: Cullora Pro Lifetime
+- Reference name: Keptora Pro Lifetime
 - US price target: USD 24.99
 - Family Sharing: disabled for 1.0.0; do not enable in App Store Connect.
 - English and Turkish display metadata

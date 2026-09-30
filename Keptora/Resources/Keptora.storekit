@@ -1,0 +1,36 @@
+{
+  "identifier": "4FBD6E67-CC2C-4BDD-A1C8-5E3411235F00",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "24.99",
+      "familyShareable": false,
+      "internalID": "KEPTORA_PRO_LIFETIME",
+      "localizations": [
+        {
+          "description": "Unlock unlimited review decisions and reversible Safety Plans after the first 100 free reviews.",
+          "displayName": "Keptora Pro Lifetime",
+          "locale": "en_US"
+        },
+        {
+          "description": "İlk 100 ücretsiz incelemeden sonra sınırsız kararları ve geri alınabilir Güvenlik Planlarını açın.",
+          "displayName": "Keptora Pro Ömür Boyu",
+          "locale": "tr_TR"
+        }
+      ],
+      "productID": "com.keptora.app.pro.lifetime",
+      "referenceName": "Keptora Pro Lifetime",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA"
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

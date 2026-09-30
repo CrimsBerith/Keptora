@@ -1,4 +1,4 @@
-# Cullora Faz 5O Teslim Özeti
+# Keptora Faz 5O Teslim Özeti
 
 **Sürüm:** 0.9.5 (140)
 

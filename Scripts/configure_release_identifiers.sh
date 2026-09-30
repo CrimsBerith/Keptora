@@ -16,19 +16,19 @@ python3 - "$ROOT" "$APP_ID" "$TEAM_ID" "$PRODUCT_ID" "$PRIVACY_URL" "$SUPPORT_UR
 from pathlib import Path
 import json, re, sys
 root=Path(sys.argv[1]); app,team,product,privacy,support,marketing=sys.argv[2:]
-project=root/'Cullora.xcodeproj/project.pbxproj'
+project=root/'Keptora.xcodeproj/project.pbxproj'
 s=project.read_text()
 s=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = "com\.yourcompany\.cullora\.tests"', f'PRODUCT_BUNDLE_IDENTIFIER = "{app}.tests"', s)
 s=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = "com\.yourcompany\.cullora"', f'PRODUCT_BUNDLE_IDENTIFIER = "{app}"', s)
 s=s.replace('DEVELOPMENT_TEAM = "";', f'DEVELOPMENT_TEAM = "{team}";')
 project.write_text(s)
-store=root/'Cullora/Resources/Cullora.storekit'
+store=root/'Keptora/Resources/Keptora.storekit'
 data=json.loads(store.read_text()); data['products'][0]['productID']=product; data['products'][0]['familyShareable']=False
 store.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
-purchase=root/'Cullora/Core/Purchases/StoreEntitlementController.swift'
+purchase=root/'Keptora/Core/Purchases/StoreEntitlementController.swift'
 s=purchase.read_text().replace('com.yourcompany.cullora.pro.lifetime', product)
 purchase.write_text(s)
-info=root/'Cullora/Resources/Info.plist'
+info=root/'Keptora/Resources/Info.plist'
 s=info.read_text()
 s=s.replace('com.yourcompany.cullora.pro.lifetime', product)
 s=s.replace('https://YOUR-DOMAIN/cullora/privacy', privacy)

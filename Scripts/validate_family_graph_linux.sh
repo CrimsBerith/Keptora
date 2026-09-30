@@ -8,10 +8,10 @@ fi
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 swiftc \
-  "$ROOT/Cullora/Core/Storage/VolumeIdentity.swift" \
-  "$ROOT/Cullora/Core/Models/AssetDescriptor.swift" \
-  "$ROOT/Cullora/Core/Models/FamilyModels.swift" \
-  "$ROOT/Cullora/Core/Families/AssetFamilyGraphBuilder.swift" \
+  "$ROOT/Keptora/Core/Storage/VolumeIdentity.swift" \
+  "$ROOT/Keptora/Core/Models/AssetDescriptor.swift" \
+  "$ROOT/Keptora/Core/Models/FamilyModels.swift" \
+  "$ROOT/Keptora/Core/Families/AssetFamilyGraphBuilder.swift" \
   "$ROOT/Scripts/family_graph_smoke.swift" \
   -o "$TMP/family-smoke"
 "$TMP/family-smoke"

@@ -1,18 +1,18 @@
-# App Store Submission Checklist — Cullora 1.0.0 (181)
+# App Store Submission Checklist — Keptora 1.0.0 (182)
 
 ## Legal and business
 
 - [ ] Apple Developer Program membership active.
 - [ ] Agreements, tax, and banking complete.
 - [ ] DSA trader status and regional business disclosures complete where required.
-- [ ] Cullora name, icon, domain, and marketing claims cleared for launch regions.
+- [ ] Keptora name, icon, domain, and marketing claims cleared for launch regions.
 - [ ] Public privacy, support, and marketing URLs live over HTTPS.
 
 ## App record and identity
 
 - [ ] App record created with the final bundle ID.
 - [ ] Bundle ID, Team ID, App Store Connect record, Xcode project, and archive match.
-- [ ] Version `1.0.0`, build `181`, copyright, categories, and age rating entered.
+- [ ] Version `1.0.0`, build `182`, copyright, categories, and age rating entered.
 - [ ] Export-compliance answers reviewed for the actual binary.
 - [ ] Content-rights answers reviewed.
 

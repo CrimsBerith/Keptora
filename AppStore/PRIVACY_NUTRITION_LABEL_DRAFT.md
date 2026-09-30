@@ -1,4 +1,4 @@
-# Cullora — App Privacy Draft
+# Keptora — App Privacy Draft
 
 ## Intended disclosure
 **Data Not Collected** is the current product intent: local-first processing, no account, analytics SDK, ad SDK or cloud processing in the canonical source.

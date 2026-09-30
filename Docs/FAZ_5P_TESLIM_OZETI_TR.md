@@ -1,6 +1,6 @@
-# Cullora Phase 5P — Teslim Özeti
+# Keptora Phase 5P — Teslim Özeti
 
-Cullora 0.9.6 (150), exact duplicate review kararlarının nedenini görünür ve audit edilebilir hale getirir.
+Keptora 0.9.6 (150), exact duplicate review kararlarının nedenini görünür ve audit edilebilir hale getirir.
 
 ## Yeni katman
 

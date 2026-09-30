@@ -1,6 +1,6 @@
-# Codex / Grok Mac Handoff — Cullora Phase 5S
+# Codex / Grok Mac Handoff — Keptora Phase 5S
 
-Canonical package: **Cullora 0.9.9 (180) — Quarantine Verification Lineage**.
+Canonical package: **Keptora 0.9.9 (180) — Quarantine Verification Lineage**.
 
 ## Start on the Mac
 ```bash
@@ -12,10 +12,10 @@ Do not count any combined-script timeout as PASS.
 
 ## Xcode acceptance
 ```bash
-open Cullora.xcodeproj
-xcodebuild -project Cullora.xcodeproj -scheme Cullora -configuration Debug clean build
-xcodebuild -project Cullora.xcodeproj -scheme Cullora test
-xcodebuild -project Cullora.xcodeproj -scheme Cullora -configuration Release analyze
+open Keptora.xcodeproj
+xcodebuild -project Keptora.xcodeproj -scheme Keptora -configuration Debug clean build
+xcodebuild -project Keptora.xcodeproj -scheme Keptora test
+xcodebuild -project Keptora.xcodeproj -scheme Keptora -configuration Release analyze
 ```
 Then test commit → Verify State → tamper/reappeared-original → restore using an internal SSD and an external APFS/exFAT volume.
 

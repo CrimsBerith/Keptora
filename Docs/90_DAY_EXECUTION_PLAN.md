@@ -2,19 +2,19 @@
 
 **Tarih:** 3 Ağustos 2026  
 **Karar durumu:** Araştırma tamamlandı; ürün seçimi uygulama aşamasına geçirildi.  
-**Birinci ürün:** **Cullora — Photo Library Triage**  
+**Birinci ürün:** **Keptora — Photo Library Triage**  
 **İkinci ürün kuyruğu:** GPX & Photo Geotagging Toolkit  
 **Üçüncü ürün kuyruğu:** Local-First Personal CRM
 
-> Bu belge, tamamlanan Mac App Store araştırmasındaki ürün skorları, finalist analizi, fiyatlandırma kararı, Cullora teknik paketleri ve nihai GO/HOLD kararlarını uygulanabilir bir işletim planına dönüştürür.
+> Bu belge, tamamlanan Mac App Store araştırmasındaki ürün skorları, finalist analizi, fiyatlandırma kararı, Keptora teknik paketleri ve nihai GO/HOLD kararlarını uygulanabilir bir işletim planına dönüştürür.
 
 ---
 
 ## 1. Yönetici kararı
 
-### GO — Cullora
+### GO — Keptora
 
-Cullora'nın seçilme nedeni yalnızca duplicate fotoğraf bulması değildir. Ürün tezi:
+Keptora'nın seçilme nedeni yalnızca duplicate fotoğraf bulması değildir. Ürün tezi:
 
 - büyük fotoğraf arşivlerinde güvenli inceleme,
 - RAW/JPEG/XMP, Live Photo, burst ve edited/export ilişkilerini anlama,
@@ -26,7 +26,7 @@ Cullora'nın seçilme nedeni yalnızca duplicate fotoğraf bulması değildir. �
 
 ### HOLD — GPX & Photo Geotagging Toolkit
 
-Profesyonel fiyat gücü ve düşük-orta rekabet avantajı var. Ancak format çeşitliliği, EXIF/XMP güvenliği, timestamp drift ve export doğruluğu daha geniş test matrisi gerektiriyor. Cullora v1 sonrası ikinci ürün adayıdır.
+Profesyonel fiyat gücü ve düşük-orta rekabet avantajı var. Ancak format çeşitliliği, EXIF/XMP güvenliği, timestamp drift ve export doğruluğu daha geniş test matrisi gerektiriyor. Keptora v1 sonrası ikinci ürün adayıdır.
 
 ### HOLD — Local-First Personal CRM
 
@@ -38,7 +38,7 @@ En büyük uzun vadeli şirket vizyonunu taşıyor. Buna karşılık sync, migra
 2. Tournament & League Manager
 3. Offline OCR Menu-Bar Capture
 
-Bu ürünler yalnız Cullora'nın launch takvimini bozmayacak şekilde küçük doğrulama deneyleri olarak ele alınmalıdır.
+Bu ürünler yalnız Keptora'nın launch takvimini bozmayacak şekilde küçük doğrulama deneyleri olarak ele alınmalıdır.
 
 ---
 
@@ -46,7 +46,7 @@ Bu ürünler yalnız Cullora'nın launch takvimini bozmayacak şekilde küçük 
 
 | Sıra | Ürün | Araştırma kararı | Stratejik rol | İlk fiyat hipotezi |
 |---:|---|---|---|---|
-| 1 | Cullora — Photo Library Triage | GO | Ana Mac ürünü | Ücretsiz scan + $24.99 lifetime; $19.99 launch |
+| 1 | Keptora — Photo Library Triage | GO | Ana Mac ürünü | Ücretsiz scan + $24.99 lifetime; $19.99 launch |
 | 2 | GPX & Photo Geotagging Toolkit | HOLD | İkinci profesyonel Mac ürünü | $24.99–39.99 lifetime |
 | 3 | Local-First Personal CRM | HOLD | Uzun vadeli platform ürünü | Free limited + $29.99–49.99 lifetime |
 | 4 | Passport / ID Photo Maker | VALIDATE | Hızlı gelir deneyi | $9.99–14.99 lifetime |
@@ -54,11 +54,11 @@ Bu ürünler yalnız Cullora'nın launch takvimini bozmayacak şekilde küçük 
 
 ---
 
-## 3. Cullora v1 ürün sözü
+## 3. Keptora v1 ürün sözü
 
 **Tek cümlelik değer önerisi**
 
-> Cullora, Mac'inizdeki fotoğraf karmaşasını cihazdan çıkarmadan analiz eder; hangi karelerin neden tutulması gerektiğini açıklar ve hiçbir şeyi geri dönüşsüz silmeden güvenli bir temizlik planı oluşturur.
+> Keptora, Mac'inizdeki fotoğraf karmaşasını cihazdan çıkarmadan analiz eder; hangi karelerin neden tutulması gerektiğini açıklar ve hiçbir şeyi geri dönüşsüz silmeden güvenli bir temizlik planı oluşturur.
 
 **Kısa marka sözü**
 
@@ -259,7 +259,7 @@ Bu sınırlar v1'in güvenilir ve App Store'a gönderilebilir kalmasını sağla
 
 **App Store taslağı**
 
-- Name: `Cullora — Photo Library Triage`
+- Name: `Keptora — Photo Library Triage`
 - Subtitle: `Clean safely. Keep what matters.`
 - Primary category: Photo & Video
 - Secondary: Utilities, yalnız işlevle uyumluysa
@@ -378,7 +378,7 @@ Abonelik, v1 ve mevcut strateji için önerilmez.
 
 ## 9. Ürün sonrası geliştirme sırası
 
-### Cullora v1.1
+### Keptora v1.1
 
 - İnsan etiketli threshold calibration
 - Daha gelişmiş keyboard triage
@@ -386,7 +386,7 @@ Abonelik, v1 ve mevcut strateji için önerilmez.
 - Library Health raporu
 - Otomatik olmayan smart presets
 
-### Cullora v1.5
+### Keptora v1.5
 
 - Photos read-only genişletme
 - Multi-source identity
@@ -394,7 +394,7 @@ Abonelik, v1 ve mevcut strateji için önerilmez.
 - German/Japanese/French/Spanish/Turkish
 - Scheduled health scan
 
-### Cullora v2
+### Keptora v2
 
 - Multi-library catalogue
 - Professional archive workflows
@@ -403,7 +403,7 @@ Abonelik, v1 ve mevcut strateji için önerilmez.
 
 ### İkinci ürün
 
-Cullora gelir ve destek akışı stabil olduktan sonra **GPX & Photo Geotagging Toolkit** teknik spike başlatılır.
+Keptora gelir ve destek akışı stabil olduktan sonra **GPX & Photo Geotagging Toolkit** teknik spike başlatılır.
 
 ---
 
@@ -422,10 +422,10 @@ Cullora gelir ve destek akışı stabil olduktan sonra **GPX & Photo Geotagging 
 
 ## 11. Nihai işletim kararı
 
-**Önümüzdeki 90 günün tek ana ürünü Cullora'dır.**
+**Önümüzdeki 90 günün tek ana ürünü Keptora'dır.**
 
-GPX ve Personal CRM geliştirmeye başlanmayacak; araştırma ve fikir deposunda HOLD durumunda tutulacaktır. Passport/ID Photo Maker veya Tournament Manager yalnız Cullora ekibinin ana takvimini bozmayan, en fazla 1–2 günlük landing-page/keyword doğrulaması olarak ele alınabilir.
+GPX ve Personal CRM geliştirmeye başlanmayacak; araştırma ve fikir deposunda HOLD durumunda tutulacaktır. Passport/ID Photo Maker veya Tournament Manager yalnız Keptora ekibinin ana takvimini bozmayan, en fazla 1–2 günlük landing-page/keyword doğrulaması olarak ele alınabilir.
 
 Başarı ölçütü yalnız uygulamanın çalışması değildir:
 
-> Kullanıcı, Cullora'nın ne bulduğunu, neden önerdiğini, hangi dosyaya dokunacağını ve geri dönüş yolunu her aşamada anlayabilmelidir.
+> Kullanıcı, Keptora'nın ne bulduğunu, neden önerdiğini, hangi dosyaya dokunacağını ve geri dönüş yolunu her aşamada anlayabilmelidir.

@@ -4,7 +4,7 @@ import Foundation
 enum RecoveryStressRunner {
     static func main() throws {
         let base = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Cullora-recovery-" + UUID().uuidString, isDirectory: true)
-        let journal = CulloraRecoveryJournal(directory: base, defaultStaleAfter: 5)
+        let journal = KeptoraRecoveryJournal(directory: base, defaultStaleAfter: 5)
         let t0 = Date(timeIntervalSince1970: 1_700_000_000)
         let a = try journal.begin(operation: "export", payloadDigest: "abc", now: t0)
         let b = try journal.begin(operation: "review", payloadDigest: "def", now: t0.addingTimeInterval(10))
@@ -19,11 +19,11 @@ enum RecoveryStressRunner {
         let quarantined = try FileManager.default.contentsOfDirectory(at: corruptURL, includingPropertiesForKeys: nil)
         precondition(!quarantined.isEmpty)
 
-        var bulk: [CulloraRecoveryRecord] = []
+        var bulk: [KeptoraRecoveryRecord] = []
         bulk.reserveCapacity(100_000)
         for i in 0..<100_000 {
-            let state: CulloraRecoveryState = (i % 4 == 0) ? .started : ((i % 4 == 1) ? .committed : ((i % 4 == 2) ? .cancelled : .failed))
-            bulk.append(CulloraRecoveryRecord(id: UUID(), operation: "op-\(i % 17)", startedAt: t0, updatedAt: t0.addingTimeInterval(Double(i % 30)), payloadDigest: String(i), state: state))
+            let state: KeptoraRecoveryState = (i % 4 == 0) ? .started : ((i % 4 == 1) ? .committed : ((i % 4 == 2) ? .cancelled : .failed))
+            bulk.append(KeptoraRecoveryRecord(id: UUID(), operation: "op-\(i % 17)", startedAt: t0, updatedAt: t0.addingTimeInterval(Double(i % 30)), payloadDigest: String(i), state: state))
         }
         let start = Date()
         let result = journal.classifyRecoverable(bulk, now: t0.addingTimeInterval(60), staleAfter: 15)

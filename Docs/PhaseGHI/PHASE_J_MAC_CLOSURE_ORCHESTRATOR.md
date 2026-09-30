@@ -1,4 +1,4 @@
-# Phase J — Mac Closure Orchestrator — Cullora
+# Phase J — Mac Closure Orchestrator — Keptora
 
 Phase J adds **release tooling only**. It does not change or homogenize the visible product shell.
 

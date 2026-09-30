@@ -1,8 +1,8 @@
-# Cullora Phase 5S Validation Report
+# Keptora Phase 5S Validation Report
 
 ## Passed in this container
 - Phase 5S static contract: **PASS (0 errors)**.
-- Real SQLite/filesystem lifecycle smoke: **PASS** (`cullora-phase5s-quarantine-verification-ok`).
+- Real SQLite/filesystem lifecycle smoke: **PASS** (`keptora-phase5s-quarantine-verification-ok`).
 - Phase 5R predecessor safety validator: **PASS (0 errors)**.
 - SQLite core: **PASS**.
 - Family graph: **PASS**.

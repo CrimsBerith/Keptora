@@ -32,4 +32,4 @@ echo "Recording $TEMPLATE for Cullora. Exercise the Archive Review Studio real-c
 xcrun xctrace record --template "$TEMPLATE" --time-limit "${TRACE_LIMIT:-45s}" --output "$OUT" --env "CULLORA_REAL_CORPUS_PATH=$CORPUS" --launch -- "$TARGET"
 xcrun xctrace export "$OUT" --toc --output "$TOC"
 [[ -s "$TOC" ]] || { echo "trace TOC export missing" >&2; exit 11; }
-echo "INSTRUMENTS_TRACE_CAPTURED app=Cullora template=$TEMPLATE output=$OUT toc=$TOC"
+echo "INSTRUMENTS_TRACE_CAPTURED app=Keptora template=$TEMPLATE output=$OUT toc=$TOC"

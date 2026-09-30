@@ -13,9 +13,9 @@ for f in "${checks[@]}"; do
   grep -Eq '^RESULT=PASS$' "$p" || { echo "Phase I evidence not PASS: $p" >&2; exit 83; }
   grep -Eq '^EVIDENCE=.+$' "$p" || { echo "Phase I evidence reference missing: $p" >&2; exit 84; }
 done
-printf 'APP=Cullora
+printf 'APP=Keptora
 SHELL_IDENTITY=Archive Review Studio
 RESULT=PASS
 STATUS=READY_FOR_APP_STORE_SUBMISSION_AFTER_REVIEW
 ' > "$EVIDENCE_ROOT/final_submission_gate_receipt.txt"
-echo "PHASE_I_FINAL_SUBMISSION_EVIDENCE_PASS app=Cullora"
+echo "PHASE_I_FINAL_SUBMISSION_EVIDENCE_PASS app=Keptora"

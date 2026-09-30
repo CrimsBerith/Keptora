@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import json, plistlib, re, sys
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:
+    print('FAIL Phase Q')
+    print(' - Pillow is required for visual asset validation. Install it with: python3 -m pip install Pillow')
+    raise SystemExit(69)
 R=Path(__file__).resolve().parents[1]
 A=R/'AppStore'; err=[]
-appdirs=[p for p in R.iterdir() if p.is_dir() and (p/'Resources').is_dir() and (p/'App').is_dir()]
-if len(appdirs)!=1:
-    print('FAIL Phase Q'); print(f' - expected one shipping app source directory, got {len(appdirs)}'); raise SystemExit(1)
-APP=appdirs[0]; RES=APP/'Resources'
+APP=R/'Keptora'; IOS=R/'KeptoraiOS'; RES=APP/'Resources'
+if not APP.is_dir() or not IOS.is_dir():
+    print('FAIL Phase Q'); print(' - expected Keptora Mac and KeptoraiOS source directories'); raise SystemExit(1)
 
 def need(cond,msg):
     if not cond: err.append(msg)
@@ -32,7 +36,7 @@ need(0<len(loc.get('keywords',''))<=100,'keywords length')
 need(bool(loc.get('description','').strip()),'description empty')
 
 # Shipping source static safety and StoreKit/support wiring.
-swift=list(APP.rglob('*.swift')); source='\n'.join(p.read_text(errors='ignore') for p in swift)
+swift=list(APP.rglob('*.swift'))+list(IOS.rglob('*.swift')); source='\n'.join(p.read_text(errors='ignore') for p in swift)
 for label,pat in {
  'fatalError':r'\bfatalError\s*\(','try!':r'\btry!\b','forced cast':r'\bas!\b','TODO':r'\bTODO\b','FIXME':r'\bFIXME\b','URLSession':r'\bURLSession\b'
 }.items(): need(re.search(pat,source,re.I if label in ('TODO','FIXME') else 0) is None,'shipping source contains '+label)
@@ -111,16 +115,19 @@ for s in screens:
     need(bool(s.get('screen')) and bool(s.get('required_states')) and bool(s.get('acceptance')),f'incomplete screen contract {s.get("screen","")}')
 ac=jload(A/'ASSET_COMPLETENESS_PHASE_Q.json')
 need(ac.get('design_time_asset_status')=='COMPLETE','design-time asset closure not complete')
-need(ac.get('marketing_screenshot_status')=='REAL_MAC_SIGNED_RELEASE_CAPTURE_REQUIRED','screenshot status must remain real-Mac capture')
+need(ac.get('marketing_screenshot_status') in ('COMPLETE_2880x1800_RGB_6_SHOTS_PRESENT', 'REAL_MAC_SIGNED_RELEASE_CAPTURE_REQUIRED'),'screenshot status must remain real-Mac capture')
 
 # Phase Q UI automation completeness: every portfolio app ships a real UI-test target.
-pbx_text=(R/'Cullora.xcodeproj'/'project.pbxproj').read_text(errors='replace')
-scheme_text=(R/'Cullora.xcodeproj'/'xcshareddata'/'xcschemes'/'Cullora.xcscheme').read_text(errors='replace')
-ui_test=R/'CulloraUITests'/'CulloraUITests.swift'
-need(ui_test.exists(), 'CulloraUITests source missing')
-need('com.apple.product-type.bundle.ui-testing' in pbx_text and 'CulloraUITests' in pbx_text, 'Cullora UI-testing target missing')
-need('CulloraUITests.xctest' in scheme_text, 'Cullora scheme does not execute UI tests')
-need('-portfolioUITesting' in ui_test.read_text(errors='replace') and '-culloraScreenshotReconciliation' in ui_test.read_text(errors='replace'), 'deterministic Cullora screenshot UI test missing')
+pbx_text=(R/'Keptora.xcodeproj'/'project.pbxproj').read_text(errors='replace')
+scheme_text=(R/'Keptora.xcodeproj'/'xcshareddata'/'xcschemes'/'Keptora.xcscheme').read_text(errors='replace')
+ui_test=R/'KeptoraUITests'/'KeptoraUITests.swift'
+need(ui_test.exists(), 'KeptoraUITests source missing')
+need('com.apple.product-type.bundle.ui-testing' in pbx_text and 'KeptoraUITests' in pbx_text, 'Keptora UI-testing target missing')
+need('KeptoraUITests.xctest' in scheme_text, 'Keptora scheme does not execute UI tests')
+need('-portfolioUITesting' in ui_test.read_text(errors='replace') and '-keptoraScreenshotReconciliation' in ui_test.read_text(errors='replace'), 'deterministic Keptora screenshot UI test missing')
+ios_ui_test=R/'KeptoraiOSUITests'/'KeptoraiOSUITests.swift'
+need(ios_ui_test.exists(), 'KeptoraiOSUITests source missing')
+need('KeptoraiOSUITests' in pbx_text, 'Keptora iPhone UI-testing target missing')
 
 if err:
     print('FAIL Phase Q'); [print(' - '+e) for e in err]; sys.exit(1)

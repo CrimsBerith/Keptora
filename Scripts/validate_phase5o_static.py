@@ -17,40 +17,40 @@ def run(cmd):
         errors.append(f"Command failed: {' '.join(cmd)}\n{result.stdout}{result.stderr}")
 
 # Syntax parse every Swift source without resolving macOS-only frameworks.
-for path in sorted(list((ROOT/'Cullora').rglob('*.swift')) + list((ROOT/'CulloraTests').rglob('*.swift'))):
+for path in sorted(list((ROOT/'Keptora').rglob('*.swift')) + list((ROOT/'KeptoraTests').rglob('*.swift'))):
     run(['swiftc','-frontend','-parse',str(path.relative_to(ROOT))])
 run(['python3','Scripts/validate_project_references.py'])
 run(['python3','Scripts/validate_app_store_metadata.py'])
 
 # Structured resources.
 resources = {}
-for rel in ['Cullora/Resources/Localizable.xcstrings','Cullora/Resources/Cullora.storekit']:
+for rel in ['Keptora/Resources/Localizable.xcstrings','Keptora/Resources/Keptora.storekit']:
     try: resources[rel]=json.loads((ROOT/rel).read_text())
     except Exception as e: errors.append(f'{rel}: {e}')
-try: info=plistlib.loads((ROOT/'Cullora/Resources/Info.plist').read_bytes())
+try: info=plistlib.loads((ROOT/'Keptora/Resources/Info.plist').read_bytes())
 except Exception as e: errors.append(f'Info.plist: {e}'); info={}
-try: entitlements=plistlib.loads((ROOT/'Cullora/Resources/Cullora.entitlements').read_bytes())
-except Exception as e: errors.append(f'Cullora.entitlements: {e}'); entitlements={}
-try: privacy=plistlib.loads((ROOT/'Cullora/Resources/PrivacyInfo.xcprivacy').read_bytes())
+try: entitlements=plistlib.loads((ROOT/'Keptora/Resources/Keptora.entitlements').read_bytes())
+except Exception as e: errors.append(f'Keptora.entitlements: {e}'); entitlements={}
+try: privacy=plistlib.loads((ROOT/'Keptora/Resources/PrivacyInfo.xcprivacy').read_bytes())
 except Exception as e: errors.append(f'PrivacyInfo.xcprivacy: {e}'); privacy={}
 
-project=(ROOT/'Cullora.xcodeproj/project.pbxproj').read_text()
-purchase_source=(ROOT/'Cullora/Core/Purchases/StoreEntitlementController.swift').read_text()
-access_source=(ROOT/'Cullora/Core/Purchases/AccessPolicy.swift').read_text()
-store=resources.get('Cullora/Resources/Cullora.storekit', {'products':[{'productID':''}]})
+project=(ROOT/'Keptora.xcodeproj/project.pbxproj').read_text()
+purchase_source=(ROOT/'Keptora/Core/Purchases/StoreEntitlementController.swift').read_text()
+access_source=(ROOT/'Keptora/Core/Purchases/AccessPolicy.swift').read_text()
+store=resources.get('Keptora/Resources/Keptora.storekit', {'products':[{'productID':''}]})
 store_id=store['products'][0]['productID']
 source_id=str(info.get('APP_LIFETIME_PRODUCT_ID', '')).strip()
 
 require(store_id == source_id, f'StoreKit product mismatch: config={store_id}, source={source_id}')
 require(info.get('CFBundleShortVersionString') == '1.0.0', 'Info.plist version must match the current 1.0.0 release metadata')
-require(str(info.get('CFBundleVersion')) == '181', 'Info.plist build must match the current 181 release metadata')
+require(str(info.get('CFBundleVersion')) == '182', 'Info.plist build must match the current 182 release metadata')
 require('MARKETING_VERSION = "1.0.0"' in project, 'Project marketing version must match the current 1.0.0 release metadata')
-require('CURRENT_PROJECT_VERSION = "181"' in project, 'Project build must match the current 181 release metadata')
+require('CURRENT_PROJECT_VERSION = 182;' in project, 'Project build must match the current 182 release metadata')
 require('knownRegions = (en, tr, Base);' in project, 'English/Turkish known regions missing')
-require(len(resources.get('Cullora/Resources/Localizable.xcstrings',{}).get('strings',{})) >= 90, 'Launch localization catalog is unexpectedly small')
+require(len(resources.get('Keptora/Resources/Localizable.xcstrings',{}).get('strings',{})) >= 90, 'Launch localization catalog is unexpectedly small')
 require(project.count('MACOSX_DEPLOYMENT_TARGET = \"13.0\"') >= 2, 'App macOS 13 deployment target changed unexpectedly')
 require(project.count('MACOSX_DEPLOYMENT_TARGET = \"14.0\"') >= 4, 'Test targets must use the installed XCTest SDK deployment target')
-require(not any('ContentUnavailableView' in path.read_text() for path in (ROOT/'Cullora').rglob('*.swift')), 'Newer ContentUnavailableView dependency remains despite macOS 13 target')
+require(not any('ContentUnavailableView' in path.read_text() for path in (ROOT/'Keptora').rglob('*.swift')), 'Newer ContentUnavailableView dependency remains despite macOS 13 target')
 try:
     with (ROOT/'AppStore/COMPETITOR_MATRIX_2026.csv').open(encoding='utf-8-sig', newline='') as handle:
         competitors=list(csv.DictReader(handle))
@@ -75,20 +75,20 @@ require(project.count('ENABLE_HARDENED_RUNTIME = \"YES\"') >= 2, 'Hardened Runti
 
 # Access model and UX contract.
 require('freeReviewLimit = 100' in access_source, 'Free review limit must remain 100')
-require((ROOT/'Cullora/Features/Onboarding/OnboardingView.swift').exists(), 'Onboarding view missing')
-require((ROOT/'Cullora/Features/Paywall/PaywallView.swift').exists(), 'Paywall view missing')
-require((ROOT/'Cullora/Features/Diagnostics/DiagnosticsView.swift').exists(), 'Diagnostics view missing')
-require((ROOT/'Cullora/Features/Insights/ReviewInsightsView.swift').exists(), 'Review Insights view missing')
+require((ROOT/'Keptora/Features/Onboarding/OnboardingView.swift').exists(), 'Onboarding view missing')
+require((ROOT/'Keptora/Features/Paywall/PaywallView.swift').exists(), 'Paywall view missing')
+require((ROOT/'Keptora/Features/Diagnostics/DiagnosticsView.swift').exists(), 'Diagnostics view missing')
+require((ROOT/'Keptora/Features/Insights/ReviewInsightsView.swift').exists(), 'Review Insights view missing')
 require('authorizeReviews' in purchase_source and 'recordReviews' in purchase_source, 'Atomic batch review entitlement support missing')
-require('applyExactGroupAction' in (ROOT/'Cullora/Core/Persistence/SQLiteDatabase.swift').read_text(), 'Exact-only batch action persistence missing')
-require('Select All Safe Copies' in (ROOT/'Cullora/Features/ReviewStudio/ReviewStudioView.swift').read_text(), 'Exact review batch action UI missing')
+require('applyExactGroupAction' in (ROOT/'Keptora/Core/Persistence/SQLiteDatabase.swift').read_text(), 'Exact-only batch action persistence missing')
+require('Select All Safe Copies' in (ROOT/'Keptora/Features/ReviewStudio/ReviewStudioView.swift').read_text(), 'Exact review batch action UI missing')
 require('authorizeReview' in purchase_source and 'authorizeSafetyPlan' in purchase_source, 'App-wide entitlement enforcement missing')
-require('DiagnosticsRedactor' in (ROOT/'Cullora/Diagnostics/DiagnosticsSnapshot.swift').read_text(), 'Diagnostics redaction missing')
-require('final class StoreEntitlementController' not in (ROOT/'Cullora/Features/Settings/SettingsView.swift').read_text(), 'Store controller implementation must not live inside SettingsView')
+require('DiagnosticsRedactor' in (ROOT/'Keptora/Diagnostics/DiagnosticsSnapshot.swift').read_text(), 'Diagnostics redaction missing')
+require('final class StoreEntitlementController' not in (ROOT/'Keptora/Features/Settings/SettingsView.swift').read_text(), 'Store controller implementation must not live inside SettingsView')
 
 # Safety contract: no permanent deletion API in app target.
 for pattern in [r'PHAssetChangeRequest\.deleteAssets', r'\.trashItem\s*\(', r'FileManager\.default\.removeItem\s*\(']:
-    for path in (ROOT/'Cullora').rglob('*.swift'):
+    for path in (ROOT/'Keptora').rglob('*.swift'):
         if re.search(pattern, path.read_text()): errors.append(f'Forbidden permanent-delete API in {path.relative_to(ROOT)}: {pattern}')
 
 # Release/package documents.
@@ -110,33 +110,33 @@ if placeholders:
 
 
 # Phase 5N continuity, keyboard, and demo contract.
-app_model=(ROOT/'Cullora/App/AppModel.swift').read_text()
-app_source=(ROOT/'Cullora/App/CulloraApp.swift').read_text()
-review_source=(ROOT/'Cullora/Features/ReviewStudio/ReviewStudioView.swift').read_text()
-require((ROOT/'Cullora/Adapters/FileSystemAdapter/DemoLibraryFactory.swift').exists(), 'Demo library factory missing')
-require((ROOT/'CulloraTests/ReviewSessionCheckpointTests.swift').exists(), 'Review session checkpoint tests missing')
-require('ReviewSessionCheckpoint' in (ROOT/'Cullora/Core/Models/ReviewModels.swift').read_text(), 'Review session checkpoint model missing')
+app_model=(ROOT/'Keptora/App/AppModel.swift').read_text()
+app_source=(ROOT/'Keptora/App/KeptoraApp.swift').read_text()
+review_source=(ROOT/'Keptora/Features/ReviewStudio/ReviewStudioView.swift').read_text()
+require((ROOT/'Keptora/Adapters/FileSystemAdapter/DemoLibraryFactory.swift').exists(), 'Demo library factory missing')
+require((ROOT/'KeptoraTests/ReviewSessionCheckpointTests.swift').exists(), 'Review session checkpoint tests missing')
+require('ReviewSessionCheckpoint' in (ROOT/'Keptora/Core/Models/ReviewModels.swift').read_text(), 'Review session checkpoint model missing')
 require('checkpointReviewSession' in app_model and 'resumeReviewSession' in app_model, 'Review checkpoint lifecycle missing')
 require('loadDemoLibrary' in app_model and 'DemoLibraryFactory.prepare' in app_model, 'Real scanner demo library path missing')
 require('CommandMenu("Review")' in app_source, 'Keyboard review command menu missing')
 for shortcut in ['Previous Exact Group','Next Exact Group','Keep Focused Photo','Select All Safe Copies']:
     require(shortcut in app_source, f'Missing keyboard command: {shortcut}')
 require('isFocused: model.selectedReviewAssetID == asset.id' in review_source, 'Focused review asset UI missing')
-require('Local review session' in (ROOT/'Cullora/Features/Insights/ReviewInsightsView.swift').read_text(), 'Local session metrics missing')
-require('SourceExclusionPolicy' in (ROOT/'Cullora/Core/Scanning/FolderEnumerator.swift').read_text(), 'Source exclusion policy missing')
-require('Export Plan…' in (ROOT/'Cullora/Features/SafetyPlan/SafetyPlanSheet.swift').read_text(), 'Safety Plan export missing')
-require('I reviewed the destination' in (ROOT/'Cullora/Features/SafetyPlan/SafetyPlanSheet.swift').read_text(), 'Explicit Safety Plan confirmation missing')
+require('Local review session' in (ROOT/'Keptora/Features/Insights/ReviewInsightsView.swift').read_text(), 'Local session metrics missing')
+require('SourceExclusionPolicy' in (ROOT/'Keptora/Core/Scanning/FolderEnumerator.swift').read_text(), 'Source exclusion policy missing')
+require('Export Plan…' in (ROOT/'Keptora/Features/SafetyPlan/SafetyPlanSheet.swift').read_text(), 'Safety Plan export missing')
+require('I reviewed the destination' in (ROOT/'Keptora/Features/SafetyPlan/SafetyPlanSheet.swift').read_text(), 'Explicit Safety Plan confirmation missing')
 require('exportPendingSafetyPlan' in app_model, 'Safety Plan JSON export missing')
 
 # Phase 5O restore, scale, exclusion, and local performance contract.
-cleanup_models=(ROOT/'Cullora/Core/Models/CleanupModels.swift').read_text()
-coordinator=(ROOT/'Cullora/Core/Cleanup/QuarantineCoordinator.swift').read_text()
-history=(ROOT/'Cullora/Features/History/HistoryView.swift').read_text()
-restore_sheet=(ROOT/'Cullora/Features/History/RestorePreviewSheet.swift').read_text()
-safety_sheet=(ROOT/'Cullora/Features/SafetyPlan/SafetyPlanSheet.swift').read_text()
-folder_enumerator=(ROOT/'Cullora/Core/Scanning/FolderEnumerator.swift').read_text()
-performance=(ROOT/'Cullora/Diagnostics/PerformanceRecorder.swift').read_text()
-diagnostics=(ROOT/'Cullora/Features/Diagnostics/DiagnosticsView.swift').read_text()
+cleanup_models=(ROOT/'Keptora/Core/Models/CleanupModels.swift').read_text()
+coordinator=(ROOT/'Keptora/Core/Cleanup/QuarantineCoordinator.swift').read_text()
+history=(ROOT/'Keptora/Features/History/HistoryView.swift').read_text()
+restore_sheet=(ROOT/'Keptora/Features/History/RestorePreviewSheet.swift').read_text()
+safety_sheet=(ROOT/'Keptora/Features/SafetyPlan/SafetyPlanSheet.swift').read_text()
+folder_enumerator=(ROOT/'Keptora/Core/Scanning/FolderEnumerator.swift').read_text()
+performance=(ROOT/'Keptora/Diagnostics/PerformanceRecorder.swift').read_text()
+diagnostics=(ROOT/'Keptora/Features/Diagnostics/DiagnosticsView.swift').read_text()
 require('RestorePlanPreview' in cleanup_models and 'RestoreOperationReadiness' in cleanup_models, 'Restore preview models missing')
 require('previewRestore(planID:' in coordinator and 'verifiedManifest(planID:' in coordinator, 'Signed restore dry-run verification missing')
 require('Review Restore' in history and 'Quarantine & Restore' in history, 'Quarantine restore center UI missing')
@@ -144,11 +144,11 @@ require('Restore Verified Files' in restore_sheet and 'never overwrite' in resto
 require('visibleLimit = 300' in restore_sheet and 'visibleLimit = 300' in safety_sheet, 'Bounded 300-row rendering missing for large plans')
 require('Large plan mode is active' in safety_sheet, 'Large Safety Plan performance mode missing')
 require('precomposedStringWithCanonicalMapping' in folder_enumerator and '.caseInsensitive' in folder_enumerator, 'Unicode/case-insensitive exclusion normalization missing')
-require((ROOT/'CulloraTests/SourceExclusionPolicyTests.swift').exists(), 'Source exclusion Unicode tests missing')
-require((ROOT/'CulloraTests/RestorePreviewTests.swift').exists(), 'Restore preview tests missing')
+require((ROOT/'KeptoraTests/SourceExclusionPolicyTests.swift').exists(), 'Source exclusion Unicode tests missing')
+require((ROOT/'KeptoraTests/RestorePreviewTests.swift').exists(), 'Restore preview tests missing')
 require('maximumSamples = 200' in performance and 'PerformanceHistory.json' in performance, 'Bounded local performance history missing')
 require('Local performance history' in diagnostics and 'exportPerformanceHistory' in app_model, 'Performance diagnostics UI/export missing')
-require('recentPerformance' in (ROOT/'Cullora/Diagnostics/DiagnosticsSnapshot.swift').read_text(), 'Performance samples missing from diagnostics snapshot')
+require('recentPerformance' in (ROOT/'Keptora/Diagnostics/DiagnosticsSnapshot.swift').read_text(), 'Performance samples missing from diagnostics snapshot')
 require(('implementationPhase: "5O"' in app_model) or ('implementationPhase: "5P"' in app_model) or ('implementationPhase: "5Q"' in app_model) or ('implementationPhase: "5R"' in app_model) or ('implementationPhase: "5S"' in app_model), 'Diagnostics phase marker must be 5O or successor 5R')
 
 print('Phase 5O static validation')

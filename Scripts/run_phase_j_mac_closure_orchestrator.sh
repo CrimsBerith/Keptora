@@ -3,8 +3,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 MODE="${1:-status}"
-PROJECT="Cullora.xcodeproj"
-SCHEME="Cullora"
+PROJECT="Keptora.xcodeproj"
+SCHEME="Keptora"
 APP_NAME="Cullora"
 SHELL_IDENTITY="Archive Review Studio"
 DEST='platform=macOS'

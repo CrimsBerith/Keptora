@@ -1,4 +1,4 @@
-# Cullora Faz 5K Teslim Özeti
+# Keptora Faz 5K Teslim Özeti
 
 **Sürüm:** 0.9.1 (100)  
 **Durum:** Mac/Xcode release-handoff kaynak paketi

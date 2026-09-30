@@ -1,4 +1,4 @@
-# Cullora — Age Rating Answers (Phase O Draft)
+# Keptora — Age Rating Answers (Phase O Draft)
 
 Use `AGE_RATING_2026_DRAFT.md` as the product-specific source of truth. Phase O deliberately does not hard-code a rating number.
 

@@ -1,4 +1,4 @@
-# Cullora — Release Information Intake (Phase O)
+# Keptora — Release Information Intake (Phase O)
 
 Fill only confirmed developer/account-holder values. Do not invent identifiers.
 

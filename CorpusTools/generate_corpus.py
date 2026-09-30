@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic Cullora corpus generator for exact and visual grouping tests."""
+"""Deterministic Keptora corpus generator for exact and visual grouping tests."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 import argparse, json, random, shutil, subprocess
@@ -19,7 +19,7 @@ def make_original(index, rng):
         x0, y0 = rng.randrange(w), rng.randrange(h)
         x1, y1 = min(w, x0 + rng.randrange(20, 240)), min(h, y0 + rng.randrange(20, 180))
         draw.rounded_rectangle((x0, y0, x1, y1), radius=12, outline=(255,255,255), width=3)
-    draw.text((24, 24), f"Cullora asset {index}", fill="white")
+    draw.text((24, 24), f"Keptora asset {index}", fill="white")
     return base
 
 def create_variant(kind, img, base_path, target, index):
@@ -42,7 +42,7 @@ def create_variant(kind, img, base_path, target, index):
 def add_raw_family(out, family_index, truth):
     stem = f"raw_family_{family_index:05d}"
     raw = out / f"{stem}.dng"; raw.write_bytes(b"CULLORA_SYNTHETIC_RAW_PLACEHOLDER\0" + bytes(str(family_index), "utf-8"))
-    xmp = out / f"{stem}.xmp"; xmp.write_text(f"<x:xmpmeta><rdf:Description cullora:id='{family_index}'/></x:xmpmeta>")
+    xmp = out / f"{stem}.xmp"; xmp.write_text(f"<x:xmpmeta><rdf:Description keptora:id='{family_index}'/></x:xmpmeta>")
     preview = Image.new("RGB", (480, 320), (60, 74, 92)); ImageDraw.Draw(preview).text((20,20), stem, fill="white")
     jpg = out / f"{stem}.jpg"; save_jpeg(preview, jpg)
     for path, role in ((raw,"raw"),(xmp,"sidecar"),(jpg,"jpeg_preview")):

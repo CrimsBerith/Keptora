@@ -1,4 +1,4 @@
-# Cullora — Phase I App Store Final QA
+# Keptora — Phase I App Store Final QA
 
 Distinct shell to preserve in final screenshots: **Archive Review Studio**.
 

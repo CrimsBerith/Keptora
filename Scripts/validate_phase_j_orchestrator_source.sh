@@ -24,4 +24,4 @@ grep -Fq 'validate_phase_i_final_submission.sh' Scripts/run_phase_j_mac_closure_
 grep -Fq 'Archive Review Studio' Docs/PhaseGHI/PHASE_J_MAC_CLOSURE_ORCHESTRATOR.md
 grep -Fq 'does not auto-pass manual App Store evidence' Docs/PhaseGHI/PHASE_J_MAC_CLOSURE_ORCHESTRATOR.md
 printf 'PHASE_J_SOURCE_GATE_PASS app=%s
-' 'Cullora'
+' 'Keptora'

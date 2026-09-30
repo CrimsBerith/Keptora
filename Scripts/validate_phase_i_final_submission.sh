@@ -18,11 +18,11 @@ done
 # Preserve product identity explicitly in final screenshot evidence.
 grep -Fq 'Archive Review Studio' "$EVIDENCE_ROOT/window_matrix_identity.txt" || { echo 'shell identity missing from window evidence' >&2; exit 106; }
 {
- echo 'APP=Cullora'
+ echo 'APP=Keptora'
  echo 'SHELL_IDENTITY=Archive Review Studio'
  echo 'PHASE=I'
  echo 'RESULT=PASS'
  echo 'STATUS=LOCAL_EVIDENCE_COMPLETE_READY_FOR_FINAL_APP_STORE_CONNECT_REVIEW'
 } > "$EVIDENCE_ROOT/final_phase_i_receipt.txt"
 ( cd "$EVIDENCE_ROOT" && shasum -a 256 *.txt > final_phase_i_evidence.sha256 )
-echo 'PHASE_I_FINAL_CLOSURE_PASS app=Cullora'
+echo 'PHASE_I_FINAL_CLOSURE_PASS app=Keptora'

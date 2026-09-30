@@ -1,4 +1,4 @@
-# App Privacy Answers — Cullora 1.0.0 (181)
+# App Privacy Answers — Keptora 1.0.0 (182)
 
 **Basis:** Current Phase 5K source only. Re-answer these questions if analytics, crash reporting, cloud sync, accounts, support SDKs, or any network service is added.
 
@@ -8,7 +8,7 @@
 
 **No — for the current local-only build.**
 
-Cullora reads user-selected folders, photo/video files, metadata, hashes, thumbnails, review decisions, cleanup plans, bookmarks, and local diagnostics on the device. The current source does not transmit those items to the developer or a third party. On-device access is not represented here as developer collection.
+Keptora reads user-selected folders, photo/video files, metadata, hashes, thumbnails, review decisions, cleanup plans, bookmarks, and local diagnostics on the device. The current source does not transmit those items to the developer or a third party. On-device access is not represented here as developer collection.
 
 ### Tracking
 
@@ -27,7 +27,7 @@ Cullora reads user-selected folders, photo/video files, metadata, hashes, thumbn
 
 ## Local data processed by the app
 
-Cullora may locally store:
+Keptora may locally store:
 
 - Security-scoped bookmarks for folders the user selected.
 - A SQLite index containing source identity, file metadata, exact fingerprints, feature-print references, review decisions, plans, and history.
@@ -40,7 +40,7 @@ This is application data on the user’s Mac, not off-device collection by the d
 
 ## Purchases
 
-Purchases are processed by Apple through StoreKit. Cullora requests product information and reads verified current entitlement transactions. Do not claim that payment-card details are received by Cullora.
+Purchases are processed by Apple through StoreKit. Keptora requests product information and reads verified current entitlement transactions. Do not claim that payment-card details are received by Keptora.
 
 ## Diagnostics
 
@@ -55,7 +55,7 @@ The bundled `PrivacyInfo.xcprivacy` currently declares:
 - File timestamp required-reason APIs for user-selected files and app-container files.
 - App-only UserDefaults access.
 
-Before every upload, inspect the archive privacy report and re-check all linked SDKs. A future SDK can change the App Privacy answers even if Cullora’s own code does not.
+Before every upload, inspect the archive privacy report and re-check all linked SDKs. A future SDK can change the App Privacy answers even if Keptora’s own code does not.
 
 ## Required public fields before submission
 

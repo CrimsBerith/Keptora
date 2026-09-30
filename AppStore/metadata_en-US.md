@@ -1,4 +1,4 @@
-# Cullora App Store Metadata Draft
+# Keptora App Store Metadata Draft
 
 **Snapshot date:** 4 August 2026  
 **Status:** Content-complete draft; legal identity, URLs, identifiers, pricing tiers, and final screenshots remain release blockers.
@@ -7,8 +7,8 @@
 
 | Field | Draft |
 |---|---|
-| App name | `Cullora: Photo Triage` |
-| Bundle display name | `Cullora` |
+| App name | `Keptora: Photo Triage` |
+| Bundle display name | `Keptora` |
 | Primary category | Photo & Video |
 | Secondary category | Utilities — keep only if the shipping feature set justifies it |
 | Download model | Free |
@@ -27,7 +27,7 @@ The proposed name is 21 characters. Both localized subtitles are within the 30-c
 
 ### Promotional text
 
-Clean exact duplicates safely, compare similar photos side by side, and move reviewed copies into a reversible quarantine—entirely on your Mac.
+Find exact photo and video copies, compare similar media, and reclaim space with explicit, protected cleanup on Mac and iPhone.
 
 ### Keywords
 
@@ -35,27 +35,27 @@ Clean exact duplicates safely, compare similar photos side by side, and move rev
 
 ### Description
 
-Cullora helps you clean photo archives without trusting a black-box delete button.
+Keptora helps you clean photo archives without trusting a black-box delete button.
 
 **START WITH EXACT DUPLICATES**  
-Scan a folder, external drive, or cloud folder mounted in Finder locally. Cullora groups files only after SHA-256 confirms byte-for-byte equality. It protects a keeper and explains why copies belong together.
+Scan a folder, external drive, or cloud folder mounted in Finder locally. Keptora groups files only after SHA-256 confirms byte-for-byte equality. It protects a keeper and explains why copies belong together.
 
-**COMPARE SIMILAR PHOTOS**  
-Review visually similar images side by side with synchronized zoom and pan. Similarity remains advisory: it never enters a cleanup plan automatically.
+**REVIEW SIMILAR MEDIA**
+Compare similar photos without cleanup actions. Similar videos use duration, shape, and sampled frames; they are never auto-selected and require your explicit review before cleanup.
 
 **REVIEW BEFORE ANY MOVE**  
-Cullora builds a Safety Plan showing every proposed action, destination, and recoverability status. Approved copies move to a reversible quarantine on the same volume. Signed manifests and history make restoration auditable.
+Keptora builds a Safety Plan showing every proposed action, destination, and recoverability status. Approved copies move to a reversible quarantine on the same volume. Signed manifests and history make restoration auditable.
 
 **UNDERSTAND PHOTO FAMILIES**  
 RAW + JPEG, XMP sidecars, Live Photo components, bursts, and edited exports are treated as related assets instead of isolated files.
 
 **PRIVATE BY DESIGN**  
-No account. No ads. No analytics. No photo upload. Your archive is processed on your Mac.
+No account. No ads. No analytics. No media upload. Your archive is processed on your supported Apple device.
 
 **FREE TO START**  
-Scan without a limit and review the first 100 unique recommendations. A one-time Cullora Pro purchase unlocks unlimited review and Safety Plans. No subscription.
+Scan without a limit and review the first 100 unique recommendations. A one-time Keptora Pro purchase unlocks unlimited review and Safety Plans. No subscription.
 
-Important: Cullora does not permanently delete files from Apple Photos. Similar-photo suggestions always require your review.
+Important: Keptora does not permanently delete files from Apple Photos. Similar-photo suggestions always require your review.
 
 ## Turkish
 
@@ -65,7 +65,7 @@ Important: Cullora does not permanently delete files from Apple Photos. Similar-
 
 ### Promotional text
 
-Tam kopyaları güvenle temizleyin, benzer fotoğrafları yan yana karşılaştırın ve incelenen kopyaları Mac’inizde geri alınabilir karantinaya taşıyın.
+Birebir fotoğraf ve video kopyalarını bulun, benzer medyaları karşılaştırın ve Mac ile iPhone’da açık onaylı güvenli temizlik yapın.
 
 ### Keywords
 
@@ -73,27 +73,27 @@ Tam kopyaları güvenle temizleyin, benzer fotoğrafları yan yana karşılaşt�
 
 ### Description
 
-Cullora, fotoğraf arşivinizi ne yaptığını açıklamayan tek tıklamalı bir silme aracına güvenmeden düzenlemenize yardımcı olur.
+Keptora, fotoğraf arşivinizi ne yaptığını açıklamayan tek tıklamalı bir silme aracına güvenmeden düzenlemenize yardımcı olur.
 
 **ÖNCE TAM KOPYALAR**  
-Bir klasörü veya harici diski tamamen yerel olarak tarayın. Cullora, dosyaları yalnızca SHA-256 ile birebir aynı oldukları doğrulandıktan sonra gruplar. Saklanacak ana kopyayı korur ve dosyaların neden aynı grupta olduğunu açıklar.
+Bir klasörü veya harici diski tamamen yerel olarak tarayın. Keptora, dosyaları yalnızca SHA-256 ile birebir aynı oldukları doğrulandıktan sonra gruplar. Saklanacak ana kopyayı korur ve dosyaların neden aynı grupta olduğunu açıklar.
 
-**BENZER FOTOĞRAFLARI KARŞILAŞTIRIN**  
-Görsel olarak benzer fotoğrafları senkronize yakınlaştırma ve kaydırmayla yan yana inceleyin. Benzerlik yalnızca bir inceleme sinyalidir; otomatik olarak temizlik planına girmez.
+**BENZER MEDYALARI İNCELEYİN**
+Benzer fotoğrafları temizleme eylemi olmadan karşılaştırın. Benzer videolar süre, görüntü oranı ve örnek karelerle önerilir; otomatik seçilmez ve temizlikten önce açıkça sizin incelemenizi gerektirir.
 
 **HER HAREKETTEN ÖNCE İNCELEYİN**  
-Cullora, önerilen her işlemi, hedef konumu ve geri alınabilirlik durumunu gösteren bir Güvenlik Planı oluşturur. Onaylanan kopyalar aynı disk üzerindeki geri alınabilir karantinaya taşınır. İmzalı manifestler ve geçmiş, geri yüklemeyi denetlenebilir kılar.
+Keptora, önerilen her işlemi, hedef konumu ve geri alınabilirlik durumunu gösteren bir Güvenlik Planı oluşturur. Onaylanan kopyalar aynı disk üzerindeki geri alınabilir karantinaya taşınır. İmzalı manifestler ve geçmiş, geri yüklemeyi denetlenebilir kılar.
 
 **FOTOĞRAF AİLELERİNİ ANLAYIN**  
 RAW + JPEG, XMP sidecar dosyaları, Live Photo bileşenleri, burst çekimler ve düzenlenmiş dışa aktarımlar birbirinden kopuk dosyalar olarak değil, ilişkili varlıklar olarak ele alınır.
 
 **GİZLİLİK ODAKLI**  
-Hesap yok. Reklam yok. Analitik yok. Fotoğraf yükleme yok. Arşiviniz Mac’inizde işlenir.
+Hesap yok. Reklam yok. Analitik yok. Medya yükleme yok. Arşiviniz desteklenen Apple aygıtınızda işlenir.
 
 **ÜCRETSİZ BAŞLAYIN**  
-Sınırsız tarama yapın ve ilk 100 benzersiz öneriyi inceleyin. Tek seferlik Cullora Pro satın alımı sınırsız incelemeyi ve Güvenlik Planlarını açar. Abonelik yok.
+Sınırsız tarama yapın ve ilk 100 benzersiz öneriyi inceleyin. Tek seferlik Keptora Pro satın alımı sınırsız incelemeyi ve Güvenlik Planlarını açar. Abonelik yok.
 
-Önemli: Cullora, Apple Photos içindeki dosyaları kalıcı olarak silmez. Benzer fotoğraf önerileri her zaman sizin incelemenizi gerektirir.
+Önemli: Keptora, Apple Photos içindeki dosyaları kalıcı olarak silmez. Benzer fotoğraf önerileri her zaman sizin incelemenizi gerektirir.
 
 ## Metadata entry checklist
 

@@ -1,9 +1,9 @@
-# Cullora App Review Corpus
+# Keptora App Review Corpus
 
 Generate the deterministic corpus on the reviewer/test Mac:
 
 ```bash
-python3 Scripts/generate_app_review_corpus.py --output ~/Desktop/Cullora_Review_Corpus
+python3 Scripts/generate_app_review_corpus.py --output ~/Desktop/Keptora_Review_Corpus
 ```
 
 The generated folder contains:

@@ -1,4 +1,4 @@
-# Cullora — Real-data Failure / Performance / Memory Hardening
+# Keptora — Real-data Failure / Performance / Memory Hardening
 
 - Real Cocoa/URL error classes map to explicit safe failure states.
 - Failure copy is product-specific: **Archive Review** / **Return to Review Floor**.

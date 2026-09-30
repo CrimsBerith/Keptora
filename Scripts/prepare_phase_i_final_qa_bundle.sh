@@ -20,6 +20,6 @@ write_pending offline_relaunch_recovery.txt 'Offline cold relaunch crash-safe re
 write_pending privacy_manifest_entitlements.txt 'Archived privacy manifest entitlements sandbox declaration review'
 write_pending metadata_urls_review_notes.txt 'Metadata privacy support URLs review notes export declaration'
 write_pending screenshots_final_inventory.txt 'Final App Store screenshot inventory with no private data'
-printf 'APP=Cullora\nSHELL_IDENTITY=Archive Review Studio\nPHASE=I\nPHASE_H_EVIDENCE=%s\n' "$H_EVIDENCE" > "$EVIDENCE_ROOT/context.txt"
+printf 'APP=Keptora\nSHELL_IDENTITY=Archive Review Studio\nPHASE=I\nPHASE_H_EVIDENCE=%s\n' "$H_EVIDENCE" > "$EVIDENCE_ROOT/context.txt"
 ( cd "$EVIDENCE_ROOT" && shasum -a 256 *.txt > evidence_preflight.sha256 )
-echo 'PHASE_I_FINAL_QA_BUNDLE_PREPARED app=Cullora'
+echo 'PHASE_I_FINAL_QA_BUNDLE_PREPARED app=Keptora'

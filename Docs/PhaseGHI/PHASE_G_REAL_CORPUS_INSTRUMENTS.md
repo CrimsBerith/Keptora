@@ -1,4 +1,4 @@
-# Cullora — Phase G Real Corpus + Instruments
+# Keptora — Phase G Real Corpus + Instruments
 
 Successor: **P6**  
 Distinct shell: **Archive Review Studio**
@@ -9,7 +9,7 @@ Phase G is fail-closed: real corpus stays external and actual traces are only pr
 
 ```bash
 ./Scripts/validate_phase_g_readiness.sh
-./Scripts/run_phase_g_profile_suite.sh /absolute/external/corpus /absolute/path/to/Cullora.app
+./Scripts/run_phase_g_profile_suite.sh /absolute/external/corpus /absolute/path/to/Keptora.app
 ```
 
 The suite records Time Profiler, Allocations and Leaks, resolves `CFBundleExecutable` from the app bundle, passes the external corpus path through `CULLORA_REAL_CORPUS_PATH`, and exports a TOC XML next to every trace.

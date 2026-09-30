@@ -1,9 +1,9 @@
-# Cullora Phase 5F — Working Xcode Project
+# Keptora Phase 5F — Working Xcode Project
 
 ## Delivered vertical slice
-1. Open `Cullora.xcodeproj` directly in Xcode.
-2. Select a Development Team and replace `com.yourcompany.cullora`.
-3. Run the `Cullora` scheme on My Mac.
+1. Open `Keptora.xcodeproj` directly in Xcode.
+2. Select a Development Team and replace `com.yourcompany.keptora`.
+3. Run the `Keptora` scheme on My Mac.
 4. Choose a folder through `NSOpenPanel`.
 5. Start a read-only scan.
 6. The app enumerates supported media, streams SHA-256 over each file, persists assets/fingerprints/checkpoints in SQLite WAL mode, rebuilds deterministic exact groups, and opens Review Studio.
@@ -28,15 +28,15 @@ Phase 5F cannot delete files. `PhotoLibraryAdapter.delete` exists as an isolated
 - Signing: choose your team; use automatic signing.
 - Bundle ID: change placeholder in target Build Settings.
 - Photos description is included in `Info.plist`.
-- App Sandbox and user-selected read/write access are included in `Cullora.entitlements`.
+- App Sandbox and user-selected read/write access are included in `Keptora.entitlements`.
 - StoreKit product is test-only until App Store Connect creates the matching non-consumable.
 
 ## Validation commands
 ```bash
-python3 CorpusTools/generate_corpus.py --out /tmp/cullora-corpus --count 1000 --seed 42
-python3 CorpusTools/benchmark_exact.py --corpus /tmp/cullora-corpus --out /tmp/cullora-benchmark.json
-xcodebuild -project Cullora.xcodeproj -scheme Cullora -configuration Debug build
-xcodebuild -project Cullora.xcodeproj -scheme Cullora -destination 'platform=macOS' test
+python3 CorpusTools/generate_corpus.py --out /tmp/keptora-corpus --count 1000 --seed 42
+python3 CorpusTools/benchmark_exact.py --corpus /tmp/keptora-corpus --out /tmp/keptora-benchmark.json
+xcodebuild -project Keptora.xcodeproj -scheme Keptora -configuration Debug build
+xcodebuild -project Keptora.xcodeproj -scheme Keptora -destination 'platform=macOS' test
 ```
 
 ## Known Phase 5F limits

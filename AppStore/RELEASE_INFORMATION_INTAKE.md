@@ -1,4 +1,4 @@
-# Cullora Release Information Intake
+# Keptora Release Information Intake
 
 Complete this file with real values before running the release gate. Do not invent legal, financial, contact, trademark, or URL information.
 
@@ -35,7 +35,7 @@ Complete this file with real values before running the release gate. Do not inve
 
 ## StoreKit lifetime product
 
-- Reference name: `Cullora Pro Lifetime` proposed
+- Reference name: `Keptora Pro Lifetime` proposed
 - Product ID: `REQUIRED`
 - Type: `Non-Consumable`
 - Display name EN/TR: `REQUIRED FINAL COPY`
@@ -58,7 +58,7 @@ Complete this file with real values before running the release gate. Do not inve
 
 - App Privacy responses: reconcile with archive privacy report and every linked SDK
 - Privacy manifest: inspect final archive copy
-- Encryption/export compliance: answer App Store Connect questionnaire; Cullora uses Apple cryptographic APIs for manifest integrity and StoreKit transport is system-provided
+- Encryption/export compliance: answer App Store Connect questionnaire; Keptora uses Apple cryptographic APIs for manifest integrity and StoreKit transport is system-provided
 - Content rights: confirm rights to every screenshot/corpus image
 - Age rating: complete current questionnaire; 4+ is proposed, not guaranteed
 - Accessibility nutrition label: complete only after VoiceOver, keyboard, contrast and motion testing

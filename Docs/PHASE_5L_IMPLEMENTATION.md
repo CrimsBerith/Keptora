@@ -1,4 +1,4 @@
-# Cullora Phase 5L Implementation
+# Keptora Phase 5L Implementation
 
 **Version:** 0.9.2  
 **Build:** 110  
@@ -62,7 +62,7 @@ Real Xcode compile/test/analyze/archive, signing, StoreKit sandbox, accessibilit
 ## Additional hardening completed
 
 - Expanded the structured competitor register from 16 to 22 products, adding Cisdem Duplicate Finder, Nektony Duplicate File Finder, Duplicate Photos Fixer Pro, Mylio Photos, PicArrange, and PhotoSort.
-- Replaced all `ContentUnavailableView` usages with `CulloraUnavailableView` so the declared macOS 13 deployment target does not depend on a newer empty-state component.
+- Replaced all `ContentUnavailableView` usages with `KeptoraUnavailableView` so the declared macOS 13 deployment target does not depend on a newer empty-state component.
 - Added Turkish translations for the compatibility empty states.
 - Kept visual maps, aesthetic scores, and similar-photo evidence outside exact-cleanup authorization.
 

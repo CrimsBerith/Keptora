@@ -1,4 +1,4 @@
-# Cullora — Phase Q Final Non-Mac Completion
+# Keptora — Phase Q Final Non-Mac Completion
 
 - Status: **PASS — no known source/UI/architecture/design-asset implementation gap remains.**
 - Product UI identity remains **Archive Review Studio**; portfolio shell homogenization is prohibited.

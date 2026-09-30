@@ -26,4 +26,4 @@ if p['app_privacy']['draft_disclosure']!='Data Not Collected':
  print('FAIL privacy draft mismatch'); sys.exit(1)
 if False and not p['release_assets']['final_icon_external_blocker']:
  print('FAIL icon blocker lost'); sys.exit(1)
-print('PASS Phase O source submission-data contract: Cullora')
+print('PASS Phase O source submission-data contract: Keptora')

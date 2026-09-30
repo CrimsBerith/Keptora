@@ -7,7 +7,7 @@
 - Searchable Safety Plan preview before any quarantine move.
 - Explicit confirmation that destination, keeper protection and recovery path were reviewed.
 - JSON export of the exact pending plan for audit/support.
-- Built-in scan exclusions for hidden items, package contents, `.Cullora Quarantine`, `.git` and `node_modules`.
+- Built-in scan exclusions for hidden items, package contents, `.Keptora Quarantine`, `.git` and `node_modules`.
 - User-defined excluded folder names and file extensions, applied on the next scan.
 - Phase 5N release validator and updated Mac release gate.
 

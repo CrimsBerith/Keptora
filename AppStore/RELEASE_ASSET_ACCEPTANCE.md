@@ -1,4 +1,4 @@
-# Phase M Release Asset Acceptance — Cullora
+# Phase M Release Asset Acceptance — Keptora
 
 - Dominant shell: **Archive Review Studio**
 - App Store content template: complete for en-US.

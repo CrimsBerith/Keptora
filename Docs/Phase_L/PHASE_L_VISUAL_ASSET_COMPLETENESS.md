@@ -1,4 +1,4 @@
-# Cullora — Phase L Visual/Asset Completeness
+# Keptora — Phase L Visual/Asset Completeness
 
 - Locked shell identity: **Archive Review Studio**
 - Screen contracts: **8**

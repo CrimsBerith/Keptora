@@ -48,7 +48,7 @@ Capture one Exact Review state with a non-keeper selected and **Decision Evidenc
 
 ## Phase 5Q shell-alignment screenshot
 
-Capture Exact Review with both transient drawers **closed** so the full-width Review Floor and bottom Decision Shelf are unmistakable. A second candidate may show the temporary Evidence drawer open. Do not submit a screenshot that makes Cullora look like a permanent three-column admin dashboard. Verify clipped Archive Plate geometry and the horizontal Workspace Shelf are visible at thumbnail size.
+Capture Exact Review with both transient drawers **closed** so the full-width Review Floor and bottom Decision Shelf are unmistakable. A second candidate may show the temporary Evidence drawer open. Do not submit a screenshot that makes Keptora look like a permanent three-column admin dashboard. Verify clipped Archive Plate geometry and the horizontal Workspace Shelf are visible at thumbnail size.
 
 ## Phase 5R Safety Plan screenshot
 Capture the real Safety Plan sheet showing the plan revision and `Current` freshness state, plus exact decision proof. For a QA-only alternate capture, use a controlled stale-plan fixture to show `Stale — regenerate` and the Regenerate Plan action; do not imply that stale plans can be committed.

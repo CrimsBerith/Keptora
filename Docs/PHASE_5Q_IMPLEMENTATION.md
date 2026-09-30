@@ -1,12 +1,12 @@
-# Cullora Phase 5Q — Archive Review Studio Shell Alignment
+# Keptora Phase 5Q — Archive Review Studio Shell Alignment
 
 ## Objective
 
-Bring the inherited Phase 5O/5P visible shell into the locked ten-app Cullora identity without changing the proven exact-duplicate, quarantine, restore, similarity, persistence, or StoreKit safety architecture.
+Bring the inherited Phase 5O/5P visible shell into the locked ten-app Keptora identity without changing the proven exact-duplicate, quarantine, restore, similarity, persistence, or StoreKit safety architecture.
 
 ## Implemented
 
-- Replaced the root `NavigationSplitView` with a horizontal **Workspace Shelf** below a compact Cullora archive masthead.
+- Replaced the root `NavigationSplitView` with a horizontal **Workspace Shelf** below a compact Keptora archive masthead.
 - Replaced the Review Studio permanent `HSplitView` with a full-width **Review Floor**.
 - Exact/similar group navigation now lives in a **temporary Review Queue drawer** opened by explicit user command.
 - Exact/similar evidence now lives in a **temporary Evidence drawer** rather than a permanent inspector.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic 100K-catalog benchmark for Cullora Phase 5I candidate generation.
+"""Deterministic 100K-catalog benchmark for Keptora Phase 5I candidate generation.
 
 This benchmark validates the sub-quadratic dHash band index. It does not execute
 Apple Vision; the Vision feature-print benchmark is intentionally macOS-only.

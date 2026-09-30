@@ -1,4 +1,4 @@
-# Cullora_Phase_5S_Quarantine_Verification_Lineage — Production AppIcon source
+# Keptora_Phase_5S_Quarantine_Verification_Lineage — Production AppIcon source
 
 - `source-1024.png`: 1024×1024 opaque RGB production-candidate master.
 - Xcode asset catalog contains the complete macOS AppIcon slot set.

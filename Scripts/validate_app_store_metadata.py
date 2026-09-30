@@ -11,12 +11,16 @@ errors = []
 release = data.get('release', {})
 if release.get('marketing_version') != '1.0.0':
     errors.append('release marketing version must be 1.0.0')
-if str(release.get('build_number')) != '181':
-    errors.append('release build number must be 181')
+if str(release.get('build_number')) != '182':
+    errors.append('release build number must be 182')
 if release.get('release_mode') != 'manual':
     errors.append('release mode must be manual')
 if release.get('minimum_macos') != '13.0':
     errors.append('minimum macOS must be 13.0')
+if release.get('minimum_ios') != '17.0':
+    errors.append('minimum iOS must be 17.0')
+if set(release.get('platforms', [])) != {'macOS', 'iPhone'}:
+    errors.append('platforms must be macOS and iPhone')
 if release.get('iap_family_sharing') is not False:
     errors.append('IAP Family Sharing must be disabled for 1.0.0')
 

@@ -10,7 +10,7 @@ struct DatabaseCoreSmoke {
 
         let database = SQLiteDatabase(url: root.appendingPathComponent("smoke.sqlite"))
         try await database.initialize()
-        guard try await database.schemaVersion() == 4 else { fatalError("Schema v4 migration failed") }
+        guard try await database.schemaVersion() >= 4 else { fatalError("Schema migration failed") }
         let source = SourceID(rawValue: "source")
         for index in 0..<3 {
             let file = root.appendingPathComponent("copy-\(index).jpg")

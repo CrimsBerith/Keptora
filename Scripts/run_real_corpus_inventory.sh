@@ -17,4 +17,4 @@ while IFS= read -r -d '' f; do
   printf '%s\t%s\t%s\t%s\n' "$count" "$ext" "$bytes" "$hash" >> "$OUT"
 done < <(find "$CORPUS" -type f -print0)
 [[ "$count" -gt 0 ]] || { echo "no accepted corpus files" >&2; exit 3; }
-printf 'REAL_CORPUS_INDEX_PASS app=Cullora files=%s bytes=%s output=%s\n' "$count" "$total" "$OUT"
+printf 'REAL_CORPUS_INDEX_PASS app=Keptora files=%s bytes=%s output=%s\n' "$count" "$total" "$OUT"

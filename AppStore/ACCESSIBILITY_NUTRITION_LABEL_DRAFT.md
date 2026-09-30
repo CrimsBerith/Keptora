@@ -1,4 +1,4 @@
-# Cullora — Accessibility Nutrition Label Draft
+# Keptora — Accessibility Nutrition Label Draft
 
 Candidate features to validate on the final Mac build:
 - VoiceOver: source identifiers/labels present; verify all common tasks end-to-end.

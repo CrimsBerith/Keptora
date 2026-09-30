@@ -1,25 +1,25 @@
-# Cullora Competitor Intelligence — 2026-08-04
+# Keptora Competitor Intelligence — 2026-08-04
 
 ## Purpose
 
-This register expands the earlier market research with direct Mac duplicate cleaners, Photos-library managers, professional culling products, editing-suite incumbents, and mobile-adjacent workflow signals. It is not a claim that every product is a direct substitute. Each row is tagged by segment so that mobile swipe cleaners are not compared as if they had the same file, sandbox, RAW, sidecar, external-volume, and recovery responsibilities as Cullora.
+This register expands the earlier market research with direct Mac duplicate cleaners, Photos-library managers, professional culling products, editing-suite incumbents, and mobile-adjacent workflow signals. It is not a claim that every product is a direct substitute. Each row is tagged by segment so that mobile swipe cleaners are not compared as if they had the same file, sandbox, RAW, sidecar, external-volume, and recovery responsibilities as Keptora.
 
 ## Product conclusion
 
-Cullora should not compete by promising the broadest AI cleaner. The defensible position remains:
+Keptora should not compete by promising the broadest AI cleaner. The defensible position remains:
 
 > **Exact cleanup is provable and reversible; similar-photo evidence is explainable and review-only.**
 
 The research supports four immediate product decisions:
 
 1. Users need filters, queue state, sorting, and visible progress when libraries become large.
-2. Batch actions are valuable only when the proof boundary is obvious. Cullora therefore allows batch planning only for SHA-256 exact groups and always excludes the keeper.
+2. Batch actions are valuable only when the proof boundary is obvious. Keptora therefore allows batch planning only for SHA-256 exact groups and always excludes the keeper.
 3. Keeper selection must be explainable and overridable.
 4. Savings/history should be visible without encouraging automatic permanent deletion.
 
 ## Added applications
 
-| Segment | Product | Key lesson for Cullora |
+| Segment | Product | Key lesson for Keptora |
 |---|---|---|
 | Built-in incumbent | Apple Photos — Duplicates | Clear recovery language and zero-setup expectations |
 | Direct Mac competitor | PhotoSweeper | Queue filters, protected keeper, exact-only batch planning, visible comparison controls |

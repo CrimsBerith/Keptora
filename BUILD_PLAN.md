@@ -1,4 +1,4 @@
-# Cullora Build Plan — Phase 5O / 1.0.0 (181)
+# Keptora Build Plan — Phase 5O / 1.0.0 (181)
 
 ## Delivered in source
 

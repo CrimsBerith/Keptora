@@ -1,6 +1,6 @@
 # What’s New — 1.0 Draft
 
-Cullora helps you review exact photo duplicates without risky one-click deletion.
+Keptora helps you review exact photo duplicates without risky one-click deletion.
 
 - Resume an exact-duplicate review exactly where you stopped.
 - Navigate groups and photos with keyboard-first shortcuts.
@@ -8,7 +8,7 @@ Cullora helps you review exact photo duplicates without risky one-click deletion
 - See local review pace, completed groups, and planned storage recovery.
 - Build reversible Safety Plans that always protect one verified keeper.
 
-All analysis stays on your Mac. Similar-photo suggestions remain review-only.
+All analysis stays on the device. Similar-photo suggestions remain review-only. Similar-video suggestions now support explicit card, checkbox, group, and safe-all selection with keeper protection and a fresh pre-cleanup file verification.
 
 
 ## Verified recovery

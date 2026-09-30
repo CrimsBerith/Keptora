@@ -1,11 +1,11 @@
-# App Store Submission Checklist — Cullora 1.0.0 (181)
+# App Store Submission Checklist — Keptora 1.0.0 (181)
 
 ## Legal and business
 
 - [ ] Apple Developer Program membership active.
 - [ ] Agreements, tax, and banking complete.
 - [ ] DSA trader status and regional business disclosures complete where required.
-- [ ] Cullora name, icon, domain, and marketing claims cleared for launch regions.
+- [ ] Keptora name, icon, domain, and marketing claims cleared for launch regions.
 - [ ] Public privacy, support, and marketing URLs live over HTTPS.
 
 ## App record and identity

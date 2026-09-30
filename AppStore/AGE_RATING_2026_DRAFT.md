@@ -1,4 +1,4 @@
-# Cullora — 2026 Age Rating Draft
+# Keptora — 2026 Age Rating Draft
 
 - Social-media capability: **No** (no feed/discovery/repost/amplification of UGC).
 - User-to-user messaging/chat: **No**.

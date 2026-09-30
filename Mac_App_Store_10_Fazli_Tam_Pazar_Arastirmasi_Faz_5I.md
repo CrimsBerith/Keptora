@@ -6110,7 +6110,7 @@ Başarısızsa: “one-shot utility” ekonomisine göre CAC ve fiyat yeniden he
 ```text
 Cullora/
 ├── App/
-│   ├── CulloraApp.swift
+│   ├── KeptoraApp.swift
 │   ├── AppState.swift
 │   └── Navigation/
 ├── Features/
@@ -6335,7 +6335,7 @@ Faz 5F’de hiçbir UI yolu dosya taşıyamaz, Trash’e gönderemez veya Photos
 7. **Aynı kaynak içindeki gizli quarantine**
 
 ```text
-<Selected Folder>/.Cullora Quarantine/<plan-id>/<original-relative-path>
+<Selected Folder>/.Keptora Quarantine/<plan-id>/<original-relative-path>
 ```
 
    - Hedef, seçilen root’un altında olduğu için kaynakla aynı volume üzerinde kalır.

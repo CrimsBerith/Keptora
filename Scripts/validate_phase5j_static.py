@@ -17,26 +17,26 @@ def run(cmd):
         errors.append(f"Command failed: {' '.join(cmd)}\n{result.stdout}{result.stderr}")
 
 # Syntax parse every Swift source without requiring macOS frameworks.
-for path in sorted(list((ROOT/'Cullora').rglob('*.swift')) + list((ROOT/'CulloraTests').rglob('*.swift'))):
+for path in sorted(list((ROOT/'Keptora').rglob('*.swift')) + list((ROOT/'KeptoraTests').rglob('*.swift'))):
     run(['swiftc','-frontend','-parse',str(path.relative_to(ROOT))])
 run(['python3','Scripts/validate_project_references.py'])
 
 # Structured files.
-for rel in ['Cullora/Resources/Localizable.xcstrings','Cullora/Resources/Cullora.storekit']:
+for rel in ['Keptora/Resources/Localizable.xcstrings','Keptora/Resources/Keptora.storekit']:
     try: json.loads((ROOT/rel).read_text())
     except Exception as e: errors.append(f'{rel}: {e}')
 try:
-    info=plistlib.loads((ROOT/'Cullora/Resources/Info.plist').read_bytes())
+    info=plistlib.loads((ROOT/'Keptora/Resources/Info.plist').read_bytes())
 except Exception as e:
     errors.append(f'Info.plist: {e}'); info={}
 try:
-    plistlib.loads((ROOT/'Cullora/Resources/Cullora.entitlements').read_bytes())
-    plistlib.loads((ROOT/'Cullora/Resources/PrivacyInfo.xcprivacy').read_bytes())
+    plistlib.loads((ROOT/'Keptora/Resources/Keptora.entitlements').read_bytes())
+    plistlib.loads((ROOT/'Keptora/Resources/PrivacyInfo.xcprivacy').read_bytes())
 except Exception as e: errors.append(f'plist parse: {e}')
 
-project=(ROOT/'Cullora.xcodeproj/project.pbxproj').read_text()
-settings=(ROOT/'Cullora/Features/Settings/SettingsView.swift').read_text()
-store=json.loads((ROOT/'Cullora/Resources/Cullora.storekit').read_text())
+project=(ROOT/'Keptora.xcodeproj/project.pbxproj').read_text()
+settings=(ROOT/'Keptora/Features/Settings/SettingsView.swift').read_text()
+store=json.loads((ROOT/'Keptora/Resources/Keptora.storekit').read_text())
 store_id=store['products'][0]['productID']
 source_match=re.search(r'lifetimeProductID = "([^"]+)"', settings)
 source_id=source_match.group(1) if source_match else ''
@@ -46,11 +46,11 @@ require(str(info.get('CFBundleVersion')) == '90', 'Info.plist build must be 90')
 require('MARKETING_VERSION = "0.9.0"' in project, 'Project marketing version must be 0.9.0')
 require('CURRENT_PROJECT_VERSION = "90"' in project, 'Project build must be 90')
 require('knownRegions = (en, tr, Base);' in project, 'English/Turkish known regions missing')
-require(len(json.loads((ROOT/'Cullora/Resources/Localizable.xcstrings').read_text())['strings']) >= 20, 'Critical localization catalog is unexpectedly small')
+require(len(json.loads((ROOT/'Keptora/Resources/Localizable.xcstrings').read_text())['strings']) >= 20, 'Critical localization catalog is unexpectedly small')
 
 # Safety contract: no permanent deletion API in app target.
 for pattern in [r'PHAssetChangeRequest\.deleteAssets', r'\.trashItem\s*\(', r'FileManager\.default\.removeItem\s*\(']:
-    for path in (ROOT/'Cullora').rglob('*.swift'):
+    for path in (ROOT/'Keptora').rglob('*.swift'):
         if re.search(pattern, path.read_text()): errors.append(f'Forbidden permanent-delete API in {path.relative_to(ROOT)}: {pattern}')
 
 placeholders=[]

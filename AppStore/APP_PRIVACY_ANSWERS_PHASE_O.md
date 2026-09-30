@@ -1,4 +1,4 @@
-# Cullora — App Privacy Answers (Phase O Draft)
+# Keptora — App Privacy Answers (Phase O Draft)
 
 ## Intended App Store Connect answer
 - **Data collection:** Data Not Collected

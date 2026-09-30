@@ -1,4 +1,4 @@
-# Cullora — Recovery / Cancellation / Stress / Focus Wave
+# Keptora — Recovery / Cancellation / Stress / Focus Wave
 
 - Product surface: **Archive Review Studio → Reconciliation Drawer**
 - Crash-safe JSON operation journal is compiled into the app target.

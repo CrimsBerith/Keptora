@@ -1,7 +1,7 @@
-# Cullora — Successor Core Slice Status
+# Keptora — Successor Core Slice Status
 
 **Target:** P6 — Quarantine Decision Reconciliation
-**Implemented core:** `CulloraPhase6DecisionCore`
+**Implemented core:** `KeptoraPhase6DecisionCore`
 **Distinct UI destination:** Archive Review Studio / reconciliation drawer
 **Status:** P6 decision snapshot reconciliation core implemented; DB/filesystem persistence + review-floor UI next.
 

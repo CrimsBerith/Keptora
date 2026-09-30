@@ -12,12 +12,12 @@ fi
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 swiftc \
-  "$ROOT/Cullora/Core/Models/AssetDescriptor.swift" \
-  "$ROOT/Cullora/Core/Models/FamilyModels.swift" \
-  "$ROOT/Cullora/Core/Models/ReviewModels.swift" \
-  "$ROOT/Cullora/Core/Models/SimilarityModels.swift" \
-  "$ROOT/Cullora/Core/Similarity/PerceptualCandidateIndex.swift" \
-  "$ROOT/Cullora/Core/Similarity/SimilarityCalibrator.swift" \
+  "$ROOT/Keptora/Core/Models/AssetDescriptor.swift" \
+  "$ROOT/Keptora/Core/Models/FamilyModels.swift" \
+  "$ROOT/Keptora/Core/Models/ReviewModels.swift" \
+  "$ROOT/Keptora/Core/Models/SimilarityModels.swift" \
+  "$ROOT/Keptora/Core/Similarity/PerceptualCandidateIndex.swift" \
+  "$ROOT/Keptora/Core/Similarity/SimilarityCalibrator.swift" \
   "$ROOT/Scripts/VolumeIdentityLinuxStub.swift" \
   "$ROOT/Scripts/similarity_core_smoke.swift" \
   -o "$TMP/similarity_core_smoke"

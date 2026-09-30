@@ -17,7 +17,7 @@ Verified for the Phase 5K handoff on 4 August 2026.
 - Approved reason values: https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons
 - TN3183 manifest structure: https://developer.apple.com/documentation/technotes/tn3183-adding-required-reason-api-entries-to-your-privacy-manifest
 
-Cullora currently declares:
+Keptora currently declares:
 
 - `3B52.1` for metadata of files/directories the user explicitly selected.
 - `C617.1` for metadata inside the app container.

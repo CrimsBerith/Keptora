@@ -1,4 +1,4 @@
-# Phase O — Pre-Mac Submission Data Closure — Cullora
+# Phase O — Pre-Mac Submission Data Closure — Keptora
 
 Phase O standardizes App Store Connect submission data without pretending that Apple account values or real Mac evidence already exist.
 

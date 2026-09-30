@@ -1,4 +1,4 @@
-# Cullora — Screen Design & Asset Blueprint (Phase K)
+# Keptora — Screen Design & Asset Blueprint (Phase K)
 
 **Portfolio identity:** Archive Review Studio  
 **Rule:** shell, hierarchy, interaction rhythm, typography and screenshot composition must remain product-specific; never collapse into a shared three-column dashboard.

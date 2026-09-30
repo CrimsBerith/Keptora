@@ -6,7 +6,7 @@ struct SourceExclusionCoreSmoke {
     static func main() throws {
         let root = URL(fileURLWithPath: "/Library")
         let decomposed = "Re\u{301}sume\u{301}"
-        let policy = SourceExclusionPolicy(folderNames: ["Résumé", ".Cullora Quarantine"], extensions: [".JPG", " XMP "])
+        let policy = SourceExclusionPolicy(folderNames: ["Résumé", ".Keptora Quarantine"], extensions: [".JPG", " XMP "])
         guard policy.excludes(root.appendingPathComponent(decomposed).appendingPathComponent("IMG.PNG"), root: root) else {
             fatalError("Unicode normalization failed")
         }

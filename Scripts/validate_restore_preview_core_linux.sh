@@ -19,21 +19,21 @@ module SQLite3 [system] {
 }
 MAP
 swiftc -I "$TMP" \
-  "$ROOT/Cullora/Core/Storage/VolumeIdentity.swift" \
-  "$ROOT/Cullora/Core/Models/AssetDescriptor.swift" \
-  "$ROOT/Cullora/Core/Models/FamilyModels.swift" \
-  "$ROOT/Cullora/Core/Models/CleanupModels.swift" \
-  "$ROOT/Cullora/Core/Models/RecoveryModels.swift" \
-  "$ROOT/Cullora/Core/Models/ReviewModels.swift" \
-  "$ROOT/Cullora/Core/Models/ScanModels.swift" \
-  "$ROOT/Cullora/Core/Models/SimilarityModels.swift" \
-  "$ROOT/Cullora/Core/Similarity/PerceptualCandidateIndex.swift" \
+  "$ROOT/Keptora/Core/Storage/VolumeIdentity.swift" \
+  "$ROOT/Keptora/Core/Models/AssetDescriptor.swift" \
+  "$ROOT/Keptora/Core/Models/FamilyModels.swift" \
+  "$ROOT/Keptora/Core/Models/CleanupModels.swift" \
+  "$ROOT/Keptora/Core/Models/RecoveryModels.swift" \
+  "$ROOT/Keptora/Core/Models/ReviewModels.swift" \
+  "$ROOT/Keptora/Core/Models/ScanModels.swift" \
+  "$ROOT/Keptora/Core/Models/SimilarityModels.swift" \
+  "$ROOT/Keptora/Core/Similarity/PerceptualCandidateIndex.swift" \
   "$ROOT/Scripts/CoreLinuxHasherStub.swift" \
   "$ROOT/Scripts/ManifestSignerLinuxStub.swift" \
   "$ROOT/Scripts/CoordinatedFileMoverLinuxStub.swift" \
-  "$ROOT/Cullora/Core/Families/AssetFamilyGraphBuilder.swift" \
-  "$ROOT/Cullora/Core/Persistence/SQLiteDatabase.swift" \
-  "$ROOT/Cullora/Core/Cleanup/QuarantineCoordinator.swift" \
+  "$ROOT/Keptora/Core/Families/AssetFamilyGraphBuilder.swift" \
+  "$ROOT/Keptora/Core/Persistence/SQLiteDatabase.swift" \
+  "$ROOT/Keptora/Core/Cleanup/QuarantineCoordinator.swift" \
   "$ROOT/Scripts/restore_preview_core_smoke.swift" \
   -lsqlite3 -o "$TMP/restore-preview-smoke"
 "$TMP/restore-preview-smoke"

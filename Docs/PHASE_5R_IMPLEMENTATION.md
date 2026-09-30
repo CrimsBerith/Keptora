@@ -1,4 +1,4 @@
-# Cullora Phase 5R — Safety Plan Freshness & Supersession Lineage
+# Keptora Phase 5R — Safety Plan Freshness & Supersession Lineage
 
 ## Purpose
 Phase 5R closes the time-of-check/time-of-use gap between exact-duplicate review decisions and quarantine commit. A Safety Plan is now a snapshot of the exact-review decision set that created it. If the underlying plan membership, keeper identity, digest, actor/reason provenance, or decision update time changes after preparation, the plan becomes stale and file-system mutation is blocked.
@@ -8,7 +8,7 @@ Phase 5R closes the time-of-check/time-of-use gap between exact-duplicate review
 - Build: `170`
 - Diagnostics implementation phase: `5R`
 - Signed cleanup manifest schema: `4`
-- Local lineage file: `Application Support/Cullora/SafetyPlanLineage.json`
+- Local lineage file: `Application Support/Keptora/SafetyPlanLineage.json`
 
 ### Decision snapshot fingerprint
 `SafetyPlanDecisionFingerprint` creates an order-independent SHA-256 fingerprint from each planned exact-copy decision:

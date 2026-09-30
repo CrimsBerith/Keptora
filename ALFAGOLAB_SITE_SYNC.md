@@ -1,6 +1,6 @@
 # Alfago Lab website name sync
 
-- **Cullora: Duplicate Cleaner** → `https://alfagolab.com/cullora`
+- **Cullora: Duplicate Cleaner** → `https://alfagolab.com/keptora`
 
 ## Consolidation status
 

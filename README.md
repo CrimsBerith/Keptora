@@ -1,10 +1,10 @@
-# Cullora — Phase 5S Quarantine Verification Lineage
+# Keptora — Phase 5S Quarantine Verification Lineage
 
-Cullora is a native macOS archive-review app. Release candidate target: **1.0.0 (181)** for Apple Silicon on macOS 13+.
+Keptora is a native macOS archive-review app. Release candidate target: **1.0.0 (181)** for Apple Silicon on macOS 13+.
 
-Phase 5S adds independent post-commit/post-restore verification and append-only verification lineage on top of Phase 5R's stale Safety Plan protection. A successful move is not automatically called verified: Cullora re-reads SQLite state, file presence and signed-manifest digest/byte count. History also exposes a read-only **Verify State** action.
+Phase 5S adds independent post-commit/post-restore verification and append-only verification lineage on top of Phase 5R's stale Safety Plan protection. A successful move is not automatically called verified: Keptora re-reads SQLite state, file presence and signed-manifest digest/byte count. History also exposes a read-only **Verify State** action.
 
-Core safety boundaries remain unchanged: exact SHA-based cleanup only, protected keeper, similarity review-only, reversible quarantine, no permanent delete API.
+Safety remains fail-closed: exact cleanup requires SHA-256 proof; similar photos stay review-only; similar videos require explicit manual selection and a fresh byte-level recheck; every group protects a keeper; folder cleanup uses reversible quarantine; Photos uses Apple's Recently Deleted flow.
 
 Start with `CODEX_GROK_MAC_HANDOFF.md`, `Docs/Phase_5S/PHASE_5S_IMPLEMENTATION.md`, and `VALIDATION_REPORT_PHASE_5S.md`.
 

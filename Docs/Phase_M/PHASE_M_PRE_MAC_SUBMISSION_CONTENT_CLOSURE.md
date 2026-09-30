@@ -1,6 +1,6 @@
 # Phase M — Pre-Mac Submission Content Closure
 
-## Cullora
+## Keptora
 
 Phase M freezes the non-Mac App Store content contract before Xcode execution. It does not claim signed-build approval.
 

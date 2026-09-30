@@ -1,4 +1,4 @@
-# Cullora — Export Compliance / DSA Preflight
+# Keptora — Export Compliance / DSA Preflight
 
 ## Encryption
 - Inventory Security/CryptoKit/CommonCrypto/third-party cryptography in the final archive.

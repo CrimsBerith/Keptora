@@ -19,8 +19,8 @@ write_pending sandbox_external_resource_recovery.txt 'Sandbox bookmark external 
 write_pending real_corpus_instruments.txt 'Real corpus Time Profiler Allocations Leaks review'
 write_pending ui_identity_screenshots.txt 'Archive Review Studio compact standard expansive screenshot identity'
 write_pending privacy_metadata_review.txt 'Privacy metadata support URL review notes and declarations'
-printf 'APP=Cullora
+printf 'APP=Keptora
 SHELL_IDENTITY=Archive Review Studio
 PHASE_H_EVIDENCE=%s
 ' "$H_EVIDENCE/phase_h_archive_evidence.txt" > "$EVIDENCE_ROOT/phase_i_context.txt"
-echo "PHASE_I_EVIDENCE_BUNDLE_PREPARED app=Cullora dir=$EVIDENCE_ROOT"
+echo "PHASE_I_EVIDENCE_BUNDLE_PREPARED app=Keptora dir=$EVIDENCE_ROOT"

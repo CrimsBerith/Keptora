@@ -18,9 +18,9 @@ Goal-özel karar hattı tamamlandı:
 
 ## 2. Nihai karar
 
-### GO — Cullora — Photo Library Triage
+### GO — Keptora — Photo Library Triage
 
-Cullora'nın kazanan tezi genel bir duplicate-file cleaner değildir:
+Keptora'nın kazanan tezi genel bir duplicate-file cleaner değildir:
 
 - büyük fotoğraf arşivlerini local-first inceleme,
 - RAW/JPEG/XMP, Live Photo, burst ve edited/export ilişkileri,
@@ -57,7 +57,7 @@ Kullanıcı kanıtında mevcut duplicate araçları için yanlış/eksik eşleş
 
 | # | Tür | Ürün yönü | Karar |
 |---:|---|---|---|
-| 1 | Duplicate File Cleanup | Cullora — Photo Library Triage | GO |
+| 1 | Duplicate File Cleanup | Keptora — Photo Library Triage | GO |
 | 2 | Clipboard & Text Utilities | Local Transform Clipboard | HOLD_NEXT |
 | 3 | File Management & Comparison | Safe Rename & Compare Studio | HOLD_NEXT |
 | 4 | Folder Sync & Backup | Explainable Sync | VALIDATE |
@@ -133,9 +133,9 @@ Kalan 1045 uygulama, bütün katalogdaki tarihsel alanları canlı metadata ile 
 
 ## 9. Son hüküm
 
-> **Mevcut veri, goal için artık karar verilebilir durumdadır. Birinci ürün Cullora olarak kalır. İkinci ürün local transform clipboard; üçüncü ürün reversible rename/compare utility olmalıdır.**
+> **Mevcut veri, goal için artık karar verilebilir durumdadır. Birinci ürün Keptora olarak kalır. İkinci ürün local transform clipboard; üçüncü ürün reversible rename/compare utility olmalıdır.**
 
-Bir sonraki çalışma veri araştırması değil, Cullora'nın gerçek Mac/Xcode release hardening ve kullanıcı doğrulama aşamasıdır.
+Bir sonraki çalışma veri araştırması değil, Keptora'nın gerçek Mac/Xcode release hardening ve kullanıcı doğrulama aşamasıdır.
 
 
 ---

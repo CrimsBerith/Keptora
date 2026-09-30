@@ -1,17 +1,12 @@
 {
-  "app": "Cullora",
+  "app": "Keptora",
+  "platforms": ["macOS", "iPhone"],
   "required_locales": [
-    {
-      "locale": "en-US",
-      "status": "content-ready"
-    }
+    { "locale": "en", "app_ui": "complete", "info_plist": "complete", "screenshots": "real-binary-capture-required" },
+    { "locale": "tr", "app_ui": "complete", "info_plist": "complete", "screenshots": "real-binary-capture-required" },
+    { "locale": "de", "app_ui": "iphone-complete-mac-review-required", "info_plist": "complete", "screenshots": "real-binary-capture-required" },
+    { "locale": "fr", "app_ui": "iphone-complete-mac-review-required", "info_plist": "complete", "screenshots": "real-binary-capture-required" }
   ],
-  "optional_locales": [
-    {
-      "locale": "tr-TR",
-      "status": "defer-until-copy-review"
-    }
-  ],
-  "fallback": "en-US",
+  "fallback": "en",
   "do_not_machine_publish_unreviewed_translation": true
 }

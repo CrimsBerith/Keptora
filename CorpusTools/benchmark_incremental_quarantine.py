@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform smoke benchmark for Cullora Phase 5H semantics.
+"""Cross-platform smoke benchmark for Keptora Phase 5H semantics.
 
 This does not execute the macOS Swift target. It independently validates the expected
 incremental-index and reversible-quarantine invariants using deterministic files,
@@ -61,7 +61,7 @@ def init_db(path: Path) -> sqlite3.Connection:
 def scan(root: Path, db: sqlite3.Connection, scan_id: str) -> ScanStats:
     files = sorted(
         p for p in root.rglob("*")
-        if p.is_file() and ".Cullora Quarantine" not in p.parts
+        if p.is_file() and ".Keptora Quarantine" not in p.parts
     )
     hashed = reused = 0
     for path in files:
@@ -113,7 +113,7 @@ def quarantine_and_restore(root: Path, db: sqlite3.Connection) -> dict[str, obje
     source = root / "exact-00-copy.jpg"
     original_digest = sha256(source)
     plan_id = "phase5h-smoke-plan"
-    quarantine = root / ".Cullora Quarantine" / plan_id / source.name
+    quarantine = root / ".Keptora Quarantine" / plan_id / source.name
     payload = {
         "schemaVersion": 2,
         "planID": plan_id,
@@ -166,7 +166,7 @@ def quarantine_and_restore(root: Path, db: sqlite3.Connection) -> dict[str, obje
 
 
 def run(count: int) -> dict[str, object]:
-    with tempfile.TemporaryDirectory(prefix="cullora-phase5h-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="keptora-phase5h-") as temporary:
         root = Path(temporary) / "Library"
         create_fixture(root, count)
         db = init_db(Path(temporary) / "index.sqlite")

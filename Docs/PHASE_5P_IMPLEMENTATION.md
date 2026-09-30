@@ -1,11 +1,11 @@
-# Cullora Phase 5P — Review Confidence & Decision Provenance
+# Keptora Phase 5P — Review Confidence & Decision Provenance
 
 **Version:** 0.9.6 (150)  
 **Platform:** native macOS 13+ / SwiftUI / SQLite
 
 ## Objective
 
-Turn the existing exact-duplicate review decisions into visible, explainable, signed provenance without weakening Cullora's existing safety model.
+Turn the existing exact-duplicate review decisions into visible, explainable, signed provenance without weakening Keptora's existing safety model.
 
 ## Added product capability
 

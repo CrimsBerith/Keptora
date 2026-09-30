@@ -1,4 +1,4 @@
-# Cullora Faz 5M Teslim Özeti
+# Keptora Faz 5M Teslim Özeti
 
 **Sürüm:** 0.9.3  
 **Build:** 120  

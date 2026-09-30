@@ -1,4 +1,4 @@
-# App Store Connect Field Map — Cullora
+# App Store Connect Field Map — Keptora
 
 | Area | Required input/artifact | Package source | Status |
 |---|---|---|---|

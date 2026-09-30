@@ -1,4 +1,4 @@
-# Cullora Faz 5J Teslim Özeti
+# Keptora Faz 5J Teslim Özeti
 
 ## Eklenenler
 

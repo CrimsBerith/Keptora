@@ -1,9 +1,9 @@
-# Cullora Phase 5S Package Manifest
+# Keptora Phase 5S Package Manifest
 
-- Product: Cullora — Archive Review Studio
+- Product: Keptora — Archive Review Studio
 - Version: **1.0.0 (181)**
 - Canonical phase: **5S**
-- Xcode project: `Cullora.xcodeproj`
+- Xcode project: `Keptora.xcodeproj`
 - Primary validation: `Scripts/validate_phase5s_static.py`
 - Real filesystem smoke: `Scripts/validate_phase5s_core_linux.sh`
 - Predecessor safety regression: `Scripts/validate_phase5r_static.py`

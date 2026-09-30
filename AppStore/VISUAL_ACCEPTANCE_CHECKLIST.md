@@ -1,4 +1,4 @@
-# Cullora — Visual Acceptance Checklist (Phase L)
+# Keptora — Visual Acceptance Checklist (Phase L)
 
 **Locked identity:** Archive Review Studio
 

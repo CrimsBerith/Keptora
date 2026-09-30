@@ -3,7 +3,7 @@
 ## Source access and identity
 - `NSOpenPanel` creates a persisted security-scoped bookmark.
 - Finder-mounted File Provider locations are supported, including iCloud Drive and providers exposed under `~/Library/CloudStorage`.
-- Cloud access is folder-based and local/read-only; Cullora does not implement provider account login, upload, or cloud synchronization.
+- Cloud access is folder-based and local/read-only; Keptora does not implement provider account login, upload, or cloud synchronization.
 - Access is balanced around scan, recovery, similarity analysis, commit, and restore.
 - `VolumeIdentity` captures UUID, name, root, removable/local flags.
 - `SourceIdentity` uses `volume stable ID + relative folder path`, with path fallback only when volume metadata is unavailable.

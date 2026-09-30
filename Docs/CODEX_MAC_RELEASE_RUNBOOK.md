@@ -1,12 +1,12 @@
-# Codex / Grok Mac Release Runbook — Cullora Phase 5Q
+# Codex / Grok Mac Release Runbook — Keptora Phase 5Q
 
 This runbook is designed for Codex or a human operator on a Mac with the current stable Xcode. It must be executed against the exact ZIP SHA recorded in the handoff report.
 
 ## 1. Unpack and establish a clean baseline
 
 ```bash
-unzip Cullora_Phase_5Q_Archive_Review_Studio_Shell.zip
-cd Cullora_Phase_5Q_Archive_Review_Studio_Shell
+unzip Keptora_Phase_5Q_Archive_Review_Studio_Shell.zip
+cd Keptora_Phase_5Q_Archive_Review_Studio_Shell
 ./Scripts/validate_phase5q_static.py
 ./Scripts/validate_app_store_metadata.py
 ./Scripts/validate_package.sh
@@ -20,9 +20,9 @@ Create the App Store Connect app record and one non-consumable IAP first. Then r
 
 ```bash
 ./Scripts/configure_release_identifiers.sh \
-  com.example.cullora \
+  com.example.keptora \
   YOURTEAMID \
-  com.example.cullora.pro.lifetime
+  com.example.keptora.pro.lifetime
 ```
 
 Replace all values with the actual registered identifiers. Then verify:
@@ -35,11 +35,11 @@ Also replace public URL, legal, contact, and review-note placeholders in `AppSto
 
 ## 3. Xcode project setup
 
-1. Open `Cullora.xcodeproj`.
-2. Select the Cullora app target and the real Development Team.
+1. Open `Keptora.xcodeproj`.
+2. Select the Keptora app target and the real Development Team.
 3. Confirm macOS deployment target 13.0 or the approved final target.
 4. Confirm App Sandbox, Hardened Runtime, User Selected File read/write, `com.apple.security.files.bookmarks.app-scope`, and `com.apple.security.personal-information.photos-library`. Do not enable broad Pictures-folder access unless a shipping workflow requires it.
-5. Select `Cullora.storekit` in the Run scheme for local purchase testing only.
+5. Select `Keptora.storekit` in the Run scheme for local purchase testing only.
 6. Keep strict concurrency diagnostics enabled; do not silence warnings with unsafe isolation changes.
 7. Clean the build folder and resolve every compile error or warning that affects correctness.
 

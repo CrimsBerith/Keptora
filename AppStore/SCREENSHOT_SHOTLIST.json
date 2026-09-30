@@ -1,53 +1,31 @@
 {
-  "app": "Cullora",
-  "primary_locale": "en-US",
-  "shots": [
-    {
-      "order": 1,
-      "surface": "Archive Review Studio",
-      "state": "representative populated state",
-      "synthetic_data_only": true,
-      "caption": "Archive Review Studio — Cullora",
-      "required": true
-    },
-    {
-      "order": 2,
-      "surface": "Visual Review Floor",
-      "state": "representative populated state",
-      "synthetic_data_only": true,
-      "caption": "Visual Review Floor — Cullora",
-      "required": true
-    },
-    {
-      "order": 3,
-      "surface": "Review Queue",
-      "state": "representative populated state",
-      "synthetic_data_only": true,
-      "caption": "Review Queue — Cullora",
-      "required": true
-    },
-    {
-      "order": 4,
-      "surface": "Evidence Drawer",
-      "state": "representative populated state",
-      "synthetic_data_only": true,
-      "caption": "Evidence Drawer — Cullora",
-      "required": true
-    },
-    {
-      "order": 5,
-      "surface": "Decision Shelf",
-      "state": "representative populated state",
-      "synthetic_data_only": true,
-      "caption": "Decision Shelf — Cullora",
-      "required": true
-    }
-  ],
+  "app": "Keptora",
+  "version": "1.0.0 (182)",
+  "locales": ["en", "tr", "de", "fr"],
+  "platforms": {
+    "macOS": [
+      "Library with connected sources and four summary values",
+      "Exact Review with protected keeper and safe copies",
+      "Select All Safe Copies confirmation",
+      "Similarity comparison showing review-only boundary",
+      "Safety Plan before reversible folder quarantine",
+      "History with quarantine verification and restore"
+    ],
+    "iPhone": [
+      "Library with Apple Photos and Files sources",
+      "Scan progress and explicit iCloud download choice",
+      "Exact Review with keeper and safe-copy selection",
+      "Similarity Review with no cleanup controls",
+      "Photos Recently Deleted confirmation",
+      "History showing Photos recovery and Files restore differences"
+    ]
+  },
   "rules": [
-    "No personal data",
-    "No placeholder lorem ipsum",
-    "No clipped labels",
-    "Show product-specific shell",
-    "Capture light/dark only if both are polished"
-  ]
+    "Capture from the final 1.0.0 (182) binary",
+    "Use no personal data or placeholder identifiers",
+    "Show no clipping at the target App Store dimensions",
+    "Do not imply similarity cleanup or Family Sharing",
+    "Use the same behavior and copy represented by submitted metadata"
+  ],
+  "status": "capture-required-after-signed-TestFlight-build"
 }

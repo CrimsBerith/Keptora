@@ -1,4 +1,4 @@
-# Cullora — Submission Checklist (Phase O)
+# Keptora — Submission Checklist (Phase O)
 
 ## Pre-Mac
 - [x] Product-specific shell/UI architecture preserved.

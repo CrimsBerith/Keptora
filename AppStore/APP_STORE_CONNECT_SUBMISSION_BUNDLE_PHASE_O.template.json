@@ -2,7 +2,7 @@
   "schema_version": 1,
   "phase": "O",
   "app": {
-    "name": "Cullora",
+    "name": "Keptora",
     "primary_locale": "en-US",
     "category": "public.app-category.utilities",
     "bundle_identifier": "${PRODUCT_BUNDLE_IDENTIFIER}",
@@ -13,8 +13,8 @@
   "localization_en_US": {
     "subtitle": "Review archive provenance",
     "promotional_text": "A focused macOS workflow for archive review studio.",
-    "description": "Cullora is a focused macOS workspace built around the Archive Review Studio. It helps you review, organize, verify, and export work with explicit evidence, reversible actions, and a clear audit trail. The app is designed for local-first workflows, keyboard-friendly operation, and predictable failure recovery without turning the experience into a generic dashboard.",
-    "keywords": "cullora,macOS,offline,local-first,productivity",
+    "description": "Keptora is a focused macOS workspace built around the Archive Review Studio. It helps you review, organize, verify, and export work with explicit evidence, reversible actions, and a clear audit trail. The app is designed for local-first workflows, keyboard-friendly operation, and predictable failure recovery without turning the experience into a generic dashboard.",
+    "keywords": "keptora,macOS,offline,local-first,productivity",
     "whats_new": "Initial release with the complete local-first workflow, recovery safeguards, accessibility hardening, and release evidence tooling."
   },
   "urls": {

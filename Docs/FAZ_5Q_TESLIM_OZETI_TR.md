@@ -1,6 +1,6 @@
-# Cullora Phase 5Q — Teslim Özeti
+# Keptora Phase 5Q — Teslim Özeti
 
-Cullora'nın Phase 5O'dan miras kalan kalıcı split-view görsel borcu temizlendi. Uygulama artık portföy master kilidindeki **Archive Review Studio** kimliğine kaynak kod seviyesinde uyuyor.
+Keptora'nın Phase 5O'dan miras kalan kalıcı split-view görsel borcu temizlendi. Uygulama artık portföy master kilidindeki **Archive Review Studio** kimliğine kaynak kod seviyesinde uyuyor.
 
 - Kalıcı sol navigation kaldırıldı; yatay **Workspace Shelf** geldi.
 - Review Studio kalıcı üç panelden çıkarıldı; tam genişlikte **Review Floor** oldu.
