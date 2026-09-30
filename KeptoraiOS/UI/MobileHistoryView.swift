@@ -3,6 +3,7 @@ import SwiftUI
 struct MobileHistoryView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @State private var entryToRestore: MobileKeptoraStore.CleanupHistoryEntry?
+    @ScaledMetric(relativeTo: .title3) private var iconBoxSize: CGFloat = 48
 
     var body: some View {
         ZStack {
@@ -40,10 +41,10 @@ struct MobileHistoryView: View {
                                                 .opacity(0.16)
                                             )
                                         Image(systemName: entry.kind == .photosRecentlyDeleted ? "photo.badge.checkmark" : "shippingbox.fill")
-                                            .font(.system(size: 20, weight: .semibold))
+                                            .font(.system(.title3, design: .rounded).weight(.semibold))
                                             .foregroundStyle(historyTint(entry))
                                     }
-                                    .frame(width: 48, height: 48)
+                                    .frame(width: iconBoxSize, height: iconBoxSize)
 
                                     VStack(alignment: .leading, spacing: 3) {
                                         if entry.kind == .photosRecentlyDeleted {
@@ -63,9 +64,9 @@ struct MobileHistoryView: View {
                                 HStack(spacing: 10) {
                                     HStack(spacing: 5) {
                                         Image(systemName: "doc.on.doc")
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .font(.system(.caption2, design: .rounded).weight(.semibold))
                                         Text("^[\(entry.itemCount) item](inflect: true)")
-                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)
                                     .padding(.vertical, 5)
@@ -73,9 +74,9 @@ struct MobileHistoryView: View {
 
                                     HStack(spacing: 5) {
                                         Image(systemName: "internaldrive")
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .font(.system(.caption2, design: .rounded).weight(.semibold))
                                         Text(ByteCountFormatter.string(fromByteCount: entry.byteCount, countStyle: .file))
-                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)
                                     .padding(.vertical, 5)

@@ -19,6 +19,7 @@ final class KeptoraUITests: XCTestCase {
         app.launchEnvironment["AppleLocale"] = locale
         app.terminate()
         app.launch()
+        app.activate()
         XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 12))
         return app
     }
@@ -156,23 +157,23 @@ final class KeptoraUITests: XCTestCase {
 
         let reviewQueue = element(withIdentifier: "mac.review.queue.open", in: app)
         XCTAssertTrue(reviewQueue.waitForExistence(timeout: 12))
-        reviewQueue.tap()
-        XCTAssertTrue(app.buttons["mac.review.drawer.close"].waitForExistence(timeout: 4))
-        app.buttons["mac.review.drawer.close"].tap()
+        reviewQueue.click()
+        XCTAssertTrue(app.buttons["mac.review.drawer.close"].waitForExistence(timeout: 5))
+        app.buttons["mac.review.drawer.close"].click()
 
         let more = element(withIdentifier: "mac.review.more", in: app)
         XCTAssertTrue(more.waitForExistence(timeout: 3))
-        more.tap()
+        more.click()
         let reconcile = element(withIdentifier: "mac.review.reconciliation.open", in: app)
         XCTAssertTrue(reconcile.waitForExistence(timeout: 3))
-        reconcile.tap()
+        reconcile.click()
         XCTAssertTrue(app.buttons["mac.reconciliation.close"].waitForExistence(timeout: 5))
-        app.buttons["mac.reconciliation.close"].tap()
+        app.buttons["mac.reconciliation.close"].click()
 
-        app.buttons["mac.folder.exact.selectAll"].tap()
+        app.buttons["mac.folder.exact.selectAll"].click()
         let confirm = app.buttons["mac.folder.exact.confirmSelectAll"].firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 3))
-        confirm.tap()
+        confirm.click()
         _ = confirm.waitForNonExistence(timeout: 3)
 
         let safetyPlanButton = element(withIdentifier: "mac.safetyPlan.open", in: app)

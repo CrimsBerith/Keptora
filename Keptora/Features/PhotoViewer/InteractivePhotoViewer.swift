@@ -194,11 +194,11 @@ public struct InteractivePhotoViewerView: View {
             .opacity(0)
             .allowsHitTesting(false)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: state.showInspector)
-        .animation(.easeInOut(duration: 0.2), value: state.isSideBySideComparing)
+        .keptoraAnimation(.spring(response: 0.35, dampingFraction: 0.8), value: state.showInspector)
+        .keptoraAnimation(.easeInOut(duration: 0.2), value: state.isSideBySideComparing)
         .task(id: state.selectedIndex) { await loadCurrentAsset() }
         .task(id: state.compareTargetIndex) { await loadCompareAsset() }
-        .onChange(of: state.selectedIndex) { _ in
+        .keptoraOnChange(of: state.selectedIndex) {
             baseZoomScale = 1.0
             basePanOffset = .zero
             state.resetTransform()
@@ -278,12 +278,21 @@ public struct InteractivePhotoViewerView: View {
                                 }
                         )
                         .onTapGesture(count: 2) {
-                            withAnimation(.easeInOut(duration: 0.25)) {
+                            if reduceMotion {
                                 state.toggle100PercentZoom()
                                 baseZoomScale = state.zoomScale
                                 if state.zoomScale <= 1.05 {
                                     state.panOffset = .zero
                                     basePanOffset = .zero
+                                }
+                            } else {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    state.toggle100PercentZoom()
+                                    baseZoomScale = state.zoomScale
+                                    if state.zoomScale <= 1.05 {
+                                        state.panOffset = .zero
+                                        basePanOffset = .zero
+                                    }
                                 }
                             }
                         }
@@ -291,7 +300,7 @@ public struct InteractivePhotoViewerView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 36))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(KeptoraDesign.warning)
                         Text("Unable to open photo")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
@@ -308,9 +317,8 @@ public struct InteractivePhotoViewerView: View {
                                 .font(.system(size: 11, weight: .semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(.ultraThinMaterial)
-                                .cornerRadius(6)
-                                .foregroundColor(.white)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                .foregroundStyle(.white)
                             Spacer()
                         }
                         .padding(12)
@@ -326,37 +334,38 @@ public struct InteractivePhotoViewerView: View {
     // MARK: - Navigation & Bars
     
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.white.opacity(0.8))
-            }
-            .buttonStyle(.plain)
-            .help("Close viewer (Esc)")
-            .accessibilityLabel("Close viewer (Esc)")
-            
-            if let item = state.currentItem {
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 10) {
+            // Group 1: Navigation Cluster
+            HStack(spacing: 8) {
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+                .help("Close viewer (Esc)")
+                .accessibilityLabel("Close viewer (Esc)")
+                
+                if let item = state.currentItem {
+                    VStack(alignment: .leading, spacing: 1) {
                         Text(item.displayName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
                             .lineLimit(1)
                         
                         Text("\(state.selectedIndex + 1) / \(state.items.count)")
-                            .font(.system(size: 10, design: .rounded))
-                            .foregroundColor(.white.opacity(0.65))
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
                     }
+                    .frame(maxWidth: 160, alignment: .leading)
 
                     if state.items.count > 1 {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 2) {
                             Button(action: { state.previous() }) {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white.opacity(0.85))
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white.opacity(0.85))
                                     .padding(5)
-                                    .background(.ultraThinMaterial, in: Circle())
                             }
                             .buttonStyle(.plain)
                             .help("Previous photo (←)")
@@ -364,10 +373,9 @@ public struct InteractivePhotoViewerView: View {
                             
                             Button(action: { state.next() }) {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white.opacity(0.85))
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white.opacity(0.85))
                                     .padding(5)
-                                    .background(.ultraThinMaterial, in: Circle())
                             }
                             .buttonStyle(.plain)
                             .help("Next photo (→)")
@@ -376,10 +384,17 @@ public struct InteractivePhotoViewerView: View {
                     }
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            }
             
             Spacer()
             
-            // Zoom controls
+            // Group 2: Zoom & Transform Cluster
             HStack(spacing: 8) {
                 Button(action: {
                     if reduceMotion { state.zoomScale = max(1.0, state.zoomScale - 0.5) }
@@ -387,6 +402,8 @@ public struct InteractivePhotoViewerView: View {
                 }) {
                     Image(systemName: "minus.magnifyingglass")
                 }
+                .buttonStyle(.plain)
+                .help("Zoom out")
                 
                 Button(action: {
                     if reduceMotion { state.toggle100PercentZoom() }
@@ -395,6 +412,8 @@ public struct InteractivePhotoViewerView: View {
                     Text("\(Int(state.zoomScale * 100))%")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 }
+                .buttonStyle(.plain)
+                .help("Toggle 100% zoom")
                 
                 Button(action: {
                     if reduceMotion { state.zoomScale = min(6.0, state.zoomScale + 0.5) }
@@ -402,27 +421,29 @@ public struct InteractivePhotoViewerView: View {
                 }) {
                     Image(systemName: "plus.magnifyingglass")
                 }
+                .buttonStyle(.plain)
+                .help("Zoom in")
+
+                Divider().frame(height: 14).background(Color.white.opacity(0.2))
+
+                Button(action: state.rotateClockwise) {
+                    Image(systemName: "rotate.right")
+                }
+                .buttonStyle(.plain)
+                .help("Rotate clockwise (⌘R)")
             }
-            .buttonStyle(.plain)
-            .foregroundColor(.white.opacity(0.85))
+            .foregroundStyle(.white.opacity(0.85))
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            
-            // Rotate
-            Button(action: state.rotateClockwise) {
-                Image(systemName: "rotate.right")
-                    .foregroundColor(.white.opacity(0.85))
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
             }
-            .buttonStyle(.plain)
-            .padding(6)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
             
-            // Compare Side-by-Side
-            if state.items.count > 1 {
-                HStack(spacing: 4) {
+            // Group 3: Comparison & Tools Cluster
+            HStack(spacing: 8) {
+                if state.items.count > 1 {
                     Button(action: {
                         state.isSideBySideComparing.toggle()
                         if state.isSideBySideComparing {
@@ -433,7 +454,7 @@ public struct InteractivePhotoViewerView: View {
                         }
                     }) {
                         Image(systemName: state.isSideBySideComparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
-                            .foregroundColor(state.isSideBySideComparing ? .accentColor : .white.opacity(0.85))
+                            .foregroundStyle(state.isSideBySideComparing ? KeptoraDesign.accent : .white.opacity(0.85))
                     }
                     .buttonStyle(.plain)
                     .help(state.isSideBySideComparing ? "Exit comparison mode" : "Compare side-by-side")
@@ -461,77 +482,79 @@ public struct InteractivePhotoViewerView: View {
                                 Text(state.compareItem?.displayName ?? "Target")
                                     .font(.system(size: 11, weight: .medium))
                                     .lineLimit(1)
-                                    .frame(maxWidth: 90)
+                                    .frame(maxWidth: 80)
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 9))
                             }
-                            .foregroundColor(.white.opacity(0.85))
+                            .foregroundStyle(.white.opacity(0.85))
                         }
                         .menuStyle(.borderlessButton)
                     }
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(.ultraThinMaterial)
-                .cornerRadius(8)
-            }
-            
-            // Reveal in Finder
-            Button(action: revealCurrentInFinder) {
-                Image(systemName: "folder")
-                    .foregroundColor(.white.opacity(0.85))
-            }
-            .buttonStyle(.plain)
-            .padding(6)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            
-            // EXIF Inspector Toggle
-            Button(action: { state.showInspector.toggle() }) {
-                Image(systemName: "info.circle")
-                    .foregroundColor(state.showInspector ? .accentColor : .white.opacity(0.85))
-            }
-            .buttonStyle(.plain)
-            .padding(6)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            
-            // Swipe Culling Studio Launcher
-            Button(action: { isShowingSwipeStudio = true }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "hand.draw.fill")
-                    Text("Swipe & Cull")
-                        .font(.system(size: 11, weight: .semibold))
-                }
-                .foregroundColor(.white.opacity(0.9))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            .help("Launch fast Tinder-style swipe culling for these photos")
-            .accessibilityLabel("Launch fast Tinder-style swipe culling for these photos")
 
-            // Clean Current Photo Button
+                    Divider().frame(height: 14).background(Color.white.opacity(0.2))
+                }
+
+                // Reveal in Finder
+                Button(action: revealCurrentInFinder) {
+                    Image(systemName: "folder")
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+                .help("Reveal in Finder")
+                .accessibilityLabel("Reveal in Finder")
+
+                // EXIF Inspector Toggle
+                Button(action: { state.showInspector.toggle() }) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(state.showInspector ? KeptoraDesign.accent : .white.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+                .help("Toggle EXIF inspector (⌘I)")
+                .accessibilityLabel("Toggle EXIF inspector (⌘I)")
+
+                // Swipe Culling Studio Launcher
+                Button(action: { isShowingSwipeStudio = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.draw.fill")
+                        Text("Swipe & Cull")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(.white.opacity(0.9))
+                }
+                .buttonStyle(.plain)
+                .help("Launch fast Tinder-style swipe culling for these photos")
+                .accessibilityLabel("Launch fast Tinder-style swipe culling for these photos")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            }
+
+            // Group 4: Clean Button
             if let current = state.currentItem, onCleanOrDelete != nil {
                 let alreadyCleaned = state.cleanedIDs.contains(current.id)
                 Button(action: {
                     onCleanOrDelete?(current)
-                    withAnimation(reduceMotion ? nil : .default) { state.markCleaned(current) }
+                    if reduceMotion {
+                        state.markCleaned(current)
+                    } else {
+                        withAnimation(.default) { state.markCleaned(current) }
+                    }
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: alreadyCleaned ? "checkmark" : "trash.fill")
                         Text(alreadyCleaned ? "In plan" : "Clean (⌘⌫)")
                             .font(.system(size: 11, weight: .semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(Color.red.opacity(0.85))
-                .cornerRadius(8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(alreadyCleaned ? KeptoraDesign.success.opacity(0.85) : KeptoraDesign.danger.opacity(0.85), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .keyboardShortcut(.delete, modifiers: [.command])
                 .disabled(alreadyCleaned)
                 .help("Add current photo to cleanup plan and view next")
@@ -564,12 +587,15 @@ public struct InteractivePhotoViewerView: View {
                 .padding(.vertical, 8)
             }
             .frame(height: 70)
-            .background(.ultraThinMaterial)
-            .cornerRadius(12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
-            .onChange(of: state.selectedIndex) { newIdx in
-                withAnimation { proxy.scrollTo(newIdx, anchor: .center) }
+            .keptoraOnChange(of: state.selectedIndex) { newIdx in
+                if reduceMotion {
+                    proxy.scrollTo(newIdx, anchor: .center)
+                } else {
+                    withAnimation { proxy.scrollTo(newIdx, anchor: .center) }
+                }
             }
         }
     }
@@ -667,9 +693,9 @@ private struct FilmstripThumbnail: View {
                     Image(systemName: "trash.fill").foregroundStyle(.white)
                 }
             }
-            .cornerRadius(6)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             )
         }
@@ -778,11 +804,11 @@ public struct PhotoInspectorDrawer: View {
             HStack {
                 Label("Photo Details", systemImage: "info.circle")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Close photo details")
@@ -792,10 +818,10 @@ public struct PhotoInspectorDrawer: View {
             if let result = resultMessage {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(KeptoraDesign.success)
                     Text(result)
                         .font(.caption)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .lineLimit(2)
                     Spacer()
                     Button {
@@ -803,13 +829,13 @@ public struct PhotoInspectorDrawer: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(8)
                 .background(Color.white.opacity(0.12))
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .transition(.opacity)
             }
 
@@ -861,11 +887,10 @@ public struct PhotoInspectorDrawer: View {
                                     Text("Fix Date from Filename")
                                 }
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.85))
-                                .cornerRadius(8)
+                                .background(KeptoraDesign.accent, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                             }
                             .buttonStyle(.plain)
                             .padding(.top, 2)
@@ -888,11 +913,10 @@ public struct PhotoInspectorDrawer: View {
                                     Text("Save Copy Without GPS Location")
                                 }
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
-                                .background(Color.orange.opacity(0.85))
-                                .cornerRadius(8)
+                                .background(KeptoraDesign.warning, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                             }
                             .buttonStyle(.plain)
                             .padding(.top, 4)
@@ -900,7 +924,7 @@ public struct PhotoInspectorDrawer: View {
                         }
                     } else {
                         Text("Reading EXIF parameters...")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                             .font(.subheadline)
                     }
                 }
@@ -908,8 +932,7 @@ public struct PhotoInspectorDrawer: View {
         }
         .padding(18)
         .frame(width: 320)
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(16)
         .disabled(isWorking)
         .confirmationDialog(
@@ -952,10 +975,10 @@ public struct PhotoInspectorDrawer: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 11))
-                .foregroundColor(.accentColor)
+                .foregroundStyle(KeptoraDesign.accent)
             Text(title)
                 .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(0.9))
         }
         .padding(.top, 4)
     }
@@ -964,26 +987,26 @@ public struct PhotoInspectorDrawer: View {
         HStack {
             Text(label)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundStyle(Color.white.opacity(0.65))
             Spacer()
             Text(value)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         }
     }
     
     private func badge(label: String, value: String) -> some View {
         VStack(spacing: 2) {
             Text(label)
-                .font(.system(size: 9))
-                .foregroundColor(.secondary)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.white.opacity(0.65))
             Text(value)
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
         .background(Color.white.opacity(0.08))
-        .cornerRadius(6)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

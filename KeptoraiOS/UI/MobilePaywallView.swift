@@ -24,7 +24,7 @@ struct MobilePaywallView: View {
 
                         VStack(spacing: 6) {
                             Text("Keptora Pro")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .font(.system(.largeTitle, design: .rounded).weight(.bold))
                                 .foregroundStyle(MobileKeptoraDesign.brandGradient)
 
                             Text("One purchase. No subscription.")
@@ -114,16 +114,18 @@ struct MobilePaywallView: View {
         }
     }
 
+    @ScaledMetric(relativeTo: .body) private var featureIconBoxSize: CGFloat = 38
+
     private func feature(_ title: LocalizedStringKey, _ image: String, _ tint: Color) -> some View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .fill(tint.opacity(0.14))
                 Image(systemName: image)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundStyle(tint)
             }
-            .frame(width: 38, height: 38)
+            .frame(width: featureIconBoxSize, height: featureIconBoxSize)
 
             Text(title)
                 .font(.system(.body, design: .rounded).weight(.medium))

@@ -45,10 +45,10 @@ struct MainRootView: View {
                         VStack(spacing: 10) {
                             Image(systemName: "arrow.down.doc.fill")
                                 .font(.system(size: 46))
-                                .foregroundColor(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                             Text("Drop Folder to Connect & Scan")
                                 .font(.headline.weight(.bold))
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                         }
                     }
                     .transition(.opacity)
@@ -98,7 +98,7 @@ struct MainRootView: View {
                 model.selectedRoute = .review
             }
         }
-        .onChange(of: scenePhase) { phase in
+        .keptoraOnChange(of: scenePhase) { phase in
             if phase != .active { model.checkpointReviewSession() }
         }
         .alert("Something went wrong", isPresented: $model.isShowingError) {

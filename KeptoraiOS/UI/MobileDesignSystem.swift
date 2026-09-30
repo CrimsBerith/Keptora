@@ -231,6 +231,8 @@ struct MobileMetricTile: View {
     let systemImage: String
     let tint: Color
 
+    @ScaledMetric(relativeTo: .title3) private var iconBoxSize: CGFloat = 38
+
     init(title: LocalizedStringKey, value: String, systemImage: String, tint: Color = MobileKeptoraDesign.accent) {
         self.title = title
         self.value = value
@@ -244,20 +246,20 @@ struct MobileMetricTile: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(tint.opacity(0.14))
                 Image(systemName: systemImage)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     .foregroundStyle(tint)
             }
-            .frame(width: 38, height: 38)
+            .frame(width: iconBoxSize, height: iconBoxSize)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(.title3, design: .rounded).weight(.bold))
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 
                 Text(title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -278,12 +280,15 @@ struct MobileMetricTile: View {
                 )
         }
         .shadow(color: tint.opacity(0.08), radius: 14, y: 6)
+        .accessibilityElement(children: .combine)
     }
 }
 
 // MARK: – Primary Gradient Button Style
 
 struct MobilePrimaryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.headline, design: .rounded).weight(.semibold))
@@ -303,9 +308,9 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
                     )
             }
             .shadow(color: MobileKeptoraDesign.violet.opacity(configuration.isPressed ? 0.15 : 0.32), radius: 18, y: 8)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.98 : 1.0))
             .opacity(configuration.isPressed ? 0.92 : 1.0)
-            .animation(MobileKeptoraDesign.animFast, value: configuration.isPressed)
+            .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
     }
 }
 
@@ -319,9 +324,9 @@ struct MobilePillBadge: View {
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
             Text(title)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded).weight(.bold))
         }
         .foregroundStyle(tint)
         .padding(.horizontal, 9)
@@ -331,12 +336,30 @@ struct MobilePillBadge: View {
             Capsule()
                 .stroke(tint.opacity(0.24), lineWidth: 1)
         }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: – Motion (Reduce Motion aware)
+
+private struct MobileKeptoraAnimationModifier<Value: Equatable>: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let animation: Animation
+    let value: Value
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? nil : animation, value: value)
     }
 }
 
 // MARK: – Panel Modifier
 
 extension View {
+    /// Like `.animation(_:value:)`, but disabled when the user turned on Reduce Motion.
+    func keptoraAnimation<Value: Equatable>(_ animation: Animation, value: Value) -> some View {
+        modifier(MobileKeptoraAnimationModifier(animation: animation, value: value))
+    }
+
     func keptoraPanel(tint: Color = MobileKeptoraDesign.accent) -> some View {
         padding(18)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))

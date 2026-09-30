@@ -216,7 +216,7 @@ public struct SmartBucketsDashboardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Image(systemName: "sparkles")
-                            .foregroundColor(.accentColor)
+                            .foregroundStyle(KeptoraDesign.accent)
                             .font(.title2)
                         Text("Smart Categories & Clutter Clusters")
                             .font(.title2.bold())
@@ -224,7 +224,7 @@ public struct SmartBucketsDashboardView: View {
                     
                     Text("100% on-device AI clusters your photos into actionable cleanups and beautiful highlights without sharing any data.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 if model.duplicateGroups.isEmpty {
@@ -268,8 +268,8 @@ public struct SmartBucketsDashboardView: View {
             )
         }
         .onAppear { cachedCards = dynamicCards }
-        .onChange(of: model.duplicateGroups.count) { _ in cachedCards = dynamicCards }
-        .onChange(of: model.decisions.count) { _ in cachedCards = dynamicCards }
+        .keptoraOnChange(of: model.duplicateGroups.count) { cachedCards = dynamicCards }
+        .keptoraOnChange(of: model.decisions.count) { cachedCards = dynamicCards }
         .sheet(isPresented: $isShowingExportSheet) {
             let universalAssets: [UniversalMediaAsset] = model.duplicateGroups.flatMap { group in
                 group.assets.map { asset in
@@ -305,7 +305,7 @@ public struct SmartBucketsDashboardView: View {
                     .frame(width: 72, height: 72)
                 Image(systemName: "sparkles.rectangle.stack")
                     .font(.system(size: 32))
-                    .foregroundColor(KeptoraDesign.accent)
+                    .foregroundStyle(KeptoraDesign.accent)
             }
             
             VStack(spacing: 6) {
@@ -313,7 +313,7 @@ public struct SmartBucketsDashboardView: View {
                     .font(.title3.bold())
                 Text("Scan Apple Photos or any folder from Home. Keptora will instantly classify exact duplicates, screenshots, receipts, large videos, and bursts into fast, actionable swipe buckets.")
                     .font(.callout)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 520)
             }
@@ -351,16 +351,16 @@ public struct SmartBucketsDashboardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Potential Reclaimable Storage")
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                 
                 Text(ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file))
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Text("\(totalCount) clutter items identified across \(cards.count) categories")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -456,7 +456,7 @@ public struct SmartBucketCard: View {
                             .frame(width: 36, height: 36)
                         Image(systemName: card.iconName)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(card.iconColor)
+                            .foregroundStyle(card.iconColor)
                     }
                     
                     Spacer()
@@ -466,17 +466,17 @@ public struct SmartBucketCard: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(card.title)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     
                     Text(card.subtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -487,16 +487,16 @@ public struct SmartBucketCard: View {
                     if card.reclaimableBytes > 0 {
                         Text(ByteCountFormatter.string(fromByteCount: card.reclaimableBytes, countStyle: .file))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(card.isDeclutter ? .orange : .secondary)
+                            .foregroundStyle(card.isDeclutter ? KeptoraDesign.warning : .secondary)
                     } else {
                         Text("Curated Collection")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.bold())
-                        .foregroundColor(.secondary.opacity(0.6))
+                        .foregroundStyle(.secondary.opacity(0.6))
                 }
             }
             .padding(16)

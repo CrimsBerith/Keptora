@@ -30,11 +30,11 @@ public struct PhysicalArchiveExportSheet: View {
             HStack {
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(KeptoraDesign.accent.opacity(0.12))
                         .frame(width: 44, height: 44)
                     Image(systemName: "folder.badge.gearshape")
                         .font(.title2)
-                        .foregroundColor(.accentColor)
+                        .foregroundStyle(KeptoraDesign.accent)
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -42,7 +42,7 @@ public struct PhysicalArchiveExportSheet: View {
                         .font(.headline)
                     Text("Organize \(assets.count) photos into clean, sorted Finder folders")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 
                 Spacer()
@@ -50,7 +50,7 @@ public struct PhysicalArchiveExportSheet: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -62,14 +62,14 @@ public struct PhysicalArchiveExportSheet: View {
                 VStack(spacing: 16) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 48))
-                        .foregroundColor(.green)
+                        .foregroundStyle(KeptoraDesign.success)
                     
                     Text("Archive Successfully Exported!")
                         .font(.title3.bold())
                     
                     Text("All photos were sorted into structured folders at your selected destination.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                     
                     if let dest = destinationURL {
@@ -83,7 +83,7 @@ public struct PhysicalArchiveExportSheet: View {
                     
                     Button("Close", action: onClose)
                         .buttonStyle(.plain)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.top, 4)
                 }
                 .padding(.vertical, 32)
@@ -102,7 +102,7 @@ public struct PhysicalArchiveExportSheet: View {
                                     .font(.callout)
                             } else {
                                 Text("No destination selected")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .font(.callout)
                             }
                             Spacer()
@@ -113,7 +113,7 @@ public struct PhysicalArchiveExportSheet: View {
                         }
                         .padding(10)
                         .background(Color(nsColor: .controlBackgroundColor))
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                     
                     // Folder Hierarchy Strategy
@@ -145,7 +145,7 @@ public struct PhysicalArchiveExportSheet: View {
                     if let err = errorMessage {
                         Text(err)
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundStyle(KeptoraDesign.danger)
                     }
                     
                     // Progress Bar
@@ -154,7 +154,7 @@ public struct PhysicalArchiveExportSheet: View {
                             ProgressView(value: progressFraction, total: 1.0)
                             Text(progressText)
                                 .font(.caption.monospacedDigit())
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.top, 4)
                     }

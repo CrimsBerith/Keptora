@@ -8,6 +8,7 @@ struct MobileReviewView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var mode: Mode = .exact
     @State private var media: Media = .photos
     @State private var exactPage = 0
@@ -94,14 +95,14 @@ struct MobileReviewView: View {
         }
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: media) {
+        .onChange(of: media) { _, _ in
             exactPage = 0
             similarPhotoPage = 0
             similarVideoPage = 0
             store.clearExactSelection()
             store.clearSimilarVideoSelection()
         }
-        .onChange(of: mode) {
+        .onChange(of: mode) { _, _ in
             store.clearExactSelection()
             store.clearSimilarVideoSelection()
         }
@@ -258,8 +259,8 @@ struct MobileReviewView: View {
                         group: group,
                         pageIndex: index,
                         totalPages: filteredExactGroups.count,
-                        onPrevious: { if exactPage > 0 { withAnimation { exactPage -= 1 } } },
-                        onNext: { if exactPage < filteredExactGroups.count - 1 { withAnimation { exactPage += 1 } } }
+                        onPrevious: { if exactPage > 0 { if reduceMotion { exactPage -= 1 } else { withAnimation { exactPage -= 1 } } } },
+                        onNext: { if exactPage < filteredExactGroups.count - 1 { if reduceMotion { exactPage += 1 } else { withAnimation { exactPage += 1 } } } }
                     )
                 }
             }
@@ -293,8 +294,8 @@ struct MobileReviewView: View {
                         group: group,
                         pageIndex: index,
                         totalPages: store.similarityGroups.count,
-                        onPrevious: { if similarPhotoPage > 0 { withAnimation { similarPhotoPage -= 1 } } },
-                        onNext: { if similarPhotoPage < store.similarityGroups.count - 1 { withAnimation { similarPhotoPage += 1 } } }
+                        onPrevious: { if similarPhotoPage > 0 { if reduceMotion { similarPhotoPage -= 1 } else { withAnimation { similarPhotoPage -= 1 } } } },
+                        onNext: { if similarPhotoPage < store.similarityGroups.count - 1 { if reduceMotion { similarPhotoPage += 1 } else { withAnimation { similarPhotoPage += 1 } } } }
                     )
                 }
             }
@@ -325,8 +326,8 @@ struct MobileReviewView: View {
                         group: group,
                         pageIndex: index,
                         totalPages: store.similarVideoGroups.count,
-                        onPrevious: { if similarVideoPage > 0 { withAnimation { similarVideoPage -= 1 } } },
-                        onNext: { if similarVideoPage < store.similarVideoGroups.count - 1 { withAnimation { similarVideoPage += 1 } } }
+                        onPrevious: { if similarVideoPage > 0 { if reduceMotion { similarVideoPage -= 1 } else { withAnimation { similarVideoPage -= 1 } } } },
+                        onNext: { if similarVideoPage < store.similarVideoGroups.count - 1 { if reduceMotion { similarVideoPage += 1 } else { withAnimation { similarVideoPage += 1 } } } }
                     )
                 }
             }
@@ -341,6 +342,7 @@ struct MobileReviewView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(selectedCount.formatted()) selected")
                         .font(.system(.headline, design: .rounded).weight(.bold))
+                        .contentTransition(.numericText())
                     Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
                         .font(.system(.caption, design: .rounded).weight(.medium))
                         .foregroundStyle(.secondary)
@@ -368,6 +370,7 @@ struct MobileReviewView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(selectedCount.formatted()) selected")
                             .font(.system(.headline, design: .rounded).weight(.bold))
+                            .contentTransition(.numericText())
                         Text(ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file))
                             .font(.system(.caption, design: .rounded).weight(.medium))
                             .foregroundStyle(.secondary)
@@ -487,6 +490,8 @@ private struct ExactGroupPage: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
                         .background(MobileKeptoraDesign.accent.opacity(0.12), in: Capsule())
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
 
                         Spacer()
 
@@ -785,6 +790,8 @@ private struct SimilarVideoGroupPage: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
                         .background(MobileKeptoraDesign.cyan.opacity(0.12), in: Capsule())
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
 
                         Spacer()
 
@@ -1026,6 +1033,8 @@ private struct SimilarityGroupPage: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
                         .background(MobileKeptoraDesign.violet.opacity(0.12), in: Capsule())
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
 
                         Spacer()
 

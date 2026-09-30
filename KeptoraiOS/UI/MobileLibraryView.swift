@@ -356,6 +356,7 @@ struct MobileLibraryView: View {
         }
         .shadow(color: selected ? tint.opacity(0.18) : Color.black.opacity(0.03), radius: 16, y: 7)
         .contentShape(Rectangle())
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     // MARK: – Scan Section
@@ -403,11 +404,14 @@ struct MobileLibraryView: View {
 
                 ProgressView(value: Double(processed), total: Double(max(total, 1)))
                     .tint(MobileKeptoraDesign.cyan)
+                    .accessibilityLabel("Scan progress")
+                    .accessibilityValue(String(format: String(localized: "%1$lld of %2$lld"), Int64(processed), Int64(total)))
 
                 HStack {
                     Text("\(processed.formatted()) of \(total.formatted())")
                         .font(.system(.caption, design: .rounded).weight(.bold))
                         .monospacedDigit()
+                        .contentTransition(.numericText())
                     Spacer()
                     Text(current)
                         .font(.system(.caption, design: .rounded))

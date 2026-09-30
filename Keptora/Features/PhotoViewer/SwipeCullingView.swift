@@ -201,7 +201,7 @@ public struct SwipeCullingStudioView: View {
                     // Left Zone Glow (Clean / Delete)
                     ZStack {
                         LinearGradient(
-                            colors: [Color.red.opacity(min(0.25, max(0.0, Double(-dragOffset.width) / 350.0))), Color.clear],
+                            colors: [KeptoraDesign.danger.opacity(min(0.25, max(0.0, Double(-dragOffset.width) / 350.0))), Color.clear],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -213,7 +213,7 @@ public struct SwipeCullingStudioView: View {
                             Text("THROW TO CLEAN")
                                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(KeptoraDesign.danger)
                         .opacity(min(1.0, max(0.0, (Double(-dragOffset.width) - 40.0) / 100.0)))
                         .padding(.leading, 24)
                     }
@@ -223,7 +223,7 @@ public struct SwipeCullingStudioView: View {
                     // Right Zone Glow (Keep)
                     ZStack {
                         LinearGradient(
-                            colors: [Color.clear, Color.green.opacity(min(0.25, max(0.0, Double(dragOffset.width) / 350.0)))],
+                            colors: [Color.clear, KeptoraDesign.success.opacity(min(0.25, max(0.0, Double(dragOffset.width) / 350.0)))],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -235,7 +235,7 @@ public struct SwipeCullingStudioView: View {
                             Text("THROW TO KEEP")
                                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                         }
-                        .foregroundColor(.green)
+                        .foregroundStyle(KeptoraDesign.success)
                         .opacity(min(1.0, max(0.0, (Double(dragOffset.width) - 40.0) / 100.0)))
                         .padding(.trailing, 24)
                     }
@@ -292,7 +292,7 @@ public struct SwipeCullingStudioView: View {
             Button(action: handleClose) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
@@ -301,14 +301,14 @@ public struct SwipeCullingStudioView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.draw.fill")
-                        .foregroundColor(.accentColor)
+                        .foregroundStyle(KeptoraDesign.accent)
                     Text("Swipe Culling Studio")
                         .font(.headline)
                 }
                 
                 Text("Swipe Right to Keep · Swipe Left to Clean · Swipe Up to Skip")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             
             Spacer()
@@ -322,7 +322,7 @@ public struct SwipeCullingStudioView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
         .padding(.horizontal, 24)
@@ -380,12 +380,12 @@ public struct SwipeCullingStudioView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(card.displayName)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                             .lineLimit(1)
                         
                         Text(ByteCountFormatter.string(fromByteCount: card.byteCount, countStyle: .file))
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     
                     Spacer()
@@ -395,9 +395,9 @@ public struct SwipeCullingStudioView: View {
                             .font(.system(size: 11, weight: .bold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background((card.badgeColor ?? .accentColor).opacity(0.15))
-                            .foregroundColor(card.badgeColor ?? .accentColor)
-                            .cornerRadius(6)
+                            .background((card.badgeColor ?? KeptoraDesign.accent).opacity(0.15))
+                            .foregroundStyle(card.badgeColor ?? KeptoraDesign.accent)
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                 }
                 .padding(14)
@@ -496,12 +496,12 @@ public struct SwipeCullingStudioView: View {
                     Text("KEEP")
                 }
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundColor(.green)
+                .foregroundStyle(KeptoraDesign.success)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .background(Color.black.opacity(0.62))
-                .cornerRadius(10)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green, lineWidth: 2))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(KeptoraDesign.success, lineWidth: 2))
                 .padding(20)
                 Spacer()
             }
@@ -518,12 +518,12 @@ public struct SwipeCullingStudioView: View {
                     Image(systemName: "trash.fill")
                 }
                 .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundColor(.red)
+                .foregroundStyle(KeptoraDesign.danger)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .background(Color.black.opacity(0.62))
-                .cornerRadius(10)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red, lineWidth: 2))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(KeptoraDesign.danger, lineWidth: 2))
                 .padding(20)
             }
             Spacer()
@@ -538,12 +538,12 @@ public struct SwipeCullingStudioView: View {
                 Text("SKIP")
             }
             .font(.system(size: 16, weight: .bold, design: .rounded))
-            .foregroundColor(.blue)
+            .foregroundStyle(KeptoraDesign.accent)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color.black.opacity(0.62))
-            .cornerRadius(8)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(KeptoraDesign.accent, lineWidth: 2))
             .padding(.bottom, 24)
         }
     }
@@ -559,13 +559,13 @@ public struct SwipeCullingStudioView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "trash.fill")
                         .font(.title2)
-                        .foregroundColor(.red)
+                        .foregroundStyle(KeptoraDesign.danger)
                         .frame(width: 56, height: 56)
-                        .background(Color.red.opacity(0.12))
+                        .background(KeptoraDesign.danger.opacity(0.12))
                         .clipShape(Circle())
                     Text("Clean (←)")
                         .font(.caption2.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .buttonStyle(.plain)
@@ -577,13 +577,13 @@ public struct SwipeCullingStudioView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.headline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 44, height: 44)
                         .background(Color.secondary.opacity(0.12))
                         .clipShape(Circle())
                     Text("Undo")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .buttonStyle(.plain)
@@ -597,13 +597,13 @@ public struct SwipeCullingStudioView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "arrow.up")
                         .font(.headline)
-                        .foregroundColor(.blue)
+                        .foregroundStyle(KeptoraDesign.accent)
                         .frame(width: 44, height: 44)
-                        .background(Color.blue.opacity(0.12))
+                        .background(KeptoraDesign.accent.opacity(0.12))
                         .clipShape(Circle())
                     Text("Skip (↑)")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .buttonStyle(.plain)
@@ -616,13 +616,13 @@ public struct SwipeCullingStudioView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "checkmark")
                         .font(.title2.bold())
-                        .foregroundColor(.green)
+                        .foregroundStyle(KeptoraDesign.success)
                         .frame(width: 56, height: 56)
-                        .background(Color.green.opacity(0.12))
+                        .background(KeptoraDesign.success.opacity(0.12))
                         .clipShape(Circle())
                     Text("Keep (→)")
                         .font(.caption2.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .buttonStyle(.plain)
@@ -637,11 +637,11 @@ public struct SwipeCullingStudioView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.green.opacity(0.15))
+                    .fill(KeptoraDesign.success.opacity(0.15))
                     .frame(width: 80, height: 80)
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 40))
-                    .foregroundColor(.green)
+                    .foregroundStyle(KeptoraDesign.success)
             }
             
             Text("Review Batch Completed!")
@@ -649,17 +649,17 @@ public struct SwipeCullingStudioView: View {
             
             Text("All \(state.totalInitialCount) photos have been categorized.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             
             // Metrics Box
             HStack(spacing: 24) {
-                metricCell(title: "Kept", value: "\(state.keptCards.count)", color: .green)
-                metricCell(title: "Planned to Clean", value: "\(state.cleanupCards.count)", color: .red)
-                metricCell(title: "Reclaimable Space", value: ByteCountFormatter.string(fromByteCount: state.totalReclaimableBytes, countStyle: .file), color: .orange)
+                metricCell(title: "Kept", value: "\(state.keptCards.count)", color: KeptoraDesign.success)
+                metricCell(title: "Planned to Clean", value: "\(state.cleanupCards.count)", color: KeptoraDesign.danger)
+                metricCell(title: "Reclaimable Space", value: ByteCountFormatter.string(fromByteCount: state.totalReclaimableBytes, countStyle: .file), color: KeptoraDesign.warning)
             }
             .padding(18)
             .background(Color(nsColor: .controlBackgroundColor))
-            .cornerRadius(14)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             
             HStack(spacing: 14) {
                 if !state.skippedCards.isEmpty {
@@ -692,10 +692,10 @@ public struct SwipeCullingStudioView: View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(color)
+                .foregroundStyle(color)
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
     }
 }

@@ -25,10 +25,10 @@ struct SafetyPlanSheet: View {
         }
         .frame(minWidth: 760, idealWidth: 900, minHeight: 560, idealHeight: 680)
         .interactiveDismissDisabled(true)
-        .onChange(of: query) { _ in visibleLimit = 300 }
-        .onChange(of: sortMode) { _ in visibleLimit = 300 }
+        .keptoraOnChange(of: query) { visibleLimit = 300 }
+        .keptoraOnChange(of: sortMode) { visibleLimit = 300 }
         .onAppear { model.refreshSafetyPlanFreshness() }
-        .onChange(of: model.safetyPlanFreshness?.state) { state in
+        .keptoraOnChange(of: model.safetyPlanFreshness?.state) { state in
             if state != .current { confirmed = false }
         }
     }

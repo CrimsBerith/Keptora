@@ -414,6 +414,34 @@ extension View {
     func keptoraAnimation<Value: Equatable>(_ animation: Animation, value: Value) -> some View {
         modifier(KeptoraAnimationModifier(animation: animation, value: value))
     }
+
+    /// Compatibility helper for `onChange(of:)` bridging macOS 13 and macOS 14+.
+    @ViewBuilder
+    func keptoraOnChange<V: Equatable>(of value: V, perform action: @escaping (_ newValue: V) -> Void) -> some View {
+        if #available(macOS 14.0, iOS 17.0, *) {
+            self.onChange(of: value) { _, newValue in
+                action(newValue)
+            }
+        } else {
+            self.onChange(of: value) { newValue in
+                action(newValue)
+            }
+        }
+    }
+
+    /// Compatibility helper for `onChange(of:)` with no parameter closure.
+    @ViewBuilder
+    func keptoraOnChange<V: Equatable>(of value: V, perform action: @escaping () -> Void) -> some View {
+        if #available(macOS 14.0, iOS 17.0, *) {
+            self.onChange(of: value) { _, _ in
+                action()
+            }
+        } else {
+            self.onChange(of: value) { _ in
+                action()
+            }
+        }
+    }
 }
 
 // MARK: - Hover / pressed feedback

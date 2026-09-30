@@ -99,7 +99,7 @@ struct ReviewStudioView: View {
         .background(KeptoraDesign.canvas)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("keptora.review.floor")
-        .onChange(of: model.selectedSimilarityGroupID) { _ in
+        .keptoraOnChange(of: model.selectedSimilarityGroupID) {
             comparisonMemberID = nil
             resetComparisonViewport()
         }
@@ -111,12 +111,12 @@ struct ReviewStudioView: View {
                 showDecisionReconciliation = true
             }
         }
-        .onChange(of: mode) { newMode in
+        .keptoraOnChange(of: mode) { newMode in
             model.setReviewModeExact(newMode == .exact)
             isQueuePresented = false
             isEvidencePresented = false
         }
-        .onChange(of: model.selectedGroupID) { _ in
+        .keptoraOnChange(of: model.selectedGroupID) {
             model.ensureReviewFocus()
             model.checkpointReviewSession()
         }
@@ -1165,7 +1165,7 @@ private struct ReviewAssetCard: View {
                         Button(action: onOpenViewer) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(6)
                                 .background(.regularMaterial, in: Circle())
                         }
@@ -1309,7 +1309,7 @@ private struct SimilarityAssetCard: View {
                         Button(action: onOpenViewer) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(6)
                                 .background(.regularMaterial, in: Circle())
                         }
@@ -1407,8 +1407,8 @@ private struct SynchronizedComparisonPane: View {
             }
         }
         .task(id: member.asset.fileURL) { image = await BoundedThumbnailCache.shared.image(for: member.asset.fileURL, maxPixelSize: 1800) }
-        .onChange(of: scale) { if $0 == 1 { scaleOrigin = 1 } }
-        .onChange(of: offset) { if $0 == .zero { offsetOrigin = .zero } }
+        .keptoraOnChange(of: scale) { val in if val == 1 { scaleOrigin = 1 } }
+        .keptoraOnChange(of: offset) { val in if val == .zero { offsetOrigin = .zero } }
     }
 }
 

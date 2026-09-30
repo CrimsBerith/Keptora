@@ -314,13 +314,13 @@ struct MacPhotosLibraryView: View {
         }
         .frame(minWidth: 900, idealWidth: 1080, minHeight: 650, idealHeight: 760)
         .task { await photos.refreshAuthorization() }
-        .onChange(of: media) { _ in
+        .keptoraOnChange(of: media) {
             photos.selectedGroupID = filteredExactGroups.first?.id
             photos.selectedSimilarityGroupID = filteredSimilarityGroups.first?.id
             photos.selectedAssetIDs.removeAll()
             photos.selectedSimilarVideoAssetIDs.removeAll()
         }
-        .onChange(of: scenePhase) { phase in
+        .keptoraOnChange(of: scenePhase) { phase in
             if phase == .active { Task { await photos.refreshAuthorization() } }
         }
         .alert("Photos cleanup completed", isPresented: Binding(
