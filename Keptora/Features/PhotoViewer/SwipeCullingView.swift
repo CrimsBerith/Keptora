@@ -15,6 +15,22 @@ public struct SwipeCullingHistoryAction: Sendable {
     public let direction: SwipeCullingDirection
 }
 
+/// Visual style for card badge overlay.
+public enum SwipeCardBadgeStyle: String, Sendable, CaseIterable {
+    case orange, blue, purple, green, red, gray
+    
+    public var color: Color {
+        switch self {
+        case .orange: return .orange
+        case .blue: return .blue
+        case .purple: return .purple
+        case .green: return .green
+        case .red: return .red
+        case .gray: return .gray
+        }
+    }
+}
+
 /// Item representing a photo card in the swipe stack.
 public struct SwipeCardItem: Identifiable, Hashable, Sendable {
     public let id: String
@@ -22,7 +38,7 @@ public struct SwipeCardItem: Identifiable, Hashable, Sendable {
     public let displayName: String
     public let byteCount: Int64
     public let badgeLabel: String?
-    public let badgeColor: Color?
+    public let badgeStyle: SwipeCardBadgeStyle?
     
     public init(
         id: String,
@@ -30,14 +46,43 @@ public struct SwipeCardItem: Identifiable, Hashable, Sendable {
         displayName: String,
         byteCount: Int64 = 0,
         badgeLabel: String? = nil,
-        badgeColor: Color? = nil
+        badgeStyle: SwipeCardBadgeStyle? = nil
     ) {
         self.id = id
         self.fileURL = fileURL
         self.displayName = displayName
         self.byteCount = byteCount
         self.badgeLabel = badgeLabel
-        self.badgeColor = badgeColor
+        self.badgeStyle = badgeStyle
+    }
+
+    public init(
+        id: String,
+        fileURL: URL,
+        displayName: String,
+        byteCount: Int64 = 0,
+        badgeLabel: String? = nil,
+        badgeColor: Color?
+    ) {
+        self.id = id
+        self.fileURL = fileURL
+        self.displayName = displayName
+        self.byteCount = byteCount
+        self.badgeLabel = badgeLabel
+        if let badgeColor {
+            if badgeColor == .orange { self.badgeStyle = .orange }
+            else if badgeColor == .blue { self.badgeStyle = .blue }
+            else if badgeColor == .purple { self.badgeStyle = .purple }
+            else if badgeColor == .green { self.badgeStyle = .green }
+            else if badgeColor == .red { self.badgeStyle = .red }
+            else { self.badgeStyle = .gray }
+        } else {
+            self.badgeStyle = nil
+        }
+    }
+
+    public var badgeColor: Color? {
+        badgeStyle?.color
     }
 }
 
@@ -107,6 +152,14 @@ public final class SwipeCullingState: ObservableObject {
         isCompleted = false
         triggerHapticFeedback(.alignment)
     }
+
+    public func recycleSkipped() {
+        guard !skippedCards.isEmpty else { return }
+        remainingCards.append(contentsOf: skippedCards)
+        skippedCards.removeAll()
+        isCompleted = false
+        triggerHapticFeedback(.alignment)
+    }
     
     private func triggerHapticFeedback(_ pattern: NSHapticFeedbackManager.FeedbackPattern) {
         NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .default)
@@ -125,6 +178,7 @@ public struct SwipeCullingStudioView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var cardImages: [String: NSImage] = [:]
     @State private var isAnimating = false
+    @State private var showDiscardAlert = false
     
     public init(
         items: [SwipeCardItem],
@@ -218,13 +272,24 @@ public struct SwipeCullingStudioView: View {
         .frame(minWidth: 750, minHeight: 680)
         .animation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.75), value: state.remainingCards.count)
         .animation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.75), value: state.isCompleted)
+        .alert("Discard Pending Selections?", isPresented: $showDiscardAlert) {
+            Button("Add to Safety Plan") {
+                onCommitPlan(state.cleanupCards)
+            }
+            Button("Discard and Close", role: .destructive) {
+                onClose()
+            }
+            Button("Keep Reviewing", role: .cancel) {}
+        } message: {
+            Text("You have \(state.cleanupCards.count) photos selected for cleanup. Closing without adding them to your Safety Plan will discard these selections.")
+        }
     }
     
     // MARK: - Subviews
     
     private var headerBar: some View {
         HStack {
-            Button(action: onClose) {
+            Button(action: handleClose) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
                     .foregroundColor(.secondary)
@@ -261,6 +326,14 @@ public struct SwipeCullingStudioView: View {
             }
         }
         .padding(.horizontal, 24)
+    }
+    
+    private func handleClose() {
+        if !state.cleanupCards.isEmpty && !state.isCompleted {
+            showDiscardAlert = true
+        } else {
+            onClose()
+        }
     }
     
     @ViewBuilder
@@ -376,16 +449,19 @@ public struct SwipeCullingStudioView: View {
                 let url = card.fileURL
                 let cardID = card.id
                 let loadedImg = await Task.detached(priority: .userInitiated) { () -> NSImage? in
-                    return NSImage(contentsOf: url)
+                    return ViewerImageLoader.image(at: url)
                 }.value
                 
                 if let loadedImg {
                     cardImages[cardID] = loadedImg
                 }
                 
-                // Keep image memory bounded by pruning cards beyond active window
-                let activeIDs = Set(state.remainingCards.prefix(6).map(\.id))
-                for key in cardImages.keys where !activeIDs.contains(key) {
+                // Keep image memory bounded by pruning cards beyond active window and recent undo history
+                var keepIDs = Set(state.remainingCards.prefix(6).map(\.id))
+                for recent in state.history.suffix(2) {
+                    keepIDs.insert(recent.item.id)
+                }
+                for key in cardImages.keys where !keepIDs.contains(key) {
                     cardImages.removeValue(forKey: key)
                 }
             }
@@ -487,14 +563,14 @@ public struct SwipeCullingStudioView: View {
                         .frame(width: 56, height: 56)
                         .background(Color.red.opacity(0.12))
                         .clipShape(Circle())
-                    Text("Clean (←/⌫)")
+                    Text("Clean (←)")
                         .font(.caption2.bold())
                         .foregroundColor(.secondary)
                 }
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.leftArrow, modifiers: [])
-            .keyboardShortcut(.delete, modifiers: [])
+            .keyboardShortcut(.delete, modifiers: [.command])
             
             // Undo Button
             Button(action: state.undo) {
@@ -571,7 +647,7 @@ public struct SwipeCullingStudioView: View {
             Text("Review Batch Completed!")
                 .font(.title.bold())
             
-            Text("You swiped through \(state.totalInitialCount) photos in record time.")
+            Text("All \(state.totalInitialCount) photos have been categorized.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
@@ -586,6 +662,14 @@ public struct SwipeCullingStudioView: View {
             .cornerRadius(14)
             
             HStack(spacing: 14) {
+                if !state.skippedCards.isEmpty {
+                    Button(action: state.recycleSkipped) {
+                        Label("Review Skipped (\(state.skippedCards.count))", systemImage: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
+
                 Button("Close", action: onClose)
                     .buttonStyle(.bordered)
                     .controlSize(.large)

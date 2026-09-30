@@ -1,6 +1,17 @@
 import AppKit
 import SwiftUI
 
+extension View {
+    @ViewBuilder
+    fileprivate func decisionButtonStyle(isSelected: Bool) -> some View {
+        if isSelected {
+            self.buttonStyle(.borderedProminent)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+}
+
 private enum ReviewStudioMode: String, CaseIterable, Identifiable {
     case exact = "Exact"
     case similar = "Similar"
@@ -31,6 +42,12 @@ private enum ExactGroupSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+private struct StudioViewerContext: Identifiable {
+    let id: String
+    let items: [ViewerPhotoItem]
+    let initialIndex: Int
+}
+
 struct ReviewStudioView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
@@ -48,6 +65,7 @@ struct ReviewStudioView: View {
     @State private var showDecisionReconciliation = false
     @State private var showGlobalSelectConfirmation = false
     @State private var isShowingSwipeCulling = false
+    @State private var activeViewerContext: StudioViewerContext? = nil
 
     var body: some View {
         ZStack {
@@ -101,6 +119,16 @@ struct ReviewStudioView: View {
         .onChange(of: model.selectedGroupID) { _ in
             model.ensureReviewFocus()
             model.checkpointReviewSession()
+        }
+        .sheet(item: $activeViewerContext) { context in
+            InteractivePhotoViewerView(
+                state: PhotoViewerState(items: context.items, initialIndex: context.initialIndex),
+                onCleanOrDelete: { item in
+                    model.setDecision(.quarantinePlan, for: AssetID(rawValue: item.id), access: store)
+                },
+                onClose: { activeViewerContext = nil }
+            )
+            .frame(minWidth: 920, minHeight: 660)
         }
         .sheet(isPresented: $showDecisionReconciliation) { QuarantineDecisionReconciliationView(model: model) }
         .sheet(isPresented: $showDecisionEvidence) {
@@ -169,6 +197,7 @@ struct ReviewStudioView: View {
                     .keyboardShortcut("[", modifiers: [])
                     .disabled(model.currentExactGroupIndex <= 0)
                     .help("Previous duplicate set ( [ )")
+                    .accessibilityLabel("Previous duplicate set")
 
                     Text(model.exactGroupPositionLabel)
                         .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -184,6 +213,7 @@ struct ReviewStudioView: View {
                     .keyboardShortcut("]", modifiers: [])
                     .disabled(model.currentExactGroupIndex >= model.duplicateGroups.count - 1)
                     .help("Next duplicate set ( ] )")
+                    .accessibilityLabel("Next duplicate set")
                 }
             } else if mode == .similar && !model.similarityGroups.isEmpty {
                 HStack(spacing: 5) {
@@ -194,6 +224,7 @@ struct ReviewStudioView: View {
                     }
                     .disabled(model.currentSimilarityGroupIndex <= 0)
                     .help("Previous similar group")
+                    .accessibilityLabel("Previous similar group")
 
                     Text(model.similarityGroupPositionLabel)
                         .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -208,6 +239,7 @@ struct ReviewStudioView: View {
                     }
                     .disabled(model.currentSimilarityGroupIndex >= model.similarityGroups.count - 1)
                     .help("Next similar group")
+                    .accessibilityLabel("Next similar group")
                 }
             }
 
@@ -356,6 +388,7 @@ struct ReviewStudioView: View {
 
             Button { model.focusPreviousReviewAsset() } label: { Image(systemName: "chevron.left") }
                 .help("Previous photo · Option-Left Arrow")
+                .accessibilityLabel("Previous photo")
                 .disabled(!model.canApplyFocusedReviewDecision)
 
             decisionShelfButton(.keep, title: "Keep", systemImage: "checkmark.shield")
@@ -364,6 +397,7 @@ struct ReviewStudioView: View {
 
             Button { model.focusNextReviewAsset() } label: { Image(systemName: "chevron.right") }
                 .help("Next photo · Option-Right Arrow")
+                .accessibilityLabel("Next photo")
                 .disabled(!model.canApplyFocusedReviewDecision)
 
             Divider().frame(height: 30)
@@ -423,23 +457,13 @@ struct ReviewStudioView: View {
     @ViewBuilder
     private func decisionShelfButton(_ decision: ReviewDecision, title: String, systemImage: String) -> some View {
         let selected = model.selectedReviewAsset.flatMap { model.decisions[$0.id] } == decision
-        if selected {
-            Button {
-                model.applyFocusedDecision(decision, access: store)
-            } label: {
-                Label(title, systemImage: systemImage)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!model.canApplyFocusedReviewDecision)
-        } else {
-            Button {
-                model.applyFocusedDecision(decision, access: store)
-            } label: {
-                Label(title, systemImage: systemImage)
-            }
-            .buttonStyle(.bordered)
-            .disabled(!model.canApplyFocusedReviewDecision)
+        Button {
+            model.applyFocusedDecision(decision, access: store)
+        } label: {
+            Label(title, systemImage: systemImage)
         }
+        .decisionButtonStyle(isSelected: selected)
+        .disabled(!model.canApplyFocusedReviewDecision)
     }
 
     private func drawerSurface<Content: View>(
@@ -676,6 +700,99 @@ struct ReviewStudioView: View {
         }
     }
 
+    private func openViewer(for asset: ReviewAsset, in group: ReviewGroup) {
+        let all = group.assets.isEmpty ? [asset] : group.assets
+        let items: [ViewerPhotoItem] = all.map {
+            ViewerPhotoItem(
+                id: $0.id.rawValue,
+                fileURL: $0.fileURL,
+                displayName: $0.displayName,
+                byteCount: $0.byteCount
+            )
+        }
+        let initialIdx = items.firstIndex(where: { $0.id == asset.id.rawValue }) ?? 0
+        activeViewerContext = StudioViewerContext(
+            id: "exact-\(group.id)-\(asset.id.rawValue)",
+            items: items,
+            initialIndex: initialIdx
+        )
+    }
+
+    private func openViewer(for member: SimilarityReviewMember, in group: SimilarityReviewGroup) {
+        let all = group.members.isEmpty ? [member] : group.members
+        let items: [ViewerPhotoItem] = all.map {
+            ViewerPhotoItem(
+                id: $0.asset.id.rawValue,
+                fileURL: $0.asset.fileURL,
+                displayName: $0.asset.displayName,
+                byteCount: $0.asset.byteCount
+            )
+        }
+        let initialIdx = items.firstIndex(where: { $0.id == member.asset.id.rawValue }) ?? 0
+        activeViewerContext = StudioViewerContext(
+            id: "similar-\(group.id)-\(member.asset.id.rawValue)",
+            items: items,
+            initialIndex: initialIdx
+        )
+    }
+
+    private func openComparisonViewer(anchor: SimilarityReviewMember, selected: SimilarityReviewMember, initialIndex: Int, groupID: String) {
+        let items = [
+            ViewerPhotoItem(
+                id: anchor.asset.id.rawValue,
+                fileURL: anchor.asset.fileURL,
+                displayName: anchor.asset.displayName,
+                byteCount: anchor.asset.byteCount
+            ),
+            ViewerPhotoItem(
+                id: selected.asset.id.rawValue,
+                fileURL: selected.asset.fileURL,
+                displayName: selected.asset.displayName,
+                byteCount: selected.asset.byteCount
+            )
+        ]
+        let targetID = initialIndex == 0 ? anchor.asset.id.rawValue : selected.asset.id.rawValue
+        activeViewerContext = StudioViewerContext(
+            id: "compare-\(groupID)-\(targetID)",
+            items: items,
+            initialIndex: initialIndex
+        )
+    }
+
+    @ViewBuilder
+    private func reviewAssetCard(asset: ReviewAsset, in group: ReviewGroup) -> some View {
+        ReviewAssetCard(
+            asset: asset,
+            decision: model.decisions[asset.id],
+            isCanonical: group.canonicalAssetID == asset.id,
+            isFocused: model.selectedReviewAssetID == asset.id,
+            groupAssets: group.assets,
+            onFocus: {
+                model.selectedReviewAssetID = asset.id
+                model.checkpointReviewSession()
+            },
+            onOpenViewer: {
+                openViewer(for: asset, in: group)
+            }
+        ) { decision in
+            model.selectedReviewAssetID = asset.id
+            model.setDecision(decision, for: asset.id, access: store)
+        }
+    }
+
+    @ViewBuilder
+    private func similarityAssetCard(member: SimilarityReviewMember, in group: SimilarityReviewGroup) -> some View {
+        SimilarityAssetCard(
+            member: member,
+            isAnchor: member.asset.id == group.anchorAssetID,
+            groupMembers: group.members,
+            onReveal: { model.reveal(member.asset) },
+            onOpenViewer: {
+                openViewer(for: member, in: group)
+            }
+        )
+    }
+
     @ViewBuilder
     private var reviewCanvas: some View {
         if mode == .exact {
@@ -727,20 +844,7 @@ struct ReviewStudioView: View {
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16)], spacing: 16) {
                         ForEach(group.assets) { asset in
-                            ReviewAssetCard(
-                                asset: asset,
-                                decision: model.decisions[asset.id],
-                                isCanonical: group.canonicalAssetID == asset.id,
-                                isFocused: model.selectedReviewAssetID == asset.id,
-                                groupAssets: group.assets,
-                                onFocus: {
-                                    model.selectedReviewAssetID = asset.id
-                                    model.checkpointReviewSession()
-                                }
-                            ) { decision in
-                                model.selectedReviewAssetID = asset.id
-                                model.setDecision(decision, for: asset.id, access: store)
-                            }
+                            reviewAssetCard(asset: asset, in: group)
                         }
                     }
                 }
@@ -804,12 +908,7 @@ struct ReviewStudioView: View {
                     } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16)], spacing: 16) {
                             ForEach(group.members) { member in
-                                SimilarityAssetCard(
-                                    member: member,
-                                    isAnchor: member.asset.id == group.anchorAssetID,
-                                    groupMembers: group.members,
-                                    onReveal: { model.reveal(member.asset) }
-                                )
+                                similarityAssetCard(member: member, in: group)
                             }
                         }
                     }
@@ -844,8 +943,26 @@ struct ReviewStudioView: View {
                         .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 }
                 HStack(spacing: 12) {
-                    SynchronizedComparisonPane(title: "Anchor", member: anchor, scale: $comparisonScale, offset: $comparisonOffset, onReveal: { model.reveal(anchor.asset) })
-                    SynchronizedComparisonPane(title: selected.distanceToAnchor.formatted(.number.precision(.fractionLength(4))), member: selected, scale: $comparisonScale, offset: $comparisonOffset, onReveal: { model.reveal(selected.asset) })
+                    SynchronizedComparisonPane(
+                        title: "Anchor",
+                        member: anchor,
+                        scale: $comparisonScale,
+                        offset: $comparisonOffset,
+                        onReveal: { model.reveal(anchor.asset) },
+                        onOpenViewer: {
+                            openComparisonViewer(anchor: anchor, selected: selected, initialIndex: 0, groupID: group.id)
+                        }
+                    )
+                    SynchronizedComparisonPane(
+                        title: selected.distanceToAnchor.formatted(.number.precision(.fractionLength(4))),
+                        member: selected,
+                        scale: $comparisonScale,
+                        offset: $comparisonOffset,
+                        onReveal: { model.reveal(selected.asset) },
+                        onOpenViewer: {
+                            openComparisonViewer(anchor: anchor, selected: selected, initialIndex: 1, groupID: group.id)
+                        }
+                    )
                 }
                 .frame(minHeight: 430)
                 HStack(spacing: 12) {
@@ -1029,9 +1146,8 @@ private struct ReviewAssetCard: View {
     let isFocused: Bool
     var groupAssets: [ReviewAsset] = []
     let onFocus: () -> Void
+    let onOpenViewer: () -> Void
     let onDecision: (ReviewDecision) -> Void
-
-    @State private var isShowingViewer: Bool = false
 
     var body: some View {
         PremiumCard {
@@ -1042,11 +1158,11 @@ private struct ReviewAssetCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .contentShape(Rectangle())
                         .onTapGesture(count: 2) {
-                            isShowingViewer = true
+                            onOpenViewer()
                         }
                     
                     HStack {
-                        Button(action: { isShowingViewer = true }) {
+                        Button(action: onOpenViewer) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.white)
@@ -1056,6 +1172,7 @@ private struct ReviewAssetCard: View {
                         .buttonStyle(.plain)
                         .padding(8)
                         .help("Open in Photo Viewer and swipe to cull")
+                        .accessibilityLabel("Open \(asset.displayName) in Photo Viewer")
                         
                         Spacer()
                     }
@@ -1096,6 +1213,7 @@ private struct ReviewAssetCard: View {
                         }
                         .buttonStyle(.plain)
                         .padding(8)
+                        .accessibilityLabel(decision == .quarantinePlan ? "Remove \(asset.displayName) from safety plan" : "Add \(asset.displayName) to safety plan")
                         .accessibilityIdentifier("mac.folder.exact.checkbox.\(asset.id.rawValue)")
                     }
                 }
@@ -1144,28 +1262,6 @@ private struct ReviewAssetCard: View {
                 )
                 .allowsHitTesting(false)
         }
-        .sheet(isPresented: $isShowingViewer) {
-            let all = groupAssets.isEmpty ? [asset] : groupAssets
-            let items = all.map {
-                ViewerPhotoItem(
-                    id: $0.id.rawValue,
-                    fileURL: $0.fileURL,
-                    displayName: $0.displayName,
-                    byteCount: $0.byteCount
-                )
-            }
-            let initialIdx = items.firstIndex(where: { $0.id == asset.id.rawValue }) ?? 0
-            InteractivePhotoViewerView(
-                state: PhotoViewerState(items: items, initialIndex: initialIdx),
-                onCleanOrDelete: { item in
-                    if item.id == asset.id.rawValue {
-                        onDecision(.quarantinePlan)
-                    }
-                },
-                onClose: { isShowingViewer = false }
-            )
-            .frame(minWidth: 920, minHeight: 660)
-        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(isCanonical ? "mac.folder.exact.keeper.\(asset.id.rawValue)" : "mac.folder.exact.cardToggle.\(asset.id.rawValue)")
         .accessibilityAddTraits(isFocused ? .isSelected : [])
@@ -1174,13 +1270,8 @@ private struct ReviewAssetCard: View {
     @ViewBuilder
     private func decisionButton(_ value: ReviewDecision, systemImage: String) -> some View {
         let selected = value == decision || (value == .keep && isCanonical)
-        if selected {
-            decisionButtonBase(value, systemImage: systemImage)
-                .buttonStyle(.borderedProminent)
-        } else {
-            decisionButtonBase(value, systemImage: systemImage)
-                .buttonStyle(.bordered)
-        }
+        decisionButtonBase(value, systemImage: systemImage)
+            .decisionButtonStyle(isSelected: selected)
     }
 
     private func decisionButtonBase(_ value: ReviewDecision, systemImage: String) -> some View {
@@ -1200,8 +1291,7 @@ private struct SimilarityAssetCard: View {
     let isAnchor: Bool
     var groupMembers: [SimilarityReviewMember] = []
     let onReveal: () -> Void
-
-    @State private var isShowingViewer: Bool = false
+    let onOpenViewer: () -> Void
 
     var body: some View {
         PremiumCard {
@@ -1212,11 +1302,11 @@ private struct SimilarityAssetCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .contentShape(Rectangle())
                         .onTapGesture(count: 2) {
-                            isShowingViewer = true
+                            onOpenViewer()
                         }
                     
                     HStack {
-                        Button(action: { isShowingViewer = true }) {
+                        Button(action: onOpenViewer) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.white)
@@ -1226,6 +1316,7 @@ private struct SimilarityAssetCard: View {
                         .buttonStyle(.plain)
                         .padding(8)
                         .help("Open in Photo Viewer and swipe to cull")
+                        .accessibilityLabel("Open \(member.asset.displayName) in Photo Viewer")
                         
                         Spacer()
                     }
@@ -1259,39 +1350,19 @@ private struct SimilarityAssetCard: View {
                 .controlSize(.small)
             }
         }
-        .sheet(isPresented: $isShowingViewer) {
-            let all = groupMembers.isEmpty ? [member] : groupMembers
-            let items = all.map {
-                ViewerPhotoItem(
-                    id: $0.asset.id.rawValue,
-                    fileURL: $0.asset.fileURL,
-                    displayName: $0.asset.displayName,
-                    byteCount: $0.asset.byteCount
-                )
-            }
-            let initialIdx = items.firstIndex(where: { $0.id == member.asset.id.rawValue }) ?? 0
-            InteractivePhotoViewerView(
-                state: PhotoViewerState(items: items, initialIndex: initialIdx),
-                onClose: { isShowingViewer = false }
-            )
-            .frame(minWidth: 920, minHeight: 660)
-        }
     }
 }
 
 private struct SynchronizedComparisonPane: View {
-    @EnvironmentObject private var model: AppModel
-    @EnvironmentObject private var store: StoreEntitlementController
-
     let title: String
     let member: SimilarityReviewMember
     @Binding var scale: CGFloat
     @Binding var offset: CGSize
     let onReveal: () -> Void
+    let onOpenViewer: () -> Void
     @State private var image: NSImage?
     @State private var scaleOrigin: CGFloat = 1
     @State private var offsetOrigin: CGSize = .zero
-    @State private var isShowingViewer: Bool = false
 
     var body: some View {
         PremiumCard {
@@ -1302,7 +1373,7 @@ private struct SynchronizedComparisonPane: View {
                         Text(title).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button(action: { isShowingViewer = true }) {
+                    Button(action: onOpenViewer) {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
                     }
                     .buttonStyle(.borderless)
@@ -1338,26 +1409,6 @@ private struct SynchronizedComparisonPane: View {
         .task(id: member.asset.fileURL) { image = await BoundedThumbnailCache.shared.image(for: member.asset.fileURL, maxPixelSize: 1800) }
         .onChange(of: scale) { if $0 == 1 { scaleOrigin = 1 } }
         .onChange(of: offset) { if $0 == .zero { offsetOrigin = .zero } }
-        .sheet(isPresented: $isShowingViewer) {
-            InteractivePhotoViewerView(
-                state: PhotoViewerState(
-                    items: [
-                        ViewerPhotoItem(
-                            id: member.asset.id.rawValue,
-                            fileURL: member.asset.fileURL,
-                            displayName: member.asset.displayName,
-                            byteCount: member.asset.byteCount
-                        )
-                    ]
-                ),
-                onCleanOrDelete: { item in
-                    let assetID = AssetID(rawValue: item.id)
-                    model.setDecision(.quarantinePlan, for: assetID, access: store)
-                },
-                onClose: { isShowingViewer = false }
-            )
-            .frame(minWidth: 920, minHeight: 660)
-        }
     }
 }
 
@@ -1553,14 +1604,63 @@ struct QuarantineDecisionReconciliationView: View {
             }.padding(16).background(KeptoraDesign.elevated)
             HStack(alignment: .top, spacing: 18) {
                 VStack(alignment: .leading, spacing: 10) {
-                    TextField("Plan ID", text: $planID); TextField("Decision fingerprint", text: $decision); TextField("Manifest fingerprint", text: $manifest); TextField("Verification fingerprint", text: $verification); TextField("Filesystem fingerprint", text: $filesystem); TextField("Restore fingerprint (optional)", text: $restore)
-                    Button("Load Current Safety Plan") { loadCurrentSafetyPlan() }.buttonStyle(.bordered)
-                    Button("Reconcile Snapshot") { reconcile() }.buttonStyle(.borderedProminent).disabled([planID,decision,manifest,verification,filesystem].contains(where: \.isEmpty))
-                    if let message { Text(message).font(.caption).foregroundStyle(.secondary) }
-                }.textFieldStyle(.roundedBorder).frame(width: 360)
-                ScrollView { LazyVStack(alignment: .leading, spacing: 8) { ForEach(records.reversed()) { r in VStack(alignment: .leading, spacing: 4) { HStack { Text("R\(r.revisionNumber)").font(.caption.monospaced().bold()); Spacer(); Text(r.state.localizedLabel).font(.caption.bold()) }; Text(r.snapshot.planID).font(.caption); ForEach(r.reasons,id:\.self) { Text("• \($0)").font(.caption2) } }.padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 8)) } } }.frame(maxWidth: .infinity)
-            }.padding(18)
-        }.frame(minWidth: 780, minHeight: 500).background(KeptoraDesign.reviewFloor).onAppear { records = store.load() }
+                    TextField("Plan ID", text: $planID)
+                    TextField("Decision fingerprint", text: $decision)
+                    TextField("Manifest fingerprint", text: $manifest)
+                    TextField("Verification fingerprint", text: $verification)
+                    TextField("Filesystem fingerprint", text: $filesystem)
+                    TextField("Restore fingerprint (optional)", text: $restore)
+
+                    Button("Load Current Safety Plan") {
+                        loadCurrentSafetyPlan()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Reconcile Snapshot") {
+                        reconcile()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled([planID, decision, manifest, verification, filesystem].contains(where: \.isEmpty))
+
+                    if let message {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 360)
+
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(records.reversed()) { r in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("R\(r.revisionNumber)")
+                                        .font(.caption.monospaced().bold())
+                                    Spacer()
+                                    Text(r.state.localizedLabel)
+                                        .font(.caption.bold())
+                                }
+                                Text(r.snapshot.planID)
+                                    .font(.caption)
+                                ForEach(r.reasons, id: \.self) { reason in
+                                    Text("• \(reason)")
+                                        .font(.caption2)
+                                }
+                            }
+                            .padding(10)
+                            .background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(18)
+        }
+        .frame(minWidth: 780, minHeight: 500)
+        .background(KeptoraDesign.reviewFloor)
+        .onAppear { records = store.load() }
     }
     private func loadCurrentSafetyPlan() {
         guard let plan = model.pendingPlan else {

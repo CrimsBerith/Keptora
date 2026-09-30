@@ -10,13 +10,13 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 22) {
                 header
                 sourceCard
+                scanStatus
                 scanSummaryCard
                 workflowStrip
                 recoveryCard
                 reviewResumeCard
                 accessCard
                 metrics
-                scanStatus
             }
             .padding(KeptoraDesign.pagePadding)
             .frame(maxWidth: 1120, alignment: .leading)
@@ -94,11 +94,15 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Scan complete")
                                 .font(.headline)
-                            Text(outcome.groups.isEmpty
-                            ? "No exact duplicates found."
-                            : "Ready to review — \(outcome.groups.count.formatted()) duplicate sets found.")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                            if outcome.groups.isEmpty {
+                                Text("No exact duplicates found.")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Ready to review — \(outcome.groups.count.formatted()) duplicate sets found.")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         Spacer()
                         Button(outcome.groups.isEmpty ? "Choose Another Folder" : "Review Duplicates") {
@@ -277,11 +281,9 @@ struct HomeView: View {
     }
 
     private var headerStatus: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            Label(store.isLifetimeUnlocked ? "Lifetime unlocked" : store.trialLabel, systemImage: store.isLifetimeUnlocked ? "checkmark.seal.fill" : "gauge.with.dots.needle.50percent")
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(store.isLifetimeUnlocked ? KeptoraDesign.success : KeptoraDesign.accent)
-        }
+        Label(store.isLifetimeUnlocked ? "Lifetime unlocked" : store.trialLabel, systemImage: store.isLifetimeUnlocked ? "checkmark.seal.fill" : "gauge.with.dots.needle.50percent")
+            .font(.callout.weight(.semibold))
+            .foregroundStyle(store.isLifetimeUnlocked ? KeptoraDesign.success : KeptoraDesign.accent)
     }
 
     private var sourceActions: some View {

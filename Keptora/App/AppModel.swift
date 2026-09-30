@@ -5,7 +5,7 @@ import Foundation
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var selectedRoute: SidebarRoute? = .home
+    @Published var selectedRoute: SidebarRoute = .home
     @Published private(set) var sourceName = "No folder selected"
     @Published private(set) var sourceProvider = "Choose a local or cloud folder"
     @Published private(set) var sourceURL: URL?
@@ -1210,6 +1210,11 @@ final class AppModel: ObservableObject {
 
     private func present(_ error: Error) {
         errorMessage = error.localizedDescription
+        isShowingError = true
+    }
+
+    func presentError(_ message: String) {
+        errorMessage = message
         isShowingError = true
     }
 

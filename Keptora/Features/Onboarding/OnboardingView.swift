@@ -71,7 +71,7 @@ struct OnboardingView: View {
                     .id("detail-\(page)")
             }
             .padding(.top, 26)
-            .keptoraAnimation(KeptoraDesign.animMedium, value: page)
+            .animation(reduceMotion ? nil : KeptoraDesign.animMedium, value: page)
 
             // Dot indicator
             HStack(spacing: 8) {
@@ -92,6 +92,7 @@ struct OnboardingView: View {
                 Button("Not Now") { model.completeOnboarding() }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                    .keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier("mac.onboarding.close")
                 Spacer()
                 if page > 0 {
@@ -103,7 +104,10 @@ struct OnboardingView: View {
                 Button(page == pages.count - 1 ? "Get Started" : "Continue") {
                     if page == pages.count - 1 {
                         model.completeOnboarding()
-                        model.chooseFolder()
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 350_000_000)
+                            model.chooseFolder()
+                        }
                     } else {
                         withAnimation(reduceMotion ? nil : KeptoraDesign.animMedium) { page += 1 }
                     }

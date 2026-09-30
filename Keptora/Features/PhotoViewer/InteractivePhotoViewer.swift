@@ -104,6 +104,8 @@ public struct InteractivePhotoViewerView: View {
     @State private var baseZoomScale: CGFloat = 1.0
     @State private var basePanOffset: CGSize = .zero
     @State private var pinchStartScale: CGFloat?
+    @State private var isLoadFailed: Bool = false
+    @State private var isCompareFailed: Bool = false
     
     public init(
         state: PhotoViewerState,
@@ -121,16 +123,25 @@ public struct InteractivePhotoViewerView: View {
             Color.black.ignoresSafeArea()
             
             // Main canvas
-            if state.isSideBySideComparing, let compareItem = state.compareItem {
+            if state.items.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.white.opacity(0.4))
+                    Text("No Photos to Display")
+                        .font(.headline)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            } else if state.isSideBySideComparing, let compareItem = state.compareItem {
                 HStack(spacing: 8) {
-                    singleViewport(image: loadedImage, title: state.currentItem?.displayName ?? "Original")
-                    singleViewport(image: compareImage, title: compareItem.displayName)
+                    singleViewport(image: loadedImage, title: state.currentItem?.displayName ?? "Original", isFailed: isLoadFailed)
+                    singleViewport(image: compareImage, title: compareItem.displayName, isFailed: isCompareFailed)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 50)
                 .padding(.bottom, 80)
             } else {
-                singleViewport(image: loadedImage, title: nil)
+                singleViewport(image: loadedImage, title: nil, isFailed: isLoadFailed)
                     .padding(.top, 40)
                     .padding(.bottom, 70)
             }
@@ -167,8 +178,14 @@ public struct InteractivePhotoViewerView: View {
                     .keyboardShortcut(.leftArrow, modifiers: [])
                 Button("") { state.next() }
                     .keyboardShortcut(.rightArrow, modifiers: [])
-                Button("") { onClose() }
-                    .keyboardShortcut(.escape, modifiers: [])
+                Button("") {
+                    if state.showInspector {
+                        state.showInspector = false
+                    } else {
+                        onClose()
+                    }
+                }
+                .keyboardShortcut(.escape, modifiers: [])
                 Button("") { state.showInspector.toggle() }
                     .keyboardShortcut("i", modifiers: [.command])
                 Button("") { state.rotateClockwise() }
@@ -213,13 +230,17 @@ public struct InteractivePhotoViewerView: View {
     // MARK: - Viewports
     
     @ViewBuilder
-    private func singleViewport(image: NSImage?, title: String?) -> some View {
+    private func singleViewport(image: NSImage?, title: String?, isFailed: Bool) -> some View {
         GeometryReader { proxy in
             ZStack {
                 if let image {
+                    let isSideRotated = Int(abs(state.rotationAngle.rounded())) % 180 != 0
+                    let containerW = isSideRotated ? proxy.size.height : proxy.size.width
+                    let containerH = isSideRotated ? proxy.size.width : proxy.size.height
                     Image(nsImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
+                        .frame(width: containerW, height: containerH)
                         .rotationEffect(.degrees(state.rotationAngle))
                         .scaleEffect(state.zoomScale)
                         .offset(state.panOffset)
@@ -266,6 +287,15 @@ public struct InteractivePhotoViewerView: View {
                                 }
                             }
                         }
+                } else if isFailed {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 36))
+                            .foregroundStyle(.orange)
+                        Text("Unable to open photo")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
                 } else {
                     ProgressView()
                         .tint(.white)
@@ -392,20 +422,56 @@ public struct InteractivePhotoViewerView: View {
             
             // Compare Side-by-Side
             if state.items.count > 1 {
-                Button(action: {
-                    state.isSideBySideComparing.toggle()
-                    if state.isSideBySideComparing {
-                        if state.compareTargetIndex == nil {
-                            state.compareTargetIndex = (state.selectedIndex + 1) % state.items.count
+                HStack(spacing: 4) {
+                    Button(action: {
+                        state.isSideBySideComparing.toggle()
+                        if state.isSideBySideComparing {
+                            if state.compareTargetIndex == nil {
+                                state.compareTargetIndex = (state.selectedIndex + 1) % state.items.count
+                            }
+                            Task { await loadCompareAsset() }
                         }
-                        Task { await loadCompareAsset() }
+                    }) {
+                        Image(systemName: state.isSideBySideComparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
+                            .foregroundColor(state.isSideBySideComparing ? .accentColor : .white.opacity(0.85))
                     }
-                }) {
-                    Image(systemName: state.isSideBySideComparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
-                        .foregroundColor(state.isSideBySideComparing ? .accentColor : .white.opacity(0.85))
+                    .buttonStyle(.plain)
+                    .help(state.isSideBySideComparing ? "Exit comparison mode" : "Compare side-by-side")
+                    .accessibilityLabel(state.isSideBySideComparing ? "Exit comparison mode" : "Compare side-by-side")
+
+                    if state.isSideBySideComparing {
+                        Menu {
+                            ForEach(Array(state.items.enumerated()), id: \.element.id) { idx, item in
+                                if idx != state.selectedIndex {
+                                    Button {
+                                        state.compareTargetIndex = idx
+                                        Task { await loadCompareAsset() }
+                                    } label: {
+                                        HStack {
+                                            Text(item.displayName)
+                                            if state.compareTargetIndex == idx {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Text(state.compareItem?.displayName ?? "Target")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: 90)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9))
+                            }
+                            .foregroundColor(.white.opacity(0.85))
+                        }
+                        .menuStyle(.borderlessButton)
+                    }
                 }
-                .buttonStyle(.plain)
-                .padding(6)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
                 .background(.ultraThinMaterial)
                 .cornerRadius(8)
             }
@@ -456,7 +522,7 @@ public struct InteractivePhotoViewerView: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: alreadyCleaned ? "checkmark" : "trash.fill")
-                        Text(alreadyCleaned ? "In plan" : "Clean (⌫)")
+                        Text(alreadyCleaned ? "In plan" : "Clean (⌘⌫)")
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -466,7 +532,7 @@ public struct InteractivePhotoViewerView: View {
                 .padding(.vertical, 5)
                 .background(Color.red.opacity(0.85))
                 .cornerRadius(8)
-                .keyboardShortcut(.delete, modifiers: [])
+                .keyboardShortcut(.delete, modifiers: [.command])
                 .disabled(alreadyCleaned)
                 .help("Add current photo to cleanup plan and view next")
                 .accessibilityLabel("Add current photo to cleanup plan and view next")
@@ -511,11 +577,16 @@ public struct InteractivePhotoViewerView: View {
     // MARK: - Actions
     
     private func loadCurrentAsset() async {
-        guard let item = state.currentItem else { return }
+        guard let item = state.currentItem else {
+            loadedImage = nil
+            isLoadFailed = false
+            return
+        }
         let url = item.fileURL
         // Drop the previous photo immediately so it is never shown under the new title.
         loadedImage = nil
         metadata = nil
+        isLoadFailed = false
         
         let (img, meta) = await Task.detached(priority: .userInitiated) { () -> (NSImage?, DetailedPhotoMetadata?) in
             (ViewerImageLoader.image(at: url), PhotoMetadataExtractor.extract(from: url))
@@ -525,18 +596,22 @@ public struct InteractivePhotoViewerView: View {
         guard !Task.isCancelled else { return }
         loadedImage = img
         metadata = meta
+        isLoadFailed = (img == nil)
     }
     
     private func loadCompareAsset() async {
         guard let item = state.compareItem else {
             compareImage = nil
+            isCompareFailed = false
             return
         }
         let url = item.fileURL
         compareImage = nil
+        isCompareFailed = false
         let img = await Task.detached(priority: .userInitiated) { ViewerImageLoader.image(at: url) }.value
         guard !Task.isCancelled else { return }
         compareImage = img
+        isCompareFailed = (img == nil)
     }
     
     private func revealCurrentInFinder() {

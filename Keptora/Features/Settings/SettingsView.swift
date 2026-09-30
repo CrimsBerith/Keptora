@@ -1,11 +1,17 @@
 import SwiftUI
 
+private enum SettingsStorageKeys {
+    static let checkpointInterval = "Keptora.CheckpointInterval"
+    static let showFilePaths = "Keptora.ShowFilePaths"
+    static let similarityEnabled = "Keptora.Feature.Similarity.v1"
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
-    @AppStorage("Keptora.CheckpointInterval") private var checkpointInterval = 100
-    @AppStorage("Keptora.ShowFilePaths") private var showFilePaths = false
-    @AppStorage("Keptora.Feature.Similarity.v1") private var similarityEnabled = true
+    @AppStorage(SettingsStorageKeys.checkpointInterval) private var checkpointInterval = 100
+    @AppStorage(SettingsStorageKeys.showFilePaths) private var showFilePaths = false
+    @AppStorage(SettingsStorageKeys.similarityEnabled) private var similarityEnabled = true
     @AppStorage(SourceExclusionPolicy.folderDefaultsKey) private var excludedFolders = ""
     @AppStorage(SourceExclusionPolicy.extensionDefaultsKey) private var excludedExtensions = ""
     @AppStorage(SimilaritySensitivityPreset.defaultsKey) private var sensitivityRaw = SimilaritySensitivityPreset.precisionFirst.rawValue
@@ -128,26 +134,35 @@ struct SettingsView: View {
 
         }
         .formStyle(.grouped)
-        .padding()
         .navigationTitle("Settings")
         .accessibilityIdentifier("mac.page.settings")
         .task { await store.refresh() }
     }
 }
 
-
 private struct KeptoraReleaseLinks: View {
-  private var privacy: URL? { URL(string: Bundle.main.object(forInfoDictionaryKey: "APP_PRIVACY_POLICY_URL") as? String ?? "") }
-  private var support: URL? { URL(string: Bundle.main.object(forInfoDictionaryKey: "APP_SUPPORT_URL") as? String ?? "") }
-  private func configured(_ url: URL?) -> Bool {
-    guard let url, url.scheme == "https", let host = url.host else { return false }
-    let placeholderTokens = ["YOUR-DOMAIN", "example.com", "localhost"]
-    return !host.isEmpty && !placeholderTokens.contains { url.absoluteString.localizedCaseInsensitiveContains($0) }
-  }
-  var body: some View {
-    Section("Links") {
-      if configured(privacy), let privacy { Link("Privacy Policy", destination: privacy) } else { Label("Privacy Policy URL: configure before release", systemImage: "exclamationmark.triangle").foregroundStyle(.secondary) }
-      if configured(support), let support { Link("Support", destination: support) } else { Label("Support URL: configure before release", systemImage: "exclamationmark.triangle").foregroundStyle(.secondary) }
+    private var privacy: URL {
+        if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_PRIVACY_POLICY_URL") as? String,
+           let url = URL(string: configured),
+           url.scheme == "https", !(url.host?.isEmpty ?? true) {
+            return url
+        }
+        return URL(string: "https://alfagolab.com/keptora/privacy")!
     }
-  }
+
+    private var support: URL {
+        if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_SUPPORT_URL") as? String,
+           let url = URL(string: configured),
+           url.scheme == "https", !(url.host?.isEmpty ?? true) {
+            return url
+        }
+        return URL(string: "https://alfagolab.com/keptora/support")!
+    }
+
+    var body: some View {
+        Section("Links") {
+            Link("Privacy Policy", destination: privacy)
+            Link("Support", destination: support)
+        }
+    }
 }

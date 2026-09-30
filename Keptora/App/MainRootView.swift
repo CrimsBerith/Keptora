@@ -65,6 +65,10 @@ struct MainRootView: View {
                             model.connectFolderURL(url)
                             model.selectedRoute = .home
                         }
+                    } else {
+                        Task { @MainActor in
+                            model.presentError("Please drop a folder to scan, not an individual file.")
+                        }
                     }
                 }
                 return true
@@ -90,7 +94,6 @@ struct MainRootView: View {
             OnboardingView().environmentObject(model)
         }
         .onAppear {
-            if model.selectedRoute == nil { model.selectedRoute = .home }
             if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
                 model.selectedRoute = .review
             }
@@ -142,7 +145,7 @@ struct MainRootView: View {
     }
 
     private func sidebarButton(_ route: SidebarRoute) -> some View {
-        let isSelected = (model.selectedRoute ?? .home) == route
+        let isSelected = model.selectedRoute == route
         let isHovered  = hoveredRoute == route
         return Button {
             withAnimation(reduceMotion ? nil : KeptoraDesign.animFast) { model.selectedRoute = route }
@@ -227,7 +230,7 @@ struct MainRootView: View {
             Button {
                 model.selectedRoute = .insights
             } label: {
-                Label("Insights", systemImage: "chart.bar.xaxis")
+                Label("Insights", systemImage: model.selectedRoute == .insights ? "chart.bar.xaxis.ascending" : "chart.bar.xaxis")
             }
             .help("Review insights")
             .accessibilityIdentifier("mac.toolbar.insights")
@@ -235,7 +238,7 @@ struct MainRootView: View {
             Button {
                 model.selectedRoute = .diagnostics
             } label: {
-                Label("Support", systemImage: "questionmark.circle")
+                Label("Support", systemImage: model.selectedRoute == .diagnostics ? "questionmark.circle.fill" : "questionmark.circle")
             }
             .help("Support and diagnostics")
             .accessibilityIdentifier("mac.toolbar.support")
@@ -243,7 +246,7 @@ struct MainRootView: View {
             Button {
                 model.selectedRoute = .settings
             } label: {
-                Label("Settings", systemImage: "gearshape")
+                Label("Settings", systemImage: model.selectedRoute == .settings ? "gearshape.fill" : "gearshape")
             }
             .help("Keptora settings")
             .accessibilityIdentifier("mac.toolbar.settings")
@@ -252,7 +255,7 @@ struct MainRootView: View {
 
     @ViewBuilder
     private var routeDetail: some View {
-        switch model.selectedRoute ?? .home {
+        switch model.selectedRoute {
         case .home:         HomeView()
         case .review:       ReviewStudioView()
         case .smartBuckets: SmartBucketsDashboardView()

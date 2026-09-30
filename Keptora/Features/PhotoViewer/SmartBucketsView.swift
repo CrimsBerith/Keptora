@@ -1,6 +1,21 @@
 import SwiftUI
 import KeptoraCore
 
+/// Visual theme for smart bucket category.
+public enum SmartBucketTheme: String, Sendable, CaseIterable {
+    case orange, blue, purple, indigo, green
+    
+    public var color: Color {
+        switch self {
+        case .orange: return .orange
+        case .blue: return .blue
+        case .purple: return .purple
+        case .indigo: return .indigo
+        case .green: return .green
+        }
+    }
+}
+
 /// Item representing a smart cluster card on the dashboard.
 public struct SmartBucketCardItem: Identifiable, Sendable {
     public let id: String
@@ -9,9 +24,13 @@ public struct SmartBucketCardItem: Identifiable, Sendable {
     public let count: Int
     public let reclaimableBytes: Int64
     public let iconName: String
-    public let iconColor: Color
+    public let theme: SmartBucketTheme
     public let isDeclutter: Bool
     
+    public var iconColor: Color {
+        theme.color
+    }
+
     public init(
         id: String,
         title: String,
@@ -19,7 +38,8 @@ public struct SmartBucketCardItem: Identifiable, Sendable {
         count: Int,
         reclaimableBytes: Int64,
         iconName: String,
-        iconColor: Color,
+        theme: SmartBucketTheme = .orange,
+        iconColor: Color? = nil,
         isDeclutter: Bool
     ) {
         self.id = id
@@ -28,9 +48,22 @@ public struct SmartBucketCardItem: Identifiable, Sendable {
         self.count = count
         self.reclaimableBytes = reclaimableBytes
         self.iconName = iconName
-        self.iconColor = iconColor
+        if let iconColor {
+            if iconColor == .blue { self.theme = .blue }
+            else if iconColor == .purple { self.theme = .purple }
+            else if iconColor == .indigo { self.theme = .indigo }
+            else if iconColor == .green { self.theme = .green }
+            else { self.theme = .orange }
+        } else {
+            self.theme = theme
+        }
         self.isDeclutter = isDeclutter
     }
+}
+
+private struct SwipeSessionPayload: Identifiable {
+    let id: String
+    let cards: [SwipeCardItem]
 }
 
 /// Single source of truth for which extra copies belong in which smart bucket, shared by the
@@ -71,9 +104,10 @@ public struct SmartBucketsDashboardView: View {
     @EnvironmentObject private var store: StoreEntitlementController
     
     @State private var selectedBucketID: String? = nil
-    @State private var activeSwipeCards: [SwipeCardItem]? = nil
+    @State private var activeSwipeSession: SwipeSessionPayload? = nil
     @State private var showingNoItemsAlert: Bool = false
     @State private var isShowingExportSheet: Bool = false
+    @State private var cachedCards: [SmartBucketCardItem] = []
     
     private var dynamicCards: [SmartBucketCardItem] {
         var screenshotsCount = 0
@@ -174,8 +208,8 @@ public struct SmartBucketsDashboardView: View {
     public init() {}
     
     public var body: some View {
-        // Computed once per render (it walks every duplicate group).
-        let cards = dynamicCards
+        // Computed once per render or cached across duplicateGroups changes.
+        let cards = cachedCards.isEmpty ? dynamicCards : cachedCards
         return ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header
@@ -213,27 +247,29 @@ public struct SmartBucketsDashboardView: View {
             .padding(24)
         }
         .alert("No Scanned Photos Found", isPresented: $showingNoItemsAlert) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) { selectedBucketID = nil }
         } message: {
             Text("Nothing in this category needs review yet. Scan a folder or your Apple Photos library from Home first, or pick another category.")
         }
-        .sheet(isPresented: Binding(
-            get: { activeSwipeCards != nil },
-            set: { if !$0 { activeSwipeCards = nil } }
-        )) {
-            if let cards = activeSwipeCards {
-                SwipeCullingStudioView(
-                    items: cards,
-                    onCommitPlan: { cleanupItems in
-                        let cleanupAssetIDs = cleanupItems.map { AssetID(rawValue: $0.id) }
-                        model.applySwipeDecisions(cleanupAssetIDs: cleanupAssetIDs, access: store)
-                        activeSwipeCards = nil
-                        model.isShowingSafetyPlan = true
-                    },
-                    onClose: { activeSwipeCards = nil }
-                )
-            }
+        .sheet(item: $activeSwipeSession, onDismiss: { selectedBucketID = nil }) { session in
+            SwipeCullingStudioView(
+                items: session.cards,
+                onCommitPlan: { cleanupItems in
+                    let cleanupAssetIDs = cleanupItems.map { AssetID(rawValue: $0.id) }
+                    model.applySwipeDecisions(cleanupAssetIDs: cleanupAssetIDs, access: store)
+                    activeSwipeSession = nil
+                    selectedBucketID = nil
+                    model.isShowingSafetyPlan = true
+                },
+                onClose: {
+                    activeSwipeSession = nil
+                    selectedBucketID = nil
+                }
+            )
         }
+        .onAppear { cachedCards = dynamicCards }
+        .onChange(of: model.duplicateGroups.count) { _ in cachedCards = dynamicCards }
+        .onChange(of: model.decisions.count) { _ in cachedCards = dynamicCards }
         .sheet(isPresented: $isShowingExportSheet) {
             let universalAssets: [UniversalMediaAsset] = model.duplicateGroups.flatMap { group in
                 group.assets.map { asset in
@@ -391,8 +427,9 @@ public struct SmartBucketsDashboardView: View {
         
         if items.isEmpty {
             showingNoItemsAlert = true
+            selectedBucketID = nil
         } else {
-            activeSwipeCards = items
+            activeSwipeSession = SwipeSessionPayload(id: bucketID ?? "all", cards: items)
         }
     }
 }

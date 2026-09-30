@@ -72,21 +72,36 @@ struct HistoryView: View {
                 .background(KeptoraDesign.canvas)
             }
         }
-        .navigationTitle("Quarantine & Restore")
+        .navigationTitle("History & Quarantine")
         .accessibilityIdentifier("mac.page.history")
     }
 
     private var quarantineSummary: some View {
-        let active = model.cleanupHistory.filter { $0.canRestore }
-        let activeFiles = active.reduce(0) { $0 + $1.operationCount }
-        let activeBytes = active.reduce(Int64(0)) { $0 + $1.estimatedBytes }
+        var activeCount = 0
+        var activeFiles = 0
+        var activeBytes: Int64 = 0
+        var signedManifestCount = 0
+
+        for item in model.cleanupHistory {
+            if item.canRestore {
+                activeCount += 1
+                activeFiles += item.operationCount
+                activeBytes += item.estimatedBytes
+            }
+            if item.manifestPath != nil {
+                signedManifestCount += 1
+            }
+        }
+
+        let verifiedStatesCount = model.quarantineVerificationLineage.lazy.filter { $0.state == .verified }.count
+
         // Adaptive grid: five metrics in one row truncate at the minimum window width.
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-            summaryMetric("Active plans", active.count.formatted(), "shippingbox")
+            summaryMetric("Active plans", activeCount.formatted(), "shippingbox")
             summaryMetric("Tracked files", activeFiles.formatted(), "doc.on.doc")
             summaryMetric("Restorable space", ByteCountFormatter.string(fromByteCount: activeBytes, countStyle: .file), "internaldrive")
-            summaryMetric("Signed manifests", model.cleanupHistory.filter { $0.manifestPath != nil }.count.formatted(), "signature")
-            summaryMetric("Verified states", model.quarantineVerificationLineage.filter { $0.state == .verified }.count.formatted(), "checkmark.shield")
+            summaryMetric("Signed manifests", signedManifestCount.formatted(), "signature")
+            summaryMetric("Verified states", verifiedStatesCount.formatted(), "checkmark.shield")
         }
     }
 
@@ -153,7 +168,7 @@ struct HistoryView: View {
                             Text("v\(verification.identity.revisionNumber) • \(verification.phase.localizedLabel) • \(verification.verifiedCount)/\(verification.operationCount)")
                         }
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(verification.state == .verified ? .green : .orange)
+                        .foregroundStyle(verification.state == .verified ? KeptoraDesign.success : KeptoraDesign.warning)
                     } else {
                         Text("No post-commit verification record yet")
                             .font(.caption2)
@@ -163,37 +178,48 @@ struct HistoryView: View {
 
                 Spacer()
 
-                HStack {
-                    if item.manifestPath != nil {
-                        Button("Show Manifest") { model.revealManifest(item) }
-                        Button {
-                            model.verifyCleanupState(item)
-                        } label: {
-                            if model.verifyingCleanupPlanID == item.id {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Label("Verify State", systemImage: "checkmark.shield")
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(model.verifyingCleanupPlanID != nil || model.restoringPlanID != nil || model.isCommittingCleanup)
-                        .accessibilityIdentifier("keptora.history.verifyState.\(item.id)")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        historyActionButtons(item: item)
                     }
-                    if item.canRestore {
-                        Button {
-                            model.prepareRestorePreview(item)
-                        } label: {
-                            if model.isPreparingRestorePreview && model.restorePreviewItem?.id == item.id {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Label("Review Restore", systemImage: "arrow.uturn.backward.circle")
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(model.restoringPlanID != nil || model.isPreparingRestorePreview)
+                    VStack(alignment: .trailing, spacing: 8) {
+                        historyActionButtons(item: item)
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func historyActionButtons(item: CleanupHistoryItem) -> some View {
+        if item.manifestPath != nil {
+            Button("Show Manifest") { model.revealManifest(item) }
+                .buttonStyle(.bordered)
+            Button {
+                model.verifyCleanupState(item)
+            } label: {
+                if model.verifyingCleanupPlanID == item.id {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Label("Verify State", systemImage: "checkmark.shield")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(model.verifyingCleanupPlanID != nil || model.restoringPlanID != nil || model.isCommittingCleanup)
+            .accessibilityIdentifier("keptora.history.verifyState.\(item.id)")
+        }
+        if item.canRestore {
+            Button {
+                model.prepareRestorePreview(item)
+            } label: {
+                if model.isPreparingRestorePreview && model.restorePreviewItem?.id == item.id {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Label("Review Restore", systemImage: "arrow.uturn.backward.circle")
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(model.restoringPlanID != nil || model.isPreparingRestorePreview)
         }
     }
 
@@ -221,10 +247,10 @@ struct HistoryView: View {
 
     private func statusColor(_ state: CleanupPlanState) -> Color {
         switch state {
-        case .committed, .partiallyCommitted: return .orange
-        case .restored, .partiallyRestored: return .green
-        case .failed: return .red
-        case .draft, .committing: return .blue
+        case .committed, .partiallyCommitted: return KeptoraDesign.warning
+        case .restored, .partiallyRestored: return KeptoraDesign.success
+        case .failed: return KeptoraDesign.danger
+        case .draft, .committing: return KeptoraDesign.accent
         }
     }
 }
