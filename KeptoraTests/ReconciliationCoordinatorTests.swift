@@ -87,4 +87,35 @@ final class ReconciliationCoordinatorTests: XCTestCase {
         XCTAssertTrue(issues.contains(where: { $0.kind == .ambiguousDiskState && $0.needsUserAttention }))
     }
 
+    func testDraftPlanIsNotMarkedFailedAtStartup() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let support = root.appendingPathComponent("Support", isDirectory: true)
+        let source = root.appendingPathComponent("Source", isDirectory: true)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let original = source.appendingPathComponent("copy.jpg")
+        let bytes = Data("draft bytes".utf8)
+        try bytes.write(to: original)
+        let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+        let database = SQLiteDatabase(url: support.appendingPathComponent("test.sqlite"))
+        try await database.initialize()
+
+        let quarantine = source.appendingPathComponent(".Keptora Quarantine/draft/copy.jpg")
+        let operation = CleanupOperationPreview(
+            id: "draft-op", groupID: "group", assetID: AssetID(rawValue: "asset"), displayName: "copy.jpg",
+            originalURL: original, quarantineURL: quarantine, byteCount: Int64(bytes.count), digest: digest
+        )
+        let plan = CleanupPlanPreview(
+            id: "draft", sourceRoot: source, quarantineRoot: quarantine.deletingLastPathComponent(),
+            createdAt: Date(), operations: [operation], sourceVolume: try VolumeIdentity.resolve(for: source)
+        )
+        // Inserted but never committed: still a draft.
+        try await database.insertCleanupPlan(plan)
+
+        let issues = try await ReconciliationCoordinator(database: database).reconcile(sourceRoot: source)
+        XCTAssertTrue(issues.isEmpty)
+        let states = try await database.fetchCleanupOperationStates(planID: "draft")
+        XCTAssertEqual(states[operation.id], .pending)
+    }
 }

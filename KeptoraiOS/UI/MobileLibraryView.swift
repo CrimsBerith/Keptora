@@ -316,6 +316,26 @@ struct MobileLibraryView: View {
 
     @ViewBuilder
     private var scanSection: some View {
+        if store.isAnalyzing {
+            // Exact scan is done but similarity passes still run: do not offer a new scan yet.
+            HStack(spacing: 10) {
+                ProgressView().tint(MobileKeptoraDesign.cyan)
+                Text("Analyzing similar photos and videos…")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                Spacer()
+                Button("Cancel", role: .cancel) { store.cancelScan() }
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(MobileKeptoraDesign.danger)
+            }
+            .keptoraPanel(tint: MobileKeptoraDesign.cyan)
+            .accessibilityElement(children: .combine)
+        } else {
+            scanStateSection
+        }
+    }
+
+    @ViewBuilder
+    private var scanStateSection: some View {
         switch store.scanState {
         case .scanning(let processed, let total, let current):
             VStack(alignment: .leading, spacing: 14) {

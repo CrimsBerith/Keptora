@@ -1087,6 +1087,12 @@ actor SQLiteDatabase {
                 "UPDATE assets SET path=?, is_quarantined=0, is_missing=0 WHERE id=?",
                 [.text(originalPath), .text(assetID.rawValue)]
             )
+            // A restored file must be reviewed again; keeping the old quarantinePlan decision
+            // would silently put it back into the next Safety Plan.
+            try executePrepared(
+                "DELETE FROM decisions WHERE asset_id=? AND action=?",
+                [.text(assetID.rawValue), .text(ReviewDecision.quarantinePlan.rawValue)]
+            )
         }
     }
 
@@ -1205,7 +1211,7 @@ actor SQLiteDatabase {
                    o.original_path, o.quarantine_path, o.byte_count, o.digest, o.status
             FROM cleanup_operations o
             JOIN cleanup_plans p ON p.id=o.plan_id
-            WHERE o.status IN ('pending','quarantined') AND p.source_path=?
+            WHERE o.status IN ('pending','quarantined') AND p.state<>'draft' AND p.source_path=?
             ORDER BY p.created_at, o.id
             """,
             [.text(URL(fileURLWithPath: sourcePath).standardizedFileURL.path)]
@@ -1709,7 +1715,8 @@ actor SQLiteDatabase {
         try bind(values, to: statement)
 
         var result: [[String: SQLiteValue]] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
+        var stepResult = sqlite3_step(statement)
+        while stepResult == SQLITE_ROW {
             var row: [String: SQLiteValue] = [:]
             for index in 0..<sqlite3_column_count(statement) {
                 let name = String(cString: sqlite3_column_name(statement, index))
@@ -1729,6 +1736,11 @@ actor SQLiteDatabase {
                 }
             }
             result.append(row)
+            stepResult = sqlite3_step(statement)
+        }
+        // A BUSY or I/O error would otherwise silently truncate the result set.
+        guard stepResult == SQLITE_DONE else {
+            throw DatabaseError.execute(String(cString: sqlite3_errmsg(connectionPointer)))
         }
         return result
     }

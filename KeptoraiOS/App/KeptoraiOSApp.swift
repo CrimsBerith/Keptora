@@ -26,7 +26,8 @@ struct KeptoraiOSApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
                         Task { await store.refreshPhotosAuthorization() }
-                    } else {
+                    } else if phase == .background {
+                        // .inactive also fires for Control Center, banners and permission alerts.
                         store.suspendScanForBackground()
                     }
                 }

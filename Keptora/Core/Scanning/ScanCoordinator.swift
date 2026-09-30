@@ -36,7 +36,8 @@ actor ScanCoordinator {
         )
 
         let urls = try enumerator.mediaFiles(in: folder)
-        let descriptors = try urls.map { try descriptor(for: $0, sourceID: sourceID) }
+        // A file removed or made unreadable between enumeration and stat must not abort the whole scan.
+        let descriptors = urls.compactMap { try? descriptor(for: $0, sourceID: sourceID) }
 
         var startIndex = 0
         if let cursor = session.cursorStableKey,
@@ -79,6 +80,7 @@ actor ScanCoordinator {
         var processed = startIndex
         var hashed = startIndex > 0 ? session.hashed : 0
         var reused = startIndex > 0 ? session.reused : 0
+        var skipped = 0
         var lastCursor = startIndex > 0 ? descriptors[startIndex - 1].stableKey : nil
 
         do {
@@ -89,9 +91,18 @@ actor ScanCoordinator {
                     try await database.touchUnchangedAsset(descriptor, scanID: session.id)
                     reused += 1
                 } else {
-                    let fingerprint = try await hasher.hashFile(at: descriptor.fileURL)
-                    try await database.upsert(asset: descriptor, fingerprint: fingerprint, scanID: session.id)
-                    hashed += 1
+                    do {
+                        let fingerprint = try await hasher.hashFile(at: descriptor.fileURL)
+                        try await database.upsert(asset: descriptor, fingerprint: fingerprint, scanID: session.id)
+                        hashed += 1
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch let error as SQLiteDatabase.DatabaseError {
+                        throw error
+                    } catch {
+                        // Unreadable file (permissions, evicted cloud file, vanished): skip it and continue.
+                        skipped += 1
+                    }
                 }
 
                 processed += 1
@@ -102,7 +113,9 @@ actor ScanCoordinator {
                         processed: processed,
                         total: descriptors.count,
                         currentItem: descriptor.displayName,
-                        message: "\(hashed) hashed · \(reused) reused"
+                        message: skipped > 0
+                            ? "\(hashed) hashed · \(reused) reused · \(skipped) skipped"
+                            : "\(hashed) hashed · \(reused) reused"
                     )
                 )
                 if processed % checkpointInterval == 0 {

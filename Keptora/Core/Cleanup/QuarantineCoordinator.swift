@@ -366,9 +366,15 @@ actor QuarantineCoordinator {
         var failed = 0
         for operation in manifest.operations {
             guard states[operation.operationID] == .quarantined else { continue }
-            let original = URL(fileURLWithPath: operation.originalPath)
-            let quarantined = URL(fileURLWithPath: operation.quarantinePath)
+            let original = URL(fileURLWithPath: operation.originalPath).standardizedFileURL
+            let quarantined = URL(fileURLWithPath: operation.quarantinePath).standardizedFileURL
             do {
+                // Never trust manifest paths blindly: both ends must stay inside the source root.
+                let standardizedRoot = sourceRoot.standardizedFileURL
+                guard Self.isDescendant(original, of: standardizedRoot),
+                      Self.isDescendant(quarantined, of: standardizedRoot) else {
+                    throw CleanupError.sourceOutsideRoot(original)
+                }
                 if let expectedVolumeID = manifest.sourceVolumeID {
                     let operationVolume = try VolumeIdentity.resolve(for: quarantined)
                     guard operationVolume.stableID == expectedVolumeID else {

@@ -110,25 +110,26 @@ struct ReviewStudioView: View {
             )
         }
         .sheet(isPresented: $isShowingSwipeCulling) {
+            // Only extra copies are swipeable; the canonical keeper is never offered for cleanup.
             let cards: [SwipeCardItem] = model.duplicateGroups.flatMap { group in
-                group.assets.map { asset in
+                group.assets.filter { $0.id != group.canonicalAssetID }.map { asset in
                     SwipeCardItem(
                         id: asset.id.rawValue,
                         fileURL: asset.fileURL,
                         displayName: asset.displayName,
                         byteCount: asset.byteCount,
-                        badgeLabel: asset.id == group.canonicalAssetID ? "Keeper" : "Copy",
-                        badgeColor: asset.id == group.canonicalAssetID ? .green : .orange
+                        badgeLabel: "Copy",
+                        badgeColor: .orange
                     )
                 }
             }
             SwipeCullingStudioView(
                 state: SwipeCullingState(items: cards),
                 onCommitPlan: { cleanupItems in
-                    for item in cleanupItems {
-                        let assetID = AssetID(rawValue: item.id)
-                        model.setDecision(.quarantinePlan, for: assetID, access: store)
-                    }
+                    model.applySwipeDecisions(
+                        cleanupAssetIDs: cleanupItems.map { AssetID(rawValue: $0.id) },
+                        access: store
+                    )
                     isShowingSwipeCulling = false
                     model.isShowingSafetyPlan = true
                 },

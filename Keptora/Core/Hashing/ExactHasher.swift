@@ -19,7 +19,8 @@ struct ExactHasher: Sendable {
     }
 
     func hashFile(at url: URL, chunkSize: Int = 1_048_576) async throws -> ExactFingerprint {
-        try await Task.detached(priority: .utility) {
+        // Detached tasks do not inherit cancellation; forward it so cancelling a scan stops hashing.
+        let work = Task.detached(priority: .utility) { () -> ExactFingerprint in
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
             guard values.isRegularFile == true else { throw HasherError.notRegularFile(url) }
 
@@ -37,6 +38,11 @@ struct ExactHasher: Sendable {
 
             let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
             return ExactFingerprint(algorithm: "sha256-v1", digest: digest, byteCount: bytesRead)
-        }.value
+        }
+        return try await withTaskCancellationHandler {
+            try await work.value
+        } onCancel: {
+            work.cancel()
+        }
     }
 }
