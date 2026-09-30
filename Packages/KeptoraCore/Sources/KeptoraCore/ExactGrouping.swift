@@ -64,12 +64,27 @@ public actor UniversalExactScanner {
             resumableEntries = [:]
         }
 
+        var lastCheckpointEmission = Date()
+        var pendingEntriesCount = 0
+
+        func emitCheckpointIfNeeded(force: Bool = false) {
+            guard !completedEntries.isEmpty else { return }
+            let now = Date()
+            if force || pendingEntriesCount >= 50 || now.timeIntervalSince(lastCheckpointEmission) >= 2.0 {
+                checkpointUpdate(.init(sourceID: adapter.source.id, allowNetwork: allowNetwork, entries: completedEntries))
+                lastCheckpointEmission = now
+                pendingEntriesCount = 0
+            }
+        }
+
         for (index, asset) in assets.enumerated() {
             try Task.checkCancellation()
             progress(index, assets.count, asset.displayName)
             if let prior = resumableEntries[asset.id], Self.sameRevision(asset, prior.sourceAsset) {
                 groupsByFingerprint[prior.fingerprint, default: []].append(prior.fingerprintedAsset)
                 completedEntries.append(prior)
+                pendingEntriesCount += 1
+                emitCheckpointIfNeeded()
                 continue
             }
             do {
@@ -99,11 +114,13 @@ public actor UniversalExactScanner {
                     )
                 groupsByFingerprint[fingerprint, default: []].append(fingerprintedAsset)
                 completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
-                checkpointUpdate(.init(sourceID: adapter.source.id, allowNetwork: allowNetwork, entries: completedEntries))
+                pendingEntriesCount += 1
+                emitCheckpointIfNeeded()
             } catch UniversalScanError.networkRequired {
                 skippedNetwork += 1
             }
         }
+        emitCheckpointIfNeeded(force: true)
 
         let groups = groupsByFingerprint.compactMap { fingerprint, members in
             members.count > 1 ? UniversalExactGroup(digest: fingerprint.digest, assets: members) : nil

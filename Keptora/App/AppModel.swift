@@ -32,6 +32,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var quarantineVerificationLineage: [QuarantineVerificationLineageRecord] = []
     @Published var isShowingSafetyPlan = false
     @Published private(set) var isCommittingCleanup = false
+    @Published private(set) var isPreparingSafetyPlan = false
     @Published private(set) var restoringPlanID: String?
     @Published private(set) var verifyingCleanupPlanID: String?
     @Published private(set) var isPreparingRestorePreview = false
@@ -263,7 +264,7 @@ final class AppModel: ObservableObject {
 
     func startScan() {
         refreshSourceAvailability()
-        guard let url = sourceURL, sourceAvailability.isAvailable, !scanProgress.isRunning else {
+        guard let url = sourceURL, sourceAvailability.isAvailable, !scanProgress.isRunning, !isCommittingCleanup else {
             if sourceURL != nil { present(SimpleAppError(message: sourceAvailability.label)) }
             return
         }
@@ -286,8 +287,8 @@ final class AppModel: ObservableObject {
                 duplicateGroups = outcome.groups
                 selectedGroupID = outcome.groups.first?.id
                 selectedReviewAssetID = outcome.groups.first?.canonicalAssetID
-                scanProgress = .completed(outcome: outcome)
                 try await reloadDatabaseState()
+                scanProgress = .completed(outcome: outcome)
                 if !outcome.groups.isEmpty {
                     selectedRoute = .review
                     checkpointReviewSession()
@@ -693,10 +694,13 @@ final class AppModel: ObservableObject {
     }
 
     func prepareSafetyPlan(access: StoreEntitlementController) {
+        guard !isPreparingSafetyPlan, !isCommittingCleanup else { return }
         guard access.authorizeSafetyPlan(assetIDs: plannedAssets.map(\.id)) else { return }
         guard let sourceURL else { return }
+        isPreparingSafetyPlan = true
         Task { [weak self] in
             guard let self else { return }
+            defer { self.isPreparingSafetyPlan = false }
             if let active = self.activeBatchTask {
                 _ = await active.value
             }
@@ -740,13 +744,16 @@ final class AppModel: ObservableObject {
     }
 
     func regenerateSafetyPlan(access: StoreEntitlementController) {
-        guard let oldPlan = pendingPlan, !isCommittingCleanup else { return }
+        guard !isPreparingSafetyPlan, !isCommittingCleanup else { return }
+        guard let oldPlan = pendingPlan else { return }
         guard access.authorizeSafetyPlan(assetIDs: plannedAssets.map(\.id)) else { return }
+        isPreparingSafetyPlan = true
         markSafetyPlanLineage(oldPlan, state: .superseded)
         pendingPlan = nil
         safetyPlanFreshness = nil
         Task { [weak self] in
             guard let self else { return }
+            defer { self.isPreparingSafetyPlan = false }
             try? await database.discardDraftCleanupPlan(oldPlan.id)
             guard let sourceURL else { return }
             do {
@@ -905,6 +912,7 @@ final class AppModel: ObservableObject {
             present(SimpleAppError(message: "Choose the original source folder before restoring this plan."))
             return
         }
+        guard restoringPlanID == nil, !isCommittingCleanup else { return }
         restoringPlanID = item.id
         Task { [weak self] in
             guard let self else { return }
@@ -1204,6 +1212,7 @@ final class AppModel: ObservableObject {
     }
 
     private func updateScanProgress(_ progress: ScanProgress) {
+        guard scanProgress.isRunning else { return }
         scanProgress = progress
     }
 

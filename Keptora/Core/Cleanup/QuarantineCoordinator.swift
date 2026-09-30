@@ -111,6 +111,7 @@ actor QuarantineCoordinator {
                 familyID: candidate.family?.id,
                 familyKind: candidate.family?.kind,
                 familyRole: candidate.family?.role,
+                familyPolicy: candidate.family?.policy,
                 decisionActor: candidate.decisionActor,
                 decisionReasonCode: candidate.decisionReasonCode,
                 decisionUpdatedAt: candidate.decisionUpdatedAt,
@@ -213,6 +214,31 @@ actor QuarantineCoordinator {
 
         var moved = 0
         var failed = 0
+        var cancellationCaught: Error?
+        var movedOperationsByFamily: [String: [CleanupOperationPreview]] = [:]
+        let allOrNothingFamilyCounts: [String: Int] = Dictionary(
+            grouping: plan.operations.filter { $0.familyPolicy == .allOrNothing && $0.familyID != nil },
+            by: { $0.familyID! }
+        ).mapValues(\.count)
+
+        func revertFamilyMembers(for familyID: String, reason: String) async {
+            guard let siblings = movedOperationsByFamily.removeValue(forKey: familyID) else { return }
+            for sibling in siblings {
+                if FileManager.default.fileExists(atPath: sibling.quarantineURL.path),
+                   !FileManager.default.fileExists(atPath: sibling.originalURL.path) {
+                    try? fileMover.moveItem(from: sibling.quarantineURL, to: sibling.originalURL)
+                }
+                try? await database.revertOperationToOriginal(
+                    operationID: sibling.id,
+                    assetID: sibling.assetID,
+                    originalPath: sibling.originalURL.path,
+                    message: reason
+                )
+                moved -= 1
+                failed += 1
+            }
+        }
+
         for operation in plan.operations {
             var movedOnDisk = false
             do {
@@ -251,6 +277,12 @@ actor QuarantineCoordinator {
                     throw error
                 }
                 moved += 1
+                if let familyID = operation.familyID, operation.familyPolicy == .allOrNothing {
+                    movedOperationsByFamily[familyID, default: []].append(operation)
+                }
+            } catch is CancellationError {
+                cancellationCaught = CancellationError()
+                break
             } catch {
                 failed += 1
                 if movedOnDisk,
@@ -259,15 +291,42 @@ actor QuarantineCoordinator {
                     try? fileMover.moveItem(from: operation.quarantineURL, to: operation.originalURL)
                 }
                 try? await database.markOperationFailed(operationID: operation.id, message: error.localizedDescription)
+
+                if let familyID = operation.familyID, operation.familyPolicy == .allOrNothing {
+                    await revertFamilyMembers(
+                        for: familyID,
+                        reason: "Reverted because sibling in all-or-nothing family failed: \(error.localizedDescription)"
+                    )
+                }
+            }
+        }
+
+        for (familyID, expectedCount) in allOrNothingFamilyCounts {
+            if let movedMembers = movedOperationsByFamily[familyID], movedMembers.count < expectedCount {
+                await revertFamilyMembers(
+                    for: familyID,
+                    reason: "Reverted because all-or-nothing family was only partially moved."
+                )
             }
         }
 
         let finalState: CleanupPlanState
-        if moved == plan.operations.count { finalState = .committed }
-        else if moved > 0 { finalState = .partiallyCommitted }
-        else { finalState = .failed }
+        if cancellationCaught != nil {
+            finalState = moved > 0 ? .partiallyCommitted : .failed
+        } else if moved == plan.operations.count {
+            finalState = .committed
+        } else if moved > 0 {
+            finalState = .partiallyCommitted
+        } else {
+            finalState = .failed
+        }
         try await database.finishCleanupCommit(plan.id, state: finalState)
         try await database.rebuildExactGroups()
+
+        if let cancellation = cancellationCaught {
+            throw cancellation
+        }
+
         let verification = try? await verifyLifecycle(manifest: manifest, phase: .postCommit)
         return CleanupCommitResult(
             planID: plan.id,

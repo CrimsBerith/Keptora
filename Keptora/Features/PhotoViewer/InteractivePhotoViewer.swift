@@ -147,7 +147,13 @@ public struct InteractivePhotoViewerView: View {
             if state.showInspector {
                 HStack {
                     Spacer()
-                    PhotoInspectorDrawer(metadata: metadata, item: state.currentItem) {
+                    PhotoInspectorDrawer(
+                        metadata: metadata,
+                        item: state.currentItem,
+                        onMetadataChanged: {
+                            Task { await loadCurrentAsset() }
+                        }
+                    ) {
                         state.showInspector = false
                     }
                     .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -616,14 +622,21 @@ private struct FilmstripThumbnail: View {
 public struct PhotoInspectorDrawer: View {
     public let metadata: DetailedPhotoMetadata?
     public let item: ViewerPhotoItem?
+    public let onMetadataChanged: (() -> Void)?
     public let onClose: () -> Void
     @State private var pendingAction: MetadataAction?
     @State private var isWorking = false
     @State private var resultMessage: String?
 
-    public init(metadata: DetailedPhotoMetadata?, item: ViewerPhotoItem?, onClose: @escaping () -> Void) {
+    public init(
+        metadata: DetailedPhotoMetadata?,
+        item: ViewerPhotoItem?,
+        onMetadataChanged: (() -> Void)? = nil,
+        onClose: @escaping () -> Void
+    ) {
         self.metadata = metadata
         self.item = item
+        self.onMetadataChanged = onMetadataChanged
         self.onClose = onClose
     }
 
@@ -660,6 +673,9 @@ public struct PhotoInspectorDrawer: View {
                     }
                 }.value
                 NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                if case .fixDate = action {
+                    onMetadataChanged?()
+                }
             } catch {
                 message = String(localized: "Could not complete the change: \(error.localizedDescription)")
             }
@@ -698,6 +714,30 @@ public struct PhotoInspectorDrawer: View {
             }
             .padding(.bottom, 4)
             
+            if let result = resultMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text(result)
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                    Spacer()
+                    Button {
+                        resultMessage = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(8)
+                .background(Color.white.opacity(0.12))
+                .cornerRadius(8)
+                .transition(.opacity)
+            }
+
             Divider().background(Color.white.opacity(0.2))
             
             ScrollView {
@@ -807,14 +847,6 @@ public struct PhotoInspectorDrawer: View {
             Button("Cancel", role: .cancel) {}
         } message: { action in
             Text(Self.confirmationMessage(for: action))
-        }
-        .alert(
-            "Photo Details",
-            isPresented: Binding(get: { resultMessage != nil }, set: { if !$0 { resultMessage = nil } })
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(resultMessage ?? "")
         }
     }
 

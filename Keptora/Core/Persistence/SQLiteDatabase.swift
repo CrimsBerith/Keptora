@@ -54,6 +54,7 @@ actor SQLiteDatabase {
         }
         connection = SQLiteConnection(db)
         try execute("PRAGMA journal_mode=WAL;")
+        try execute("PRAGMA synchronous=NORMAL;")
         try execute("PRAGMA foreign_keys=ON;")
         try execute("PRAGMA busy_timeout=5000;")
         try migrateIfNeeded()
@@ -231,6 +232,39 @@ actor SQLiteDatabase {
         )
     }
 
+    func recordSkippedAsset(_ asset: AssetDescriptor, scanID: String) throws {
+        try initialize()
+        try executePrepared(
+            """
+            INSERT INTO assets(
+                id, source_id, stable_key, display_name, path, media_kind, byte_count, created_at, modified_at,
+                indexed_at, last_seen_scan_id, is_missing, is_quarantined
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,0)
+            ON CONFLICT(id) DO UPDATE SET
+                source_id=excluded.source_id,
+                stable_key=excluded.stable_key,
+                display_name=excluded.display_name,
+                path=excluded.path,
+                media_kind=excluded.media_kind,
+                byte_count=excluded.byte_count,
+                created_at=excluded.created_at,
+                modified_at=excluded.modified_at,
+                indexed_at=excluded.indexed_at,
+                last_seen_scan_id=excluded.last_seen_scan_id,
+                is_missing=0
+            """,
+            [
+                .text(asset.id.rawValue), .text(asset.sourceID.rawValue), .text(asset.stableKey),
+                .text(asset.displayName), .text(asset.fileURL.path), .text(asset.mediaKind.rawValue),
+                .int(asset.byteCount),
+                asset.creationDate.map { .double($0.timeIntervalSince1970) } ?? .null,
+                asset.modificationDate.map { .double($0.timeIntervalSince1970) } ?? .null,
+                .double(Date().timeIntervalSince1970),
+                .text(scanID), .int(0)
+            ]
+        )
+    }
+
     func upsert(asset: AssetDescriptor, fingerprint: ExactFingerprint, scanID: String? = nil) throws {
         try initialize()
         try transaction {
@@ -362,6 +396,29 @@ actor SQLiteDatabase {
         return AssetFamilySummary(id: id, kind: kind, policy: policy, role: role, memberCount: Int(row["member_count"]?.int64 ?? 0))
     }
 
+    private func fetchAllFamilySummaries() throws -> [String: AssetFamilySummary] {
+        let count = try scalarInt("SELECT COUNT(*) FROM family_members")
+        guard count > 0 else { return [:] }
+        let rows = try self.rows(
+            """
+            SELECT fm.asset_id, af.id, af.kind, af.policy, fm.role, counts.cnt AS member_count
+            FROM family_members fm
+            JOIN asset_families af ON af.id=fm.family_id
+            JOIN (SELECT family_id, COUNT(*) AS cnt FROM family_members GROUP BY family_id) counts ON counts.family_id=af.id
+            """
+        )
+        var map: [String: AssetFamilySummary] = [:]
+        for row in rows {
+            guard let assetID = row["asset_id"]?.string,
+                  let id = row["id"]?.string,
+                  let kindRaw = row["kind"]?.string, let kind = AssetFamilyKind(rawValue: kindRaw),
+                  let policyRaw = row["policy"]?.string, let policy = FamilySafetyPolicy(rawValue: policyRaw),
+                  let roleRaw = row["role"]?.string, let role = AssetFamilyRole(rawValue: roleRaw) else { continue }
+            map[assetID] = AssetFamilySummary(id: id, kind: kind, policy: policy, role: role, memberCount: Int(row["member_count"]?.int64 ?? 0))
+        }
+        return map
+    }
+
     // MARK: - Exact groups and review decisions
 
     func rebuildExactGroups(keeperPolicy: KeeperSelectionPolicy = .preserve) throws {
@@ -454,11 +511,13 @@ actor SQLiteDatabase {
                     [.text(groupID), .text(canonical)]
                 )
             }
+            try execute("DELETE FROM decisions WHERE group_id LIKE 'exact:%' AND group_id NOT IN (SELECT id FROM comparison_groups WHERE kind='exact');")
         }
     }
 
     func fetchDuplicateGroups(sourceID: SourceID? = nil) throws -> [ReviewGroup] {
         try initialize()
+        let familyMap = try fetchAllFamilySummaries()
         let sourceClause = sourceID == nil ? "" : " AND a.source_id=?"
         let groupRows = try rows(
             """
@@ -494,7 +553,7 @@ actor SQLiteDatabase {
                 """,
                 [.text(id)]
             )
-            let assets = try assetRows.compactMap { asset -> ReviewAsset? in
+            let assets = assetRows.compactMap { asset -> ReviewAsset? in
                 guard let assetID = asset["id"]?.string,
                       let name = asset["display_name"]?.string,
                       let path = asset["path"]?.string,
@@ -507,7 +566,7 @@ actor SQLiteDatabase {
                     byteCount: bytes,
                     modificationDate: asset["modified_at"]?.double.map { Date(timeIntervalSince1970: $0) },
                     digest: digest,
-                    family: try familySummary(assetID: assetID)
+                    family: familyMap[assetID]
                 )
             }
             guard assets.count > 1 else { return nil }
@@ -625,6 +684,7 @@ actor SQLiteDatabase {
 
     func fetchCleanupCandidates(sourceID: SourceID? = nil) throws -> [CleanupCandidate] {
         try initialize()
+        let familyMap = try fetchAllFamilySummaries()
         let sourceClause = sourceID == nil ? "" : " AND a.source_id=?"
         return try rows(
             """
@@ -657,7 +717,7 @@ actor SQLiteDatabase {
                 originalURL: URL(fileURLWithPath: path),
                 byteCount: bytes,
                 digest: digest,
-                family: try familySummary(assetID: assetID),
+                family: familyMap[assetID],
                 decisionActor: actor,
                 decisionReasonCode: row["reason_code"]?.string ?? "legacy-decision",
                 decisionUpdatedAt: Date(timeIntervalSince1970: updated)
@@ -1066,6 +1126,20 @@ actor SQLiteDatabase {
             "UPDATE cleanup_operations SET status=?, error_message=? WHERE id=?",
             [.text(CleanupOperationState.failed.rawValue), .text(message), .text(operationID)]
         )
+    }
+
+    func revertOperationToOriginal(operationID: String, assetID: AssetID, originalPath: String, message: String) throws {
+        try initialize()
+        try transaction {
+            try executePrepared(
+                "UPDATE cleanup_operations SET status=?, error_message=?, executed_at=NULL WHERE id=?",
+                [.text(CleanupOperationState.failed.rawValue), .text(message), .text(operationID)]
+            )
+            try executePrepared(
+                "UPDATE assets SET path=?, is_quarantined=0, is_missing=0 WHERE id=?",
+                [.text(originalPath), .text(assetID.rawValue)]
+            )
+        }
     }
 
     func recordOperationError(operationID: String, message: String) throws {
@@ -1767,13 +1841,41 @@ actor SQLiteDatabase {
         }
     }
 
-    private func transaction(_ body: () throws -> Void) throws {
+    private var inTransaction = false
+
+    func transaction(_ body: () throws -> Void) throws {
+        if inTransaction {
+            try body()
+            return
+        }
+        inTransaction = true
         try execute("BEGIN IMMEDIATE TRANSACTION;")
         do {
             try body()
             try execute("COMMIT;")
+            inTransaction = false
         } catch {
             try? execute("ROLLBACK;")
+            inTransaction = false
+            throw error
+        }
+    }
+
+    func withBatchTransaction<T>(_ body: () throws -> T) throws -> T {
+        try initialize()
+        if inTransaction {
+            return try body()
+        }
+        inTransaction = true
+        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            let result = try body()
+            try execute("COMMIT;")
+            inTransaction = false
+            return result
+        } catch {
+            try? execute("ROLLBACK;")
+            inTransaction = false
             throw error
         }
     }

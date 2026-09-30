@@ -102,6 +102,7 @@ actor ScanCoordinator {
                     } catch {
                         // Unreadable file (permissions, evicted cloud file, vanished): skip it and continue.
                         skipped += 1
+                        try? await database.recordSkippedAsset(descriptor, scanID: session.id)
                     }
                 }
 

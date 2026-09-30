@@ -81,6 +81,7 @@ struct CleanupOperationPreview: Identifiable, Hashable, Codable, Sendable {
     let familyID: String?
     let familyKind: AssetFamilyKind?
     let familyRole: AssetFamilyRole?
+    let familyPolicy: FamilySafetyPolicy?
     let decisionActor: String?
     let decisionReasonCode: String?
     let decisionUpdatedAt: Date?
@@ -98,6 +99,7 @@ struct CleanupOperationPreview: Identifiable, Hashable, Codable, Sendable {
         familyID: String? = nil,
         familyKind: AssetFamilyKind? = nil,
         familyRole: AssetFamilyRole? = nil,
+        familyPolicy: FamilySafetyPolicy? = nil,
         decisionActor: String? = nil,
         decisionReasonCode: String? = nil,
         decisionUpdatedAt: Date? = nil,
@@ -114,6 +116,7 @@ struct CleanupOperationPreview: Identifiable, Hashable, Codable, Sendable {
         self.familyID = familyID
         self.familyKind = familyKind
         self.familyRole = familyRole
+        self.familyPolicy = familyPolicy
         self.decisionActor = decisionActor
         self.decisionReasonCode = decisionReasonCode
         self.decisionUpdatedAt = decisionUpdatedAt

@@ -382,7 +382,7 @@ struct ReviewStudioView: View {
                 Label("Safety Plan", systemImage: "list.clipboard")
             }
             .buttonStyle(.borderedProminent)
-            .disabled(model.plannedAssets.isEmpty || model.isCommittingCleanup)
+            .disabled(model.plannedAssets.isEmpty || model.isCommittingCleanup || model.isPreparingSafetyPlan)
             .accessibilityIdentifier("mac.safetyPlan.open")
         }
         .controlSize(.small)
@@ -965,7 +965,7 @@ struct ReviewStudioView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(model.plannedAssets.isEmpty || model.isCommittingCleanup)
+                        .disabled(model.plannedAssets.isEmpty || model.isCommittingCleanup || model.isPreparingSafetyPlan)
                     }
                 }
                 .padding(18)

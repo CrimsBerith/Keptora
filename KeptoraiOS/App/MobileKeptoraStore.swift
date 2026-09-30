@@ -108,6 +108,10 @@ final class MobileKeptoraStore: ObservableObject {
     private let bookmarkKey = "Keptora.iOS.SourceBookmark.v1"
     private let historyKey = "Keptora.iOS.CleanupHistory.v1"
     private let scanCheckpointKey = "Keptora.iOS.ScanCheckpoint.v1"
+    nonisolated private var scanCheckpointFileURL: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("scan_checkpoint.json")
+    }
     private let reviewedAssetsKey = "Keptora.iOS.ReviewedAssets.v1"
     private let freeReviewLimit = 100
 
@@ -117,7 +121,8 @@ final class MobileKeptoraStore: ObservableObject {
            let decoded = try? JSONDecoder().decode([CleanupHistoryEntry].self, from: data) {
             history = decoded
         }
-        hasScanCheckpoint = UserDefaults.standard.data(forKey: scanCheckpointKey) != nil
+        let checkpointFileExists = scanCheckpointFileURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+        hasScanCheckpoint = checkpointFileExists || UserDefaults.standard.data(forKey: scanCheckpointKey) != nil
         reviewedAssetIDs = Set(UserDefaults.standard.stringArray(forKey: reviewedAssetsKey) ?? [])
         if ProcessInfo.processInfo.arguments.contains("-keptoraThousandsStressUITesting") {
             seedThousandsStressUITesting()
@@ -170,6 +175,9 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func connectPhotos() async {
+        if source == .photos && (authorization == .authorized || authorization == .limited) {
+            return
+        }
         releaseFolderScope()
         if isPhotosDeniedUITesting {
             authorization = .denied
@@ -272,6 +280,9 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func connectFolder(_ url: URL) {
+        if case .folder(let currentURL) = source, currentURL == url {
+            return
+        }
         releaseFolderScope()
         guard url.startAccessingSecurityScopedResource() else {
             errorMessage = String(localized: "Keptora could not access this folder.")
@@ -343,14 +354,13 @@ final class MobileKeptoraStore: ObservableObject {
                     adapter: adapter,
                     allowNetwork: allowNetwork,
                     resuming: checkpoint,
-                    checkpointUpdate: { checkpoint in
-                        guard let data = try? JSONEncoder().encode(checkpoint) else { return }
-                        UserDefaults.standard.set(data, forKey: self.scanCheckpointKey)
-                        Task { @MainActor [weak self] in self?.hasScanCheckpoint = true }
+                    checkpointUpdate: { [weak self] checkpoint in
+                        self?.saveScanCheckpoint(checkpoint)
                     },
                     progress: { processed, total, current in
                         Task { @MainActor [weak self] in
-                            self?.scanState = .scanning(processed: processed, total: total, current: current)
+                            guard let self, case .scanning = self.scanState else { return }
+                            self.scanState = .scanning(processed: processed, total: total, current: current)
                         }
                     }
                 )
@@ -496,9 +506,10 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func cleanupSelection() async {
-        guard !isCleaningUp else { return }
+        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
         let selection = selectedSafeAssets
         guard !selection.isEmpty else { return }
+        let capturedBytes = selectedBytes
         isCleaningUp = true
         defer { isCleaningUp = false }
         do {
@@ -515,7 +526,7 @@ final class MobileKeptoraStore: ObservableObject {
                         kind: .photosRecentlyDeleted,
                         createdAt: Date(),
                         itemCount: selection.count,
-                        byteCount: selectedBytes,
+                        byteCount: capturedBytes,
                         folderRecord: nil,
                         restoredAt: nil
                     ), at: 0
@@ -535,7 +546,7 @@ final class MobileKeptoraStore: ObservableObject {
                         kind: .folderQuarantine,
                         createdAt: record.createdAt,
                         itemCount: record.operations.count,
-                        byteCount: selectedBytes,
+                        byteCount: capturedBytes,
                         folderRecord: record,
                         restoredAt: nil
                     ), at: 0
@@ -545,7 +556,7 @@ final class MobileKeptoraStore: ObservableObject {
             }
             persistHistory()
             selectedAssetIDs.removeAll()
-            startScan()
+            startScan(allowNetwork: lastScanAllowedNetwork)
         } catch {
             guard !Self.isUserCancellation(error) else { return }
             errorMessage = error.localizedDescription
@@ -553,9 +564,10 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func cleanupSimilarVideoSelection() async {
-        guard !isCleaningUp else { return }
+        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
         let selection = selectedSimilarVideoAssets
         guard !selection.isEmpty else { return }
+        let capturedBytes = selectedSimilarVideoBytes
         isCleaningUp = true
         defer { isCleaningUp = false }
         do {
@@ -572,7 +584,7 @@ final class MobileKeptoraStore: ObservableObject {
                         kind: .photosRecentlyDeleted,
                         createdAt: Date(),
                         itemCount: selection.count,
-                        byteCount: selectedSimilarVideoBytes,
+                        byteCount: capturedBytes,
                         folderRecord: nil,
                         restoredAt: nil
                     ), at: 0
@@ -593,7 +605,7 @@ final class MobileKeptoraStore: ObservableObject {
                         kind: .folderQuarantine,
                         createdAt: record.createdAt,
                         itemCount: record.operations.count,
-                        byteCount: selectedSimilarVideoBytes,
+                        byteCount: capturedBytes,
                         folderRecord: record,
                         restoredAt: nil
                     ), at: 0
@@ -618,6 +630,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func restore(_ entry: CleanupHistoryEntry) async {
+        guard !scanState.isScanning, !isAnalyzing else { return }
         guard let record = entry.folderRecord else { return }
         do {
             let restored = try await folderCleanup.restore(record)
@@ -626,7 +639,7 @@ final class MobileKeptoraStore: ObservableObject {
                 history[index].restoredAt = restored.restoredAt
             }
             persistHistory()
-            startScan()
+            startScan(allowNetwork: lastScanAllowedNetwork)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -661,8 +674,27 @@ final class MobileKeptoraStore: ObservableObject {
         activeFolderAdapter = nil
     }
 
+    nonisolated private func saveScanCheckpoint(_ checkpoint: UniversalScanCheckpoint) {
+        guard let data = try? JSONEncoder().encode(checkpoint) else { return }
+        if let fileURL = scanCheckpointFileURL {
+            try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: fileURL, options: .atomic)
+        }
+        Task { @MainActor [weak self] in self?.hasScanCheckpoint = true }
+    }
+
     private func loadScanCheckpoint(matching selection: SourceSelection, allowNetwork: Bool) -> UniversalScanCheckpoint? {
-        guard let data = UserDefaults.standard.data(forKey: scanCheckpointKey),
+        let checkpointData: Data? = {
+            if let fileURL = scanCheckpointFileURL, let data = try? Data(contentsOf: fileURL) {
+                return data
+            }
+            if let legacyData = UserDefaults.standard.data(forKey: scanCheckpointKey) {
+                UserDefaults.standard.removeObject(forKey: scanCheckpointKey)
+                return legacyData
+            }
+            return nil
+        }()
+        guard let data = checkpointData,
               let checkpoint = try? JSONDecoder().decode(UniversalScanCheckpoint.self, from: data) else { return nil }
         let expectedSourceID: String?
         switch selection {
@@ -675,6 +707,9 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     private func clearScanCheckpoint() {
+        if let fileURL = scanCheckpointFileURL {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
         UserDefaults.standard.removeObject(forKey: scanCheckpointKey)
         hasScanCheckpoint = false
     }
