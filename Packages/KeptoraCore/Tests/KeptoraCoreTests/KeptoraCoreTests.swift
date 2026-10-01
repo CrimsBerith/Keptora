@@ -175,6 +175,27 @@ final class KeptoraCoreTests: XCTestCase {
         XCTAssertEqual(result.groups.first?.assets.count, 2)
     }
 
+    func testCandidatePruningSkipsSingletons() async throws {
+        let dupA = UniversalMediaAsset(id: "dup-a", sourceID: "test", reference: .photoLibrary(localIdentifier: "dup-a"), displayName: "dup-a.jpg", mediaKind: .image, byteCount: 1000)
+        let dupB = UniversalMediaAsset(id: "dup-b", sourceID: "test", reference: .photoLibrary(localIdentifier: "dup-b"), displayName: "dup-b.jpg", mediaKind: .image, byteCount: 1000)
+        let singleton1 = UniversalMediaAsset(id: "single-1", sourceID: "test", reference: .photoLibrary(localIdentifier: "single-1"), displayName: "s1.jpg", mediaKind: .image, byteCount: 2000)
+        let singleton2 = UniversalMediaAsset(id: "single-2", sourceID: "test", reference: .photoLibrary(localIdentifier: "single-2"), displayName: "s2.jpg", mediaKind: .image, byteCount: 3000)
+
+        let adapter = CountingSourceAdapter(assets: [dupA, dupB, singleton1, singleton2])
+        let result = try await UniversalExactScanner().scan(
+            adapter: adapter,
+            allowNetwork: false,
+            progress: { _, _, _ in }
+        )
+
+        let hashCount = await adapter.hashCount()
+        // Only dupA and dupB share the same byte count, singletons must never be hashed
+        XCTAssertEqual(hashCount, 2)
+        XCTAssertEqual(result.groups.count, 1)
+        XCTAssertEqual(result.groups.first?.assets.count, 2)
+        XCTAssertEqual(result.assets.count, 4)
+    }
+
     func testMediaFingerprintDiskCacheStoresAndRetrieves() async {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_cache_\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: tempURL) }

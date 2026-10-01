@@ -4,6 +4,7 @@ struct HomeView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
     @State private var showPhotosLibrary = false
+    @State private var showRescanConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -318,11 +319,29 @@ struct HomeView: View {
     }
 
     private var scanButton: some View {
-        Button { model.startScan() } label: {
+        Button {
+            if model.plannedAssets.count > 0 || model.hasResumableReviewSession {
+                showRescanConfirmation = true
+            } else {
+                model.startScan()
+            }
+        } label: {
             Label("Start Read-Only Scan", systemImage: "sparkle.magnifyingglass")
         }
         .buttonStyle(.borderedProminent)
         .disabled(!model.canStartScan)
+        .confirmationDialog(
+            "Start new scan?",
+            isPresented: $showRescanConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Discard Review and Rescan", role: .destructive) {
+                model.startScan()
+            }
+            Button("Keep Current Review", role: .cancel) {}
+        } message: {
+            Text("Starting a new scan will reset your uncommitted review decisions.")
+        }
     }
 
     private func workflowStep(title: String, value: String, detail: String, systemImage: String, color: Color) -> some View {

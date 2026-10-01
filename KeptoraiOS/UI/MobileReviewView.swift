@@ -16,6 +16,7 @@ struct MobileReviewView: View {
     @State private var similarVideoPage = 0
     @State private var showCleanupConfirmation = false
     @State private var showPostCleanupNotice = false
+    @State private var showClearSelectionConfirmation = false
 
     private var filteredExactGroups: [UniversalExactGroup] {
         store.exactGroups.filter { $0.assets.first?.mediaKind == (media == .photos ? .image : .video) }
@@ -106,12 +107,6 @@ struct MobileReviewView: View {
             exactPage = 0
             similarPhotoPage = 0
             similarVideoPage = 0
-            store.clearExactSelection()
-            store.clearSimilarVideoSelection()
-        }
-        .onChange(of: mode) { _, _ in
-            store.clearExactSelection()
-            store.clearSimilarVideoSelection()
         }
         .onChange(of: filteredExactGroups.map(\.id)) { _, ids in
             if exactPage >= ids.count {
@@ -137,9 +132,12 @@ struct MobileReviewView: View {
         ) {
             Button(cleanupButtonTitle, role: .destructive) {
                 Task {
-                    if isSimilarVideoMode { await store.cleanupSimilarVideoSelection() }
-                    else { await store.cleanupSelection() }
-                    showPostCleanupNotice = true
+                    let success: Bool
+                    if isSimilarVideoMode { success = await store.cleanupSimilarVideoSelection() }
+                    else { success = await store.cleanupSelection() }
+                    if success {
+                        showPostCleanupNotice = true
+                    }
                 }
             }
             .accessibilityIdentifier("ios.cleanup.confirm")
@@ -158,7 +156,20 @@ struct MobileReviewView: View {
             }
             Button("Done", role: .cancel) {}
         } message: {
-            Text("Keeper photos remain safe in your library. Cleaned copies are safely restorable at any time.")
+            Text("Selected items moved safely to Recently Deleted and are restorable at any time.")
+        }
+        .confirmationDialog(
+            String(format: String(localized: "Clear all %lld selections?"), Int64(selectedCount)),
+            isPresented: $showClearSelectionConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear All Selections", role: .destructive) {
+                if isSimilarVideoMode { store.clearSimilarVideoSelection() }
+                else { store.clearExactSelection() }
+            }
+            Button("Keep Selections", role: .cancel) {}
+        } message: {
+            Text("This will deselect all currently chosen photos across all groups.")
         }
     }
 
@@ -284,7 +295,8 @@ struct MobileReviewView: View {
                         pageIndex: index,
                         totalPages: filteredExactGroups.count,
                         onPrevious: { if exactPage > 0 { if reduceMotion { exactPage -= 1 } else { withAnimation { exactPage -= 1 } } } },
-                        onNext: { if exactPage < filteredExactGroups.count - 1 { if reduceMotion { exactPage += 1 } else { withAnimation { exactPage += 1 } } } }
+                        onNext: { if exactPage < filteredExactGroups.count - 1 { if reduceMotion { exactPage += 1 } else { withAnimation { exactPage += 1 } } } },
+                        onJumpTo: { target in if reduceMotion { exactPage = target } else { withAnimation { exactPage = target } } }
                     )
                 }
             }
@@ -351,7 +363,8 @@ struct MobileReviewView: View {
                         pageIndex: index,
                         totalPages: store.similarVideoGroups.count,
                         onPrevious: { if similarVideoPage > 0 { if reduceMotion { similarVideoPage -= 1 } else { withAnimation { similarVideoPage -= 1 } } } },
-                        onNext: { if similarVideoPage < store.similarVideoGroups.count - 1 { if reduceMotion { similarVideoPage += 1 } else { withAnimation { similarVideoPage += 1 } } } }
+                        onNext: { if similarVideoPage < store.similarVideoGroups.count - 1 { if reduceMotion { similarVideoPage += 1 } else { withAnimation { similarVideoPage += 1 } } } },
+                        onJumpTo: { target in if reduceMotion { similarVideoPage = target } else { withAnimation { similarVideoPage = target } } }
                     )
                 }
             }
@@ -384,8 +397,12 @@ struct MobileReviewView: View {
                 }
                 Spacer()
                 Button {
-                    if isSimilarVideoMode { store.clearSimilarVideoSelection() }
-                    else { store.clearExactSelection() }
+                    if selectedCount > 1 {
+                        showClearSelectionConfirmation = true
+                    } else {
+                        if isSimilarVideoMode { store.clearSimilarVideoSelection() }
+                        else { store.clearExactSelection() }
+                    }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
@@ -423,8 +440,12 @@ struct MobileReviewView: View {
                     }
                     Spacer()
                     Button {
-                        if isSimilarVideoMode { store.clearSimilarVideoSelection() }
-                        else { store.clearExactSelection() }
+                        if selectedCount > 1 {
+                            showClearSelectionConfirmation = true
+                        } else {
+                            if isSimilarVideoMode { store.clearSimilarVideoSelection() }
+                            else { store.clearExactSelection() }
+                        }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)
@@ -481,11 +502,22 @@ struct MobileReviewView: View {
             kind,
             ByteCountFormatter.string(fromByteCount: selectedBytes, countStyle: .file)
         )
+        let zeroCount = isSimilarVideoMode ? store.similarVideoGroupsWithAllCopiesSelectedCount : store.exactGroupsWithAllCopiesSelectedCount
+        let zeroWarning = zeroCount > 0
+            ? "\n\n🚨 " + String(format: String(localized: "DANGER: In %1$lld set(s), ALL copies including the original are selected. You will lose this media completely!"), Int64(zeroCount))
+            : ""
+        let keeperWarning = store.hasSelectedKeeper ? "\n\n⚠️ " + String(localized: "Includes original (keeper) photo/video. It will also be deleted.") : ""
         switch store.source {
         case .photos:
-            return summary + "\n\n" + String(localized: "✓ Restorable at any time: Protected keepers stay intact. Removed photos move to Recently Deleted for up to 30 days.")
+            let baseNotice = store.hasSelectedKeeper
+                ? String(localized: "✓ Restorable at any time: Deleted items (including originals) move to Recently Deleted for up to 30 days.")
+                : String(localized: "✓ Restorable at any time: Protected keepers stay intact. Removed photos move to Recently Deleted for up to 30 days.")
+            return summary + zeroWarning + keeperWarning + "\n\n" + baseNotice
         default:
-            return summary + "\n\n" + String(localized: "✓ Restorable at any time: Protected keepers stay intact. Copies move safely to Keptora Safe Bin.")
+            let baseNotice = store.hasSelectedKeeper
+                ? String(localized: "✓ Restorable at any time: Deleted items (including originals) move safely to Keptora Safe Bin.")
+                : String(localized: "✓ Restorable at any time: Protected keepers stay intact. Copies move safely to Keptora Safe Bin.")
+            return summary + zeroWarning + keeperWarning + "\n\n" + baseNotice
         }
     }
 }
@@ -517,25 +549,40 @@ private struct ExactGroupPage: View {
     let totalPages: Int
     let onPrevious: () -> Void
     let onNext: () -> Void
+    let onJumpTo: (Int) -> Void
 
     @State private var activeInspectorAsset: UniversalMediaAsset?
     @State private var activeSafetyAsset: UniversalMediaAsset?
+
+    private var isAllCopiesSelected: Bool {
+        !group.assets.isEmpty && group.assets.allSatisfy { store.selectedAssetIDs.contains($0.id) }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if totalPages > 1 {
                     HStack(alignment: .center) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "photo.stack")
-                                .font(.system(size: 11, weight: .bold))
-                            Text(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                        Menu {
+                            ForEach(0..<min(totalPages, 50), id: \.self) { targetIndex in
+                                Button(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(targetIndex + 1), Int64(totalPages))) {
+                                    onJumpTo(targetIndex)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "photo.stack")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .foregroundStyle(MobileKeptoraDesign.accent)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(MobileKeptoraDesign.accent.opacity(0.12), in: Capsule())
                         }
-                        .foregroundStyle(MobileKeptoraDesign.accent)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(MobileKeptoraDesign.accent.opacity(0.12), in: Capsule())
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
 
@@ -582,7 +629,7 @@ private struct ExactGroupPage: View {
 
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Exact set")
+                        Text(LocalizedStringKey("Exact set"))
                             .font(.system(.title2, design: .rounded).weight(.bold))
                         Text(String(format: String(localized: "%@ copies · %@ safe to review"), group.assets.count.formatted(), ByteCountFormatter.string(fromByteCount: group.reclaimableBytes, countStyle: .file)))
                             .font(.system(.subheadline, design: .rounded))
@@ -592,6 +639,20 @@ private struct ExactGroupPage: View {
                     MobilePillBadge(title: "Verified", systemImage: "checkmark.seal.fill", tint: MobileKeptoraDesign.mint)
                 }
                 .padding(.horizontal, 4)
+
+                if isAllCopiesSelected {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.octagon.fill")
+                            .foregroundStyle(MobileKeptoraDesign.danger)
+                        Text(LocalizedStringKey("All copies selected — no copy will remain!"))
+                            .font(.system(.caption, design: .rounded).weight(.bold))
+                            .foregroundStyle(MobileKeptoraDesign.danger)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(MobileKeptoraDesign.danger.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 4)
+                }
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 10) {
                     ForEach(group.assets) { asset in
@@ -660,75 +721,134 @@ private struct MobileAssetCard: View {
     private var isKeeper: Bool { asset.id == group.keeperID }
     private var isSelected: Bool { store.selectedAssetIDs.contains(asset.id) }
 
+    private var checkboxFillColor: Color {
+        if isSelected {
+            return isKeeper ? MobileKeptoraDesign.amber : MobileKeptoraDesign.violet
+        }
+        if isKeeper {
+            return MobileKeptoraDesign.mint.opacity(0.85)
+        }
+        if asset.isProtectedFromGlobalSelection {
+            return MobileKeptoraDesign.amber.opacity(0.85)
+        }
+        return Color.black.opacity(0.40)
+    }
+
+    private var checkboxIconName: String {
+        if isSelected { return "checkmark" }
+        if isKeeper || asset.isProtectedFromGlobalSelection { return "shield.fill" }
+        return ""
+    }
+
+    @ViewBuilder
+    private var thumbnailView: some View {
+        Button(action: toggle) {
+            ZStack(alignment: .bottomLeading) {
+                MobileAssetThumbnail(asset: asset)
+                    .frame(height: 106)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                if asset.mediaKind == .video {
+                    Label(asset.formattedDuration, systemImage: "play.fill")
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3)
+                        .background(.black.opacity(0.68), in: Capsule())
+                        .padding(5)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(format: String(localized: "%@ photo"), asset.displayName))
+        .accessibilityIdentifier("review.exact.asset.\(asset.id)")
+    }
+
+    private var inspectButton: some View {
+        Button(action: onInspect) {
+            ZStack {
+                Circle()
+                    .fill(Color.black.opacity(0.52))
+                    .frame(width: 26, height: 26)
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 36, height: 36)
+            .padding(4)
+            .contentShape(Rectangle())
+            .padding(-4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(format: String(localized: "Inspect %@ full screen"), asset.displayName))
+        .accessibilityIdentifier("review.exact.inspect.\(asset.id)")
+    }
+
+    private var checkboxButton: some View {
+        Button(action: toggle) {
+            ZStack {
+                Circle()
+                    .fill(checkboxFillColor)
+                    .frame(width: 24, height: 24)
+                
+                Image(systemName: checkboxIconName)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 36, height: 36)
+            .padding(4)
+            .contentShape(Rectangle())
+            .padding(-4)
+            .shadow(radius: 3)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(format: String(localized: "Toggle selection for %@"), asset.displayName))
+        .accessibilityIdentifier("review.exact.checkbox.\(asset.id)")
+    }
+
+    private var cardDetailsView: some View {
+        Button(action: toggle) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: asset.displayName)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+
+                HStack {
+                    Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
+                        .font(.system(.caption2, design: .rounded).weight(.medium))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    assetStatusBadge
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHidden(true)
+    }
+
+    private var cardBorderShape: some ShapeStyle {
+        if isSelected {
+            return isKeeper ? AnyShapeStyle(MobileKeptoraDesign.amber) : AnyShapeStyle(MobileKeptoraDesign.brandGradient)
+        } else {
+            return AnyShapeStyle(LinearGradient(colors: [Color.white.opacity(0.30), Color.primary.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ZStack(alignment: .topTrailing) {
-                Button(action: toggle) {
-                    MobileAssetThumbnail(asset: asset)
-                        .frame(height: 106)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(alignment: .bottomLeading) {
-                            if asset.mediaKind == .video {
-                                Label(asset.formattedDuration, systemImage: "play.fill")
-                                    .font(.system(.caption2, design: .rounded).weight(.bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 5).padding(.vertical, 3)
-                                    .background(.black.opacity(0.68), in: Capsule())
-                                    .padding(5)
-                            }
-                        }
+            ZStack(alignment: .top) {
+                thumbnailView
+                HStack {
+                    inspectButton
+                    Spacer()
+                    checkboxButton
                 }
-                .buttonStyle(.plain)
-                .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
-                .accessibilityLabel(String(format: String(localized: "%@ photo"), asset.displayName))
-                .accessibilityIdentifier("review.exact.asset.\(asset.id)")
-
-                Button(action: toggle) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                isKeeper ? MobileKeptoraDesign.mint : (isSelected ? MobileKeptoraDesign.violet : Color.black.opacity(0.40))
-                            )
-                            .frame(width: 24, height: 24)
-                        
-                        Image(systemName: isKeeper ? "lock.shield.fill" : (isSelected ? "checkmark" : ""))
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-                    .frame(width: 36, height: 36)
-                    .padding(4)
-                    .contentShape(Rectangle())
-                    .padding(-4)
-                    .shadow(radius: 3)
-                }
-                .buttonStyle(.plain)
-                .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
-                .accessibilityLabel(String(format: String(localized: "Toggle selection for %@"), asset.displayName))
-                .accessibilityIdentifier("review.exact.checkbox.\(asset.id)")
             }
-
-            Button(action: toggle) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(verbatim: asset.displayName)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
-
-                    HStack {
-                        Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                            .font(.system(.caption2, design: .rounded).weight(.medium))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                        
-                        Spacer()
-                        
-                        assetStatusBadge
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
-            .accessibilityHidden(true)
+            cardDetailsView
         }
         .padding(7)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
@@ -738,14 +858,9 @@ private struct MobileAssetCard: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .stroke(
-                    isSelected
-                    ? AnyShapeStyle(MobileKeptoraDesign.brandGradient)
-                    : AnyShapeStyle(LinearGradient(colors: [Color.white.opacity(0.30), Color.primary.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing)),
-                    lineWidth: isSelected ? 2 : 1
-                )
+                .stroke(cardBorderShape, lineWidth: isSelected ? 2 : 1)
         }
-        .shadow(color: isSelected ? MobileKeptoraDesign.violet.opacity(0.24) : Color.black.opacity(0.04), radius: 12, y: 6)
+        .shadow(color: isSelected ? (isKeeper ? MobileKeptoraDesign.amber.opacity(0.24) : MobileKeptoraDesign.violet.opacity(0.24)) : Color.black.opacity(0.04), radius: 12, y: 6)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "protected keeper") : String(localized: "exact copy")))
         .accessibilityIdentifier("review.exact.container.\(asset.id)")
@@ -766,39 +881,36 @@ private struct MobileAssetCard: View {
         }
     }
 
-    @ViewBuilder
-    private var assetStatusBadge: some View {
+    private var badgeTitle: LocalizedStringKey {
         if isKeeper {
-            Text("Keeper")
-                .font(.system(.caption2, design: .rounded).weight(.bold))
-                .textCase(.uppercase)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(MobileKeptoraDesign.mint)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(MobileKeptoraDesign.mint.opacity(0.14), in: Capsule())
+            return isSelected ? "Keeper (Delete)" : "Keeper"
         } else if asset.isProtectedFromGlobalSelection {
-            Text("Protected")
-                .font(.system(.caption2, design: .rounded).weight(.bold))
-                .textCase(.uppercase)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(MobileKeptoraDesign.amber)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(MobileKeptoraDesign.amber.opacity(0.14), in: Capsule())
+            return isSelected ? "Protected (Delete)" : "Protected"
         } else {
-            Text("Copy")
-                .font(.system(.caption2, design: .rounded).weight(.bold))
-                .textCase(.uppercase)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(MobileKeptoraDesign.cyan)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(MobileKeptoraDesign.cyan.opacity(0.14), in: Capsule())
+            return "Copy"
         }
+    }
+
+    private var badgeColor: Color {
+        if isKeeper {
+            return isSelected ? MobileKeptoraDesign.amber : MobileKeptoraDesign.mint
+        } else if asset.isProtectedFromGlobalSelection {
+            return MobileKeptoraDesign.amber
+        } else {
+            return MobileKeptoraDesign.cyan
+        }
+    }
+
+    private var assetStatusBadge: some View {
+        Text(badgeTitle)
+            .font(.system(.caption2, design: .rounded).weight(.bold))
+            .textCase(.uppercase)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(badgeColor)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(badgeColor.opacity(0.14), in: Capsule())
     }
 
     private func toggle() {
@@ -818,24 +930,39 @@ private struct SimilarVideoGroupPage: View {
     let totalPages: Int
     let onPrevious: () -> Void
     let onNext: () -> Void
+    let onJumpTo: (Int) -> Void
 
     @State private var activeInspectorAsset: UniversalMediaAsset?
+
+    private var isAllCopiesSelected: Bool {
+        !group.assets.isEmpty && group.assets.allSatisfy { store.selectedSimilarVideoAssetIDs.contains($0.id) }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if totalPages > 1 {
                     HStack(alignment: .center) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "video.fill")
-                                .font(.system(size: 11, weight: .bold))
-                            Text(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                        Menu {
+                            ForEach(0..<min(totalPages, 50), id: \.self) { targetIndex in
+                                Button(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(targetIndex + 1), Int64(totalPages))) {
+                                    onJumpTo(targetIndex)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "video.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .foregroundStyle(MobileKeptoraDesign.cyan)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(MobileKeptoraDesign.cyan.opacity(0.12), in: Capsule())
                         }
-                        .foregroundStyle(MobileKeptoraDesign.cyan)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(MobileKeptoraDesign.cyan.opacity(0.12), in: Capsule())
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(String(format: String(localized: "Set %1$lld of %2$lld"), Int64(pageIndex + 1), Int64(totalPages)))
 
@@ -882,9 +1009,9 @@ private struct SimilarVideoGroupPage: View {
 
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Similar videos")
+                        Text(LocalizedStringKey("Similar videos"))
                             .font(.system(.title2, design: .rounded).weight(.bold))
-                        Text("A visual suggestion, not an exact match. Tap a card or its checkbox to choose it.")
+                        Text(LocalizedStringKey("A visual suggestion, not an exact match. Tap a card or its checkbox to choose it."))
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -892,6 +1019,20 @@ private struct SimilarVideoGroupPage: View {
                     MobilePillBadge(title: "Review first", systemImage: "eye.fill", tint: MobileKeptoraDesign.cyan)
                 }
                 .padding(.horizontal, 4)
+
+                if isAllCopiesSelected {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.octagon.fill")
+                            .foregroundStyle(MobileKeptoraDesign.danger)
+                        Text(LocalizedStringKey("All videos selected — no copy will remain!"))
+                            .font(.system(.caption, design: .rounded).weight(.bold))
+                            .foregroundStyle(MobileKeptoraDesign.danger)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(MobileKeptoraDesign.danger.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 4)
+                }
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 10) {
                     ForEach(group.assets) { asset in
@@ -937,65 +1078,148 @@ private struct SimilarVideoAssetCard: View {
     private var isProtected: Bool { asset.isProtectedFromGlobalSelection }
     private var isSelected: Bool { store.selectedSimilarVideoAssetIDs.contains(asset.id) }
 
+    private var statusBadgeColor: Color {
+        if isSelected { return MobileKeptoraDesign.amber }
+        if isKeeper || isProtected { return MobileKeptoraDesign.mint }
+        return MobileKeptoraDesign.cyan
+    }
+
+    private var checkboxFillColor: Color {
+        if isSelected {
+            return isKeeper ? MobileKeptoraDesign.amber : MobileKeptoraDesign.violet
+        }
+        if isKeeper {
+            return MobileKeptoraDesign.mint.opacity(0.85)
+        }
+        if isProtected {
+            return MobileKeptoraDesign.amber.opacity(0.85)
+        }
+        return Color.black.opacity(0.40)
+    }
+
+    private var checkboxIconName: String {
+        if isSelected { return "checkmark" }
+        if isKeeper || isProtected { return "shield.fill" }
+        return ""
+    }
+
+    private var videoThumbnail: some View {
+        ZStack(alignment: .bottomLeading) {
+            MobileAssetThumbnail(asset: asset)
+                .frame(height: 106)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            Label(asset.formattedDuration, systemImage: "play.fill")
+                .font(.system(.caption2, design: .rounded).weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 3)
+                .background(.black.opacity(0.68), in: Capsule())
+                .padding(5)
+        }
+    }
+
+    private var videoInfoRow: some View {
+        HStack {
+            Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
+                .font(.system(.caption2, design: .rounded).weight(.medium))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+            
+            Text(statusLabel)
+                .font(.system(.caption2, design: .rounded).weight(.bold))
+                .textCase(.uppercase)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(statusBadgeColor)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1.5)
+                .background(statusBadgeColor.opacity(0.14), in: Capsule())
+        }
+    }
+
+    private var cardBorderShape: some ShapeStyle {
+        if isSelected {
+            return isKeeper ? AnyShapeStyle(MobileKeptoraDesign.amber) : AnyShapeStyle(MobileKeptoraDesign.brandGradient)
+        } else {
+            return AnyShapeStyle(LinearGradient(colors: [MobileKeptoraDesign.cyan.opacity(0.24), Color.primary.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+    }
+
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            videoThumbnail
+
+            Text(verbatim: asset.displayName)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+
+            videoInfoRow
+        }
+        .padding(7)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(
+            (isSelected ? MobileKeptoraDesign.violet : MobileKeptoraDesign.cyan).opacity(isSelected ? 0.10 : 0.02),
+            in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(cardBorderShape, lineWidth: isSelected ? 2 : 1)
+        }
+        .shadow(color: isSelected ? (isKeeper ? MobileKeptoraDesign.amber.opacity(0.22) : MobileKeptoraDesign.violet.opacity(0.22)) : Color.black.opacity(0.04), radius: 12, y: 6)
+    }
+
+    private var inspectButton: some View {
+        Button(action: onInspect) {
+            ZStack {
+                Circle()
+                    .fill(Color.black.opacity(0.52))
+                    .frame(width: 26, height: 26)
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 36, height: 36)
+            .padding(4)
+            .contentShape(Rectangle())
+            .padding(-4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(format: String(localized: "Inspect %@ video full screen"), asset.displayName))
+        .accessibilityIdentifier("review.similarVideo.inspect.\(asset.id)")
+    }
+
+    private var checkboxButton: some View {
+        Button(action: toggle) {
+            ZStack {
+                Circle()
+                    .fill(checkboxFillColor)
+                    .frame(width: 24, height: 24)
+                
+                Image(systemName: checkboxIconName)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 36, height: 36)
+            .padding(4)
+            .contentShape(Rectangle())
+            .padding(-4)
+            .shadow(radius: 3)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(format: String(localized: "Toggle selection for %@"), asset.displayName))
+        .accessibilityIdentifier("review.similarVideo.checkbox.\(asset.id)")
+    }
+
     var body: some View {
         Button {
             toggle()
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                MobileAssetThumbnail(asset: asset)
-                    .frame(height: 106)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(alignment: .bottomLeading) {
-                        Label(asset.formattedDuration, systemImage: "play.fill")
-                            .font(.system(.caption2, design: .rounded).weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5).padding(.vertical, 3)
-                            .background(.black.opacity(0.68), in: Capsule())
-                            .padding(5)
-                    }
-
-                Text(verbatim: asset.displayName)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-
-                HStack {
-                    Text(verbatim: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
-                        .font(.system(.caption2, design: .rounded).weight(.medium))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                    
-                    Spacer()
-                    
-                    Text(statusLabel)
-                        .font(.system(.caption2, design: .rounded).weight(.bold))
-                        .textCase(.uppercase)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundStyle(isKeeper || isProtected ? MobileKeptoraDesign.mint : MobileKeptoraDesign.cyan)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1.5)
-                        .background((isKeeper || isProtected ? MobileKeptoraDesign.mint : MobileKeptoraDesign.cyan).opacity(0.14), in: Capsule())
-                }
-            }
-            .padding(7)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-            .background(
-                (isSelected ? MobileKeptoraDesign.violet : MobileKeptoraDesign.cyan).opacity(isSelected ? 0.10 : 0.02),
-                in: RoundedRectangle(cornerRadius: 15, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .stroke(
-                        isSelected
-                        ? AnyShapeStyle(MobileKeptoraDesign.brandGradient)
-                        : AnyShapeStyle(LinearGradient(colors: [MobileKeptoraDesign.cyan.opacity(0.24), Color.primary.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)),
-                        lineWidth: isSelected ? 2 : 1
-                    )
-            }
-            .shadow(color: isSelected ? MobileKeptoraDesign.violet.opacity(0.22) : Color.black.opacity(0.04), radius: 12, y: 6)
+            cardContent
         }
         .buttonStyle(.plain)
-        .disabled(isKeeper || isProtected)
         .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "protected keeper") : String(localized: "similar video candidate")))
         .accessibilityIdentifier("review.similarVideo.asset.\(asset.id)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -1006,31 +1230,12 @@ private struct SimilarVideoAssetCard: View {
                 Label("Inspect Video", systemImage: "arrow.up.left.and.arrow.down.right")
             }
         }
-        .overlay(alignment: .topTrailing) {
-            Button(action: toggle) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            isKeeper || isProtected
-                            ? MobileKeptoraDesign.mint
-                            : (isSelected ? MobileKeptoraDesign.violet : Color.black.opacity(0.40))
-                        )
-                        .frame(width: 24, height: 24)
-                    
-                    Image(systemName: isKeeper || isProtected ? "lock.shield.fill" : (isSelected ? "checkmark" : ""))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 36, height: 36)
-                .padding(4)
-                .contentShape(Rectangle())
-                .padding(-4)
-                .shadow(radius: 3)
+        .overlay(alignment: .top) {
+            HStack {
+                inspectButton
+                Spacer()
+                checkboxButton
             }
-            .buttonStyle(.plain)
-            .disabled(isKeeper || isProtected)
-            .accessibilityLabel(String(format: String(localized: "Toggle selection for %@"), asset.displayName))
-            .accessibilityIdentifier("review.similarVideo.checkbox.\(asset.id)")
         }
     }
 
@@ -1042,8 +1247,8 @@ private struct SimilarVideoAssetCard: View {
     }
 
     private var statusLabel: LocalizedStringKey {
-        if isKeeper { return "Keeper" }
-        if isProtected { return "Protected" }
+        if isKeeper { return isSelected ? "Keeper (Delete)" : "Keeper" }
+        if isProtected { return isSelected ? "Protected (Delete)" : "Protected" }
         return "Review"
     }
 }

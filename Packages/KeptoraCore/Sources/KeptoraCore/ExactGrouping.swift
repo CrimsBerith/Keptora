@@ -82,20 +82,70 @@ public actor UniversalExactScanner {
             }
         }
 
+        // Phase 1: Candidate signature bucketing.
+        // Exact duplicates must have identical byte count (or matching media metadata if size is unknown).
+        // Assets with unique signatures cannot be duplicates and do not need full SHA-256 data hashing.
+        var assetSignatures: [String: String] = [:]
+        var signatureCounts: [String: Int] = [:]
+
+        for asset in assets {
+            let sig: String
+            if let byteCount = asset.byteCount, byteCount > 0 {
+                sig = "s:\(byteCount)"
+            } else if let prior = resumableEntries[asset.id],
+                      (prior.fingerprint.byteCount > 0 || (prior.fingerprintedAsset.byteCount ?? 0) > 0) {
+                let b = prior.fingerprint.byteCount > 0 ? prior.fingerprint.byteCount : prior.fingerprintedAsset.byteCount!
+                sig = "s:\(b)"
+            } else if let queried = await adapter.assetByteCount(for: asset), queried > 0 {
+                sig = "s:\(queried)"
+            } else {
+                sig = "d:\(asset.mediaKind.rawValue):\(asset.pixelWidth)x\(asset.pixelHeight):\(Int(asset.duration ?? 0))"
+            }
+            assetSignatures[asset.id] = sig
+            signatureCounts[sig, default: 0] += 1
+        }
+
+        // Phase 2: Processing and hashing candidate assets.
         for (index, asset) in assets.enumerated() {
             try Task.checkCancellation()
             let now = Date()
-            if index == 0 || index == assets.count - 1 || now.timeIntervalSince(lastProgressEmission) >= 0.1 {
+            if index == 0 || index == assets.count - 1 || now.timeIntervalSince(lastProgressEmission) >= 0.05 {
                 lastProgressEmission = now
                 progress(index, assets.count, asset.displayName)
             }
+
+            let sig = assetSignatures[asset.id] ?? "unknown"
+            let isCandidate = (signatureCounts[sig] ?? 0) > 1
+
+            // Replay from prior checkpoint if valid and revision matches
             if let prior = resumableEntries[asset.id], Self.sameRevision(asset, prior.sourceAsset) {
-                groupsByFingerprint[prior.fingerprint, default: []].append(prior.fingerprintedAsset)
-                completedEntries.append(prior)
+                // Singletons can keep their unique fingerprint; candidates require real SHA256 (not "unique:")
+                if !isCandidate || !prior.fingerprint.digest.hasPrefix("unique:") {
+                    groupsByFingerprint[prior.fingerprint, default: []].append(prior.fingerprintedAsset)
+                    completedEntries.append(prior)
+                    continue
+                }
+            }
+
+            // Singleton fast-path: prune hashing
+            if !isCandidate {
+                let resolvedByteCount = asset.byteCount ?? 0
+                let fingerprint = UniversalExactFingerprint(
+                    digest: "unique:\(asset.id)",
+                    byteCount: resolvedByteCount
+                )
+                let fingerprintedAsset = asset.with(
+                    byteCount: resolvedByteCount > 0 ? resolvedByteCount : nil,
+                    requiresNetwork: false
+                )
+                groupsByFingerprint[fingerprint, default: []].append(fingerprintedAsset)
+                completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
                 pendingEntriesCount += 1
                 emitCheckpointIfNeeded()
                 continue
             }
+
+            // Candidate duplicate: two or more assets share the exact signature. Full SHA-256 fingerprint required.
             do {
                 let fingerprint = try await adapter.exactFingerprint(
                     for: asset,
@@ -114,6 +164,12 @@ public actor UniversalExactScanner {
                 skippedNetwork += 1
             } catch UniversalScanError.resourceUnavailable {
                 skippedNetwork += 1
+            } catch UniversalScanError.inaccessibleAsset {
+                skippedNetwork += 1
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                skippedNetwork += 1
             }
         }
         emitCheckpointIfNeeded(force: true)
@@ -122,8 +178,12 @@ public actor UniversalExactScanner {
             members.count > 1 ? UniversalExactGroup(digest: fingerprint.digest, assets: members) : nil
         }.sorted { $0.reclaimableBytes > $1.reclaimableBytes }
         progress(assets.count, assets.count, "")
+
+        let completedAssetMap = Dictionary(completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprintedAsset) }, uniquingKeysWith: { _, latest in latest })
+        let finalizedAssets = assets.map { completedAssetMap[$0.id] ?? $0 }
+
         return (
-            assets,
+            finalizedAssets,
             groups,
             skippedNetwork,
             Dictionary(completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) }, uniquingKeysWith: { _, latest in latest })
@@ -131,9 +191,14 @@ public actor UniversalExactScanner {
     }
 
     private static func sameRevision(_ current: UniversalMediaAsset, _ prior: UniversalMediaAsset) -> Bool {
-        current.reference == prior.reference &&
-        current.modificationDate == prior.modificationDate &&
-        current.byteCount == prior.byteCount
+        guard current.reference == prior.reference,
+              current.modificationDate == prior.modificationDate else {
+            return false
+        }
+        if let cb = current.byteCount, let pb = prior.byteCount {
+            return cb == pb
+        }
+        return true
     }
 }
 

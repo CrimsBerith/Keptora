@@ -73,9 +73,9 @@ final class MobileKeptoraStore: ObservableObject {
     @Published private(set) var authorization: SourceAuthorization = .notDetermined
     @Published var scanState: ScanState = .idle
     @Published private(set) var assets: [UniversalMediaAsset] = []
-    @Published private(set) var exactGroups: [UniversalExactGroup] = []
+    @Published internal(set) var exactGroups: [UniversalExactGroup] = []
     @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = []
-    @Published private(set) var similarVideoGroups: [UniversalSimilarityGroup] = []
+    @Published internal(set) var similarVideoGroups: [UniversalSimilarityGroup] = []
     @Published var similarityProgress: (processed: Int, total: Int)?
     @Published var videoSimilarityProgress: (processed: Int, total: Int)?
     @Published private(set) var skippedCloudItems = 0
@@ -156,7 +156,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     var selectedSafeAssets: [UniversalMediaAsset] {
         var unique: [String: UniversalMediaAsset] = [:]
-        for asset in exactGroups.flatMap(\.safeCopies) where selectedAssetIDs.contains(asset.id) {
+        for asset in exactGroups.flatMap(\.assets) where selectedAssetIDs.contains(asset.id) {
             unique[asset.id] = asset
         }
         return Array(unique.values)
@@ -168,7 +168,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     var selectedSimilarVideoAssets: [UniversalMediaAsset] {
         var unique: [String: UniversalMediaAsset] = [:]
-        for asset in similarVideoGroups.flatMap(\.safeCandidates)
+        for asset in similarVideoGroups.flatMap(\.assets)
         where selectedSimilarVideoAssetIDs.contains(asset.id) {
             unique[asset.id] = asset
         }
@@ -177,6 +177,30 @@ final class MobileKeptoraStore: ObservableObject {
 
     var selectedSimilarVideoBytes: Int64 {
         selectedSimilarVideoAssets.reduce(0) { $0 + ($1.byteCount ?? 0) }
+    }
+
+    var hasSelectedKeeper: Bool {
+        exactGroups.contains { group in
+            selectedAssetIDs.contains(group.keeperID)
+        } || similarVideoGroups.contains { group in
+            selectedSimilarVideoAssetIDs.contains(group.keeperID)
+        }
+    }
+
+    var exactGroupsWithAllCopiesSelectedCount: Int {
+        exactGroups.filter { group in
+            !group.assets.isEmpty && group.assets.allSatisfy { selectedAssetIDs.contains($0.id) }
+        }.count
+    }
+
+    var similarVideoGroupsWithAllCopiesSelectedCount: Int {
+        similarVideoGroups.filter { group in
+            !group.assets.isEmpty && group.assets.allSatisfy { selectedSimilarVideoAssetIDs.contains($0.id) }
+        }.count
+    }
+
+    var hasAnyGroupWithAllCopiesSelected: Bool {
+        exactGroupsWithAllCopiesSelectedCount > 0 || similarVideoGroupsWithAllCopiesSelectedCount > 0
     }
 
     var currentGroup: UniversalExactGroup? {
@@ -219,6 +243,7 @@ final class MobileKeptoraStore: ObservableObject {
         shouldConnectPhotosWhenAuthorized = false
         source = .photos
         resetResults(clearCheckpoint: false)
+        startScan()
     }
 
     func handleAppLaunchAuthorization() async {
@@ -237,6 +262,9 @@ final class MobileKeptoraStore: ObservableObject {
         } else if status == .authorized || status == .limited {
             source = .photos
             resetResults(clearCheckpoint: false)
+            if scanState == .idle {
+                startScan()
+            }
         }
     }
 
@@ -343,12 +371,22 @@ final class MobileKeptoraStore: ObservableObject {
         selectedAssetIDs.removeAll()
         selectedSimilarVideoAssetIDs.removeAll()
         let selectedSource = source
+        guard selectedSource != .none else { return }
+        print("[KeptoraScan] Starting scan for source: \(selectedSource), allowNetwork: \(allowNetwork)")
         lastScanAllowedNetwork = allowNetwork
         let checkpoint = loadScanCheckpoint(matching: selectedSource, allowNetwork: allowNetwork)
         if checkpoint == nil { clearScanCheckpoint() }
         suspendedForBackground = false
+        scanState = .scanning(processed: 0, total: max(assets.count, 1), current: String(localized: "Connecting to library…"))
+        lastProgressUpdateTime = Date()
+        UIApplication.shared.isIdleTimerDisabled = true
         scanTask = Task { [weak self] in
             guard let self else { return }
+            defer {
+                Task { @MainActor in
+                    UIApplication.shared.isIdleTimerDisabled = false
+                }
+            }
             do {
                 let adapter: any SourceAdapter
                 let imageProvider: any SimilarityImageProviding
@@ -367,8 +405,10 @@ final class MobileKeptoraStore: ObservableObject {
                     imageProvider = folder
                     videoProvider = folder
                 case .none:
+                    scanState = .idle
                     return
                 }
+                print("[KeptoraScan] Calling scanner.scan...")
                 let result = try await scanner.scan(
                     adapter: adapter,
                     allowNetwork: allowNetwork,
@@ -378,16 +418,20 @@ final class MobileKeptoraStore: ObservableObject {
                     },
                     progress: { processed, total, current in
                         Task { @MainActor [weak self] in
-                            guard let self, case .scanning = self.scanState else { return }
+                            guard let self else { return }
                             let now = Date()
-                            if processed == 0 || processed == total || now.timeIntervalSince(self.lastProgressUpdateTime) >= 0.1 {
+                            if processed == 0 || processed == total || now.timeIntervalSince(self.lastProgressUpdateTime) >= 0.05 {
                                 self.lastProgressUpdateTime = now
                                 self.scanState = .scanning(processed: processed, total: total, current: current)
+                                if processed % 100 == 0 || processed == total {
+                                    print("[KeptoraScan] Progress: \(processed)/\(total) (\(current))")
+                                }
                             }
                         }
                     }
                 )
                 guard !Task.isCancelled else { return }
+                print("[KeptoraScan] Exact scan done: \(result.assets.count) assets, \(result.groups.count) exact duplicate groups, skippedNetwork: \(result.skippedNetwork)")
                 assets = result.assets
                 exactGroups = result.groups
                 scanFingerprintsByAssetID = result.fingerprintsByAssetID
@@ -410,9 +454,11 @@ final class MobileKeptoraStore: ObservableObject {
                         }
                     )
                     currentSimilarityGroupIndex = 0
+                    print("[KeptoraScan] Visual similarity done: \(similarityGroups.count) groups")
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {
+                    print("[KeptoraScan] Visual similarity error: \(error)")
                     similarityGroups = []
                 }
                 similarityProgress = nil
@@ -435,17 +481,21 @@ final class MobileKeptoraStore: ObservableObject {
                             }
                         }
                     )
+                    print("[KeptoraScan] Video similarity done: \(similarVideoGroups.count) groups")
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {
+                    print("[KeptoraScan] Video similarity error: \(error)")
                     similarVideoGroups = []
                 }
                 videoSimilarityProgress = nil
             } catch is CancellationError {
+                print("[KeptoraScan] Scan was cancelled")
                 scanState = suspendedForBackground ? .paused : .idle
                 similarityProgress = nil
                 videoSimilarityProgress = nil
             } catch {
+                print("[KeptoraScan] Scan failed: \(error)")
                 scanState = .failed(error.localizedDescription)
                 errorMessage = error.localizedDescription
             }
@@ -462,6 +512,7 @@ final class MobileKeptoraStore: ObservableObject {
         similarityProgress = nil
         videoSimilarityProgress = nil
         clearScanCheckpoint()
+        UIApplication.shared.isIdleTimerDisabled = false
     }
 
     func suspendScanForBackground() {
@@ -487,7 +538,6 @@ final class MobileKeptoraStore: ObservableObject {
 
     @discardableResult
     func toggleSelection(_ asset: UniversalMediaAsset, in group: UniversalExactGroup, isUnlocked: Bool) -> Bool {
-        guard asset.id != group.keeperID, !asset.isProtectedFromGlobalSelection else { return true }
         guard authorizeReview(assetIDs: [asset.id], isUnlocked: isUnlocked) else { return false }
         if !selectedAssetIDs.insert(asset.id).inserted { selectedAssetIDs.remove(asset.id) }
         return true
@@ -510,9 +560,7 @@ final class MobileKeptoraStore: ObservableObject {
         in group: UniversalSimilarityGroup,
         isUnlocked: Bool
     ) -> Bool {
-        guard group.mediaKind == .video,
-              asset.id != group.keeperID,
-              !asset.isProtectedFromGlobalSelection else { return true }
+        guard group.mediaKind == .video else { return true }
         guard authorizeReview(assetIDs: [asset.id], isUnlocked: isUnlocked) else { return false }
         if !selectedSimilarVideoAssetIDs.insert(asset.id).inserted {
             selectedSimilarVideoAssetIDs.remove(asset.id)
@@ -533,9 +581,9 @@ final class MobileKeptoraStore: ObservableObject {
         capturedBytes: Int64,
         resolveFolderCandidates: (URL) async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)],
         onSuccess: () -> Void
-    ) async {
-        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
-        guard !selection.isEmpty else { return }
+    ) async -> Bool {
+        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return false }
+        guard !selection.isEmpty else { return false }
         isCleaningUp = true
         defer { isCleaningUp = false }
         do {
@@ -572,21 +620,52 @@ final class MobileKeptoraStore: ObservableObject {
                     ), at: 0
                 )
             case .none:
-                return
+                return false
+            }
+            let removedIDs = Set(selection.map(\.id))
+            exactGroups = exactGroups.compactMap { group in
+                let remaining = group.assets.filter { !removedIDs.contains($0.id) }
+                guard remaining.count > 1 else { return nil }
+                let newKeeper = remaining.contains(where: { $0.id == group.keeperID }) ? group.keeperID : remaining.first?.id ?? ""
+                return UniversalExactGroup(digest: group.digest, assets: remaining, keeperID: newKeeper)
+            }
+            similarVideoGroups = similarVideoGroups.compactMap { group in
+                let remaining = group.assets.filter { !removedIDs.contains($0.id) }
+                guard remaining.count > 1 else { return nil }
+                let newKeeper = remaining.contains(where: { $0.id == group.keeperID }) ? group.keeperID : remaining.first?.id ?? ""
+                return UniversalSimilarityGroup(
+                    id: group.id,
+                    assets: remaining,
+                    maximumDistance: group.maximumDistance,
+                    mediaKind: group.mediaKind,
+                    keeperID: newKeeper
+                )
+            }
+            assets.removeAll { removedIDs.contains($0.id) }
+            for id in removedIDs {
+                scanFingerprintsByAssetID.removeValue(forKey: id)
+            }
+            if currentGroupIndex >= exactGroups.count {
+                currentGroupIndex = max(0, exactGroups.count - 1)
+            }
+            if currentSimilarityGroupIndex >= similarVideoGroups.count {
+                currentSimilarityGroupIndex = max(0, similarVideoGroups.count - 1)
             }
             persistHistory()
             onSuccess()
-            startScan(allowNetwork: lastScanAllowedNetwork)
+            return true
         } catch {
-            guard !Self.isUserCancellation(error) else { return }
+            guard !Self.isUserCancellation(error) else { return false }
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
-    func cleanupSelection() async {
+    @discardableResult
+    func cleanupSelection() async -> Bool {
         let selection = selectedSafeAssets
         let capturedBytes = selectedBytes
-        await executeCleanup(
+        return await executeCleanup(
             selection: selection,
             capturedBytes: capturedBytes,
             resolveFolderCandidates: { [weak self] _ in
@@ -605,10 +684,11 @@ final class MobileKeptoraStore: ObservableObject {
         )
     }
 
-    func cleanupSimilarVideoSelection() async {
+    @discardableResult
+    func cleanupSimilarVideoSelection() async -> Bool {
         let selection = selectedSimilarVideoAssets
         let capturedBytes = selectedSimilarVideoBytes
-        await executeCleanup(
+        return await executeCleanup(
             selection: selection,
             capturedBytes: capturedBytes,
             resolveFolderCandidates: { [weak self] _ in

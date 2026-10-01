@@ -334,6 +334,13 @@ public protocol SourceAdapter: Sendable {
         allowNetwork: Bool,
         progress: @escaping @Sendable (Int64) -> Void
     ) async throws -> UniversalExactFingerprint
+    func assetByteCount(for asset: UniversalMediaAsset) async -> Int64?
+}
+
+extension SourceAdapter {
+    public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
+        asset.byteCount
+    }
 }
 
 public protocol SimilarityImageProviding: Sendable {

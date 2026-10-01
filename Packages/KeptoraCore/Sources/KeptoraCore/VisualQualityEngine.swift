@@ -141,21 +141,23 @@ public enum VisualQualityEngine: Sendable {
         var hasDetectedFace = false
         var eyesOpenDetected = false
         
-        let faceRequest = VNDetectFaceLandmarksRequest()
-        faceRequest.revision = VNDetectFaceLandmarksRequestRevision3
+        let faceRequest = VNDetectFaceRectanglesRequest()
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         if let _ = try? handler.perform([faceRequest]),
            let results = faceRequest.results, !results.isEmpty {
             hasDetectedFace = true
-            faceScore = 50.0
+            faceScore = 60.0
             
-            for face in results {
-                if face.confidence > 0.4 {
-                    if let leftEye = face.landmarks?.leftEye, let rightEye = face.landmarks?.rightEye,
-                       leftEye.pointCount > 0, rightEye.pointCount > 0 {
-                        eyesOpenDetected = true
-                        faceScore = min(100.0, faceScore + 35.0)
-                    }
+            if let firstFace = results.first, firstFace.confidence > 0.5 {
+                let landmarkRequest = VNDetectFaceLandmarksRequest()
+                landmarkRequest.inputFaceObservations = [firstFace]
+                if let _ = try? handler.perform([landmarkRequest]),
+                   let landmarkResults = landmarkRequest.results,
+                   let landmarks = landmarkResults.first?.landmarks,
+                   let leftEye = landmarks.leftEye, let rightEye = landmarks.rightEye,
+                   leftEye.pointCount > 0, rightEye.pointCount > 0 {
+                    eyesOpenDetected = true
+                    faceScore = min(100.0, faceScore + 35.0)
                 }
             }
         }

@@ -85,9 +85,22 @@ struct MobileHistoryView: View {
                                 .foregroundStyle(.secondary)
 
                                 if entry.kind == .photosRecentlyDeleted {
-                                    Text("Recover items from Recently Deleted in Apple Photos. With iCloud Photos, recovery syncs across your devices.")
-                                        .font(.system(.footnote, design: .rounded))
-                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Recover items from Recently Deleted in Apple Photos. With iCloud Photos, recovery syncs across your devices.")
+                                            .font(.system(.footnote, design: .rounded))
+                                            .foregroundStyle(.secondary)
+
+                                        Button {
+                                            if let url = URL(string: "photos-redirect://") {
+                                                UIApplication.shared.open(url)
+                                            }
+                                        } label: {
+                                            Label("Open Apple Photos", systemImage: "arrow.up.forward.app")
+                                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                    }
                                 } else if entry.restoredAt != nil {
                                     HStack(spacing: 6) {
                                         Image(systemName: "checkmark.circle.fill")

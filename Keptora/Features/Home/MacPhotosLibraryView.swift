@@ -50,17 +50,41 @@ private final class MacPhotosLibraryStore: ObservableObject {
     }
 
     var selectedAssets: [UniversalMediaAsset] {
-        exactGroups.flatMap(\.safeCopies).filter { selectedAssetIDs.contains($0.id) }
+        exactGroups.flatMap(\.assets).filter { selectedAssetIDs.contains($0.id) }
     }
 
     var selectedBytes: Int64 { selectedAssets.reduce(0) { $0 + ($1.byteCount ?? 0) } }
 
     var selectedSimilarVideoAssets: [UniversalMediaAsset] {
-        similarVideoGroups.flatMap(\.safeCandidates).filter { selectedSimilarVideoAssetIDs.contains($0.id) }
+        similarVideoGroups.flatMap(\.assets).filter { selectedSimilarVideoAssetIDs.contains($0.id) }
     }
 
     var selectedSimilarVideoBytes: Int64 {
         selectedSimilarVideoAssets.reduce(0) { $0 + ($1.byteCount ?? 0) }
+    }
+
+    var hasSelectedKeeper: Bool {
+        exactGroups.contains { group in
+            selectedAssetIDs.contains(group.keeperID)
+        }
+    }
+
+    var hasSelectedSimilarVideoKeeper: Bool {
+        similarVideoGroups.contains { group in
+            selectedSimilarVideoAssetIDs.contains(group.keeperID)
+        }
+    }
+
+    var exactGroupsWithAllCopiesSelectedCount: Int {
+        exactGroups.filter { group in
+            !group.assets.isEmpty && group.assets.allSatisfy { selectedAssetIDs.contains($0.id) }
+        }.count
+    }
+
+    var similarVideoGroupsWithAllCopiesSelectedCount: Int {
+        similarVideoGroups.filter { group in
+            !group.assets.isEmpty && group.assets.allSatisfy { selectedSimilarVideoAssetIDs.contains($0.id) }
+        }.count
     }
 
     func refreshAuthorization() async {
@@ -170,7 +194,6 @@ private final class MacPhotosLibraryStore: ObservableObject {
     }
 
     func toggle(_ asset: UniversalMediaAsset, in group: UniversalExactGroup) {
-        guard asset.id != group.keeperID, !asset.isProtectedFromGlobalSelection else { return }
         if !selectedAssetIDs.insert(asset.id).inserted { selectedAssetIDs.remove(asset.id) }
     }
 
@@ -183,9 +206,7 @@ private final class MacPhotosLibraryStore: ObservableObject {
     }
 
     func toggleSimilarVideo(_ asset: UniversalMediaAsset, in group: UniversalSimilarityGroup) {
-        guard group.mediaKind == .video,
-              asset.id != group.keeperID,
-              !asset.isProtectedFromGlobalSelection else { return }
+        guard group.mediaKind == .video else { return }
         if !selectedSimilarVideoAssetIDs.insert(asset.id).inserted {
             selectedSimilarVideoAssetIDs.remove(asset.id)
         }
@@ -214,8 +235,19 @@ private final class MacPhotosLibraryStore: ObservableObject {
             }
             try await adapter.deleteExactAssets(localIdentifiers: identifiers)
             completedPhotosCleanupCount = selection.count
+            let removedIDs = Set(selection.map(\.id))
+            exactGroups = exactGroups.compactMap { (group: UniversalExactGroup) -> UniversalExactGroup? in
+                let remaining = group.assets.filter { !removedIDs.contains($0.id) }
+                guard remaining.count > 1 else { return nil }
+                let newKeeper = remaining.contains(where: { $0.id == group.keeperID }) ? group.keeperID : remaining.first?.id ?? ""
+                return UniversalExactGroup(digest: group.digest, assets: remaining, keeperID: newKeeper)
+            }
+            assets.removeAll { removedIDs.contains($0.id) }
+            for id in removedIDs {
+                scanFingerprintsByAssetID.removeValue(forKey: id)
+            }
             selectedAssetIDs.removeAll()
-            scan(allowNetwork: lastScanAllowedNetwork)
+            selectedGroupID = exactGroups.first?.id
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -244,8 +276,25 @@ private final class MacPhotosLibraryStore: ObservableObject {
             }
             try await adapter.deleteSelectedAssets(localIdentifiers: identifiers)
             completedPhotosCleanupCount = selection.count
+            let removedIDs = Set(selection.map(\.id))
+            similarVideoGroups = similarVideoGroups.compactMap { (group: UniversalSimilarityGroup) -> UniversalSimilarityGroup? in
+                let remaining = group.assets.filter { !removedIDs.contains($0.id) }
+                guard remaining.count > 1 else { return nil }
+                let newKeeper = remaining.contains(where: { $0.id == group.keeperID }) ? group.keeperID : remaining.first?.id ?? ""
+                return UniversalSimilarityGroup(
+                    id: group.id,
+                    assets: remaining,
+                    maximumDistance: group.maximumDistance,
+                    mediaKind: group.mediaKind,
+                    keeperID: newKeeper
+                )
+            }
+            assets.removeAll { removedIDs.contains($0.id) }
+            for id in removedIDs {
+                scanFingerprintsByAssetID.removeValue(forKey: id)
+            }
             selectedSimilarVideoAssetIDs.removeAll()
-            scan(allowNetwork: lastScanAllowedNetwork)
+            selectedSimilarityGroupID = similarVideoGroups.first?.id
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -299,8 +348,6 @@ struct MacPhotosLibraryView: View {
         .keptoraOnChange(of: media) {
             photos.selectedGroupID = filteredExactGroups.first?.id
             photos.selectedSimilarityGroupID = filteredSimilarityGroups.first?.id
-            photos.selectedAssetIDs.removeAll()
-            photos.selectedSimilarVideoAssetIDs.removeAll()
         }
         .keptoraOnChange(of: scenePhase) { phase in
             if phase == .active { Task { await photos.refreshAuthorization() } }
@@ -336,11 +383,19 @@ struct MacPhotosLibraryView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            if isSimilarVideoMode {
-                Text("\(cleanupCount.formatted()) manually reviewed similar videos will move to Recently Deleted. The keeper stays protected. With iCloud Photos, removal syncs to your other devices.")
-            } else {
-                Text("\(cleanupCount.formatted()) verified exact copies will move to Recently Deleted. The keeper stays protected. With iCloud Photos, removal syncs to your other devices.")
-            }
+            let zeroCount = isSimilarVideoMode ? photos.similarVideoGroupsWithAllCopiesSelectedCount : photos.exactGroupsWithAllCopiesSelectedCount
+            let zeroWarning = zeroCount > 0
+                ? "\n\n🚨 DANGER: In \(zeroCount) set(s), ALL copies including the original are selected. You will lose this media completely!"
+                : ""
+            let hasKeeper = isSimilarVideoMode ? photos.hasSelectedSimilarVideoKeeper : photos.hasSelectedKeeper
+            let keeperWarning = hasKeeper
+                ? "\n\n⚠️ Includes original (keeper) photo/video. It will also be deleted."
+                : "\n\nProtected keepers stay intact."
+            let summary = isSimilarVideoMode
+                ? "\(cleanupCount.formatted()) manually reviewed similar videos will move to Recently Deleted."
+                : "\(cleanupCount.formatted()) verified exact copies will move to Recently Deleted."
+            let baseNotice = "\n\n✓ Restorable at any time: Deleted items move to Recently Deleted for up to 30 days. With iCloud Photos, removal syncs to your other devices."
+            Text(summary + zeroWarning + keeperWarning + baseNotice)
         }
     }
 
@@ -600,20 +655,18 @@ private struct MacPhotosAssetCard: View {
             .overlay { RoundedRectangle(cornerRadius: 16).stroke(selected ? KeptoraDesign.accent : Color.primary.opacity(0.06), lineWidth: selected ? 2 : 1) }
         }
         .buttonStyle(.plain)
-        .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
-        .accessibilityLabel("\(asset.displayName), \(isKeeper ? "protected keeper" : "exact copy")")
+        .accessibilityLabel("\(asset.displayName), \(isKeeper ? "keeper" : "exact copy")")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .overlay(alignment: .topTrailing) {
             Button(action: action) {
-                Image(systemName: isKeeper || asset.isProtectedFromGlobalSelection ? "lock.shield.fill" : (selected ? "checkmark.square.fill" : "square"))
+                Image(systemName: selected ? "checkmark.square.fill" : (isKeeper || asset.isProtectedFromGlobalSelection ? "shield.fill" : "square"))
                     .font(.title2)
-                    .foregroundStyle(isKeeper || asset.isProtectedFromGlobalSelection ? .green : (selected ? KeptoraDesign.accent : .primary))
+                    .foregroundStyle(selected ? (isKeeper ? .orange : KeptoraDesign.accent) : (isKeeper || asset.isProtectedFromGlobalSelection ? .green : .primary))
                     .padding(8)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(isKeeper || asset.isProtectedFromGlobalSelection)
             .padding(8)
             .accessibilityLabel(selected ? "Deselect \(asset.displayName)" : "Select \(asset.displayName)")
             .accessibilityIdentifier("mac.photos.exact.checkbox.\(asset.id)")
@@ -649,10 +702,10 @@ private struct MacSimilarVideoCard: View {
                     Text(asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
                     Spacer()
                     if isKeeper {
-                        Text("Protected keeper")
-                            .font(.caption).foregroundStyle(.green)
+                        Text(selected ? "Keeper (Delete)" : "Keeper")
+                            .font(.caption).foregroundStyle(selected ? .orange : .green)
                     } else if isProtected {
-                        Text("Protected metadata")
+                        Text(selected ? "Protected (Delete)" : "Protected")
                             .font(.caption).foregroundStyle(.green)
                     } else {
                         Text("Review candidate")
@@ -664,23 +717,21 @@ private struct MacSimilarVideoCard: View {
             .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 16))
             .overlay {
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(selected ? KeptoraDesign.accent : Color.primary.opacity(0.06), lineWidth: selected ? 2 : 1)
+                    .stroke(selected ? (isKeeper ? .orange : KeptoraDesign.accent) : Color.primary.opacity(0.06), lineWidth: selected ? 2 : 1)
             }
         }
         .buttonStyle(.plain)
-        .disabled(isKeeper || isProtected)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .overlay(alignment: .topTrailing) {
             Button(action: action) {
-                Image(systemName: isKeeper || isProtected ? "lock.shield.fill" : (selected ? "checkmark.square.fill" : "square"))
+                Image(systemName: selected ? "checkmark.square.fill" : (isKeeper || isProtected ? "shield.fill" : "square"))
                     .font(.title2)
-                    .foregroundStyle(isKeeper || isProtected ? .green : (selected ? KeptoraDesign.accent : .primary))
+                    .foregroundStyle(selected ? (isKeeper ? .orange : KeptoraDesign.accent) : (isKeeper || isProtected ? .green : .primary))
                     .padding(8)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(isKeeper || isProtected)
             .padding(8)
             .accessibilityLabel(selected ? "Deselect \(asset.displayName)" : "Select \(asset.displayName)")
             .accessibilityIdentifier("mac.photos.similarVideo.checkbox.\(asset.id)")
@@ -691,6 +742,18 @@ private struct MacSimilarVideoCard: View {
 private struct MacPhotosThumbnail: View {
     let asset: UniversalMediaAsset
     @State private var image: NSImage?
+
+    private final class ResumeBox: @unchecked Sendable {
+        private var didResume = false
+        private let lock = NSLock()
+        func resumeOnce(_ block: () -> Void) {
+            lock.lock()
+            defer { lock.unlock() }
+            guard !didResume else { return }
+            didResume = true
+            block()
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -705,6 +768,7 @@ private struct MacPhotosThumbnail: View {
     private func load() async {
         guard case .photoLibrary(let identifier) = asset.reference,
               let photo = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject else { return }
+        let box = ResumeBox()
         image = await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
@@ -715,7 +779,13 @@ private struct MacPhotosThumbnail: View {
                 targetSize: NSSize(width: 600, height: 600),
                 contentMode: .aspectFill,
                 options: options
-            ) { image, _ in continuation.resume(returning: image) }
+            ) { image, info in
+                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                let isFinal = !options.isNetworkAccessAllowed || !degraded
+                if isFinal || image != nil {
+                    box.resumeOnce { continuation.resume(returning: image) }
+                }
+            }
         }
     }
 }

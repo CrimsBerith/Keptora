@@ -93,10 +93,11 @@ struct MobileAssetThumbnail: View {
                         options: options
                     ) { img, info in
                         let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                        // A degraded image is only a preview; wait for the final one unless PhotoKit
-                        // reports an error or cancellation.
                         let failed = info?[PHImageErrorKey] != nil || (info?[PHImageCancelledKey] as? Bool) == true
-                        if degraded && img != nil && !failed { return }
+                        let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                        // If network access is disabled or asset is in iCloud, degraded image is the only locally available representation
+                        let isFinalOrOnlyAvailable = !options.isNetworkAccessAllowed || isInCloud
+                        if degraded && img != nil && !failed && !isFinalOrOnlyAvailable { return }
                         request.resumeOnce { continuation.resume(returning: img) }
                     }
                     request.setID(id)

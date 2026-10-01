@@ -421,6 +421,31 @@ struct MobileLibraryView: View {
             }
             .keptoraPanel(tint: MobileKeptoraDesign.cyan)
 
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title3)
+                        .foregroundStyle(MobileKeptoraDesign.amber)
+                    Text("Scan Interrupted")
+                        .font(.system(.headline, design: .rounded).weight(.semibold))
+                }
+                Text(message)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Button {
+                    store.startScan()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Try Again")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 34)
+                }
+                .buttonStyle(MobilePrimaryButtonStyle())
+            }
+            .keptoraPanel(tint: MobileKeptoraDesign.amber)
+
         default:
             VStack(spacing: 12) {
                 Button { store.startScan() } label: {
@@ -528,17 +553,33 @@ struct MobileLibraryView: View {
 
     /// Shown when a scan finished without finding any exact copies, so the screen is not just blank.
     private var noDuplicatesSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.largeTitle)
                 .foregroundStyle(MobileKeptoraDesign.mint)
                 .accessibilityHidden(true)
             Text("No exact copies found")
                 .font(.system(.title3, design: .rounded).weight(.bold))
-            Text("Nothing in \(store.source.title) is a byte-identical duplicate. Similar photos, if any, appear in Review.")
+            Text("Nothing in \(store.source.title) is a byte-identical duplicate.")
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            if !store.similarVideoGroups.isEmpty || !store.similarityGroups.isEmpty {
+                let count = store.similarVideoGroups.count + store.similarityGroups.count
+                Button {
+                    store.selectedTab = .review
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles.rectangle.stack.fill")
+                        Text("Review \(count) Similar Sets")
+                            .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 38)
+                }
+                .buttonStyle(MobilePrimaryButtonStyle())
+                .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity)
         .keptoraPanel(tint: MobileKeptoraDesign.mint)

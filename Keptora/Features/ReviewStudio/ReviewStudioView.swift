@@ -226,8 +226,14 @@ struct ReviewStudioView: View {
                     }
                     .keyboardShortcut("[", modifiers: [])
                     .disabled(model.currentExactGroupIndex <= 0)
-                    .help("Previous duplicate set ( [ )")
+                    .help("Previous duplicate set ( [ or ← )")
                     .accessibilityLabel("Previous duplicate set")
+
+                    Button {
+                        model.selectPreviousExactGroup()
+                    } label: { EmptyView() }
+                    .keyboardShortcut(.leftArrow, modifiers: [])
+                    .frame(width: 0, height: 0).opacity(0)
 
                     Text(model.exactGroupPositionLabel)
                         .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -242,8 +248,14 @@ struct ReviewStudioView: View {
                     }
                     .keyboardShortcut("]", modifiers: [])
                     .disabled(model.currentExactGroupIndex >= model.duplicateGroups.count - 1)
-                    .help("Next duplicate set ( ] )")
+                    .help("Next duplicate set ( ] or → )")
                     .accessibilityLabel("Next duplicate set")
+
+                    Button {
+                        model.selectNextExactGroup()
+                    } label: { EmptyView() }
+                    .keyboardShortcut(.rightArrow, modifiers: [])
+                    .frame(width: 0, height: 0).opacity(0)
                 }
             } else if mode == .similar && !model.similarityGroups.isEmpty {
                 HStack(spacing: 5) {
@@ -253,8 +265,14 @@ struct ReviewStudioView: View {
                         Image(systemName: "chevron.left")
                     }
                     .disabled(model.currentSimilarityGroupIndex <= 0)
-                    .help("Previous similar group")
+                    .help("Previous similar group ( ← )")
                     .accessibilityLabel("Previous similar group")
+
+                    Button {
+                        model.selectPreviousSimilarityGroup()
+                    } label: { EmptyView() }
+                    .keyboardShortcut(.leftArrow, modifiers: [])
+                    .frame(width: 0, height: 0).opacity(0)
 
                     Text(model.similarityGroupPositionLabel)
                         .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -268,8 +286,14 @@ struct ReviewStudioView: View {
                         Image(systemName: "chevron.right")
                     }
                     .disabled(model.currentSimilarityGroupIndex >= model.similarityGroups.count - 1)
-                    .help("Next similar group")
+                    .help("Next similar group ( → )")
                     .accessibilityLabel("Next similar group")
+
+                    Button {
+                        model.selectNextSimilarityGroup()
+                    } label: { EmptyView() }
+                    .keyboardShortcut(.rightArrow, modifiers: [])
+                    .frame(width: 0, height: 0).opacity(0)
                 }
             }
 
@@ -426,9 +450,9 @@ struct ReviewStudioView: View {
                 .accessibilityLabel("Previous photo")
                 .disabled(!model.canApplyFocusedReviewDecision)
 
-            decisionShelfButton(.keep, title: "Keep", systemImage: "checkmark.shield")
-            decisionShelfButton(.quarantinePlan, title: "Add to Plan", systemImage: "shippingbox")
-            decisionShelfButton(.skip, title: "Skip", systemImage: "forward")
+            decisionShelfButton(.keep, title: "Keep", systemImage: "checkmark.shield", shortcut: "k")
+            decisionShelfButton(.quarantinePlan, title: "Add to Plan", systemImage: "shippingbox", shortcut: "d")
+            decisionShelfButton(.skip, title: "Skip", systemImage: "forward", shortcut: "s")
 
             Button { model.focusNextReviewAsset() } label: { Image(systemName: "chevron.right") }
                 .help("Next photo · Option-Right Arrow")
@@ -490,15 +514,23 @@ struct ReviewStudioView: View {
     }
 
     @ViewBuilder
-    private func decisionShelfButton(_ decision: ReviewDecision, title: String, systemImage: String) -> some View {
+    private func decisionShelfButton(_ decision: ReviewDecision, title: String, systemImage: String, shortcut: KeyEquivalent? = nil) -> some View {
         let selected = model.selectedReviewAsset.flatMap { model.decisions[$0.id] } == decision
-        Button {
+        let button = Button {
             model.applyFocusedDecision(decision, access: store)
         } label: {
             Label(title, systemImage: systemImage)
         }
         .decisionButtonStyle(isSelected: selected)
         .disabled(!model.canApplyFocusedReviewDecision)
+
+        if let shortcut {
+            button
+                .keyboardShortcut(shortcut, modifiers: [])
+                .help("\(title) · Press \(String(shortcut.character).uppercased())")
+        } else {
+            button
+        }
     }
 
     private func drawerSurface<Content: View>(

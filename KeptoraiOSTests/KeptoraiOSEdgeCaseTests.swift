@@ -43,19 +43,21 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
             assets: [keeperAsset, copyAsset],
             keeperID: keeperAsset.id
         )
+        store.exactGroups = [group]
 
         // Attempt to select all safe copies
         let selected = store.selectAllSafeCopies(in: group, isUnlocked: true)
         XCTAssertTrue(selected)
         
-        // Assert keeper is never selected
+        // Assert keeper is never selected by default bulk selection
         XCTAssertFalse(store.selectedAssetIDs.contains(keeperAsset.id))
         XCTAssertTrue(store.selectedAssetIDs.contains(copyAsset.id))
         
-        // Attempt to toggle keeper directly
+        // User can manually select keeper if desired
         let toggledKeeper = store.toggleSelection(keeperAsset, in: group, isUnlocked: true)
         XCTAssertTrue(toggledKeeper)
-        XCTAssertFalse(store.selectedAssetIDs.contains(keeperAsset.id))
+        XCTAssertTrue(store.selectedAssetIDs.contains(keeperAsset.id))
+        XCTAssertTrue(store.hasSelectedKeeper)
     }
 
     func testProtectedAssetWithAdjustmentsOrFavoritesIsExcluded() {
