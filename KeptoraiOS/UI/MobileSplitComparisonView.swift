@@ -145,7 +145,7 @@ struct MobileSplitComparisonView: View {
                         .accessibilityIdentifier("ios.splitComparison.close")
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Reset") {
+                    Button {
                         withAnimation {
                             scale = 1.0
                             lastScale = 1.0
@@ -153,8 +153,11 @@ struct MobileSplitComparisonView: View {
                             lastOffset = .zero
                             splitRatio = 0.5
                         }
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
                     }
                     .disabled(scale == 1.0 && offset == .zero && splitRatio == 0.5)
+                    .accessibilityLabel("Reset Loupe")
                     .accessibilityIdentifier("ios.splitComparison.reset")
                 }
             }

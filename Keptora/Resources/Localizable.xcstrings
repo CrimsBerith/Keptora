@@ -57,7 +57,7 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$@ · %2$@"
           }
         },
@@ -87,14 +87,14 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$@ · %2$lld decisions · %3$@ planned"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ · %2$lld décisions · %3$@ planifiées"
+            "value": "%1$@ · %2$lld décisions · %3$@ prévus"
           }
         },
         "tr": {
@@ -202,25 +202,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ von %@"
+            "value": "%1$@ von %2$@"
           }
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$@ of %2$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ sur %@"
+            "value": "%1$@ sur %2$@"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ / %@"
+            "value": "%1$@ / %2$@"
           }
         }
       }
@@ -254,19 +254,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ für die rückgängig machbare Quarantäne ausgewählt."
+            "value": "%@ für den sicheren Quarantäne-Ordner ausgewählt (umkehrbar)."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ sélectionnées pour la quarantaine réversible."
+            "value": "%@ sélectionnés pour la zone de récupération (réversible)."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ geri alınabilir karantina için seçildi."
+            "value": "%@ güvenli kurtarma kutusu için seçildi (geri alınabilir)."
           }
         }
       }
@@ -401,7 +401,7 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$lld / %2$lld"
           }
         },
@@ -503,7 +503,7 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$lld linked components · %2$@"
           }
         },
@@ -528,19 +528,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld von %lld Gruppen"
+            "value": "%1$lld von %2$lld Gruppen"
           }
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$lld of %2$lld groups"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld groupes sur %lld"
+            "value": "%1$lld sur %2$lld groupes"
           }
         },
         "tr": {
@@ -635,7 +635,7 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "%1$lld/%2$lld"
           }
         },
@@ -704,19 +704,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein moderates Bewertungs-Set. Ähnliche Fotos bleiben nur für die Bewertung verfügbar und werden nie automatisch zur Bereinigung hinzugefügt."
+            "value": "Eine Gruppe zur visuellen Prüfung. Ähnliche Fotos dienen nur dem Vergleich und werden nie automatisch zur Bereinigung hinzugefügt."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un ensemble de commentaires modérés. Les photos similaires restent uniquement des commentaires et ne sont jamais ajoutées automatiquement à la vérification."
+            "value": "Un groupe de photos à comparer. Les photos similaires restent uniquement pour comparaison visuelle et ne sont jamais ajoutées automatiquement au nettoyage."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Orta derecede bir inceleme seti. Benzer fotoğraflar yalnızca inceleme olarak kalır ve asla otomatik olarak temizlemeye eklenmez."
+            "value": "Görsel karşılaştırma grubu. Benzer fotoğraflar yalnızca inceleme amaçlıdır ve asla otomatik olarak temizliğe eklenmez."
           }
         }
       }
@@ -836,19 +836,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktive Vermögenswerte"
+            "value": "Aktive Mediendateien"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Éléments actifs"
+            "value": "Fichiers actifs"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktif Öğeler"
+            "value": "Aktif Dosyalar"
           }
         }
       }
@@ -906,19 +906,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fokussiertes Foto zum Sicherheitsplan hinzufügen"
+            "value": "Ausgewähltes Foto zum Sicherheitsplan hinzufügen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter une photo concentrée au plan de sécurité"
+            "value": "Ajouter la photo sélectionnée au plan de sécurité"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odaklanan Fotoğrafı Güvenlik Planına Ekle"
+            "value": "Seçili Fotoğrafı Güvenlik Planına Ekle"
           }
         }
       }
@@ -1196,19 +1196,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anker"
+            "value": "Referenzfoto"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "ancre"
+            "value": "Référence"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Referans"
+            "value": "Referans Fotoğraf"
           }
         }
       }
@@ -1508,13 +1508,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anatomie"
+            "value": "Build"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "construire"
+            "value": "Version"
           }
         },
         "tr": {
@@ -1640,19 +1640,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ausbruch"
+            "value": "Serienaufnahme"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "éclatement"
+            "value": "Rafale"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seri çekim"
+            "value": "Seri Çekim"
           }
         }
       }
@@ -1662,19 +1662,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Explodierendes Mitglied"
+            "value": "Serienaufnahme-Foto"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Membre éclaté"
+            "value": "Photo de la rafale"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seri çekim üyesi"
+            "value": "Seri çekim fotoğrafı"
           }
         }
       }
@@ -1986,19 +1986,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "„Behalten\", „In den Plan\" oder „Überspringen\" auswählen für die genauere Kopie. Keptora wird den Grund festhalten und hier seine Beweise zeigen."
+            "value": "Wählen Sie „Behalten“, „In den Plan“ oder „Überspringen“ für die ausgewählte Kopie. Keptora speichert die Begründung und zeigt den Sicherheitsnachweis hier an."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisissez Garder, Ajouter au plan ou Éviter pour la copie exacte et ciblée. Keptora enregistrera la raison et montrera ses preuves ici."
+            "value": "Choisissez Garder, Ajouter au plan ou Ignorer pour la copie exacte sélectionnée. Keptora enregistrera la raison et affichera les preuves ici."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odaklanan kopya için Sakla, Plana Ekle veya Atla seçeneğini belirleyin. Keptora nedeni kaydedip kanıtını burada gösterir."
+            "value": "Seçili kopya için Koru, Plana Ekle veya Geç seçeneğini belirleyin. Keptora kararın gerekçesini kaydedip kanıtını burada gösterir."
           }
         }
       }
@@ -2838,13 +2838,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vollständige Sicherheitspläne werden hier angezeigt."
+            "value": "Abgeschlossene Sicherheitspläne werden hier angezeigt."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les plans de sécurité complétés apparaîtront ici."
+            "value": "Les plans de sécurité terminés apparaîtront ici."
           }
         },
         "tr": {
@@ -3402,13 +3402,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarantaine Keptora"
+            "value": "Zone de récupération Keptora"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora Karantinası"
+            "value": "Keptora Kurtarma Kutusu"
           }
         }
       }
@@ -3530,19 +3530,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora überprüft das signierte Manifest, die ursprünglichen Pfade, die Quarantänedateien, die Bytezahlen und die SHA-256-Hashes, bevor die Wiederherstellung freigegeben wird."
+            "value": "Keptora prüft das signierte Manifest, Originalpfade, Quarantänedateien, Dateigrößen und SHA-256-Hashes, bevor die Wiederherstellung freigegeben wird."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora vérifie le manifeste signé, les chemins d'origine, les fichiers de quarantaine, le nombre d'octets et les empreintes SHA-256 avant d'activer la restauration."
+            "value": "Keptora vérifie le manifeste signé, les chemins d’origine, les fichiers de récupération, la taille et les empreintes SHA-256 avant d’autoriser la restauration."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora geri yüklemeyi etkinleştirmeden önce imzalı bildirimi, özgün yolları, karantina dosyalarını, bayt sayılarını ve SHA-256 özetlerini doğrular."
+            "value": "Keptora geri yüklemeyi etkinleştirmeden önce imzalı bildirimi, orijinal yolları, kurtarma kutusundaki dosyaları, bayt sayılarını ve SHA-256 özetlerini doğrular."
           }
         }
       }
@@ -3554,19 +3554,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora wird die überprüften Kopien in einen versteckten Quarantäneordner neben den Originalschriften verschieben. Nichts wird dauerhaft gelöscht."
+            "value": "Keptora verschiebt überprüfte Kopien in einen versteckten Quarantäneordner neben den Originalen. Nichts wird dauerhaft gelöscht."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora transférera les copies examinées dans un dossier de quarantaine caché à côté des originaux. Rien n'est supprimé définitivement."
+            "value": "Keptora déplace les copies examinées dans un dossier de récupération caché à côté des originaux. Rien n’est supprimé définitivement."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora incelenen kopyaları orijinallerin yanındaki gizli karantina klasörüne taşır. Hiçbir şey kalıcı olarak silinmez."
+            "value": "Keptora incelenen kopyaları orijinallerin yanındaki gizli kurtarma klasörüne taşır. Hiçbir dosya kalıcı olarak silinmez."
           }
         }
       }
@@ -4212,19 +4212,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Genauere Vermögenswerte"
+            "value": "Exakte Mediendateien"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Éléments exacts"
+            "value": "Fichiers exacts"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aynı dosyalar"
+            "value": "Birebir Dosyalar"
           }
         }
       }
@@ -4366,19 +4366,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Genauere Gruppen"
+            "value": "Exakte Gruppen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Groupes exacts"
+            "value": "Groupes de doublons exacts"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Birebir gruplar"
+            "value": "Birebir Kopya Grupları"
           }
         }
       }
@@ -4388,19 +4388,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Genauere Gruppen"
+            "value": "Exakte Gruppen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Groupes exacts"
+            "value": "Groupes de doublons exacts"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tam Kopya Grupları"
+            "value": "Birebir Kopya Grupları"
           }
         }
       }
@@ -4438,7 +4438,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les photos et les vidéos exactes sont vérifiées par octet par octet. Les vidéos similaires nécessitent une vérification manuelle."
+            "value": "Les photos et vidéos exactes sont vérifiées octet par octet. Les vidéos similaires nécessitent un examen manuel."
           }
         },
         "tr": {
@@ -5804,19 +5804,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Quarantäne"
+            "value": "Im Quarantäne-Ordner"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En quarantaine"
+            "value": "En zone de récupération"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantinada"
+            "value": "Kurtarma Kutusunda"
           }
         }
       }
@@ -5940,19 +5940,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weiter prüfen"
+            "value": "Weiter überprüfen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuer l’examen"
+            "value": "Poursuivre l’examen"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "İncelemeye Devam Et"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Reviewing"
           }
         }
       }
@@ -6778,13 +6784,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Déplacer les copies exactes vers la quarantaine Keptora ?"
+            "value": "Déplacer les copies exactes vers la zone de récupération Keptora ?"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tam kopyalar Keptora Karantinası’na taşınsın mı?"
+            "value": "Birebir kopyalar Keptora Kurtarma Kutusu’na taşınsın mı?"
           }
         }
       }
@@ -6800,13 +6806,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Déplacer les vidéos similaires sélectionnées vers la quarantaine Keptora ?"
+            "value": "Déplacer les vidéos similaires vers la zone de récupération Keptora ?"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seçilen benzer videolar Keptora Karantinası’na taşınsın mı?"
+            "value": "Seçilen benzer videolar Keptora Kurtarma Kutusu’na taşınsın mı?"
           }
         }
       }
@@ -6816,19 +6822,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Quarantäne verschieben"
+            "value": "In sicheren Quarantäne-Ordner verschieben"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mettre en quarantaine"
+            "value": "Mettre en zone de récupération"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantinaya Taşı"
+            "value": "Kurtarma Kutusuna Taşı"
           }
         }
       }
@@ -7874,13 +7880,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ouvrir la réconciliation des décisions de quarantaine"
+            "value": "Ouvrir la réconciliation des décisions de récupération"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantina kararları eşitlemesini aç"
+            "value": "Kurtarma kararları mutabakatını aç"
           }
         }
       }
@@ -8026,19 +8032,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Teilweise in Quarantäne"
+            "value": "Teilweise im Quarantäne-Ordner"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Partiellement en quarantaine"
+            "value": "Partiellement en zone de récupération"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kısmen karantinaya alınmış"
+            "value": "Kısmen kurtarma kutusuna taşınmış"
           }
         }
       }
@@ -8569,7 +8575,7 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "Plan %1$lld · current %2$lld"
           }
         },
@@ -9204,19 +9210,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Geschützte Originale bleiben bestehen. Dateien werden in einen wiederherstellbaren Keptora-Quarantäneordner verschoben."
+            "value": "Geschützte Originale bleiben erhalten. Dateien werden in den umkehrbaren Keptora-Quarantäneordner verschoben."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les originaux protégés restent en place. Les fichiers sont déplacés vers une quarantaine Keptora réversible."
+            "value": "Les originaux protégés restent en place. Les fichiers sont déplacés vers une zone de récupération Keptora réversible."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Korunan ana kopyalar yerinde kalır. Dosyalar geri alınabilir Keptora Karantinası klasörüne taşınır."
+            "value": "Korunan orijinaller yerinde kalır. Dosyalar geri alınabilir Keptora Kurtarma Kutusu klasörüne taşınır."
           }
         }
       }
@@ -9304,13 +9310,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarantaine et restauration"
+            "value": "Récupération et restauration"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantina ve Geri Yükleme"
+            "value": "Kurtarma Kutusu ve Geri Yükleme"
           }
         }
       }
@@ -9320,19 +9326,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarantäneinhalte geändert"
+            "value": "Quarantäneinhalt geändert"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le contenu de la quarantaine a été modifié"
+            "value": "Le contenu de récupération a changé"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantina içeriği değişmiş"
+            "value": "Kurtarma kutusundaki içerik değişmiş"
           }
         }
       }
@@ -9366,19 +9372,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarantäne-Datei fehlt"
+            "value": "Quarantänedatei fehlt"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fichier de quarantaine manquant"
+            "value": "Fichier de récupération manquant"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantina dosyası bulunamadı"
+            "value": "Kurtarma kutusundaki dosya bulunamadı"
           }
         }
       }
@@ -9388,19 +9394,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarantäne:%@"
+            "value": "Quarantäne: %@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quarantaine :%@"
+            "value": "Récupération : %@"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantina: %@"
+            "value": "Kurtarma Kutusu: %@"
           }
         }
       }
@@ -9410,19 +9416,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Quarantäne"
+            "value": "Im Quarantäne-Ordner"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En quarantaine"
+            "value": "En zone de récupération"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantinada"
+            "value": "Kurtarma Kutusunda"
           }
         }
       }
@@ -10246,19 +10252,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Wiederherstellung ist blockiert, bis jede verbleibende in Quarantäne befindliche Datei sicher ist. Keptora überschreibt nicht belegte ursprüngliche Pfade oder wiederherstellt veränderte Inhalte."
+            "value": "Die Wiederherstellung ist blockiert, bis jede Datei im Quarantäneordner sicher ist. Keptora überschreibt keine belegten Originalpfade und stellt keine geänderten Inhalte wieder her."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La restauration est bloquée jusqu'à ce que tous les fichiers restants en quarantaine soient en sécurité. Keptora ne remplace pas les chemins d'origine occupés ou ne restaure pas le contenu modifié."
+            "value": "La restauration est bloquée tant que chaque fichier de récupération n’est pas sécurisé. Keptora n’écrasera jamais un emplacement d’origine occupé."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kalan tüm karantina dosyaları güvenli olana kadar geri yükleme engellenir. Keptora dolu özgün yolların üzerine yazmaz ve değişmiş içeriği geri yüklemez."
+            "value": "Kurtarma kutusundaki tüm dosyalar doğrulanana kadar geri yükleme engellenir. Keptora dolu orijinal yolların üzerine yazmaz ve değişmiş içeriği geri yüklemez."
           }
         }
       }
@@ -11364,19 +11370,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sicherheitsplan-Verlauf R%lld · %@"
+            "value": "Sicherheitsplan-Verlauf R%1$lld · %2$@"
           }
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "Safety Plan lineage R%1$lld · %2$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historique du plan de sécurité R%lld · %@"
+            "value": "Lignée du plan de sécurité R%1$lld · %2$@"
           }
         },
         "tr": {
@@ -12158,25 +12164,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ von %@ passenden Dateien angezeigt"
+            "value": "%1$@ von %2$@ passenden Dateien angezeigt"
           }
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "Showing %1$@ of %2$@ matching files"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ fichiers correspondants affichés sur %@"
+            "value": "Affichage de %1$@ sur %2$@ fichiers correspondants"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eşleşen %1$@ / %2$@ dosya gösteriliyor"
+            "value": "%2$@ eşleşen dosyadan %1$@ tanesi gösteriliyor"
           }
         }
       }
@@ -13506,19 +13512,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das geschützte Original bleibt erhalten. Dateien werden in die wiederherstellbare Keptora-Quarantäne verschoben."
+            "value": "Das geschützte Original bleibt erhalten. Dateien werden in den umkehrbaren Keptora-Quarantäneordner verschoben."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L’original protégé reste en place. Les fichiers sont déplacés vers la quarantaine Keptora réversible."
+            "value": "L’original protégé reste en place. Les fichiers sont déplacés vers la zone de récupération Keptora réversible."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Korunan ana öğe yerinde kalır. Dosyalar geri alınabilir Keptora Karantinası klasörüne taşınır."
+            "value": "Korunan orijinal yerinde kalır. Dosyalar geri alınabilir Keptora Kurtarma Kutusu klasörüne taşınır."
           }
         }
       }
@@ -13690,19 +13696,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Kopie ist das geschützte Original. Keptora verhindert die Quarantäne, bis ein anderes Original ausgewählt wird."
+            "value": "Diese Kopie ist das geschützte Original. Keptora verhindert das Verschieben, bis ein anderes Original gewählt wird."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette copie est l'original protégé. Keptora empêche sa mise en quarantaine tant qu'un autre original n'est pas sélectionné."
+            "value": "Cette copie est l’original protégé. Keptora empêche son déplacement tant qu’un autre original n’est pas sélectionné."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu kopya korunan asıl kopyadır. Başka bir asıl kopya seçilene kadar karantinaya alınması engellenir."
+            "value": "Bu dosya korunan orijinaldir. Başka bir orijinal seçilene kadar kurtarma kutusuna taşınması engellenir."
           }
         }
       }
@@ -13802,19 +13808,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese geplante Kopie entspricht dem SHA-256-Hash und ist nicht das geschützte Original. Keptora berechnet den Hash unmittelbar vor der Quarantäne erneut."
+            "value": "Diese geplante Kopie entspricht dem exakten SHA-256-Hash und ist nicht das geschützte Original. Keptora prüft den Hash vor dem Verschieben erneut."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette copie planifiée correspond au condensat SHA-256 et n'est pas l'original protégé. Keptora vérifiera à nouveau son empreinte avant la mise en quarantaine."
+            "value": "Cette copie correspond à l’empreinte SHA-256 et n’est pas l’original protégé. Keptora recalcule son empreinte immédiatement avant le déplacement."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu kopya SHA-256 özetiyle eşleşiyor ve asıl kopya değildir. Karantinaya alınmadan hemen önce tekrar doğrulanır."
+            "value": "Bu kopya SHA-256 özetiyle eşleşiyor ve asıl dosya değildir. Kurtarma kutusuna taşınmadan hemen önce tekrar doğrulanır."
           }
         }
       }
@@ -14349,7 +14355,7 @@
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "v%1$lld • %2$@ • %3$lld/%4$lld"
           }
         },
@@ -14712,25 +14718,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volumen:%@ · %@"
+            "value": "Volume: %1$@ · %2$@"
           }
         },
         "en": {
           "stringUnit": {
-            "state": "new",
+            "state": "translated",
             "value": "Volume: %1$@ · %2$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volume :%@ · %@"
+            "value": "Volume : %1$@ · %2$@"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bölüm: %1$@ · %2$@"
+            "value": "Birim: %1$@ · %2$@"
           }
         }
       }
@@ -14854,19 +14860,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dieser Plan kann später unter „Quarantäne & Wiederherstellung“ wiederhergestellt werden."
+            "value": "Sie können diesen Plan später unter Verlauf & Wiederherstellung wiederherstellen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous pouvez restaurer ce plan plus tard depuis Quarantine & Restore."
+            "value": "Vous pourrez restaurer ce plan ultérieurement depuis Historique et restauration."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu planı daha sonra Karantina ve Geri Yükleme bölümünden geri yükleyebilirsiniz."
+            "value": "Bu planı daha sonra Geçmiş ve Geri Yükleme bölümünden geri yükleyebilirsiniz."
           }
         }
       }
@@ -14900,19 +14906,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Kopie ist als Original ausgewählt. Quarantäne blockiert, bis ein anderes Original gewählt wird."
+            "value": "Sie haben diese Kopie als Original gewählt. Keptora schützt sie vor der Quarantäne, bis Sie ein anderes Original wählen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous avez sélectionné cette copie comme original protégé. Keptora empêche sa mise en quarantaine tant que vous n'en choisissez pas un autre."
+            "value": "Vous avez sélectionné cette copie comme original. Keptora la protège tant que vous ne choisissez pas un autre original."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu kopyayı asıl kopya olarak seçtiniz. Başka bir asıl kopya seçilene kadar karantinaya alınması engellenir."
+            "value": "Bu dosyayı korunan orijinal olarak seçtiniz. Başka bir orijinal seçilene kadar kurtarma kutusuna taşınması engellenir."
           }
         }
       }
@@ -15488,7 +15494,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "GPS Konumu Olmadan Kopya Kaydet"
+            "value": "GPS Konumu Olmadan Yeni Kopya Kaydet"
           }
         },
         "de": {
@@ -15500,7 +15506,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enregistrer une copie sans position GPS"
+            "value": "Enregistrer une copie sans coordonnées GPS"
           }
         }
       }
@@ -16972,7 +16978,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Karantina hedefi zaten mevcut: %@"
+            "value": "Kurtarma kutusu hedefi zaten mevcut: %@"
           }
         },
         "de": {
@@ -16984,7 +16990,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La destination de mise en quarantaine existe déjà : %@"
+            "value": "La destination de récupération existe déjà : %@"
           }
         }
       }
@@ -17517,6 +17523,2358 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette référence source n’est pas prise en charge."
+          }
+        }
+      }
+    },
+    "History & Restore": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History & Restore"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geçmiş ve Geri Yükleme"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf & Wiederherstellung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique et restauration"
+          }
+        }
+      }
+    },
+    "Review Safety Plan…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review Safety Plan…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik Planını İncele…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sicherheitsplan überprüfen…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Examiner le plan de sécurité…"
+          }
+        }
+      }
+    },
+    "Restore From Quarantine…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore From Recovery Bin…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurtarma Kutusundan Geri Yükle…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Papierkorb wiederherstellen…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurer depuis la zone de récupération…"
+          }
+        }
+      }
+    },
+    "Drop Folder to Connect & Scan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop Folder to Connect & Scan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlamak ve Taramak İçin Klasörü Buraya Bırakın"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner zum Verbinden und Scannen hierher ziehen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déposer un dossier pour connecter et analyser"
+          }
+        }
+      }
+    },
+    "Starting a new scan will reset your uncommitted review decisions.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting a new scan will reset your uncommitted review decisions."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni bir tarama başlatmak, henüz onaylanmamış inceleme kararlarınızı sıfırlar."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein neuer Scan setzt Ihre nicht bestätigten Entscheidungen zurück."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrer une nouvelle analyse réinitialisera vos décisions non confirmées."
+          }
+        }
+      }
+    },
+    "Discard Review and Rescan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard Review and Rescan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İncelemeyi Sıfırla ve Yeniden Tara"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überprüfung verwerfen und erneut scannen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandonner et réanalyser"
+          }
+        }
+      }
+    },
+    "Keep Current Review": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Current Review"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mevcut İncelemeyi Koru"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle Überprüfung behalten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserver l’examen actuel"
+          }
+        }
+      }
+    },
+    "How It Works": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How It Works"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nasıl Çalışır?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So funktioniert es"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment ça marche"
+          }
+        }
+      }
+    },
+    "Swipe Culling Studio": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe Culling Studio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kart Kaydırma Stüdyosu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wisch-Sortier-Studio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio de tri par balayage"
+          }
+        }
+      }
+    },
+    "Swipe & Cull": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe & Cull"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydır ve Ayıkla"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wischen & Sortieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balayer et trier"
+          }
+        }
+      }
+    },
+    "Swipe Right to Keep · Swipe Left to Clean · Swipe Up to Skip": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe Right to Keep · Swipe Left to Clean · Swipe Up to Skip"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sağa Kaydır: Koru · Sola Kaydır: Temizle · Yukarı Kaydır: Atla"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach rechts: Behalten · Nach links: Bereinigen · Nach oben: Überspringen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glisser à droite : Garder · À gauche : Nettoyer · En haut : Ignorer"
+          }
+        }
+      }
+    },
+    "Clean (←)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean (←)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizle (←)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereinigen (←)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nettoyer (←)"
+          }
+        }
+      }
+    },
+    "Keep (→)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep (→)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koru (→)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behalten (→)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder (→)"
+          }
+        }
+      }
+    },
+    "Skip (↑)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip (↑)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atla (↑)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringen (↑)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer (↑)"
+          }
+        }
+      }
+    },
+    "Undo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geri Al"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widerrufen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        }
+      }
+    },
+    "Clean (⌘⌫)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean (⌘⌫)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizle (⌘⌫)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereinigen (⌘⌫)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nettoyer (⌘⌫)"
+          }
+        }
+      }
+    },
+    "Review Safe Cleanup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review Safe Cleanup"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenli Temizliği İncele"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sichere Bereinigung überprüfen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifier le nettoyage sécurisé"
+          }
+        }
+      }
+    },
+    "Move to Safe Bin": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Safe Bin"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurtarma Kutusuna Taşı (Geri Alınabilir)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den sicheren Papierkorb verschieben"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déplacer vers la zone de récupération"
+          }
+        }
+      }
+    },
+    "Keptora moves reviewed duplicate copies into a safe recovery bin. Your original photos are kept safe and untouched.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora moves reviewed duplicate copies into a safe recovery bin. Your original photos are kept safe and untouched."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora incelenen kopyaları güvenli bir kurtarma kutusuna taşır. Orijinal fotoğraflarınız daima güvende ve dokunulmazdır."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora verschiebt überprüfte Kopien in einen sicheren Wiederherstellungsordner. Ihre Originalfotos bleiben unberührt."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora déplace les copies examinées dans une zone de récupération sécurisée. Vos photos originales restent intactes."
+          }
+        }
+      }
+    },
+    "Original keeper photos remain in place. Every duplicate copy is verified before moving, and photo families (like RAW+JPEG or Live Photos) stay together.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original keeper photos remain in place. Every duplicate copy is verified before moving, and photo families (like RAW+JPEG or Live Photos) stay together."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korunan orijinal fotoğraflarınız yerinde kalır. Taşınmadan önce her kopya doğrulanır ve fotoğraf aileleri (RAW+JPEG veya Live Photo) bir arada korunur."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschützte Originalfotos bleiben erhalten. Jede Kopie wird vor dem Verschieben geprüft, und Fotofamilien (wie RAW+JPEG oder Live Photos) bleiben zusammen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les photos originales protégées restent en place. Chaque copie est vérifiée avant déplacement et les groupes de photos (RAW+JPEG ou Live Photos) restent associés."
+          }
+        }
+      }
+    },
+    "You can restore these files at any time from History & Restore.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can restore these files at any time from History & Restore."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu dosyaları Geçmiş ve Geri Yükleme bölümünden dilediğiniz zaman tek tıkla geri yükleyebilirsiniz."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie können diese Dateien jederzeit unter Verlauf & Wiederherstellung wiederherstellen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez restaurer ces fichiers à tout moment depuis Historique et restauration."
+          }
+        }
+      }
+    },
+    "Verifying and safely moving duplicate files…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifying and safely moving duplicate files…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyalar doğrulanıyor ve güvenli kurtarma kutusuna taşınıyor…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien werden geprüft und sicher in den Papierkorb verschoben…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification et déplacement sécurisé des doublons en cours…"
+          }
+        }
+      }
+    },
+    "Why This Is Safe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why This Is Safe"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Dosya Neden Güvenle Silinebilir?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum dies sicher ist"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi est-ce sûr"
+          }
+        }
+      }
+    },
+    "Why This Is Safe…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why This Is Safe…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Dosya Neden Güvenle Silinebilir?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum dies sicher ist…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi est-ce sûr…"
+          }
+        }
+      }
+    },
+    "View Photo Details": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View Photo Details"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraf Detaylarını Görüntüle"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotodetails anzeigen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les détails de la photo"
+          }
+        }
+      }
+    },
+    "Fix Date from Filename": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fix Date from Filename"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarihi Dosya Adından Onar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datum aus Dateinamen reparieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corriger la date d’après le nom"
+          }
+        }
+      }
+    },
+    "Organize in Finder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organize in Finder"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder’da Düzenle"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Finder organisieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organiser dans le Finder"
+          }
+        }
+      }
+    },
+    "Start Smart Review": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Smart Review"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akıllı İncelemeyi Başlat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smarte Überprüfung starten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrer l’examen intelligent"
+          }
+        }
+      }
+    },
+    "Export & Organize Archive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export & Organize Archive"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivi Düzenle ve Dışa Aktar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiv organisieren & exportieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organiser et exporter l’archive"
+          }
+        }
+      }
+    },
+    "Export & Organize Photo Archive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export & Organize Photo Archive"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraf Arşivini Düzenle ve Dışa Aktar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoarchiv organisieren & exportieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organiser et exporter l’archive photo"
+          }
+        }
+      }
+    },
+    "All photos were sorted into structured folders at your selected destination.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All photos were sorted into structured folders at your selected destination."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm fotoğraflar seçtiğiniz hedef konumda düzenli klasörlere ayrıştırıldı."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Fotos wurden am gewählten Zielort in strukturierte Ordner sortiert."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les photos ont été classées dans des dossiers structurés à l’emplacement choisi."
+          }
+        }
+      }
+    },
+    "Archive Successfully Exported!": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive Successfully Exported!"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiv Başarıyla Dışa Aktarıldı!"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiv erfolgreich exportiert!"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive exportée avec succès !"
+          }
+        }
+      }
+    },
+    "Destination Folder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destination Folder"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hedef Klasör"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zielordner"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossier de destination"
+          }
+        }
+      }
+    },
+    "Folder Hierarchy Structure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder Hierarchy Structure"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasör Hiyerarşisi Yapısı"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordnerhierarchie-Struktur"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Structure de hiérarchie des dossiers"
+          }
+        }
+      }
+    },
+    "File Placement Mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File Placement Mode"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya Yerleşim Modu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateiplatzierungsmodus"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode de placement des fichiers"
+          }
+        }
+      }
+    },
+    "By Year & Month (e.g. 2026/08 - August/)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Year & Month (e.g. 2026/08 - August/)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yıl ve Aya Göre (ör. 2026/08 - Ağustos/)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Jahr & Monat (z. B. 2026/08 - August/)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par année et mois (ex. 2026/08 - Août/)"
+          }
+        }
+      }
+    },
+    "By Year & AI Category (e.g. 2026/Nature/)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Year & AI Category (e.g. 2026/Nature/)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yıl ve Kategoriye Göre (ör. 2026/Doğa/)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Jahr & KI-Kategorie (z. B. 2026/Natur/)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par année et catégorie (ex. 2026/Nature/)"
+          }
+        }
+      }
+    },
+    "By Category Only (e.g. Documents/Receipts/)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By Category Only (e.g. Documents/Receipts/)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yalnızca Kategoriye Göre (ör. Belgeler/Fişler/)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur nach Kategorie (z. B. Dokumente/Belege/)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par catégorie uniquement (ex. Documents/Reçus/)"
+          }
+        }
+      }
+    },
+    "Copy Files (Safe duplicate copies)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Files (Safe duplicate copies)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyaları Kopyala (Güvenli bağımsız kopyalar)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien kopieren (Sichere separate Kopien)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier les fichiers (Copies indépendantes sécurisées)"
+          }
+        }
+      }
+    },
+    "Hardlinks (Zero extra disk space, instant)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hardlinks (Zero extra disk space, instant)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sabit Bağlantılar / Hardlink (Sıfır ek disk alanı, anında)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hardlinks (Kein zusätzlicher Speicherplatz, sofort)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liens physiques (Zéro espace supplémentaire, instantané)"
+          }
+        }
+      }
+    },
+    "Symlinks (Finder Aliases)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symlinks (Finder Aliases)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sembolik Bağlantılar / Finder Kısayolları"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symlinks (Finder-Aliase)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liens symboliques (Alias Finder)"
+          }
+        }
+      }
+    },
+    "Review Batch Completed!": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review Batch Completed!"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İnceleme Grubu Tamamlandı!"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überprüfungsgruppe abgeschlossen!"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lot d’examen terminé !"
+          }
+        }
+      }
+    },
+    "Discard Pending Selections?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard Pending Selections?"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekleyen Seçimler Silinsin mi?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausstehende Auswahl verwerfen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandonner les sélections en attente ?"
+          }
+        }
+      }
+    },
+    "Discard and Close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard and Close"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçimleri Sil ve Kapat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwerfen und schließen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandonner et fermer"
+          }
+        }
+      }
+    },
+    "Ready to Analyze & Group Your Library": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to Analyze & Group Your Library"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kütüphanenizi Gruplandırmaya Hazır"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereit zur Analyse & Gruppierung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prêt à analyser et classer votre photothèque"
+          }
+        }
+      }
+    },
+    "Go to Home & Start Scan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Home & Start Scan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ana Sayfaya Git ve Taramayı Başlat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zur Startseite & Scan starten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aller à l’accueil et lancer l’analyse"
+          }
+        }
+      }
+    },
+    "Potential Reclaimable Storage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Potential Reclaimable Storage"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geri Kazanılabilecek Depolama Alanı"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückgewinnbarer Speicherplatz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espace de stockage récupérable"
+          }
+        }
+      }
+    },
+    "Protected Keeper": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protected Keeper"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korunan Orijinal"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschütztes Original"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original protégé"
+          }
+        }
+      }
+    },
+    "Add to Cleanup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Cleanup"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizliğe Ekle"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zur Bereinigung hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter au nettoyage"
+          }
+        }
+      }
+    },
+    "Cleanup History…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleanup History…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizlik Geçmişi…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereinigungsverlauf…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique de nettoyage…"
+          }
+        }
+      }
+    },
+    "Review Insights…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review Insights…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İnceleme Analizleri…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überprüfungs-Einblicke…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiques d’examen…"
+          }
+        }
+      }
+    },
+    "Diagnostics Snapshot…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics Snapshot…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tanılama Özeti…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnose-Momentaufnahme…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instantané de diagnostic…"
+          }
+        }
+      }
+    },
+    "Previous duplicate set": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous duplicate set"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önceki kopya kümesi"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorherige Duplikatgruppe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groupe de doublons précédent"
+          }
+        }
+      }
+    },
+    "Next duplicate set": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next duplicate set"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki kopya kümesi"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Duplikatgruppe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groupe de doublons suivant"
+          }
+        }
+      }
+    },
+    "Previous similar group": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous similar group"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önceki benzer grup"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorherige ähnliche Gruppe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groupe similaire précédent"
+          }
+        }
+      }
+    },
+    "Next similar group": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next similar group"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki benzer grup"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste ähnliche Gruppe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groupe similaire suivant"
+          }
+        }
+      }
+    },
+    "Previous photo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous photo"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önceki fotoğraf"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges Foto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo précédente"
+          }
+        }
+      }
+    },
+    "Next photo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next photo"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki fotoğraf"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächstes Foto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo suivante"
+          }
+        }
+      }
+    },
+    "Previous photo (←)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous photo (←)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önceki fotoğraf (←)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges Foto (←)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo précédente (←)"
+          }
+        }
+      }
+    },
+    "Next photo (→)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next photo (→)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki fotoğraf (→)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächstes Foto (→)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo suivante (→)"
+          }
+        }
+      }
+    },
+    "Toggle EXIF inspector (⌘I)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle EXIF inspector (⌘I)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EXIF panelini aç/kapat (⌘I)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EXIF-Informationen ein-/ausblenden (⌘I)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher/masquer l’inspecteur EXIF (⌘I)"
+          }
+        }
+      }
+    },
+    "Similar photo suggestions are never deleted automatically.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Similar photo suggestions are never deleted automatically."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benzer fotoğraf önerileri hiçbir zaman otomatik olarak silinmez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ähnliche Fotovorschläge werden niemals automatisch gelöscht."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les suggestions de photos similaires ne sont jamais supprimées automatiquement."
+          }
+        }
+      }
+    },
+    "Nothing in this category needs review yet. Scan a folder or your Apple Photos library from Home first, or pick another category.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing in this category needs review yet. Scan a folder or your Apple Photos library from Home first, or pick another category."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kategoride henüz incelenecek fotoğraf bulunmuyor. Ana sayfadan bir klasör veya Apple Fotoğraflar kütüphanesini tarayın ya da başka bir kategori seçin."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In dieser Kategorie muss derzeit nichts überprüft werden. Scannen Sie zuerst einen Ordner oder Ihre Apple Fotos-Mediathek."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien à examiner dans cette catégorie pour le moment. Analysez un dossier ou votre photothèque Apple Photos depuis l’accueil."
+          }
+        }
+      }
+    },
+    "No destination selected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No destination selected"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hedef klasör seçilmedi"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Zielordner ausgewählt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun dossier sélectionné"
+          }
+        }
+      }
+    },
+    "No Photos to Display": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Photos to Display"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görüntülenecek Fotoğraf Yok"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Fotos zum Anzeigen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune photo à afficher"
+          }
+        }
+      }
+    },
+    "Reading EXIF parameters...": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading EXIF parameters..."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EXIF parametreleri okunuyor..."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EXIF-Parameter werden gelesen..."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture des métadonnées EXIF..."
+          }
+        }
+      }
+    },
+    "Retry Loading": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry Loading"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeniden Dene"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut laden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer le chargement"
+          }
+        }
+      }
+    },
+    "Smart Categories & Clutter Clusters": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smart Categories & Clutter Clusters"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akıllı Kategoriler ve Gruplar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smarte Kategorien & Fotogruppen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catégories intelligentes et groupes"
+          }
+        }
+      }
+    },
+    "All %lld photos have been categorized.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All %lld photos have been categorized."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fotoğrafın tümü kategorilere ayrıldı."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle %lld Fotos wurden kategorisiert."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les %lld photos ont été classées."
+          }
+        }
+      }
+    },
+    "You have %lld photos selected for cleanup. Closing without adding them to your Safety Plan will discard these selections.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You have %lld photos selected for cleanup. Closing without adding them to your Safety Plan will discard these selections."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizlik için seçilmiş %lld fotoğrafınız var. Güvenlik Planına eklemeden kapatırsanız bu seçimler silinecektir."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie haben %lld Fotos zur Bereinigung ausgewählt. Wenn Sie schließen, ohne sie zum Sicherheitsplan hinzuzufügen, werden diese Auswahlen verworfen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez sélectionné %lld photos pour le nettoyage. Fermer sans les ajouter au plan de sécurité annulera ces sélections."
+          }
+        }
+      }
+    },
+    "Add %lld Items to Safety Plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %lld Items to Safety Plan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Fotoğrafı Güvenlik Planına Ekle"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Fotos zum Sicherheitsplan hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter %lld éléments au plan de sécurité"
+          }
+        }
+      }
+    },
+    "Review Skipped (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review Skipped (%lld)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atlananları İncele (%lld)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersprungene prüfen (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Examiner les photos ignorées (%lld)"
+          }
+        }
+      }
+    },
+    "Queue (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queue (%lld)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuyruk (%lld)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warteschlange (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File d’attente (%lld)"
+          }
+        }
+      }
+    },
+    "%lld photos selected for cleanup.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld photos selected for cleanup."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizlik için %lld fotoğraf seçildi."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Fotos zur Bereinigung ausgewählt."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld photos sélectionnées pour le nettoyage."
+          }
+        }
+      }
+    },
+    "Byte-for-byte verified": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Byte-for-byte verified"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bayt bayt doğrulandı"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Byte für Byte verifiziert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifié octet par octet"
+          }
+        }
+      }
+    },
+    "Match distance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Match distance"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eşleşme mesafesi"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übereinstimmungsabstand"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distance de correspondance"
+          }
+        }
+      }
+    },
+    "Advanced Technical Info": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced Technical Info"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gelişmiş Teknik Bilgiler"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweiterte technische Details"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informations techniques avancées"
+          }
+        }
+      }
+    },
+    "Manual Fingerprint Overrides": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual Fingerprint Overrides"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuel Parmak İzi Geçersiz Kılmaları"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuelle Fingerabdruck-Überschreibungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacements manuels des empreintes"
+          }
+        }
+      }
+    },
+    "Reconcile quarantine snapshots to track plan state changes and verify safety guarantees.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconcile quarantine snapshots to track plan state changes and verify safety guarantees."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan durumu değişikliklerini izlemek ve güvenlik garantilerini doğrulamak için karantina anlık görüntülerini mutabık kılın."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gleichen Sie Quarantäne-Snapshots ab, um Statusänderungen zu verfolgen und Sicherheitsgarantien zu überprüfen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapprochez les instantanés de quarantaine pour suivre l'état du plan et vérifier les garanties de sécurité."
+          }
+        }
+      }
+    },
+    "Original photos are preserved and copies can be restored at any time.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original photos are preserved and copies can be restored at any time."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orijinal fotoğraflar korunur ve kopyalar istenildiği zaman geri yüklenebilir."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Originalfotos bleiben erhalten und Kopien können jederzeit wiederhergestellt werden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les photos originales sont préservées et les copies peuvent être restaurées à tout moment."
+          }
+        }
+      }
+    },
+    "Clear all planned selections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear all planned selections"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm planlanan seçimleri temizle"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle geplanten Auswahlen löschen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer toutes les sélections prévues"
+          }
+        }
+      }
+    },
+    "Dismiss saved review session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss saved review session"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydedilen inceleme oturumunu kapat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeicherte Bewertungssitzung verwerfen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer la session d'examen enregistrée"
+          }
+        }
+      }
+    },
+    "Recheck safety plan freshness": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recheck safety plan freshness"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik planı tazeliğini yeniden doğrula"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualität des Sicherheitsplans prüfen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revérifier l'actualité du plan de sécurité"
+          }
+        }
+      }
+    },
+    "Export pending safety plan as JSON": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export pending safety plan as JSON"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekleyen güvenlik planını JSON olarak dışa aktar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausstehenden Sicherheitsplan als JSON exportieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporter le plan de sécurité en attente au format JSON"
           }
         }
       }

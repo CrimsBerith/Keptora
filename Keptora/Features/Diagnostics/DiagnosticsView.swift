@@ -48,8 +48,12 @@ struct DiagnosticsView: View {
                     Label("Local performance history", systemImage: "speedometer")
                         .font(.headline)
                     Spacer()
-                    Button("Export History…") { model.exportPerformanceHistory() }
-                        .disabled(model.performanceSamples.isEmpty)
+                    Button {
+                        model.exportPerformanceHistory()
+                    } label: {
+                        Label("Export History…", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(model.performanceSamples.isEmpty)
                 }
                 Text("Keptora stores at most 200 timing samples on this Mac. No filenames, paths, hashes, image bytes, or account data are recorded.")
                     .font(.caption)
@@ -106,9 +110,17 @@ struct DiagnosticsView: View {
                 Text("Export a structured JSON snapshot for debugging. It contains no image bytes, thumbnails, hashes, file contents, or account identifiers.")
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button(showFilePaths ? LocalizedStringKey("Copy Diagnostics") : LocalizedStringKey("Copy Redacted Diagnostics")) { model.copyDiagnostics() }
-                    Button("Export Diagnostics…") { model.exportDiagnostics() }
-                        .buttonStyle(.borderedProminent)
+                    Button {
+                        model.copyDiagnostics()
+                    } label: {
+                        Label(showFilePaths ? "Copy Diagnostics" : "Copy Redacted Diagnostics", systemImage: "doc.on.doc")
+                    }
+                    Button {
+                        model.exportDiagnostics()
+                    } label: {
+                        Label("Export Diagnostics…", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
                 Divider()
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {

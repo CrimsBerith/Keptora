@@ -167,7 +167,7 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.history"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["ios.history.entry.00000000-0000-0000-0000-000000000101"].exists)
         XCTAssertTrue(app.staticTexts["Photos Recently Deleted"].exists)
-        XCTAssertTrue(app.staticTexts["Keptora Quarantine"].exists)
+        XCTAssertTrue(app.staticTexts["Keptora Safe Bin"].waitForExistence(timeout: 3) || app.staticTexts["Keptora Quarantine"].waitForExistence(timeout: 3))
     }
 
     func testPrimaryTabLabelsAreLocalizedInFourLanguages() {

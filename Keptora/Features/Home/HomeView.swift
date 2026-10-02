@@ -151,7 +151,7 @@ struct HomeView: View {
             workflowStep(
                 title: "Exact Match",
                 value: "SHA-256",
-                detail: "SHA-256 verified",
+                detail: "Byte-for-byte verified",
                 systemImage: "checkmark.seal.fill",
                 color: KeptoraDesign.success
             )
@@ -219,10 +219,23 @@ struct HomeView: View {
                             .foregroundStyle(.tertiary)
                     }
                     Spacer()
-                    Button("Dismiss") { model.dismissReviewSession() }
-                        .buttonStyle(.bordered)
-                    Button("Resume") { model.resumeReviewSession() }
-                        .buttonStyle(.borderedProminent)
+                    Button {
+                        model.dismissReviewSession()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .padding(6)
+                    .help("Dismiss saved review session")
+                    .accessibilityLabel("Dismiss")
+
+                    Button {
+                        model.resumeReviewSession()
+                    } label: {
+                        Label("Resume", systemImage: "play.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
             }
         }

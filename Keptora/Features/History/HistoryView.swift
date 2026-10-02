@@ -50,10 +50,11 @@ struct HistoryView: View {
                                     .font(.headline)
                                 Text("Try a different search or status filter.")
                                     .font(.callout)
-                                    .foregroundStyle(.secondary)
-                                Button("Clear Filters") {
+                                Button {
                                     query = ""
                                     filter = .all
+                                } label: {
+                                    Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle.badge.xmark")
                                 }
                             }
                             .frame(maxWidth: .infinity)
@@ -193,8 +194,12 @@ struct HistoryView: View {
     @ViewBuilder
     private func historyActionButtons(item: CleanupHistoryItem) -> some View {
         if item.manifestPath != nil {
-            Button("Show Manifest") { model.revealManifest(item) }
-                .buttonStyle(.bordered)
+            Button {
+                model.revealManifest(item)
+            } label: {
+                Label("Show Manifest", systemImage: "doc.text.magnifyingglass")
+            }
+            .buttonStyle(.bordered)
             Button {
                 model.verifyCleanupState(item)
             } label: {

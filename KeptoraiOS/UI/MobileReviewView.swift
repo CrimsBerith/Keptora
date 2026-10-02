@@ -1465,12 +1465,15 @@ private struct MobileSimilarityCompareView: View {
                         .accessibilityIdentifier("ios.similarityComparison.close")
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Reset Zoom") {
+                    Button {
                         scale = 1
                         lastScale = 1
                         offset = .zero
                         lastOffset = .zero
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
                     }
+                    .accessibilityLabel("Reset Zoom")
                     .accessibilityIdentifier("ios.similarityComparison.reset")
                 }
             }

@@ -67,6 +67,7 @@ struct ReviewStudioView: View {
     @State private var isShowingSwipeCulling = false
     @State private var activeViewerContext: StudioViewerContext? = nil
     @State private var toastMessage: String? = nil
+    @State private var decisionHistory: [(AssetID, ReviewDecision?)] = []
 
     var body: some View {
         ZStack {
@@ -80,6 +81,20 @@ struct ReviewStudioView: View {
             .safeAreaInset(edge: .bottom) {
                 decisionShelf
             }
+
+            // Hidden shortcut buttons for Spacebar Quick Look and ⌘Z Undo
+            Button {
+                toggleSpacebarQuickLook()
+            } label: { EmptyView() }
+            .keyboardShortcut(.space, modifiers: [])
+            .frame(width: 0, height: 0).opacity(0)
+
+            Button {
+                undoLastDecision()
+            } label: { EmptyView() }
+            .keyboardShortcut("z", modifiers: [.command])
+            .disabled(decisionHistory.isEmpty)
+            .frame(width: 0, height: 0).opacity(0)
         }
         .overlay(alignment: .leading) {
             if isQueuePresented {
@@ -99,11 +114,19 @@ struct ReviewStudioView: View {
         }
         .overlay(alignment: .bottom) {
             if let toastMessage {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Text(toastMessage)
                         .font(.subheadline.weight(.medium))
+                    if !decisionHistory.isEmpty && toastMessage.contains("undo") {
+                        Button("Undo") {
+                            undoLastDecision()
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(KeptoraDesign.accent)
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -241,6 +264,17 @@ struct ReviewStudioView: View {
                         .padding(.vertical, 3)
                         .background(Color.primary.opacity(0.06), in: Capsule())
 
+                    if let group = model.selectedGroup {
+                        let nonKeeperCount = group.assets.filter { $0.id != group.canonicalAssetID }.count
+                        let decidedCount = group.assets.filter { $0.id != group.canonicalAssetID && model.decisions[$0.id] != nil }.count
+                        if nonKeeperCount > 0 && decidedCount >= nonKeeperCount {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(KeptoraDesign.success)
+                                .help("All duplicate copies in this set have been reviewed")
+                        }
+                    }
+
                     Button {
                         model.selectNextExactGroup()
                     } label: {
@@ -328,13 +362,16 @@ struct ReviewStudioView: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(KeptoraDesign.accent)
 
-                        Button("Clear") {
+                        Button {
                             model.applyBatchActionToAllExactGroups(.skipExtras, access: store)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption)
                         }
-                        .buttonStyle(.borderless)
-                        .font(.caption)
+                        .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .help("Clear all planned selections")
+                        .accessibilityLabel("Clear all planned selections")
                         .accessibilityIdentifier("mac.folder.exact.clearSelection")
                     }
                     .padding(.horizontal, 8)
@@ -375,12 +412,13 @@ struct ReviewStudioView: View {
                     isEvidencePresented.toggle()
                 }
             } label: {
-                Label("Inspector", systemImage: "sidebar.trailing")
+                Image(systemName: "sidebar.trailing")
             }
             .buttonStyle(.bordered)
             .background(isEvidencePresented ? KeptoraDesign.accent.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .disabled(mode == .exact ? model.selectedGroup == nil : model.selectedSimilarityGroup == nil)
             .help("Toggle photo details and safety inspector")
+            .accessibilityLabel("Inspector")
 
             // Secondary Tools Menu
             Menu {
@@ -503,8 +541,13 @@ struct ReviewStudioView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             } else {
-                Button("Refresh Similarity") { model.startSimilarityAnalysis() }
-                    .buttonStyle(.bordered)
+                Button {
+                    model.startSimilarityAnalysis()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .help("Refresh similarity analysis")
             }
         }
         .padding(.horizontal, 18)
@@ -517,7 +560,7 @@ struct ReviewStudioView: View {
     private func decisionShelfButton(_ decision: ReviewDecision, title: String, systemImage: String, shortcut: KeyEquivalent? = nil) -> some View {
         let selected = model.selectedReviewAsset.flatMap { model.decisions[$0.id] } == decision
         let button = Button {
-            model.applyFocusedDecision(decision, access: store)
+            applyDecisionWithHistory(decision)
         } label: {
             Label(title, systemImage: systemImage)
         }
@@ -530,6 +573,62 @@ struct ReviewStudioView: View {
                 .help("\(title) · Press \(String(shortcut.character).uppercased())")
         } else {
             button
+        }
+    }
+
+    private func applyDecisionWithHistory(_ decision: ReviewDecision) {
+        guard let focused = model.selectedReviewAsset else { return }
+        let prev = model.decisions[focused.id]
+        decisionHistory.append((focused.id, prev))
+        
+        #if os(macOS)
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        #endif
+        
+        model.applyFocusedDecision(decision, access: store)
+        model.focusNextReviewAsset()
+        
+        withAnimation(.easeOut(duration: 0.2)) {
+            toastMessage = "\(decision.label) · ⌘Z to undo"
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if toastMessage?.contains("undo") == true {
+                withAnimation { toastMessage = nil }
+            }
+        }
+    }
+
+    private func undoLastDecision() {
+        guard let (lastID, previousDecision) = decisionHistory.popLast() else { return }
+        #if os(macOS)
+        NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+        #endif
+        
+        model.setDecision(previousDecision ?? .skip, for: lastID, access: store)
+        
+        withAnimation(.easeOut(duration: 0.2)) {
+            toastMessage = "Undone"
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            if toastMessage == "Undone" {
+                withAnimation { toastMessage = nil }
+            }
+        }
+    }
+
+    private func toggleSpacebarQuickLook() {
+        if activeViewerContext != nil {
+            activeViewerContext = nil
+            return
+        }
+        if mode == .exact, let asset = model.selectedReviewAsset, let group = model.selectedGroup {
+            openViewer(for: asset, in: group)
+        } else if mode == .similar, let group = model.selectedSimilarityGroup {
+            if let member = group.members.first(where: { $0.id.rawValue == comparisonMemberID }) ?? group.anchor {
+                openViewer(for: member, in: group)
+            }
         }
     }
 
@@ -947,9 +1046,15 @@ struct ReviewStudioView: View {
                         .frame(maxWidth: 260)
                         Spacer()
                         if similarityLayout == .compare {
-                            Button("Reset View") { resetComparisonViewport() }
-                                .keyboardShortcut("0", modifiers: [.command])
-                                .help("Reset synchronized zoom and pan")
+                            Button {
+                                resetComparisonViewport()
+                            } label: {
+                                Image(systemName: "arrow.counterclockwise")
+                            }
+                            .buttonStyle(.borderless)
+                            .keyboardShortcut("0", modifiers: [.command])
+                            .help("Reset synchronized zoom and pan (⌘0)")
+                            .accessibilityLabel("Reset View")
                         }
                     }
                     if similarityLayout == .compare {
@@ -1015,8 +1120,14 @@ struct ReviewStudioView: View {
                 }
                 .frame(minHeight: 430)
                 HStack(spacing: 12) {
-                    Button { comparisonScale = max(1, comparisonScale - 0.5) } label: { Label("Zoom Out", systemImage: "minus.magnifyingglass") }.keyboardShortcut("-", modifiers: [.command])
-                    Button { comparisonScale = min(8, comparisonScale + 0.5) } label: { Label("Zoom In", systemImage: "plus.magnifyingglass") }.keyboardShortcut("+", modifiers: [.command])
+                    Button { comparisonScale = max(1, comparisonScale - 0.5) } label: { Image(systemName: "minus.magnifyingglass") }
+                        .help("Zoom Out (⌘-)")
+                        .accessibilityLabel("Zoom Out")
+                        .keyboardShortcut("-", modifiers: [.command])
+                    Button { comparisonScale = min(8, comparisonScale + 0.5) } label: { Image(systemName: "plus.magnifyingglass") }
+                        .help("Zoom In (⌘+)")
+                        .accessibilityLabel("Zoom In")
+                        .keyboardShortcut("+", modifiers: [.command])
                     Slider(value: $comparisonScale, in: 1...8, step: 0.1).accessibilityLabel("Comparison zoom")
                     Text("\(comparisonScale, format: .number.precision(.fractionLength(1)))×").font(.caption.monospacedDigit()).frame(width: 42, alignment: .trailing)
                 }.controlSize(.small)
@@ -1073,8 +1184,12 @@ struct ReviewStudioView: View {
                              : "You selected this copy as the keeper. Keptora protects it and will never delete this file.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Button("Reveal Keeper in Finder") { model.reveal(keeper) }
-                            .controlSize(.small)
+                        Button {
+                            model.reveal(keeper)
+                        } label: {
+                            Label("Reveal in Finder", systemImage: "folder")
+                        }
+                        .controlSize(.small)
                     }
 
                     Divider()
@@ -1099,8 +1214,12 @@ struct ReviewStudioView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Button("Why This Is Safe…") { showDecisionEvidence = true }
-                                .controlSize(.small)
+                            Button {
+                                showDecisionEvidence = true
+                            } label: {
+                                Label("Why This Is Safe", systemImage: "shield.checkerboard")
+                            }
+                            .controlSize(.small)
                         }
                         .padding(10)
                         .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -1151,11 +1270,8 @@ struct ReviewStudioView: View {
                     Text("Similarity Details")
                         .font(.headline)
                     InspectorRow(label: "Tier", value: group.tier.label)
-                    InspectorRow(label: "Maximum distance", value: group.maximumDistance.formatted(.number.precision(.fractionLength(4))))
-                    InspectorRow(label: "Members", value: group.members.count.formatted())
-                    InspectorRow(label: "Vision revision", value: "1 (pinned)")
-                    InspectorRow(label: "Crop policy", value: "Scale fit")
-                    InspectorRow(label: "Calibration", value: group.isCalibrated ? "Local profile" : "Conservative bootstrap")
+                    InspectorRow(label: "Match distance", value: group.maximumDistance.formatted(.number.precision(.fractionLength(4))))
+                    InspectorRow(label: "Photos", value: group.members.count.formatted())
 
                     Divider()
                     Label("Review-only policy", systemImage: "hand.raised.square.fill")
@@ -1171,16 +1287,33 @@ struct ReviewStudioView: View {
                             .foregroundStyle(.secondary)
                         Text(anchor.asset.displayName)
                             .font(.callout.weight(.medium))
-                        Button("Reveal in Finder") { model.reveal(anchor.asset) }
+                        Button {
+                            model.reveal(anchor.asset)
+                        } label: {
+                            Label("Reveal in Finder", systemImage: "folder")
+                        }
+                        .controlSize(.small)
                     }
 
                     Divider()
-                    Text("Profile")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(group.profileID)
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
+                    DisclosureGroup("Advanced Technical Info") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            InspectorRow(label: "Vision revision", value: "1 (pinned)")
+                            InspectorRow(label: "Crop policy", value: "Scale fit")
+                            InspectorRow(label: "Calibration", value: group.isCalibrated ? "Local profile" : "Conservative bootstrap")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Profile ID")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                Text(group.profileID)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        .padding(.top, 6)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 .padding(18)
             }
@@ -1199,6 +1332,7 @@ private struct ReviewAssetCard: View {
     let onFocus: () -> Void
     let onOpenViewer: () -> Void
     let onDecision: (ReviewDecision) -> Void
+    @State private var isHovered = false
 
     var body: some View {
         PremiumCard {
@@ -1222,7 +1356,8 @@ private struct ReviewAssetCard: View {
                         }
                         .buttonStyle(.plain)
                         .padding(8)
-                        .help("Open in Photo Viewer and swipe to cull")
+                        .opacity(isHovered || isFocused ? 1.0 : 0.6)
+                        .help("Open in Photo Viewer (Space)")
                         .accessibilityLabel("Open \(asset.displayName) in Photo Viewer")
                         
                         Spacer()
@@ -1242,6 +1377,9 @@ private struct ReviewAssetCard: View {
                         .padding(8)
                     } else {
                         Button {
+                            #if os(macOS)
+                            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+                            #endif
                             onDecision(decision == .quarantinePlan ? .skip : .quarantinePlan)
                         } label: {
                             HStack(spacing: 5) {
@@ -1290,16 +1428,20 @@ private struct ReviewAssetCard: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
-                HStack(spacing: 8) {
-                    decisionButton(.keep, systemImage: "checkmark.shield")
-                    decisionButton(.quarantinePlan, systemImage: "shippingbox")
-                    decisionButton(.skip, systemImage: "forward")
-                }
             }
         }
         .contentShape(ArchivePlateShape(cut: 10))
+        .scaleEffect(isHovered ? 1.015 : 1.0)
+        .shadow(color: isHovered ? Color.black.opacity(0.12) : Color.clear, radius: 8, y: 3)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.16)) {
+                isHovered = hovering
+            }
+        }
         .onTapGesture {
+            #if os(macOS)
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+            #endif
             onFocus()
             if !isCanonical {
                 onDecision(decision == .quarantinePlan ? .skip : .quarantinePlan)
@@ -1317,24 +1459,6 @@ private struct ReviewAssetCard: View {
         .accessibilityIdentifier(isCanonical ? "mac.folder.exact.keeper.\(asset.id.rawValue)" : "mac.folder.exact.cardToggle.\(asset.id.rawValue)")
         .accessibilityAddTraits(isFocused ? .isSelected : [])
     }
-
-    @ViewBuilder
-    private func decisionButton(_ value: ReviewDecision, systemImage: String) -> some View {
-        let selected = value == decision || (value == .keep && isCanonical)
-        decisionButtonBase(value, systemImage: systemImage)
-            .decisionButtonStyle(isSelected: selected)
-    }
-
-    private func decisionButtonBase(_ value: ReviewDecision, systemImage: String) -> some View {
-        Button { onDecision(value) } label: {
-            Label(value.label, systemImage: systemImage)
-                .frame(maxWidth: .infinity)
-        }
-        .controlSize(.small)
-        .disabled(isCanonical && value != .keep)
-        .help(isCanonical && value != .keep ? "Choose another keeper first." : value.label)
-        .accessibilityIdentifier(value == .quarantinePlan && !isCanonical ? "mac.folder.exact.checkbox.\(asset.id.rawValue)" : "")
-    }
 }
 
 private struct SimilarityAssetCard: View {
@@ -1343,6 +1467,7 @@ private struct SimilarityAssetCard: View {
     var groupMembers: [SimilarityReviewMember] = []
     let onReveal: () -> Void
     let onOpenViewer: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
         PremiumCard {
@@ -1366,7 +1491,8 @@ private struct SimilarityAssetCard: View {
                         }
                         .buttonStyle(.plain)
                         .padding(8)
-                        .help("Open in Photo Viewer and swipe to cull")
+                        .opacity(isHovered ? 1.0 : 0.6)
+                        .help("Open in Photo Viewer (Space)")
                         .accessibilityLabel("Open \(member.asset.displayName) in Photo Viewer")
                         
                         Spacer()
@@ -1404,6 +1530,13 @@ private struct SimilarityAssetCard: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+            }
+        }
+        .scaleEffect(isHovered ? 1.015 : 1.0)
+        .shadow(color: isHovered ? Color.black.opacity(0.12) : Color.clear, radius: 8, y: 3)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.16)) {
+                isHovered = hovering
             }
         }
     }
@@ -1639,6 +1772,7 @@ struct QuarantineDecisionReconciliationView: View {
     @State private var filesystem = ""
     @State private var restore = ""
     @State private var message: String?
+    @State private var showAdvancedFingerprints = false
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -1662,21 +1796,24 @@ struct QuarantineDecisionReconciliationView: View {
                 .accessibilityIdentifier("mac.reconciliation.close")
             }.padding(16).background(KeptoraDesign.elevated)
             HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 10) {
-                    TextField("Plan ID", text: $planID)
-                    TextField("Decision fingerprint", text: $decision)
-                    TextField("Manifest fingerprint", text: $manifest)
-                    TextField("Verification fingerprint", text: $verification)
-                    TextField("Filesystem fingerprint", text: $filesystem)
-                    TextField("Restore fingerprint (optional)", text: $restore)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Reconcile quarantine snapshots to track plan state changes and verify safety guarantees.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
 
-                    Button("Load Current Safety Plan") {
+                    Button {
                         loadCurrentSafetyPlan()
+                    } label: {
+                        Label("Load Current Safety Plan", systemImage: "arrow.triangle.2.circlepath")
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
 
-                    Button("Reconcile Snapshot") {
+                    Button {
                         reconcile()
+                    } label: {
+                        Label("Reconcile Snapshot", systemImage: "checkmark.seal")
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled([planID, decision, manifest, verification, filesystem].contains(where: \.isEmpty))
@@ -1684,10 +1821,25 @@ struct QuarantineDecisionReconciliationView: View {
                     if let message {
                         Text(message)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(message.contains("error") ? .red : .secondary)
+                            .padding(.vertical, 2)
                     }
+
+                    DisclosureGroup("Manual Fingerprint Overrides", isExpanded: $showAdvancedFingerprints) {
+                        VStack(spacing: 8) {
+                            TextField("Plan ID", text: $planID)
+                            TextField("Decision fingerprint", text: $decision)
+                            TextField("Manifest fingerprint", text: $manifest)
+                            TextField("Verification fingerprint", text: $verification)
+                            TextField("Filesystem fingerprint", text: $filesystem)
+                            TextField("Restore fingerprint (optional)", text: $restore)
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .padding(.top, 6)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .textFieldStyle(.roundedBorder)
                 .frame(width: 360)
 
                 ScrollView {

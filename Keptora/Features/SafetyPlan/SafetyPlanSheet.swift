@@ -9,7 +9,6 @@ struct SafetyPlanSheet: View {
     }
 
     @State private var query = ""
-    @State private var confirmed = false
     @State private var sortMode: SortMode = .path
     @State private var visibleLimit = 300
     @EnvironmentObject private var model: AppModel
@@ -28,9 +27,6 @@ struct SafetyPlanSheet: View {
         .keptoraOnChange(of: query) { visibleLimit = 300 }
         .keptoraOnChange(of: sortMode) { visibleLimit = 300 }
         .onAppear { model.refreshSafetyPlanFreshness() }
-        .keptoraOnChange(of: model.safetyPlanFreshness?.state) { state in
-            if state != .current { confirmed = false }
-        }
     }
 
     private var header: some View {
@@ -78,10 +74,18 @@ struct SafetyPlanSheet: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Recheck") { model.refreshSafetyPlanFreshness() }
+                        Button {
+                            model.refreshSafetyPlanFreshness()
+                        } label: {
+                            Label("Recheck", systemImage: "arrow.clockwise")
+                        }
                         if !freshness.permitsCommit {
-                            Button("Regenerate Plan") { model.regenerateSafetyPlan(access: store) }
-                                .buttonStyle(.borderedProminent)
+                            Button {
+                                model.regenerateSafetyPlan(access: store)
+                            } label: {
+                                Label("Regenerate Plan", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
                     }
                     .padding(12)
@@ -176,8 +180,14 @@ struct SafetyPlanSheet: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-                Toggle("I understand original photos are preserved and copies can be restored at any time.", isOn: $confirmed)
-                    .toggleStyle(.checkbox)
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .foregroundStyle(Color.green)
+                    Text("Original photos are preserved and copies can be restored at any time.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
             }
             .padding(22)
         } else {
@@ -197,8 +207,12 @@ struct SafetyPlanSheet: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Export Plan…") { model.exportPendingSafetyPlan() }
-                .disabled(model.pendingPlan == nil || model.isCommittingCleanup || model.safetyPlanFreshness?.permitsCommit != true)
+            Button {
+                model.exportPendingSafetyPlan()
+            } label: {
+                Label("Export Plan…", systemImage: "square.and.arrow.up")
+            }
+            .disabled(model.pendingPlan == nil || model.isCommittingCleanup || model.safetyPlanFreshness?.permitsCommit != true)
             Button("Cancel") { model.cancelSafetyPlan() }
                 .keyboardShortcut(.cancelAction)
                 .disabled(model.isCommittingCleanup)
@@ -216,7 +230,7 @@ struct SafetyPlanSheet: View {
             }
             .buttonStyle(.borderedProminent)
             .keyboardShortcut(.defaultAction)
-            .disabled(model.pendingPlan == nil || model.isCommittingCleanup || !confirmed || model.safetyPlanFreshness?.permitsCommit != true)
+            .disabled(model.pendingPlan == nil || model.isCommittingCleanup || model.safetyPlanFreshness?.permitsCommit != true)
         }
         .padding(18)
     }

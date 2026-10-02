@@ -103,7 +103,6 @@ struct InteractivePhotoViewerView: View {
     @State private var loadedImage: NSImage?
     @State private var compareImage: NSImage?
     @State private var metadata: DetailedPhotoMetadata?
-    @State private var isShowingSwipeStudio: Bool = false
     
     @State private var baseZoomScale: CGFloat = 1.0
     @State private var basePanOffset: CGSize = .zero
@@ -206,28 +205,6 @@ struct InteractivePhotoViewerView: View {
             baseZoomScale = 1.0
             basePanOffset = .zero
             state.resetTransform()
-        }
-        .sheet(isPresented: $isShowingSwipeStudio) {
-            let cards = state.items.map { item in
-                SwipeCardItem(
-                    id: item.id,
-                    fileURL: item.fileURL,
-                    displayName: item.displayName,
-                    byteCount: item.byteCount ?? 0
-                )
-            }
-            SwipeCullingStudioView(
-                items: cards,
-                onCommitPlan: { cleanupItems in
-                    for c in cleanupItems {
-                        if let match = state.items.first(where: { $0.id == c.id }) {
-                            onCleanOrDelete?(match)
-                        }
-                    }
-                    isShowingSwipeStudio = false
-                },
-                onClose: { isShowingSwipeStudio = false }
-            )
         }
     }
     
@@ -401,15 +378,6 @@ struct InteractivePhotoViewerView: View {
             // Group 2: Zoom & Transform Cluster
             HStack(spacing: 8) {
                 Button(action: {
-                    if reduceMotion { state.zoomScale = max(1.0, state.zoomScale - 0.5) }
-                    else { withAnimation(.easeOut(duration: 0.2)) { state.zoomScale = max(1.0, state.zoomScale - 0.5) } }
-                }) {
-                    Image(systemName: "minus.magnifyingglass")
-                }
-                .buttonStyle(.plain)
-                .help("Zoom out")
-                
-                Button(action: {
                     if reduceMotion { state.toggle100PercentZoom() }
                     else { withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { state.toggle100PercentZoom() } }
                 }) {
@@ -417,16 +385,7 @@ struct InteractivePhotoViewerView: View {
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 }
                 .buttonStyle(.plain)
-                .help("Toggle 100% zoom")
-                
-                Button(action: {
-                    if reduceMotion { state.zoomScale = min(6.0, state.zoomScale + 0.5) }
-                    else { withAnimation(.easeOut(duration: 0.2)) { state.zoomScale = min(6.0, state.zoomScale + 0.5) } }
-                }) {
-                    Image(systemName: "plus.magnifyingglass")
-                }
-                .buttonStyle(.plain)
-                .help("Zoom in")
+                .help("Toggle 100% zoom (Double-click or pinch)")
 
                 Divider().frame(height: 14).background(Color.white.opacity(0.2))
 
@@ -515,19 +474,6 @@ struct InteractivePhotoViewerView: View {
                 .buttonStyle(.plain)
                 .help("Toggle EXIF inspector (⌘I)")
                 .accessibilityLabel("Toggle EXIF inspector (⌘I)")
-
-                // Swipe Culling Studio Launcher
-                Button(action: { isShowingSwipeStudio = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hand.draw.fill")
-                        Text("Swipe & Cull")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(.white.opacity(0.9))
-                }
-                .buttonStyle(.plain)
-                .help("Launch fast Tinder-style swipe culling for these photos")
-                .accessibilityLabel("Launch fast Tinder-style swipe culling for these photos")
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
