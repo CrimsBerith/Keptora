@@ -5,6 +5,8 @@
 **Girdiler:** [24 bulguluk UI/UX raporu](UI_UX_AUDIT.md), kullanıcının tüm arşivden serbest seçim/silme, mobil WhatsApp temizliği ve çekim bilgileriyle desteklenen benzerlik istekleri.
 **Durum:** Bu belge ilk ürün planını ve sonraki teslim notlarını içerir. Birleşik arşiv, kaynak rozetleri, manuel temizlik, başlangıç izinleri ve görsel yenileme kodlandı; native kabulü ayrıca gerekir. Güncel geliştirme sırası: [2.000–3.000 fotoğrafta kolay toplu temizlik planı](BULK_PHOTO_CLEANUP_PLAN.md).
 
+**Son kapsam kararı:** Kullanıcı WhatsApp'a özel çalışmayı iptal etti. Aşağıdaki tarihsel WhatsApp önerileri güncel iş listesi değildir. Aktif kaynaklar Galeri/Fotoğraflar, Bulut klasörleri ve Dosyalar; kaydedilmiş fotoğraflar genel taramada kalır. Özel girişlerin UI'dan kaldırılması güncel planda yer alır.
+
 ## 1. Yeni ürün hedefi
 
 Keptora, kullanıcının erişim verdiği fotoğraf ve video arşivini rahatça gezdiği, istediği öğeleri seçtiği, karşılaştırdığı ve sistemin desteklediği yolla temizlediği bir uygulama olacak. Birebir kopya ve benzerlik analizi yardımcı özellikler olacak; manuel temizleme yapmak için analiz tamamlamak gerekmeyecek.

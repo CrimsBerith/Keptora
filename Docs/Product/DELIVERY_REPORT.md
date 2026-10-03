@@ -4,6 +4,8 @@
 
 **Son plan güncellemesi:** [2.000–3.000 fotoğrafta kolay toplu temizlik](BULK_PHOTO_CLEANUP_PLAN.md). Kaynak tikleri, bütün fotoğraflara kalite bulguları, yan yana karar grid'i ve artımlı/önbellekli analiz yeni geliştirme kapsamıdır; aşağıdaki önceki teslimlerle karıştırılmamalıdır. Kod işleri burada, Xcode/Mac/iPhone kabulü en son kullanıcıda olacak.
 
+**Kapsam sadeleştirme:** WhatsApp'a özel çalışma kullanıcı tarafından iptal edildi. Güncel plan Galeri/Fotoğraflar, Bulut klasörleri ve Dosyalar'a odaklanır; önceki teslimdeki özel girişlerin kaldırılması planlanır. Bu rapordaki WhatsApp bölümleri geçmiş teslimi anlatır; uygulama kodundan henüz çıkarılmış sayılmaz.
+
 ## Kullanıcıya görünen değişiklikler
 
 - iPhone’daki Arşiv, kopya analizini beklemeden tüm erişilebilir fotoğraf ve videoları listeler. Normal dokunma önizleme, seçim modunda dokunma seçimdir. Basılı tutup sürükleme, görünür kapsamı/günü/ayı seçme, seçim geri alma ve ayrı son inceleme vardır.

@@ -8,6 +8,8 @@ Başlangıç izin ekranı ve WhatsApp dışa aktarım rehberi ayrıca uygulandı
 
 Son kullanıcı talebiyle kaynak tikleri, tüm fotoğraflarda kalite bulguları ve 2.000–3.000 fotoğrafta hızlı toplu karar için [yeni uygulama planı](BULK_PHOTO_CLEANUP_PLAN.md) hazırlandı. Bu yeni işler uygulanmış gibi sayılmaz; mevcut teslim üzerine gelecek geliştirmelerdir. Xcode/Mac/iPhone kabulü en son kullanıcı tarafından yapılacak.
 
+**Güncel kapsam:** WhatsApp'a özel akış kullanıcı tarafından iptal edildi; aşağıdaki WhatsApp bulguları önceki sürümün kaydıdır. Yeni planda ayrı WhatsApp kaynağı/entegrasyonu yoktur; galeriye veya dosyalara kaydedilmiş medya normal taramada kalır.
+
 1. İlk kurulumda Fotoğraflar izni verilir. Dosyalar/iCloud Drive/diğer sağlayıcılardaki istenen klasörler bir kez bağlanır. Mac’te birden fazla klasör aynı seçim penceresinde eklenebilir.
 2. Arşiv, bağlı ve erişilebilen kaynakların fotoğraf ve videolarını birlikte gösterir. WhatsApp’tan Fotoğraflar’a kaydedilen öğeler ikinci kez eklenmez; albüm üyeliği kaynak rozeti olarak kullanılır.
 3. **Tüm Kaynakları Tara**, aynı taramada bu kaynakların hepsini karşılaştırır. **Bulut Asıllarını Dahil Et** indirmeli taramayı açık onayla başlatır. Bulutta olup okunamayan asıllar arşivden kaybolmaz.
