@@ -1,5 +1,7 @@
 import KeptoraCore
 import AppKit
+@preconcurrency import AVFoundation
+import ImageIO
 import Photos
 import SwiftUI
 
@@ -394,7 +396,7 @@ struct MacPhotosLibraryView: View {
             let summary = isSimilarVideoMode
                 ? "\(cleanupCount.formatted()) manually reviewed similar videos will move to Recently Deleted."
                 : "\(cleanupCount.formatted()) verified exact copies will move to Recently Deleted."
-            let baseNotice = "\n\n✓ Restorable at any time: Deleted items move to Recently Deleted for up to 30 days. With iCloud Photos, removal syncs to your other devices."
+            let baseNotice = "\n\nRecovery: Items move to Recently Deleted for up to 30 days unless permanently deleted sooner. iCloud Photos removal syncs to your other devices."
             Text(summary + zeroWarning + keeperWarning + baseNotice)
         }
     }
@@ -739,9 +741,12 @@ private struct MacSimilarVideoCard: View {
     }
 }
 
-private struct MacPhotosThumbnail: View {
+struct MacPhotosThumbnail: View {
     let asset: UniversalMediaAsset
+    var pixelSize: CGFloat = 600
+    var fit = false
     @State private var image: NSImage?
+    @State private var finished = false
 
     private final class ResumeBox: @unchecked Sendable {
         private var didResume = false
@@ -758,14 +763,43 @@ private struct MacPhotosThumbnail: View {
     var body: some View {
         ZStack {
             Color.secondary.opacity(0.10)
-            if let image { Image(nsImage: image).resizable().scaledToFill() }
-            else { Image(systemName: asset.mediaKind == .video ? "video.fill" : "photo").font(.largeTitle).foregroundStyle(.secondary) }
+            if let image {
+                if fit { Image(nsImage: image).resizable().scaledToFit() }
+                else { Image(nsImage: image).resizable().scaledToFill() }
+            } else if !finished { ProgressView() }
+            else { Label("Preview unavailable", systemImage: asset.mediaKind == .video ? "video.slash" : "photo.badge.exclamationmark").font(.caption).foregroundStyle(.secondary) }
         }
         .clipped()
         .task(id: asset.id) { await load() }
     }
 
     private func load() async {
+        image = nil; finished = false
+        defer { finished = true }
+        if case .file(let url) = asset.reference {
+            if asset.mediaKind == .video {
+                let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+                generator.appliesPreferredTrackTransform = true
+                generator.maximumSize = CGSize(width: pixelSize, height: pixelSize)
+                let cgImage = await withTaskCancellationHandler {
+                    try? await generator.image(at: CMTime(seconds: 0, preferredTimescale: 600)).image
+                } onCancel: { generator.cancelAllCGImageGeneration() }
+                if let cgImage, !Task.isCancelled { image = NSImage(cgImage: cgImage, size: .zero) }
+            } else {
+                let size = pixelSize
+                let decoded = await Task.detached(priority: .utility) { () -> NSImage? in
+                    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                          let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                            kCGImageSourceCreateThumbnailFromImageAlways: true,
+                            kCGImageSourceThumbnailMaxPixelSize: Int(size),
+                            kCGImageSourceCreateThumbnailWithTransform: true
+                          ] as CFDictionary) else { return nil }
+                    return NSImage(cgImage: cgImage, size: .zero)
+                }.value
+                if !Task.isCancelled { image = decoded }
+            }
+            return
+        }
         guard case .photoLibrary(let identifier) = asset.reference,
               let photo = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject else { return }
         let box = ResumeBox()
@@ -776,8 +810,8 @@ private struct MacPhotosThumbnail: View {
             options.isNetworkAccessAllowed = false
             PHImageManager.default().requestImage(
                 for: photo,
-                targetSize: NSSize(width: 600, height: 600),
-                contentMode: .aspectFill,
+                targetSize: NSSize(width: pixelSize, height: pixelSize),
+                contentMode: fit ? .aspectFit : .aspectFill,
                 options: options
             ) { image, info in
                 let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false

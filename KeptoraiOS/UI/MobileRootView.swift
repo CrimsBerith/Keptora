@@ -11,8 +11,8 @@ struct MobileRootView: View {
                 .tabItem { Label("Library", systemImage: "photo.stack") }
                 .tag(MobileTab.library)
                 .accessibilityIdentifier("tab.library")
-            NavigationStack { MobileReviewView() }
-                .tabItem { Label("Review", systemImage: "sparkles.rectangle.stack") }
+            NavigationStack { MobileCleanupHubView() }
+                .tabItem { Label("Cleanup", systemImage: "sparkles.rectangle.stack") }
                 .tag(MobileTab.review)
                 .accessibilityIdentifier("tab.review")
             NavigationStack { MobileHistoryView() }

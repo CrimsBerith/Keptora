@@ -5,10 +5,11 @@ struct MainRootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
+    @StateObject private var archive = MacArchiveModel()
     @State private var hoveredRoute: SidebarRoute?
     @State private var isDropTargeted: Bool = false
 
-    private let primaryRoutes: [SidebarRoute] = [.home, .review, .smartBuckets, .history]
+    private let primaryRoutes: [SidebarRoute] = [.archive, .home, .review, .smartBuckets, .history]
     private let toolRoutes:    [SidebarRoute] = [.insights]
 
     var body: some View {
@@ -34,6 +35,7 @@ struct MainRootView: View {
             ZStack {
                 KeptoraBackdrop()
                 routeDetail
+                    .environmentObject(archive)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 if isDropTargeted {
@@ -256,11 +258,12 @@ struct MainRootView: View {
     @ViewBuilder
     private var routeDetail: some View {
         switch model.selectedRoute {
+        case .archive:      MacArchiveView()
         case .home:         HomeView()
         case .review:       ReviewStudioView()
         case .smartBuckets: SmartBucketsDashboardView()
         case .insights:     ReviewInsightsView()
-        case .history:      HistoryView()
+        case .history:      CombinedCleanupHistoryView()
         case .diagnostics:  DiagnosticsView()
         case .settings:     SettingsView()
         }

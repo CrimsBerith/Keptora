@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 
 public struct LibrarySource: Identifiable, Hashable, Codable, Sendable {
     public enum Kind: String, Codable, CaseIterable, Sendable {
@@ -93,6 +95,7 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
     public let hasAdjustments: Bool
     public let isSharedLibraryAsset: Bool
     public let hasAlbumMembership: Bool
+    public let context: MediaContext?
     public let requiresNetwork: Bool
 
     public init(
@@ -112,7 +115,8 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         hasAdjustments: Bool = false,
         isSharedLibraryAsset: Bool = false,
         hasAlbumMembership: Bool = false,
-        requiresNetwork: Bool = false
+        requiresNetwork: Bool = false,
+        context: MediaContext? = nil
     ) {
         self.id = id
         self.sourceID = sourceID
@@ -131,6 +135,7 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         self.isSharedLibraryAsset = isSharedLibraryAsset
         self.hasAlbumMembership = hasAlbumMembership
         self.requiresNetwork = requiresNetwork
+        self.context = context
     }
 
     public var isProtectedFromGlobalSelection: Bool {
@@ -153,7 +158,8 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         hasAdjustments: Bool? = nil,
         isSharedLibraryAsset: Bool? = nil,
         hasAlbumMembership: Bool? = nil,
-        requiresNetwork: Bool? = nil
+        requiresNetwork: Bool? = nil,
+        context: MediaContext?? = nil
     ) -> UniversalMediaAsset {
         UniversalMediaAsset(
             id: self.id,
@@ -172,7 +178,8 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
             hasAdjustments: hasAdjustments ?? self.hasAdjustments,
             isSharedLibraryAsset: isSharedLibraryAsset ?? self.isSharedLibraryAsset,
             hasAlbumMembership: hasAlbumMembership ?? self.hasAlbumMembership,
-            requiresNetwork: requiresNetwork ?? self.requiresNetwork
+            requiresNetwork: requiresNetwork ?? self.requiresNetwork,
+            context: context != nil ? context! : self.context
         )
     }
 }
@@ -300,6 +307,7 @@ public struct UniversalSimilarityGroup: Identifiable, Hashable, Codable, Sendabl
     }
 }
 
+#if canImport(CoreGraphics)
 public struct UniversalVideoSimilaritySample: @unchecked Sendable {
     public let duration: TimeInterval
     public let pixelWidth: Int
@@ -313,6 +321,8 @@ public struct UniversalVideoSimilaritySample: @unchecked Sendable {
         self.frames = frames
     }
 }
+
+#endif
 
 public enum SourceAuthorization: String, Codable, Sendable {
     case notDetermined
@@ -343,6 +353,7 @@ extension SourceAdapter {
     }
 }
 
+#if canImport(CoreGraphics)
 public protocol SimilarityImageProviding: Sendable {
     func similarityImage(
         for asset: UniversalMediaAsset,
@@ -358,6 +369,8 @@ public protocol SimilarityVideoProviding: Sendable {
         allowNetwork: Bool
     ) async throws -> UniversalVideoSimilaritySample
 }
+
+#endif
 
 public struct DashboardSnapshot: Hashable, Codable, Sendable {
     public let scannedItems: Int

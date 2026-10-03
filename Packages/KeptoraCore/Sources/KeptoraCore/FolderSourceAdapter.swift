@@ -53,6 +53,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
             guard values?.isRegularFile == true else { continue }
             let kind: UniversalMediaKind = SupportedMediaExtensions.videos.contains(ext) ? .video : .image
             let stablePath = url.standardizedFileURL.path
+            let metadata = kind == .image ? PhotoMetadataExtractor.extract(from: url) : nil
             assets.append(
                 UniversalMediaAsset(
                     id: "file:\(StableDigest.fnv1a64(source.id + "|" + stablePath))",
@@ -60,9 +61,14 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
                     reference: .file(url),
                     displayName: url.lastPathComponent,
                     mediaKind: kind,
-                    byteCount: Int64(values?.fileSize ?? 0),
+                    byteCount: values?.fileSize.map { Int64($0) },
+                    pixelWidth: metadata?.pixelWidth ?? 0, pixelHeight: metadata?.pixelHeight ?? 0,
                     creationDate: values?.creationDate,
-                    modificationDate: values?.contentModificationDate
+                    modificationDate: values?.contentModificationDate,
+                    context: MediaContext(location: metadata.flatMap { m in
+                        guard let lat = m.latitude, let lon = m.longitude else { return nil }
+                        return MediaLocation(latitude: lat, longitude: lon)
+                    }, captureDate: metadata?.dateCaptured, captureTimeIsReliable: metadata?.captureTimeIsReliable == true, camera: metadata?.cameraModel, captureDateText: metadata?.dateCapturedText)
                 )
             )
         }

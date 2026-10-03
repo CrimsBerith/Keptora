@@ -14,7 +14,7 @@ struct PaywallView: View {
                         Image("paywall_hero")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 360)
+                            .frame(width: 320)
                             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -43,7 +43,7 @@ struct PaywallView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             feature("Unlimited exact-duplicate review decisions", image: "infinity")
                             feature("Unlimited reversible Cleanup Plans", image: "arrow.uturn.backward.circle")
-                            feature("Privacy-first · Nothing is uploaded", image: "checkmark.shield.fill")
+                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
                         }
                         .padding(20)
                         .frame(maxWidth: 590, alignment: .leading)
@@ -137,7 +137,7 @@ struct PaywallView: View {
         .task { if store.lifetimeProduct == nil { await store.refresh() } }
     }
 
-    private func feature(_ text: String, image: String) -> some View {
+    private func feature(_ text: LocalizedStringKey, image: String) -> some View {
         Label {
             Text(text)
                 .font(.callout.weight(.medium))

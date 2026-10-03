@@ -295,7 +295,7 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(.horizontal, 20)
             .frame(minHeight: 52)
-            .background(MobileKeptoraDesign.brandGradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(MobileKeptoraDesign.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
@@ -307,7 +307,7 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
                         lineWidth: 1
                     )
             }
-            .shadow(color: MobileKeptoraDesign.violet.opacity(configuration.isPressed ? 0.15 : 0.32), radius: 18, y: 8)
+            .shadow(color: MobileKeptoraDesign.violet.opacity(configuration.isPressed ? 0.15 : 0.32), radius: 8, y: 3)
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.98 : 1.0))
             .opacity(configuration.isPressed ? 0.92 : 1.0)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)

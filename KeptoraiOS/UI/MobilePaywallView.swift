@@ -14,7 +14,7 @@ struct MobilePaywallView: View {
                         Image("paywall_hero")
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: 220)
                             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -35,9 +35,7 @@ struct MobilePaywallView: View {
 
                         VStack(alignment: .leading, spacing: 16) {
                             feature("Unlimited exact-copy review", "infinity", MobileKeptoraDesign.violet)
-                            feature("Reversible folder cleanup", "arrow.uturn.backward.circle", MobileKeptoraDesign.amber)
-                            feature("Photos and Files", "photo.on.rectangle.angled", MobileKeptoraDesign.coral)
-                            feature("Private, on-device processing", "lock.shield.fill", MobileKeptoraDesign.mint)
+                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
                         }
                         .keptoraPanel(tint: MobileKeptoraDesign.violet)
 

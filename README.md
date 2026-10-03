@@ -1,22 +1,21 @@
-# Keptora — Phase 5S Quarantine Verification Lineage
+# Keptora
 
-Keptora is a native macOS archive-review app. Release candidate target: **1.0.0 (181)** for Apple Silicon on macOS 13+.
+Keptora is a private photo and video cleaner for iPhone and macOS. Open Apple Photos or a chosen folder, browse all accessible media, select any items manually, and review the source and recovery conditions before removing them.
 
-Phase 5S adds independent post-commit/post-restore verification and append-only verification lineage on top of Phase 5R's stale Safety Plan protection. A successful move is not automatically called verified: Keptora re-reads SQLite state, file presence and signed-manifest digest/byte count. History also exposes a read-only **Verify State** action.
+The library supports album, media, favorite and date filters, grouping, preview and selection review. WhatsApp collections use saved Photos copies and user-assigned albums; WhatsApp chat storage is managed inside WhatsApp. Similarity suggestions combine visual comparison with available capture time, location and burst context, while exact duplicates retain byte-level verification.
 
-Safety remains fail-closed: exact cleanup requires SHA-256 proof; similar photos stay review-only; similar videos require explicit manual selection and a fresh byte-level recheck; every group protects a keeper; folder cleanup uses reversible quarantine; Photos uses Apple's Recently Deleted flow.
+Photos removals use the system confirmation and Recently Deleted. Folder files move to a recovery area on the same storage; this does not free space. Disk recovery manifests preserve a recovery route across app interruptions. Manual selection, privacy and recovery are available without Pro.
 
-Start with `CODEX_GROK_MAC_HANDOFF.md`, `Docs/Phase_5S/PHASE_5S_IMPLEMENTATION.md`, and `VALIDATION_REPORT_PHASE_5S.md`.
+See the [delivery report](Docs/Product/DELIVERY_REPORT.md), [UI/UX audit](Docs/Product/UI_UX_AUDIT.md), [product plan](Docs/Product/PHOTO_CLEANER_PLAN.md), and [new artwork](Docs/Product/ARTWORK.md).
 
+## Development checks
 
-## Phase G Mac profiling closure
-- Static readiness: `./Scripts/validate_phase_g_readiness.sh`
-- Real Mac trace suite: `./Scripts/run_phase_g_profile_suite.sh <external-corpus> <built-app>`
-- Product shell remains **Archive Review Studio**; real corpus remains external.
+```sh
+rtk swift test --package-path Packages/KeptoraCore
+rtk proxy python3 Scripts/validate_project_references.py
+rtk proxy python3 Scripts/validate_photo_cleaner_assets.py
+```
 
+On Linux, the package tests the shared Foundation catalogue, selection and metadata policy models. Apple-only adapters and UI require macOS/Xcode. [Apple CI](.github/workflows/apple-validation.yml) runs the full core, native macOS/iPhone unit tests, focused product UI tests and simulator screenshot capture. Native validation and current screenshots must be reviewed before release.
 
-## Phase H–I Mac closure automation
-- Static readiness: `./Scripts/validate_phase_h_i_readiness.sh`
-- Phase H Mac runner: `./Scripts/run_phase_h_release_candidate_macos.sh <phase-g-trace-dir>`
-- Phase I checklist: `AppStore/PHASE_I_FINAL_QA_CHECKLIST.md`
-- Preserve **Archive Review Studio** through final screenshots and TestFlight QA.
+Legacy archive-review implementation and release history remain documented in [Phase 5S](Docs/Phase_5S/PHASE_5S_IMPLEMENTATION.md). Those historical reports and screenshots do not validate the current photo-cleaner release.

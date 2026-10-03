@@ -9,6 +9,7 @@ struct MobileAssetThumbnail: View {
     /// Longest edge requested from PhotoKit; grid cells use the default, full-screen viewers pass more.
     var pixelSize: CGFloat = 500
     var contentMode: ContentMode = .fill
+    var allowNetwork = false
     @State private var image: UIImage?
     @State private var didFinish = false
 
@@ -24,20 +25,24 @@ struct MobileAssetThumbnail: View {
             } else if !didFinish {
                 ProgressView()
             } else {
-                Image(systemName: asset.mediaKind == .video ? "video.fill" : "photo")
-                    .font(.largeTitle).foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Image(systemName: "photo.badge.exclamationmark").font(.title2)
+                    Text("Preview unavailable").font(.caption2).multilineTextAlignment(.center)
+                    Button("Retry") { Task { didFinish = false; await load(); didFinish = true } }
+                        .font(.caption).frame(minHeight: 44)
+                }.foregroundStyle(.secondary).padding(4)
             }
         }
         .clipped()
-        .task(id: asset.id) {
-            didFinish = false
+        .task(id: cacheKey) {
+            image = nil; didFinish = false
             await load()
             if !Task.isCancelled { didFinish = true }
         }
     }
 
     private var cacheKey: String {
-        "\(asset.id)_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")"
+        "\(asset.id)_\(asset.modificationDate?.timeIntervalSince1970 ?? 0)_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
     }
 
     private func load() async {
@@ -84,7 +89,7 @@ struct MobileAssetThumbnail: View {
                     let options = PHImageRequestOptions()
                     options.deliveryMode = .highQualityFormat
                     options.resizeMode = .fast
-                    options.isNetworkAccessAllowed = false
+                    options.isNetworkAccessAllowed = allowNetwork
                     let targetMode: PHImageContentMode = (contentMode == .fit) ? .aspectFit : .aspectFill
                     let id = PHImageManager.default().requestImage(
                         for: photo,
@@ -96,7 +101,7 @@ struct MobileAssetThumbnail: View {
                         let failed = info?[PHImageErrorKey] != nil || (info?[PHImageCancelledKey] as? Bool) == true
                         let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
                         // If network access is disabled or asset is in iCloud, degraded image is the only locally available representation
-                        let isFinalOrOnlyAvailable = !options.isNetworkAccessAllowed || isInCloud
+                        let isFinalOrOnlyAvailable = !options.isNetworkAccessAllowed && isInCloud
                         if degraded && img != nil && !failed && !isFinalOrOnlyAvailable { return }
                         request.resumeOnce { continuation.resume(returning: img) }
                     }

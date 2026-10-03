@@ -57,8 +57,7 @@ final class KeptoraiOSTests: XCTestCase {
         let adapter = PhotoLibrarySourceAdapter()
         let auth = await adapter.authorizationStatus()
         guard auth == .authorized || auth == .limited else {
-            print("Photos authorization is not granted on this runner; skipping live scan.")
-            return
+            throw XCTSkip("Photos authorization is not granted on this runner.")
         }
         let assets = try await adapter.enumerateAssets()
         XCTAssertGreaterThanOrEqual(assets.count, 5, "Simulator should contain the imported sample assets.")

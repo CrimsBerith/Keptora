@@ -8,6 +8,7 @@ struct MobileSplitComparisonView: View {
     let assetB: UniversalMediaAsset
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var splitRatio: CGFloat = 0.5
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -146,7 +147,7 @@ struct MobileSplitComparisonView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        withAnimation {
+                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
                             scale = 1.0
                             lastScale = 1.0
                             offset = .zero

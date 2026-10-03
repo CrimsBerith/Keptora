@@ -14,11 +14,56 @@ final class KeptoraiOSUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += arguments + [
             "-AppleLanguages", "(\(language))",
-            "-AppleLocale", locale
+            "-AppleLocale", locale,
+            "-hasSeenMobileOnboarding", "YES", "-Keptora.AppLanguage", "system"
         ]
         app.launch()
-        XCTAssertTrue(app.buttons["library.source.photos"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 10))
         return app
+    }
+
+    private func openComparisons(_ app: XCUIApplication) {
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        let comparisons = app.buttons["cleanup.comparisons"]
+        for _ in 0..<6 where !comparisons.isHittable { app.swipeUp() }
+        XCTAssertTrue(comparisons.waitForExistence(timeout: 5))
+        comparisons.tap()
+    }
+
+    func testManualArchiveSelectionRetainsItemsWhenFiltering() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        app.buttons["archive.selectMode"].tap()
+        let item = app.buttons["archive.asset.ui-photo-keeper"]
+        XCTAssertTrue(item.waitForExistence(timeout: 5)); item.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
+        app.segmentedControls.buttons["Videos"].tap()
+        XCTAssertTrue(app.staticTexts["1 selected outside this view"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Review Selection"].isHittable)
+        app.buttons["Review Selection"].tap()
+        XCTAssertTrue(app.staticTexts["Portrait Original.heic"].waitForExistence(timeout: 3))
+        app.buttons["Close"].tap()
+    }
+
+    func testWhatsAppGuideExplainsSavedCopiesAndChatStorage() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        app.buttons["WhatsApp Storage Guide"].tap()
+        XCTAssertTrue(app.staticTexts["Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage."].waitForExistence(timeout: 3))
+        app.buttons["Done"].tap()
+    }
+
+    func testCaptureCurrentPhotoLibraryScreens() {
+        let app = launch()
+        if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
+        XCTAssertTrue(app.buttons["archive.selectMode"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["archive.selectMode"].isEnabled, "Imported simulator photos must be visible")
+        app.buttons["archive.selectMode"].tap()
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Current Library — real simulator media"
+        attachment.lifetime = .keepAlways; add(attachment)
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        let hub = XCTAttachment(screenshot: app.screenshot())
+        hub.name = "Current Cleanup Collections"; hub.lifetime = .keepAlways; add(hub)
     }
 
     func testLaunchShowsKeptoraLibrary() {
@@ -34,7 +79,7 @@ final class KeptoraiOSUITests: XCTestCase {
     func testVideoReviewSupportsCardCheckboxAndMediaFilters() {
         let app = launch(arguments: ["-keptoraVideoReviewUITesting"])
 
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        openComparisons(app)
         XCTAssertTrue(app.segmentedControls.buttons["Exact copies"].waitForExistence(timeout: 8))
         app.segmentedControls.buttons["Videos"].tap()
 
@@ -76,6 +121,7 @@ final class KeptoraiOSUITests: XCTestCase {
         let app = launch()
 
         let settings = app.buttons["ios.library.settings"]
+        app.buttons["ios.library.options"].tap()
         XCTAssertTrue(settings.waitForExistence(timeout: 8))
         settings.tap()
         XCTAssertTrue(app.buttons["ios.settings.close"].waitForExistence(timeout: 5))
@@ -89,6 +135,7 @@ final class KeptoraiOSUITests: XCTestCase {
         app.buttons["ios.paywall.close"].tap()
         XCTAssertTrue(app.buttons["library.source.photos"].waitForExistence(timeout: 5))
 
+        app.buttons["ios.library.options"].tap()
         settings.tap()
         XCTAssertTrue(app.buttons["ios.settings.close"].waitForExistence(timeout: 5))
         app.buttons["ios.settings.close"].tap()
@@ -123,7 +170,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testExactPhotoCardDetailsAndCleanupConfirmation() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        openComparisons(app)
 
         let card = app.buttons["review.exact.asset.ui-photo-copy"]
         XCTAssertTrue(card.waitForExistence(timeout: 8))
@@ -145,7 +192,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testSimilarPhotoComparisonOpensResetsAndCloses() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        openComparisons(app)
         app.segmentedControls.buttons["Similar"].tap()
 
         XCTAssertTrue(app.buttons["ios.similarityComparison.open"].waitForExistence(timeout: 8))
@@ -158,9 +205,9 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testLibraryReviewAndHistoryTabsShowFixtureContent() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        XCTAssertTrue(app.descendants(matching: .any)["ios.page.library"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].exists)
 
-        app.tabBars.buttons.element(boundBy: 1).tap()
+        openComparisons(app)
         XCTAssertTrue(app.segmentedControls.buttons["Exact copies"].waitForExistence(timeout: 5))
 
         app.tabBars.buttons.element(boundBy: 2).tap()
@@ -172,10 +219,10 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testPrimaryTabLabelsAreLocalizedInFourLanguages() {
         let expectations: [(String, String, String, String, String)] = [
-            ("en", "en_US", "Library", "Review", "History"),
-            ("tr", "tr_TR", "Arşiv", "İnceleme", "Geçmiş"),
-            ("de", "de_DE", "Mediathek", "Prüfen", "Verlauf"),
-            ("fr", "fr_FR", "Photothèque", "Examen", "Historique")
+            ("en", "en_US", "Library", "Cleanup", "History"),
+            ("tr", "tr_TR", "Arşiv", "Temizlik", "Geçmiş"),
+            ("de", "de_DE", "Mediathek", "Bereinigen", "Verlauf"),
+            ("fr", "fr_FR", "Photothèque", "Nettoyage", "Historique")
         ]
 
         for (language, locale, library, review, history) in expectations {

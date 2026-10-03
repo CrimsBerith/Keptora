@@ -1,13 +1,12 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "onboarding_restore.jpg",
-      "idiom" : "universal",
-      "scale" : "1x"
+      "filename": "onboarding_restore.png",
+      "idiom": "universal"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }

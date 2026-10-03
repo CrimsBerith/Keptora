@@ -73,22 +73,19 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             throw UniversalScanError.sourcePermissionDenied
         }
         let fetch = PHAsset.fetchAssets(with: nil)
-        let albumMemberIDs = Self.albumMemberIdentifiers()
+        let albumMemberships = Self.albumMemberships()
         var output: [UniversalMediaAsset] = []
         output.reserveCapacity(fetch.count)
         for index in 0..<fetch.count {
             try Task.checkCancellation()
             let asset = fetch.object(at: index)
             guard asset.mediaType == .image || asset.mediaType == .video else { continue }
-            let filename = (asset.value(forKey: "filename") as? String) ?? (asset.mediaType == .video ? "Video_\(index + 1)" : "Photo_\(index + 1)")
-            let byteCount: Int64? = autoreleasepool {
-                let resources = PHAssetResource.assetResources(for: asset)
-                if let primary = Self.primaryResource(in: resources, mediaType: asset.mediaType),
-                   let size = primary.value(forKey: "fileSize") as? Int64, size > 0 {
-                    return size
-                }
-                return resources.compactMap { $0.value(forKey: "fileSize") as? Int64 }.first
-            }
+            let resources = PHAssetResource.assetResources(for: asset)
+            let filename = Self.primaryResource(in: resources, mediaType: asset.mediaType)?.originalFilename
+                ?? resources.first?.originalFilename ?? (asset.mediaType == .video ? "Video_\(index + 1)" : "Photo_\(index + 1)")
+            // PhotoKit has no public size property. Unknown is honest; a completed
+            // fingerprint supplies measured bytes without private KVC keys.
+            let byteCount: Int64? = nil
             output.append(
                 UniversalMediaAsset(
                     id: "photos:\(asset.localIdentifier)",
@@ -104,9 +101,13 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     modificationDate: asset.modificationDate,
                     isFavorite: asset.isFavorite,
                     isHidden: asset.isHidden,
-                    hasAdjustments: asset.hasAdjustments,
+                    hasAdjustments: resources.contains { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto || $0.type == .adjustmentBaseVideo },
                     isSharedLibraryAsset: Self.isSharedAsset(asset),
-                    hasAlbumMembership: albumMemberIDs.contains(asset.localIdentifier)
+                    hasAlbumMembership: !(albumMemberships[asset.localIdentifier] ?? []).isEmpty,
+                    context: MediaContext(albums: albumMemberships[asset.localIdentifier] ?? [],
+                        location: asset.location.map { MediaLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) },
+                        captureDate: asset.creationDate, captureTimeIsReliable: true, burstID: asset.burstIdentifier,
+                        isLivePhoto: asset.mediaSubtypes.contains(.photoLive), isScreenshot: asset.mediaSubtypes.contains(.photoScreenshot))
                 )
             )
         }
@@ -253,17 +254,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 
     public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
         if let byteCount = asset.byteCount, byteCount > 0 { return byteCount }
-        guard case .photoLibrary(let localIdentifier) = asset.reference else { return nil }
-        return autoreleasepool {
-            let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
-            guard let photo = fetch.firstObject else { return nil }
-            let resources = PHAssetResource.assetResources(for: photo)
-            if let primary = Self.primaryResource(in: resources, mediaType: photo.mediaType),
-               let size = primary.value(forKey: "fileSize") as? Int64, size > 0 {
-                return size
-            }
-            return resources.compactMap { $0.value(forKey: "fileSize") as? Int64 }.first
-        }
+        return nil
     }
 
     private static func isNetworkAccessRequired(_ error: Error) -> Bool {
@@ -294,6 +285,26 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
         let desc = ns.localizedDescription.lowercased()
         return desc.contains("cancelled") || desc.contains("canceled")
+    }
+
+    /// Detailed camera/lens/EXIF data is fetched only when a person opens Details.
+    public func metadata(for asset: UniversalMediaAsset, allowNetwork: Bool = false) async throws -> DetailedPhotoMetadata {
+        guard case .photoLibrary(let id) = asset.reference, asset.mediaKind == .image,
+              let photo = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
+            throw UniversalScanError.unsupportedReference
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            let singleShot = SingleShotContinuation<DetailedPhotoMetadata>(continuation)
+            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
+            options.deliveryMode = .highQualityFormat; options.version = .current
+            PHImageManager.default().requestImageDataAndOrientation(for: photo, options: options) { data, _, _, info in
+                if let data, let source = CGImageSourceCreateWithData(data as CFData, nil) {
+                    singleShot.resume(returning: PhotoMetadataExtractor.extract(from: source))
+                } else {
+                    singleShot.resume(throwing: (info?[PHImageErrorKey] as? Error) ?? UniversalScanError.inaccessibleAsset(asset.displayName))
+                }
+            }
+        }
     }
 
     public func similarityImage(
@@ -361,23 +372,25 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         try await deleteSelectedAssets(localIdentifiers: localIdentifiers)
     }
 
-    public func deleteSelectedAssets(localIdentifiers: [String]) async throws {
+    public func deleteSelectedAssets(localIdentifiers: [String], intent: PhotosRemovalIntent = .suggestedCopies) async throws {
         let identifiers = Array(Set(localIdentifiers))
         guard !identifiers.isEmpty else { return }
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
         guard fetched.count == identifiers.count else {
             throw UniversalScanError.cleanupNotPermitted("Some Photos items changed after review. Scan again before cleanup.")
         }
+        if case .suggestedCopies = intent {
         var protectedNames: [String] = []
         let albumMemberIDs = Self.albumMemberIdentifiers()
         fetched.enumerateObjects { asset, _, _ in
             let resources = PHAssetResource.assetResources(for: asset)
-            if asset.isFavorite || asset.isHidden || asset.hasAdjustments || Self.isSharedAsset(asset) || albumMemberIDs.contains(asset.localIdentifier) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
+            if asset.isFavorite || asset.isHidden || Self.isSharedAsset(asset) || albumMemberIDs.contains(asset.localIdentifier) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
                 protectedNames.append(resources.first?.originalFilename ?? asset.localIdentifier)
             }
         }
         guard protectedNames.isEmpty else {
             throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
+        }
         }
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(fetched)
@@ -488,6 +501,17 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         case .limited: return .limited
         @unknown default: return .unavailable
         }
+    }
+
+    private static func albumMemberships() -> [String: [MediaAlbum]] {
+        let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        var membership: [String: [MediaAlbum]] = [:]
+        collections.enumerateObjects { collection, _, _ in
+            let album = MediaAlbum(id: collection.localIdentifier, title: collection.localizedTitle ?? "Album")
+            let members = PHAsset.fetchAssets(in: collection, options: nil)
+            members.enumerateObjects { asset, _, _ in membership[asset.localIdentifier, default: []].append(album) }
+        }
+        return membership
     }
 
     private static func albumMemberIdentifiers() -> Set<String> {

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9490E585F79F412A9D79B787 /* MacArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */; };
+		088D4FA225BE4000810CF63B /* MobileArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247968AEA26B410B9CC6A740 /* MobileArchiveView.swift */; };
 		005D72074E110279171AD67F /* SQLiteDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 866CEFC30164C3AC7062B41A /* SQLiteDatabase.swift */; };
 		0195725B846AE21194345209 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFDC646C1331F98A111D7A7 /* AppModelTests.swift */; };
 		01FC7A58A26DC192B4189200 /* AssetFamilyGraphBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326EA7A14786A61759908120 /* AssetFamilyGraphBuilder.swift */; };
@@ -149,6 +151,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveView.swift; sourceTree = "<group>"; };
+		247968AEA26B410B9CC6A740 /* MobileArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileArchiveView.swift; sourceTree = "<group>"; };
 		0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		01FB6C8ACDCC9E3B5600691F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -367,6 +371,7 @@
 				50E774654B7B6226883187D4 /* MobileDesignSystem.swift */,
 				C69676A4C411DD7EE8237095 /* MobileHistoryView.swift */,
 				49F70571F43303158A051682 /* MobileLibraryView.swift */,
+				247968AEA26B410B9CC6A740 /* MobileArchiveView.swift */,
 				3DA20DA12EE914B907307D05 /* MobileOnboardingView.swift */,
 				11D09C4A20DA834789E9E33A /* MobilePaywallView.swift */,
 				025DC88E37E819FF25CFA767 /* MobilePhotoInspectorSheet.swift */,
@@ -712,6 +717,7 @@
 			children = (
 				0B2F1ABB3C2D822ADB36E913 /* HomeView.swift */,
 				AB3B580F106A42DF1476F8F4 /* MacPhotosLibraryView.swift */,
+				2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -1017,6 +1023,7 @@
 				0C453A54835BFA6F96BECD04 /* KeptoraResiliencePerformanceController.swift in Sources */,
 				9493785F5F7D9FEA90BFAB22 /* KeptoraWindowStressContract.swift in Sources */,
 				5FE3A8443B5C5C39D6EEF09C /* MacPhotosLibraryView.swift in Sources */,
+				9490E585F79F412A9D79B787 /* MacArchiveView.swift in Sources */,
 				988A8BF44853C471CA5BEE6F /* MainRootView.swift in Sources */,
 				C02864EACDF705F063943BE7 /* ManifestSigner.swift in Sources */,
 				2D2758F0540D33F2D8F31B6D /* MetadataToolsCore.swift in Sources */,
@@ -1073,6 +1080,7 @@
 				A12D04F6278CD5C6F5B44DB4 /* MobileHistoryView.swift in Sources */,
 				83214BA1B8E122CC708E8F11 /* MobileKeptoraStore.swift in Sources */,
 				62F08545038D1C5B36609E57 /* MobileLibraryView.swift in Sources */,
+				088D4FA225BE4000810CF63B /* MobileArchiveView.swift in Sources */,
 				7E2E9ABF3C87FEACF21C0C28 /* MobileOnboardingView.swift in Sources */,
 				15DFAD7618D55BF256A1BA6A /* MobilePaywallView.swift in Sources */,
 				86206A4776E5A638E19BB45A /* MobilePhotoInspectorSheet.swift in Sources */,

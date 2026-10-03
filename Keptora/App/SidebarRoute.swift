@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum SidebarRoute: String, CaseIterable, Identifiable, Hashable {
+    case archive
     case home
     case review
     case smartBuckets
@@ -13,7 +14,8 @@ enum SidebarRoute: String, CaseIterable, Identifiable, Hashable {
 
     var title: LocalizedStringKey {
         switch self {
-        case .home:         return "Library"
+        case .archive:      return "Library"
+        case .home:         return "Sources & Analysis"
         case .review:       return "Review"
         case .smartBuckets: return "Smart Categories"
         case .insights:     return "Insights"
@@ -25,6 +27,7 @@ enum SidebarRoute: String, CaseIterable, Identifiable, Hashable {
 
     var systemImage: String {
         switch self {
+        case .archive:      return "photo.stack"
         case .home:         return "house.fill"
         case .review:       return "square.on.square.fill"
         case .smartBuckets: return "sparkles.rectangle.stack.fill"

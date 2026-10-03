@@ -101,6 +101,7 @@ struct MobileReviewView: View {
                 }
             }
         }
+        .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? String(localized: "Removing selected items…")).padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: media) { _, _ in
@@ -124,7 +125,7 @@ struct MobileReviewView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if selectedCount > 0 && (mode == .exact || isSimilarVideoMode) { cleanupBar }
+            if selectedCount > 0 && (mode == .exact || isSimilarVideoMode) { cleanupBar.disabled(store.isCleaningUp) }
         }
         .alert(
             cleanupTitle,
@@ -156,7 +157,7 @@ struct MobileReviewView: View {
             }
             Button("Done", role: .cancel) {}
         } message: {
-            Text("Selected items moved safely to Recently Deleted and are restorable at any time.")
+            Text(store.source == .photos ? "Selected items moved to Recently Deleted in Apple Photos for up to 30 days unless permanently deleted sooner." : "Selected files moved to the Keptora recovery folder. Keep the folder and record to restore them. Disk space has not been freed.")
         }
         .confirmationDialog(
             String(format: String(localized: "Clear all %lld selections?"), Int64(selectedCount)),
@@ -314,7 +315,7 @@ struct MobileReviewView: View {
                         .tint(MobileKeptoraDesign.cyan)
                     Text("Finding visually similar photos…")
                         .font(.system(.headline, design: .rounded).weight(.semibold))
-                    Text("Review-only. Similarity never enables cleanup.")
+                    Text("Compare suggestions, then choose items to remove in your library.")
                         .font(.system(.subheadline, design: .rounded)).foregroundStyle(.secondary)
                 }
                 .padding(28)
@@ -322,7 +323,7 @@ struct MobileReviewView: View {
                 ContentUnavailableView {
                     Label("No similar groups", systemImage: "sparkles.rectangle.stack")
                 } description: {
-                    Text("Visual suggestions are kept separate from exact cleanup and can never be selected for removal.")
+                    Text("No visually similar groups are available. You can still select any item in your library.")
                 }
             } else {
                 GroupPager(items: store.similarityGroups, selection: $similarPhotoPage) { index, group in
@@ -389,7 +390,7 @@ struct MobileReviewView: View {
                             .foregroundStyle(.secondary)
                         HStack(spacing: 3) {
                             Image(systemName: "arrow.uturn.backward.circle.fill")
-                            Text("Restorable")
+                            Text("Recovery")
                         }
                         .font(.system(.caption2, design: .rounded).weight(.semibold))
                         .foregroundStyle(MobileKeptoraDesign.mint)
@@ -432,7 +433,7 @@ struct MobileReviewView: View {
                                 .foregroundStyle(.secondary)
                             HStack(spacing: 3) {
                                 Image(systemName: "arrow.uturn.backward.circle.fill")
-                                Text("Restorable")
+                                Text("Recovery")
                             }
                             .font(.system(.caption2, design: .rounded).weight(.semibold))
                             .foregroundStyle(MobileKeptoraDesign.mint)
@@ -504,19 +505,19 @@ struct MobileReviewView: View {
         )
         let zeroCount = isSimilarVideoMode ? store.similarVideoGroupsWithAllCopiesSelectedCount : store.exactGroupsWithAllCopiesSelectedCount
         let zeroWarning = zeroCount > 0
-            ? "\n\n🚨 " + String(format: String(localized: "DANGER: In %1$lld set(s), ALL copies including the original are selected. You will lose this media completely!"), Int64(zeroCount))
+            ? "\n\n🚨 " + String(format: String(localized: "In %1$lld group(s), every item is selected for removal."), Int64(zeroCount))
             : ""
         let keeperWarning = store.hasSelectedKeeper ? "\n\n⚠️ " + String(localized: "Includes original (keeper) photo/video. It will also be deleted.") : ""
         switch store.source {
         case .photos:
             let baseNotice = store.hasSelectedKeeper
-                ? String(localized: "✓ Restorable at any time: Deleted items (including originals) move to Recently Deleted for up to 30 days.")
-                : String(localized: "✓ Restorable at any time: Protected keepers stay intact. Removed photos move to Recently Deleted for up to 30 days.")
+                ? String(localized: "Recovery: Deleted items (including originals) move to Recently Deleted for up to 30 days.")
+                : String(localized: "Recovery: Protected keepers stay intact. Removed photos move to Recently Deleted for up to 30 days.")
             return summary + zeroWarning + keeperWarning + "\n\n" + baseNotice
         default:
             let baseNotice = store.hasSelectedKeeper
-                ? String(localized: "✓ Restorable at any time: Deleted items (including originals) move safely to Keptora Safe Bin.")
-                : String(localized: "✓ Restorable at any time: Protected keepers stay intact. Copies move safely to Keptora Safe Bin.")
+                ? String(localized: "Recovery: Deleted items (including originals) move safely to the recovery folder on the same storage. Disk space has not been freed.")
+                : String(localized: "Recovery: Protected keepers stay intact. Copies move safely to the recovery folder on the same storage. Disk space has not been freed.")
             return summary + zeroWarning + keeperWarning + "\n\n" + baseNotice
         }
     }
@@ -596,7 +597,7 @@ private struct ExactGroupPage: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .padding(7)
                                     .contentShape(Rectangle())
@@ -613,7 +614,7 @@ private struct ExactGroupPage: View {
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .padding(7)
                                     .contentShape(Rectangle())
@@ -687,7 +688,7 @@ private struct SafetyDetailsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                LabeledContent("Status", value: isKeeper ? String(localized: "Protected keeper") : String(localized: "Byte-for-byte exact copy"))
+                LabeledContent("Status", value: isKeeper ? String(localized: "Suggested keeper") : String(localized: "Byte-for-byte exact copy"))
                 LabeledContent("Name", value: asset.displayName)
                 LabeledContent("Size", value: asset.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "—")
                 LabeledContent("Resolution", value: "\(asset.pixelWidth) × \(asset.pixelHeight)")
@@ -774,7 +775,7 @@ private struct MobileAssetCard: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .padding(4)
             .contentShape(Rectangle())
             .padding(-4)
@@ -795,7 +796,7 @@ private struct MobileAssetCard: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .padding(4)
             .contentShape(Rectangle())
             .padding(-4)
@@ -862,7 +863,7 @@ private struct MobileAssetCard: View {
         }
         .shadow(color: isSelected ? (isKeeper ? MobileKeptoraDesign.amber.opacity(0.24) : MobileKeptoraDesign.violet.opacity(0.24)) : Color.black.opacity(0.04), radius: 12, y: 6)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "protected keeper") : String(localized: "exact copy")))
+        .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "suggested keeper") : String(localized: "exact copy")))
         .accessibilityIdentifier("review.exact.container.\(asset.id)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .contextMenu {
@@ -976,7 +977,7 @@ private struct SimilarVideoGroupPage: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .padding(7)
                                     .contentShape(Rectangle())
@@ -993,7 +994,7 @@ private struct SimilarVideoGroupPage: View {
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .padding(7)
                                     .contentShape(Rectangle())
@@ -1181,7 +1182,7 @@ private struct SimilarVideoAssetCard: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .padding(4)
             .contentShape(Rectangle())
             .padding(-4)
@@ -1202,7 +1203,7 @@ private struct SimilarVideoAssetCard: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .padding(4)
             .contentShape(Rectangle())
             .padding(-4)
@@ -1220,7 +1221,7 @@ private struct SimilarVideoAssetCard: View {
             cardContent
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "protected keeper") : String(localized: "similar video candidate")))
+        .accessibilityLabel(String(format: String(localized: "%1$@, %2$@"), asset.displayName, isKeeper ? String(localized: "suggested keeper") : String(localized: "similar video candidate")))
         .accessibilityIdentifier("review.similarVideo.asset.\(asset.id)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .contextMenu {
@@ -1262,6 +1263,7 @@ private enum SimilarityCompareModal: Identifiable {
 }
 
 private struct SimilarityGroupPage: View {
+    @EnvironmentObject private var store: MobileKeptoraStore
     let group: UniversalSimilarityGroup
     let pageIndex: Int
     let totalPages: Int
@@ -1297,7 +1299,7 @@ private struct SimilarityGroupPage: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(pageIndex > 0 ? Color.primary : Color.secondary.opacity(0.35))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .padding(7)
                                     .contentShape(Rectangle())
@@ -1314,7 +1316,7 @@ private struct SimilarityGroupPage: View {
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(pageIndex < totalPages - 1 ? Color.primary : Color.secondary.opacity(0.35))
-                                    .frame(width: 30, height: 30)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .padding(7)
                                     .contentShape(Rectangle())
@@ -1331,12 +1333,21 @@ private struct SimilarityGroupPage: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Similar photos")
                         .font(.system(.title2, design: .rounded).weight(.bold))
-                    Text("Compare these suggestions. No cleanup actions are available.")
+                    Text("Compare the images and capture details, then choose what to remove.")
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 4)
 
+                Button("Choose Items in Library") { store.openCollection(group.assets, title: String(localized: "Similar photos")) }
+                    .buttonStyle(.borderedProminent).frame(minHeight: 44)
+                if let first = group.assets.first, let second = group.assets.dropFirst().first {
+                    let evidence = SimilarityContext(first, second)
+                    HStack {
+                        if let seconds = evidence.secondsApart { Label(String(format: String(localized: "%.0f seconds apart"), seconds), systemImage: "clock") }
+                        if let meters = evidence.metersApart { Label(String(format: String(localized: "%.0f meters apart"), meters), systemImage: "location") }
+                    }.font(.caption).foregroundStyle(.secondary)
+                }
                 HStack(spacing: 10) {
                     Button { activeCompareModal = .sideBySide } label: {
                         HStack(spacing: 6) {
@@ -1376,7 +1387,7 @@ private struct SimilarityGroupPage: View {
                                 .lineLimit(1)
 
                             HStack {
-                                Label("Review only", systemImage: "eye")
+                                Label("Compare", systemImage: "eye")
                                     .font(.system(.caption2, design: .rounded).weight(.medium))
                                     .foregroundStyle(.secondary)
                             }

@@ -67,6 +67,7 @@ final class MobileKeptoraStore: ObservableObject {
         let byteCount: Int64
         var folderRecord: FolderQuarantineRecord?
         var restoredAt: Date?
+        var sourceBookmark: Data? = nil
     }
 
     @Published private(set) var source: SourceSelection = .none
@@ -91,6 +92,23 @@ final class MobileKeptoraStore: ObservableObject {
     @Published var modalRoute: MobileModalRoute?
     @Published var isShowingPhotosPermissionHelp = false
     @Published var errorMessage: String?
+    @Published private(set) var isLoadingCatalogue = false
+    @Published var catalogueError: String?
+    @Published var skippedSimilarityPreviews = 0
+    @Published var similarityError: String?
+    @Published var videoSimilarityError: String?
+    @Published var selectedLibraryIDs: Set<String> = []
+    @Published var libraryCollectionIDs: Set<String>?
+    @Published var libraryCollectionTitle: String?
+    @Published var libraryCollectionSortBySize = false
+    @Published var libraryCollectionKind: String?
+    @Published var cleanupStatus: String?
+    private var catalogueTask: Task<Void, Never>?
+    private var catalogueGeneration = UUID()
+    private var scanGeneration = UUID()
+    private var manualSelectionIsLoaded = false
+    private var photoObserver: MobilePhotoChangeObserver?
+
 
     func present(_ route: MobileModalRoute) {
         modalRoute = route
@@ -146,6 +164,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     deinit {
+        catalogueTask?.cancel()
         scanTask?.cancel()
         activeFolderScopeURL?.stopAccessingSecurityScopedResource()
     }
@@ -209,9 +228,9 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func connectPhotos() async {
-        if source == .photos && (authorization == .authorized || authorization == .limited) {
-            return
-        }
+        guard !isCleaningUp else { return }
+        if source == .photos && (authorization == .authorized || authorization == .limited) { return }
+        resetResults(clearCheckpoint: false)
         releaseFolderScope()
         if isPhotosDeniedUITesting {
             authorization = .denied
@@ -243,7 +262,7 @@ final class MobileKeptoraStore: ObservableObject {
         shouldConnectPhotosWhenAuthorized = false
         source = .photos
         resetResults(clearCheckpoint: false)
-        startScan()
+        await loadCatalogue()
     }
 
     func handleAppLaunchAuthorization() async {
@@ -257,25 +276,32 @@ final class MobileKeptoraStore: ObservableObject {
         let status = await photosAdapter.authorizationStatus()
         authorization = status
         
-        if status == .notDetermined {
-            await connectPhotos()
-        } else if status == .authorized || status == .limited {
+        if status == .authorized || status == .limited {
             source = .photos
-            resetResults(clearCheckpoint: false)
-            if scanState == .idle {
-                startScan()
-            }
+            await loadCatalogue()
         }
     }
 
     func refreshPhotosAuthorization() async {
+        guard !isPhotosDeniedUITesting,
+              !LaunchArguments.contains(LaunchArguments.comprehensiveUITesting),
+              !LaunchArguments.contains(LaunchArguments.videoReviewUITesting),
+              !LaunchArguments.contains(LaunchArguments.thousandsStressUITesting) else { return }
         let latest = await photosAdapter.authorizationStatus()
         authorization = latest
-        guard shouldConnectPhotosWhenAuthorized,
-              latest == .authorized || latest == .limited else { return }
-        shouldConnectPhotosWhenAuthorized = false
-        source = .photos
-        resetResults(clearCheckpoint: false)
+        if source == .photos && latest != .authorized && latest != .limited {
+            catalogueTask?.cancel()
+            resetResults(clearCheckpoint: false)
+            selectedLibraryIDs.removeAll()
+            return
+        }
+        guard latest == .authorized || latest == .limited else { return }
+        if shouldConnectPhotosWhenAuthorized {
+            shouldConnectPhotosWhenAuthorized = false
+            source = .photos
+            resetResults(clearCheckpoint: false)
+        }
+        if source == .photos && !isCleaningUp && !scanState.isScanning && !isAnalyzing { await loadCatalogue() }
     }
 
     func openPhotosSettings() {
@@ -322,9 +348,9 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func connectFolder(_ url: URL) {
-        if case .folder(let currentURL) = source, currentURL == url {
-            return
-        }
+        guard !isCleaningUp else { return }
+        if case .folder(let currentURL) = source, currentURL == url { return }
+        resetResults(clearCheckpoint: false)
         releaseFolderScope()
         guard url.startAccessingSecurityScopedResource() else {
             errorMessage = String(localized: "Keptora could not access this folder.")
@@ -342,6 +368,131 @@ final class MobileKeptoraStore: ObservableObject {
             errorMessage = error.localizedDescription
         }
         resetResults(clearCheckpoint: false)
+        Task { await loadCatalogue() }
+    }
+
+    var librarySelection: [UniversalMediaAsset] {
+        assets.filter { selectedLibraryIDs.contains($0.id) }
+    }
+
+    var albums: [MediaAlbum] {
+        var unique: [String: MediaAlbum] = [:]
+        for asset in assets { for album in asset.context?.albums ?? [] { unique[album.id] = album } }
+        return unique.values.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    private var librarySelectionKey: String {
+        switch source {
+        case .photos: return "Keptora.ManualSelection.photos"
+        case .folder(let url): return "Keptora.ManualSelection." + StableDigest.fnv1a64(url.standardizedFileURL.path)
+        case .none: return "Keptora.ManualSelection.none"
+        }
+    }
+
+    func saveLibrarySelection() {
+        guard manualSelectionIsLoaded, source != .none else { return }
+        UserDefaults.standard.set(Array(selectedLibraryIDs).sorted(), forKey: librarySelectionKey)
+    }
+
+    func toggleLibrarySelection(_ asset: UniversalMediaAsset) {
+        guard !isCleaningUp else { return }
+        if !selectedLibraryIDs.insert(asset.id).inserted { selectedLibraryIDs.remove(asset.id) }
+        saveLibrarySelection()
+    }
+
+    func openCollection(_ items: [UniversalMediaAsset], title: String, sortBySize: Bool = false, kind: String? = nil) {
+        libraryCollectionIDs = Set(items.map(\.id))
+        libraryCollectionTitle = title
+        libraryCollectionSortBySize = sortBySize
+        libraryCollectionKind = kind
+        selectedTab = .library
+    }
+
+    func collectionContains(_ item: UniversalMediaAsset) -> Bool {
+        switch libraryCollectionKind {
+        case "WhatsApp Media":
+            let ids = Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs") ?? [])
+            return item.context?.albums.contains { $0.isWhatsAppNamed || ids.contains($0.id) } == true
+        case "Screenshots": return item.context?.isScreenshot == true
+        case "Videos by Size": return item.mediaKind == .video
+        case "Live Photos": return item.context?.isLivePhoto == true
+        default: return libraryCollectionIDs == nil || libraryCollectionIDs!.contains(item.id)
+        }
+    }
+
+    func loadCatalogue() async {
+        guard source != .none, !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
+        catalogueTask?.cancel()
+        let generation = UUID()
+        catalogueGeneration = generation
+        let requestedSource = source
+        isLoadingCatalogue = true
+        catalogueError = nil
+        catalogueTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if catalogueGeneration == generation { isLoadingCatalogue = false } }
+            do {
+                let catalogue: [UniversalMediaAsset]
+                switch requestedSource {
+                case .photos: catalogue = try await photosAdapter.enumerateAssets()
+                case .folder:
+                    guard let adapter = activeFolderAdapter else { return }
+                    catalogue = try await adapter.enumerateAssets()
+                case .none: return
+                }
+                guard !Task.isCancelled, requestedSource == source, catalogueGeneration == generation else { return }
+                assets = catalogue.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+                if selectedLibraryIDs.isEmpty {
+                    selectedLibraryIDs = Set(UserDefaults.standard.stringArray(forKey: librarySelectionKey) ?? [])
+                }
+                selectedLibraryIDs.formIntersection(catalogue.map(\.id))
+                manualSelectionIsLoaded = true
+                saveLibrarySelection()
+                if case .folder(let root) = requestedSource {
+                    let records = try await folderCleanup.recoveryRecords(root: root)
+                    guard !Task.isCancelled, catalogueGeneration == generation else { return }
+                    for record in records {
+                        if let index = history.firstIndex(where: { $0.id == record.id }) {
+                            history[index].folderRecord = record; history[index].restoredAt = record.restoredAt
+                            continue
+                        }
+                        history.insert(CleanupHistoryEntry(id: record.id, kind: .folderQuarantine, createdAt: record.createdAt,
+                            itemCount: record.operations.count, byteCount: 0, folderRecord: record, restoredAt: record.restoredAt,
+                            sourceBookmark: UserDefaults.standard.data(forKey: bookmarkKey)), at: 0)
+                    }
+                    persistHistory()
+                }
+                if requestedSource == .photos && photoObserver == nil {
+                    photoObserver = MobilePhotoChangeObserver { [weak self] in
+                        Task { @MainActor in await self?.loadCatalogue() }
+                    }
+                }
+            } catch is CancellationError { }
+            catch { if catalogueGeneration == generation { catalogueError = error.localizedDescription } }
+        }
+        await catalogueTask?.value
+    }
+
+    @discardableResult
+    func cleanupLibrarySelection(expectedIDs: Set<String>) async -> Bool {
+        guard selectedLibraryIDs == expectedIDs else {
+            errorMessage = String(localized: "Your selection changed. Review it again before removing items.")
+            return false
+        }
+        let snapshot = librarySelection
+        guard snapshot.count == expectedIDs.count else { return false }
+        let size = MediaSelectionSummary(snapshot).knownBytes
+        return await executeCleanup(selection: snapshot, capturedBytes: size,
+            intent: .manualSelection,
+            resolveFolderCandidates: { [weak self] _ in
+                guard let self, let adapter = activeFolderAdapter else { return [] }
+                var result: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
+                for item in snapshot {
+                    let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false, progress: { _ in })
+                    result.append((item, fingerprint.digest))
+                }
+                return result
+            }, onSuccess: { [weak self] in self?.selectedLibraryIDs.removeAll(); self?.saveLibrarySelection() })
     }
 
     func restoreSavedSource() async {
@@ -367,7 +518,13 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func startScan(allowNetwork: Bool = false) {
+        guard !isCleaningUp && !scanState.isScanning && !isAnalyzing else { return }
         scanTask?.cancel()
+        catalogueTask?.cancel()
+        catalogueGeneration = UUID(); isLoadingCatalogue = false
+        let generation = UUID(); scanGeneration = generation
+        similarityError = nil
+        videoSimilarityError = nil
         selectedAssetIDs.removeAll()
         selectedSimilarVideoAssetIDs.removeAll()
         let selectedSource = source
@@ -384,7 +541,7 @@ final class MobileKeptoraStore: ObservableObject {
             guard let self else { return }
             defer {
                 Task { @MainActor in
-                    UIApplication.shared.isIdleTimerDisabled = false
+                    if self.scanGeneration == generation { UIApplication.shared.isIdleTimerDisabled = false }
                 }
             }
             do {
@@ -414,11 +571,14 @@ final class MobileKeptoraStore: ObservableObject {
                     allowNetwork: allowNetwork,
                     resuming: checkpoint,
                     checkpointUpdate: { [weak self] checkpoint in
-                        self?.saveScanCheckpoint(checkpoint)
+                        Task { @MainActor in
+                            guard let self, self.scanGeneration == generation else { return }
+                            self.saveScanCheckpoint(checkpoint)
+                        }
                     },
                     progress: { processed, total, current in
                         Task { @MainActor [weak self] in
-                            guard let self else { return }
+                            guard let self, self.scanGeneration == generation else { return }
                             let now = Date()
                             if processed == 0 || processed == total || now.timeIntervalSince(self.lastProgressUpdateTime) >= 0.05 {
                                 self.lastProgressUpdateTime = now
@@ -430,9 +590,13 @@ final class MobileKeptoraStore: ObservableObject {
                         }
                     }
                 )
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, scanGeneration == generation else { return }
                 print("[KeptoraScan] Exact scan done: \(result.assets.count) assets, \(result.groups.count) exact duplicate groups, skippedNetwork: \(result.skippedNetwork)")
-                assets = result.assets
+                assets = result.assets.map { asset in
+                    guard let fingerprint = result.fingerprintsByAssetID[asset.id] else { return asset }
+                    return asset.with(byteCount: .some(fingerprint.byteCount))
+                }
+                selectedLibraryIDs.formIntersection(assets.map(\.id)); saveLibrarySelection()
                 exactGroups = result.groups
                 scanFingerprintsByAssetID = result.fingerprintsByAssetID
                 skippedCloudItems = result.skippedNetwork
@@ -443,16 +607,20 @@ final class MobileKeptoraStore: ObservableObject {
                 // Secondary visual similarity comparison (fail-safe enrichment)
                 do {
                     similarityProgress = (0, result.assets.filter { $0.mediaKind == .image }.count)
-                    similarityGroups = try await similarityAnalyzer.analyze(
+                    let photoGroups = try await similarityAnalyzer.analyze(
                         assets: result.assets,
                         provider: imageProvider,
                         allowNetwork: allowNetwork,
                         progress: { processed, total in
                             Task { @MainActor [weak self] in
-                                self?.similarityProgress = (processed, total)
+                                guard let self, self.scanGeneration == generation else { return }
+                                self.similarityProgress = (processed, total)
                             }
                         }
                     )
+                    guard !Task.isCancelled, scanGeneration == generation else { return }
+                    similarityGroups = photoGroups
+                    skippedSimilarityPreviews = await similarityAnalyzer.skippedPreviewCount
                     currentSimilarityGroupIndex = 0
                     print("[KeptoraScan] Visual similarity done: \(similarityGroups.count) groups")
                 } catch is CancellationError {
@@ -460,6 +628,7 @@ final class MobileKeptoraStore: ObservableObject {
                 } catch {
                     print("[KeptoraScan] Visual similarity error: \(error)")
                     similarityGroups = []
+                    similarityError = error.localizedDescription
                 }
                 similarityProgress = nil
 
@@ -471,30 +640,36 @@ final class MobileKeptoraStore: ObservableObject {
                         .filter { $0.mediaKind == .video && !exactCopyIDs.contains($0.id) }
                         .map { self.withScannedByteCount($0) }
                     videoSimilarityProgress = (0, videoCandidates.count)
-                    similarVideoGroups = try await videoSimilarityAnalyzer.analyze(
+                    let videoGroups = try await videoSimilarityAnalyzer.analyze(
                         assets: videoCandidates,
                         provider: videoProvider,
                         allowNetwork: allowNetwork,
                         progress: { processed, total in
                             Task { @MainActor [weak self] in
-                                self?.videoSimilarityProgress = (processed, total)
+                                guard let self, self.scanGeneration == generation else { return }
+                                self.videoSimilarityProgress = (processed, total)
                             }
                         }
                     )
+                    guard !Task.isCancelled, scanGeneration == generation else { return }
+                    similarVideoGroups = videoGroups
                     print("[KeptoraScan] Video similarity done: \(similarVideoGroups.count) groups")
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {
                     print("[KeptoraScan] Video similarity error: \(error)")
                     similarVideoGroups = []
+                    videoSimilarityError = error.localizedDescription
                 }
                 videoSimilarityProgress = nil
             } catch is CancellationError {
+                guard scanGeneration == generation else { return }
                 print("[KeptoraScan] Scan was cancelled")
                 scanState = suspendedForBackground ? .paused : .idle
                 similarityProgress = nil
                 videoSimilarityProgress = nil
             } catch {
+                guard scanGeneration == generation else { return }
                 print("[KeptoraScan] Scan failed: \(error)")
                 scanState = .failed(error.localizedDescription)
                 errorMessage = error.localizedDescription
@@ -506,6 +681,7 @@ final class MobileKeptoraStore: ObservableObject {
     var isAnalyzing: Bool { similarityProgress != nil || videoSimilarityProgress != nil }
 
     func cancelScan() {
+        scanGeneration = UUID()
         scanTask?.cancel()
         scanTask = nil
         scanState = .idle
@@ -538,6 +714,10 @@ final class MobileKeptoraStore: ObservableObject {
 
     @discardableResult
     func toggleSelection(_ asset: UniversalMediaAsset, in group: UniversalExactGroup, isUnlocked: Bool) -> Bool {
+        guard asset.id != group.keeperID, !asset.isProtectedFromGlobalSelection else {
+            errorMessage = String(localized: "Use Library to select this item manually. Suggested cleanup keeps it out of bulk selection.")
+            return true
+        }
         guard authorizeReview(assetIDs: [asset.id], isUnlocked: isUnlocked) else { return false }
         if !selectedAssetIDs.insert(asset.id).inserted { selectedAssetIDs.remove(asset.id) }
         return true
@@ -561,6 +741,10 @@ final class MobileKeptoraStore: ObservableObject {
         isUnlocked: Bool
     ) -> Bool {
         guard group.mediaKind == .video else { return true }
+        guard asset.id != group.keeperID, !asset.isProtectedFromGlobalSelection else {
+            errorMessage = String(localized: "Use Library to select this item manually. Suggested cleanup keeps it out of bulk selection.")
+            return true
+        }
         guard authorizeReview(assetIDs: [asset.id], isUnlocked: isUnlocked) else { return false }
         if !selectedSimilarVideoAssetIDs.insert(asset.id).inserted {
             selectedSimilarVideoAssetIDs.remove(asset.id)
@@ -579,13 +763,15 @@ final class MobileKeptoraStore: ObservableObject {
     private func executeCleanup(
         selection: [UniversalMediaAsset],
         capturedBytes: Int64,
+        intent: PhotosRemovalIntent = .suggestedCopies,
         resolveFolderCandidates: (URL) async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)],
         onSuccess: () -> Void
     ) async -> Bool {
-        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return false }
+        guard !isCleaningUp, !isLoadingCatalogue, !scanState.isScanning, !isAnalyzing else { return false }
         guard !selection.isEmpty else { return false }
         isCleaningUp = true
-        defer { isCleaningUp = false }
+        cleanupStatus = String(localized: "Reviewing selected items…")
+        defer { isCleaningUp = false; cleanupStatus = nil }
         do {
             switch source {
             case .photos:
@@ -593,7 +779,8 @@ final class MobileKeptoraStore: ObservableObject {
                     guard case .photoLibrary(let identifier) = asset.reference else { return nil }
                     return identifier
                 }
-                try await photosAdapter.deleteSelectedAssets(localIdentifiers: identifiers)
+                guard identifiers.count == selection.count else { throw UniversalScanError.unsupportedReference }
+                try await photosAdapter.deleteSelectedAssets(localIdentifiers: identifiers, intent: intent)
                 history.insert(
                     CleanupHistoryEntry(
                         id: UUID(),
@@ -607,6 +794,7 @@ final class MobileKeptoraStore: ObservableObject {
                 )
             case .folder(let root):
                 let candidates = try await resolveFolderCandidates(root)
+                guard candidates.count == selection.count else { throw UniversalScanError.cleanupNotPermitted("Review the selection again before cleanup.") }
                 let record = try await folderCleanup.quarantine(root: root, selections: candidates)
                 history.insert(
                     CleanupHistoryEntry(
@@ -616,7 +804,8 @@ final class MobileKeptoraStore: ObservableObject {
                         itemCount: record.operations.count,
                         byteCount: capturedBytes,
                         folderRecord: record,
-                        restoredAt: nil
+                        restoredAt: nil,
+                        sourceBookmark: UserDefaults.standard.data(forKey: bookmarkKey)
                     ), at: 0
                 )
             case .none:
@@ -641,7 +830,14 @@ final class MobileKeptoraStore: ObservableObject {
                     keeperID: newKeeper
                 )
             }
+            similarityGroups = similarityGroups.compactMap { group in
+                let remaining = group.assets.filter { !removedIDs.contains($0.id) }
+                guard remaining.count > 1 else { return nil }
+                return UniversalSimilarityGroup(id: group.id, assets: remaining, maximumDistance: group.maximumDistance)
+            }
             assets.removeAll { removedIDs.contains($0.id) }
+            selectedLibraryIDs.subtract(removedIDs)
+            saveLibrarySelection()
             for id in removedIDs {
                 scanFingerprintsByAssetID.removeValue(forKey: id)
             }
@@ -717,23 +913,37 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func restore(_ entry: CleanupHistoryEntry) async {
-        guard !scanState.isScanning, !isAnalyzing else { return }
+        guard !isCleaningUp, !isLoadingCatalogue, !scanState.isScanning, !isAnalyzing else { return }
         guard let record = entry.folderRecord else { return }
+        isCleaningUp = true; cleanupStatus = String(localized: "Restoring files…")
+        defer { isCleaningUp = false; cleanupStatus = nil; Task { await loadCatalogue() } }
         do {
+            var recoveryScope: URL?
+            if let bookmark = entry.sourceBookmark {
+                var stale = false
+                let url = try URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
+                if url.startAccessingSecurityScopedResource() { recoveryScope = url }
+            }
+            defer { recoveryScope?.stopAccessingSecurityScopedResource() }
             let restored = try await folderCleanup.restore(record)
             if let index = history.firstIndex(where: { $0.id == entry.id }) {
                 history[index].folderRecord = restored
                 history[index].restoredAt = restored.restoredAt
             }
             persistHistory()
-            startScan(allowNetwork: lastScanAllowedNetwork)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
     func deleteHistory(at offsets: IndexSet) {
-        history.remove(atOffsets: offsets)
+        let removable = offsets.filter { index in
+            history.indices.contains(index) && (history[index].kind != .folderQuarantine || history[index].restoredAt != nil)
+        }
+        if removable.count != offsets.count {
+            errorMessage = String(localized: "Restore these files before removing their recovery record.")
+        }
+        history.remove(atOffsets: IndexSet(removable))
         persistHistory()
     }
 
@@ -743,6 +953,15 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     private func resetResults(clearCheckpoint shouldClearCheckpoint: Bool = true) {
+        catalogueTask?.cancel(); catalogueGeneration = UUID(); isLoadingCatalogue = false
+        scanGeneration = UUID()
+        photoObserver = nil
+        manualSelectionIsLoaded = false
+        selectedLibraryIDs.removeAll()
+        libraryCollectionSortBySize = false
+        libraryCollectionKind = nil
+        libraryCollectionIDs = nil
+        libraryCollectionTitle = nil
         scanTask?.cancel()
         assets = []
         exactGroups = []
@@ -917,7 +1136,9 @@ final class MobileKeptoraStore: ObservableObject {
             mediaKind: .image,
             byteCount: 4_200_000,
             pixelWidth: 4032,
-            pixelHeight: 3024
+            pixelHeight: 3024,
+            isFavorite: true,
+            context: MediaContext(captureDate: Date(timeIntervalSince1970: 1_786_000_000), captureTimeIsReliable: true)
         )
         let photoCopy = UniversalMediaAsset(
             id: "ui-photo-copy",
@@ -1148,4 +1369,15 @@ final class MobileKeptoraStore: ObservableObject {
             )
         ]
     }
+}
+
+private final class MobilePhotoChangeObserver: NSObject, PHPhotoLibraryChangeObserver, @unchecked Sendable {
+    private let onChange: @Sendable () -> Void
+    init(onChange: @escaping @Sendable () -> Void) {
+        self.onChange = onChange
+        super.init()
+        PHPhotoLibrary.shared().register(self)
+    }
+    deinit { PHPhotoLibrary.shared().unregisterChangeObserver(self) }
+    func photoLibraryDidChange(_ changeInstance: PHChange) { onChange() }
 }

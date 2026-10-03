@@ -3,6 +3,7 @@
 import Foundation
 
 public actor VisualSimilarityAnalyzer {
+    public private(set) var skippedPreviewCount = 0
     public init() {}
 
     public func analyze(
@@ -10,12 +11,17 @@ public actor VisualSimilarityAnalyzer {
         provider: any SimilarityImageProviding,
         allowNetwork: Bool = false,
         threshold: Float = 0.30,
-        maximumAssets: Int = 5_000,
+        maximumAssets: Int = .max,
         progress: @escaping @Sendable (_ processed: Int, _ total: Int) -> Void
     ) async throws -> [UniversalSimilarityGroup] {
         let candidates = Array(assets.lazy.filter { $0.mediaKind == .image }.prefix(maximumAssets))
         var clusters: [(representative: VNFeaturePrintObservation?, coarseHash: UInt64, members: [UniversalMediaAsset], maximumDistance: Float)] = []
+        skippedPreviewCount = 0
         var bandIndex: [UInt32: Set<Int>] = [:]
+        var timeIndex: [Int: Set<Int>] = [:]
+        var burstIndex: [String: Set<Int>] = [:]
+        var locationIndex: [String: Set<Int>] = [:]
+        var descriptors: [String: (feature: VNFeaturePrintObservation?, hash: UInt64)] = [:]
         var qualityByAssetID: [String: VisualQualityReport] = [:]
 
         for (index, asset) in candidates.enumerated() {
@@ -28,17 +34,23 @@ public actor VisualSimilarityAnalyzer {
                     maximumPixelSize: 384,
                     allowNetwork: allowNetwork
                 )
-            } catch {
-                continue
-            }
-            guard let hash = try? coarseHash(for: image) else { continue }
+            } catch is CancellationError { throw CancellationError() }
+            catch { skippedPreviewCount += 1; continue }
+            guard let hash = try? coarseHash(for: image) else { skippedPreviewCount += 1; continue }
             let feature = featurePrint(for: image)
+            descriptors[asset.id] = (feature, hash)
             let qualityReport = VisualQualityEngine.evaluateQuality(for: image, asset: asset)
             qualityByAssetID[asset.id] = qualityReport
             
             var bestIndex: Int?
             var bestDistance = Float.greatestFiniteMagnitude
-            let candidateIndices = Set(bandKeys(for: hash).flatMap { bandIndex[$0] ?? [] })
+            var bestRank = Float.greatestFiniteMagnitude
+            var candidateIndices = Set(bandKeys(for: hash).flatMap { bandIndex[$0] ?? [] })
+            let minute = asset.context?.captureTimeIsReliable == true ? asset.context?.captureDate.map { Int($0.timeIntervalSince1970 / 60) } : nil
+            if let minute { for bucket in (minute - 1)...(minute + 1) { candidateIndices.formUnion(timeIndex[bucket] ?? []) } }
+            if let burst = asset.context?.burstID { candidateIndices.formUnion(burstIndex[burst] ?? []) }
+            let locationKeys = nearbyLocationKeys(asset.context?.location)
+            for key in locationKeys { candidateIndices.formUnion(locationIndex[key] ?? []) }
             
             for clusterIndex in candidateIndices {
                 let rep = clusters[clusterIndex]
@@ -54,8 +66,25 @@ public actor VisualSimilarityAnalyzer {
                     distance = Float((hash ^ rep.coarseHash).nonzeroBitCount) / 64.0
                 }
                 
-                if distance < threshold, distance < bestDistance {
-                    bestDistance = distance
+                // Every member must still be visually close. This prevents a chain
+                // of intermediate shots from merging two distinct scenes.
+                var pairwiseMaximum = distance
+                for member in rep.members.dropFirst() {
+                    guard let descriptor = descriptors[member.id] else { continue }
+                    var memberDistance = Float((hash ^ descriptor.hash).nonzeroBitCount) / 64
+                    if let feature, let other = descriptor.feature {
+                        var measured: Float = 0
+                        if (try? feature.computeDistance(&measured, to: other)) != nil { memberDistance = measured }
+                    }
+                    pairwiseMaximum = max(pairwiseMaximum, memberDistance)
+                    if pairwiseMaximum >= threshold { break }
+                }
+                guard pairwiseMaximum < threshold else { continue }
+                let context = SimilarityContext(asset, rep.members[0])
+                let rank = distance - context.rankingAdjustment(visualDistance: distance, threshold: threshold)
+                if distance < threshold, rank < bestRank {
+                    bestDistance = pairwiseMaximum
+                    bestRank = rank
                     bestIndex = clusterIndex
                 }
             }
@@ -63,10 +92,17 @@ public actor VisualSimilarityAnalyzer {
             if let bestIndex {
                 clusters[bestIndex].members.append(asset)
                 clusters[bestIndex].maximumDistance = max(clusters[bestIndex].maximumDistance, bestDistance)
+                for key in bandKeys(for: hash) { bandIndex[key, default: []].insert(bestIndex) }
+                if let minute { timeIndex[minute, default: []].insert(bestIndex) }
+                if let burst = asset.context?.burstID { burstIndex[burst, default: []].insert(bestIndex) }
+                if let key = locationKeys.first { locationIndex[key, default: []].insert(bestIndex) }
             } else {
                 let newIndex = clusters.count
                 clusters.append((feature, hash, [asset], 0))
                 for key in bandKeys(for: hash) { bandIndex[key, default: []].insert(newIndex) }
+                if let minute { timeIndex[minute, default: []].insert(newIndex) }
+                if let burst = asset.context?.burstID { burstIndex[burst, default: []].insert(newIndex) }
+                if let key = locationKeys.first { locationIndex[key, default: []].insert(newIndex) }
             }
         }
 
@@ -97,7 +133,7 @@ public actor VisualSimilarityAnalyzer {
                 return lhsDate < rhsDate
             }
             return UniversalSimilarityGroup(
-                id: "similar:\(index):\(sortedMembers.first?.id ?? "")",
+                id: "similar:" + StableDigest.fnv1a64(sortedMembers.map(\.id).sorted().joined(separator: "|")),
                 assets: sortedMembers,
                 maximumDistance: cluster.maximumDistance,
                 keeperID: sortedMembers.first?.id
@@ -140,6 +176,15 @@ public actor VisualSimilarityAnalyzer {
             }
         }
         return hash
+    }
+
+    private func nearbyLocationKeys(_ location: MediaLocation?) -> [String] {
+        guard let location, location.latitude.isFinite, location.longitude.isFinite,
+              abs(location.latitude) <= 90, abs(location.longitude) <= 180 else { return [] }
+        let lat = Int(floor(location.latitude * 1_000)), lon = Int(floor(location.longitude * 1_000))
+        var keys = ["\(lat):\(lon)"]
+        for a in -1...1 { for b in -1...1 where a != 0 || b != 0 { keys.append("\(lat + a):\(lon + b)") } }
+        return keys
     }
 
     private func bandKeys(for hash: UInt64) -> [UInt32] {

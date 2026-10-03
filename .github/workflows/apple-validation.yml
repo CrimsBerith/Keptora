@@ -1,0 +1,53 @@
+name: Apple validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shared Apple core and recovery tests
+        run: swift test --package-path Packages/KeptoraCore --parallel
+      - name: Project and visual asset integrity
+        run: |
+          python3 Scripts/validate_project_references.py
+          python3 Scripts/validate_photo_cleaner_assets.py
+      - name: macOS build and unit tests
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme Keptora \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/MacTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO -only-testing:KeptoraTests test
+      - name: Prepare iPhone simulator with actual media
+        run: bash Scripts/prepare_photo_cleaner_simulator.sh
+      - name: iPhone unit and product UI tests
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
+            -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
+            -derivedDataPath Build/CI -resultBundlePath Build/iPhoneTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            -only-testing:KeptoraiOSTests \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testWhatsAppGuideExplainsSavedCopiesAndChatStorage \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
+            test
+      - name: Keep native test evidence and current screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-test-evidence
+          path: Build/*.xcresult
+          retention-days: 14

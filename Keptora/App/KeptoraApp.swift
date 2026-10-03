@@ -130,7 +130,7 @@ struct KeptoraApp: App {
                     .disabled(!appDelegate.model.hasResumableReviewSession)
             }
             CommandMenu("Go") {
-                Button("Library") { appDelegate.model.selectedRoute = .home }
+                Button("Library") { appDelegate.model.selectedRoute = .archive }
                     .keyboardShortcut("1", modifiers: [.command])
                 Button("Review Studio") { appDelegate.model.selectedRoute = .review }
                     .keyboardShortcut("2", modifiers: [.command])

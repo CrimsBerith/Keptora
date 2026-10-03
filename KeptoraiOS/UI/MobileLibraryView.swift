@@ -1,7 +1,7 @@
 import KeptoraCore
 import SwiftUI
 
-struct MobileLibraryView: View {
+struct MobileSourceLibraryView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
     @State private var showCloudDownloadConfirmation = false
@@ -33,7 +33,7 @@ struct MobileLibraryView: View {
                 Button { store.present(.settings) } label: {
                     ZStack {
                         Circle().fill(MobileKeptoraDesign.brandGradient)
-                        Image(systemName: purchase.isUnlocked ? "checkmark.seal.fill" : "person.crop.circle.fill")
+                        Image(systemName: "gearshape.fill")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                     }
@@ -114,10 +114,10 @@ struct MobileLibraryView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Make room for what matters.")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(.system(.title2, design: .rounded).weight(.bold))
                         .foregroundStyle(.white)
                         .minimumScaleFactor(0.8)
-                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -209,7 +209,7 @@ struct MobileLibraryView: View {
                 )
             }
 
-            if store.authorization == .denied || store.authorization == .restricted {
+            if (store.source == .photos || store.source == .none) && (store.authorization == .denied || store.authorization == .restricted) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         Image(systemName: "hand.raised.fill")

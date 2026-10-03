@@ -8,19 +8,19 @@ struct OnboardingView: View {
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             title: "Everything stays on your Mac",
-            detail: "Keptora scans only the folder you choose. Images, hashes, thumbnails, and decisions are never uploaded — no account required.",
+            detail: "Keptora opens only Photos or the folder you choose. Images, hashes, thumbnails, and decisions stay on your device. No account required.",
             imageName: "onboarding_privacy",
             accent: Color(red: 0.15, green: 0.52, blue: 0.37)
         ),
         OnboardingPage(
-            title: "Proof, not guesswork",
-            detail: "Exact duplicates are confirmed by SHA-256 hash. Similar-photo groups are visual suggestions only — they never become cleanup actions automatically.",
+            title: "Every Photo. Your Choice.",
+            detail: "Browse every photo and video. Compare similar shots using visual detail, capture time and location, then choose which items to remove.",
             imageName: "onboarding_proof",
             accent: Color(red: 0.14, green: 0.42, blue: 0.88)
         ),
         OnboardingPage(
-            title: "Undo anything, any time",
-            detail: "Review a Cleanup Plan before anything moves. Keptora protects one keeper per group, signs a manifest, and supports full restore from History.",
+            title: "Review Before Removing",
+            detail: "Review your selection before removing it. Photos uses Recently Deleted for up to 30 days unless deleted sooner. Folder files stay in a recovery area until restored.",
             imageName: "onboarding_restore",
             accent: Color(red: 0.78, green: 0.42, blue: 0.12)
         )
@@ -104,10 +104,7 @@ struct OnboardingView: View {
                 Button(page == pages.count - 1 ? LocalizedStringKey("Get Started") : LocalizedStringKey("Continue")) {
                     if page == pages.count - 1 {
                         model.completeOnboarding()
-                        Task { @MainActor in
-                            try? await Task.sleep(nanoseconds: 350_000_000)
-                            model.chooseFolder()
-                        }
+                        model.selectedRoute = .archive
                     } else {
                         withAnimation(reduceMotion ? nil : KeptoraDesign.animMedium) { page += 1 }
                     }

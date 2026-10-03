@@ -143,6 +143,63 @@ final class KeptoraCoreTests: XCTestCase {
         }
     }
 
+    func testRecoveryManifestSurvivesLostInAppHistory() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("unique.jpg")
+        try Data("a unique manually selected photo".utf8).write(to: file)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let items = try await adapter.enumerateAssets()
+        let item = try XCTUnwrap(items.first)
+        let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false) { _ in }
+        let executor = FolderQuarantineExecutor()
+        let record = try await executor.quarantine(root: root, selections: [(item, fingerprint.digest)])
+        let reloaded = try await FolderQuarantineExecutor().recoveryRecords(root: root)
+        XCTAssertEqual(reloaded.first?.id, record.id)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.operations[0].quarantineURL.deletingLastPathComponent().appendingPathComponent("recovery.json").path))
+    }
+
+    func testRestoreResumesAfterInterruptionWithoutOverwritingVerifiedOriginal() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for name in ["one.jpg", "two.jpg"] { try Data(name.utf8).write(to: root.appendingPathComponent(name)) }
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        var selections: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
+        for item in try await adapter.enumerateAssets() {
+            let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false) { _ in }
+            selections.append((item, fingerprint.digest))
+        }
+        let executor = FolderQuarantineExecutor()
+        let record = try await executor.quarantine(root: root, selections: selections)
+        let first = record.operations[0]
+        try FileManager.default.moveItem(at: first.quarantineURL, to: first.originalURL)
+        let restored = try await executor.restore(record)
+        XCTAssertNotNil(restored.restoredAt)
+        for operation in restored.operations {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: operation.originalURL.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: operation.quarantineURL.path))
+        }
+    }
+
+    func testManualFileChangeFailsBeforeAnyMove() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("selected.jpg")
+        try Data("original".utf8).write(to: file)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let items = try await adapter.enumerateAssets(); let item = try XCTUnwrap(items.first)
+        let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false) { _ in }
+        try Data("changed after review".utf8).write(to: file)
+        do {
+            _ = try await FolderQuarantineExecutor().quarantine(root: root, selections: [(item, fingerprint.digest)])
+            XCTFail("Changed content must stay at its original path")
+        } catch UniversalScanError.cleanupNotPermitted { }
+        XCTAssertEqual(try Data(contentsOf: file), Data("changed after review".utf8))
+    }
+
     func testResumedScanReusesOnlySameRevisionCheckpointEntries() async throws {
         let first = asset(id: "copy-1")
         let second = asset(id: "copy-2")

@@ -1,9 +1,18 @@
 import SwiftUI
+import AVKit
+import Photos
 import KeptoraCore
 
 struct MobilePhotoInspectorSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let asset: UniversalMediaAsset
+    @EnvironmentObject private var store: MobileKeptoraStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var allowNetwork = false
+    @State private var player: AVPlayer?
+    @State private var videoLoading = false
+    @State private var previewError: String?
+    @State private var asset: UniversalMediaAsset
+    private let items: [UniversalMediaAsset]
     
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
@@ -11,8 +20,14 @@ struct MobilePhotoInspectorSheet: View {
     @State private var lastOffset: CGSize = .zero
     @State private var showInfo = false
     
-    init(asset: UniversalMediaAsset) {
-        self.asset = asset
+    init(asset: UniversalMediaAsset, items: [UniversalMediaAsset] = []) {
+        _asset = State(initialValue: asset); self.items = items
+    }
+    private var currentIndex: Int? { items.firstIndex { $0.id == asset.id } }
+    private func move(_ delta: Int) {
+        guard let index = currentIndex, items.indices.contains(index + delta) else { return }
+        player?.pause(); player = nil; scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero; previewError = nil
+        asset = items[index + delta]
     }
     
     public var body: some View {
@@ -20,9 +35,11 @@ struct MobilePhotoInspectorSheet: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
+                if let player { VideoPlayer(player: player) }
+                else {
                 // Interactive Zoomable Image
                 GeometryReader { proxy in
-                    MobileAssetThumbnail(asset: asset, pixelSize: 1600, contentMode: .fit)
+                    MobileAssetThumbnail(asset: asset, pixelSize: 1600, contentMode: .fit, allowNetwork: allowNetwork)
                         .scaleEffect(scale)
                         .offset(offset)
                         .frame(width: proxy.size.width, height: proxy.size.height)
@@ -33,7 +50,7 @@ struct MobilePhotoInspectorSheet: View {
                                 }
                                 .onEnded { _ in
                                     if scale <= 1.0 {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
                                             scale = 1.0
                                             offset = .zero
                                         }
@@ -66,7 +83,7 @@ struct MobilePhotoInspectorSheet: View {
                             let generator = UIImpactFeedbackGenerator(style: .light)
                             generator.prepare()
                             generator.impactOccurred()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8)) {
                                 if scale > 1.0 {
                                     scale = 1.0
                                     offset = .zero
@@ -79,7 +96,27 @@ struct MobilePhotoInspectorSheet: View {
                             }
                         }
                 }
+                }
             }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 8) {
+                    if let previewError { Text(previewError).font(.caption).foregroundStyle(.white) }
+                    if videoLoading { ProgressView("Loading video…").tint(.white) }
+                    if case .photoLibrary = asset.reference, !allowNetwork {
+                        Button("Download Preview from iCloud") { allowNetwork = true }.frame(minHeight: 44)
+                    }
+                    HStack {
+                        if !items.isEmpty {
+                            Button { move(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.accessibilityLabel("Previous Item").disabled((currentIndex ?? 0) <= 0)
+                            Button { move(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }.accessibilityLabel("Next Item").disabled((currentIndex ?? 0) >= items.count - 1)
+                        }
+                        if asset.mediaKind == .video && player == nil { Button("Play Video") { Task { await loadVideo() } }.disabled(videoLoading) }
+                        Spacer()
+                        Button(store.selectedLibraryIDs.contains(asset.id) ? "Deselect" : "Select") { store.toggleLibrarySelection(asset) }
+                    }.buttonStyle(.borderedProminent).frame(minHeight: 44)
+                }.padding(12).background(.black.opacity(0.85))
+            }
+            .onDisappear { player?.pause() }
             .navigationTitle(asset.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -94,8 +131,9 @@ struct MobilePhotoInspectorSheet: View {
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(.white.opacity(0.85)).frame(minWidth: 44, minHeight: 44)
                     }
+                    .accessibilityLabel("Close Preview")
                 }
                 
                 ToolbarItem(placement: .primaryAction) {
@@ -107,16 +145,35 @@ struct MobilePhotoInspectorSheet: View {
                     }) {
                         Image(systemName: "info.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(MobileKeptoraDesign.cyan)
+                            .foregroundStyle(MobileKeptoraDesign.cyan).frame(minWidth: 44, minHeight: 44)
                     }
                 }
             }
             .sheet(isPresented: $showInfo) {
-                AssetMetadataSheet(asset: asset)
+                AssetMetadataSheet(asset: asset, allowNetwork: allowNetwork)
                     .presentationDetents([.medium, .fraction(0.65)])
                     .presentationDragIndicator(.visible)
             }
         }
+    }
+
+    private func loadVideo() async {
+        videoLoading = true; previewError = nil
+        defer { videoLoading = false }
+        switch asset.reference {
+        case .file(let url): player = AVPlayer(url: url)
+        case .photoLibrary(let id):
+            guard let photo = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
+                previewError = String(localized: "Preview unavailable"); return
+            }
+            let options = PHVideoRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
+            let avAsset = await withCheckedContinuation { (continuation: CheckedContinuation<AVAsset?, Never>) in
+                PHImageManager.default().requestAVAsset(forVideo: photo, options: options) { value, _, _ in continuation.resume(returning: value) }
+            }
+            if let avAsset { player = AVPlayer(playerItem: AVPlayerItem(asset: avAsset)) }
+            else { previewError = String(localized: "Video is unavailable locally. Allow an iCloud download and try again.") }
+        }
+        player?.play()
     }
 }
 
@@ -124,6 +181,8 @@ struct MobilePhotoInspectorSheet: View {
 
 private struct AssetMetadataSheet: View {
     let asset: UniversalMediaAsset
+    var allowNetwork = false
+    @State private var detailed: DetailedPhotoMetadata?
     
     var body: some View {
         NavigationStack {
@@ -141,15 +200,36 @@ private struct AssetMetadataSheet: View {
                     }
                 }
                 
-                if let date = asset.creationDate {
-                    Section(header: Text("Capture Information")) {
-                        LabeledContent("Date", value: date.formatted(date: .long, time: .shortened))
+                Section("Capture Information") {
+                    if let description = asset.captureDateDescription {
+                        LabeledContent("Capture Date", value: description)
+                        if asset.context?.captureTimeIsReliable != true { Text("Time zone is unavailable. Time is shown as recorded.").font(.footnote).foregroundStyle(.secondary) }
+                    } else {
+                        Text("Capture date unavailable")
+                        if let date = asset.creationDate { LabeledContent("File Created", value: date.formatted()) }
                     }
+                    if let camera = detailed?.cameraModel ?? asset.context?.camera { LabeledContent("Camera", value: camera) }
+                    if let lens = detailed?.lensModel { LabeledContent("Lens", value: lens) }
+                    if let focal = detailed?.formattedFocalLength { LabeledContent("Focal Length", value: focal) }
+                    if let aperture = detailed?.formattedAperture { LabeledContent("Aperture", value: aperture) }
+                    if let exposure = detailed?.formattedShutterSpeed { LabeledContent("Shutter Speed", value: exposure) }
+                    if let iso = detailed?.iso { LabeledContent("ISO", value: iso.formatted()) }
+                    if let location = asset.context?.location {
+                        LabeledContent("Location", value: String(format: "%.5f, %.5f", location.latitude, location.longitude))
+                    } else { Text("Location unavailable") }
+                    ForEach(asset.context?.albums ?? []) { album in LabeledContent("Album", value: album.title) }
                 }
-                
-                Section(header: Text("Safety & Protection")) {
+                Section("Selection Details") {
                     LabeledContent("Favorite", value: asset.isFavorite ? String(localized: "Yes") : String(localized: "No"))
-                    LabeledContent("Protected", value: asset.isProtectedFromGlobalSelection ? String(localized: "Protected") : String(localized: "Eligible for Cleanup"))
+                    if asset.hasAdjustments { Text("This item has edits.") }
+                    Text("You can select any accessible item manually. Suggested batch selections preserve favorites and edited items.").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .task(id: asset.id) {
+                if case .file(let url) = asset.reference, asset.mediaKind == .image {
+                    detailed = await Task.detached { PhotoMetadataExtractor.extract(from: url) }.value
+                } else if asset.mediaKind == .image {
+                    detailed = try? await PhotoLibrarySourceAdapter().metadata(for: asset, allowNetwork: allowNetwork)
                 }
             }
             .navigationTitle("Details")

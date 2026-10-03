@@ -6,7 +6,7 @@ import KeptoraCore
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var selectedRoute: SidebarRoute = .home
+    @Published var selectedRoute: SidebarRoute = .archive
     @Published private(set) var sourceName = "No folder selected"
     @Published private(set) var sourceProvider = "Choose a local or cloud folder"
     @Published private(set) var sourceURL: URL?

@@ -146,6 +146,7 @@ struct ArchivePlateShape: InsettableShape {
 
 struct PremiumCard<Content: View>: View {
     private let content: Content
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -154,13 +155,12 @@ struct PremiumCard<Content: View>: View {
     var body: some View {
         content
             .padding(20)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
-            .background(KeptoraDesign.elevated.opacity(0.86), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
+            .background(KeptoraDesign.elevated.opacity(reduceTransparency ? 1 : 0.96), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous)
-                    .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.07), radius: 10, y: 4)
+            .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
     }
 }
 

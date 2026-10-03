@@ -115,6 +115,7 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertTrue(element(withIdentifier: "keptora.review.floor", in: app).waitForExistence(timeout: 5))
 
         app.buttons["mac.sidebar.history"].tap()
+        app.segmentedControls.buttons["Verified Copy Plans"].tap()
         XCTAssertTrue(element(withIdentifier: "mac.page.history", in: app).waitForExistence(timeout: 5))
 
         app.buttons["mac.toolbar.insights"].tap()
@@ -199,7 +200,7 @@ final class KeptoraUITests: XCTestCase {
     func testPrimaryNavigationUsesOneCompleteSupportedLanguage() throws {
         let app = launchSelectionFixture()
         let actual = [
-            app.buttons["mac.sidebar.home"].label,
+            app.buttons["mac.sidebar.archive"].label,
             app.buttons["mac.sidebar.review"].label,
             app.buttons["mac.sidebar.history"].label
         ]
@@ -232,7 +233,7 @@ final class KeptoraUITests: XCTestCase {
         for item in testCases {
             let app = launchSelectionFixture(language: item.lang, locale: item.loc)
             let actual = [
-                app.buttons["mac.sidebar.home"].label,
+                app.buttons["mac.sidebar.archive"].label,
                 app.buttons["mac.sidebar.review"].label,
                 app.buttons["mac.sidebar.history"].label
             ]

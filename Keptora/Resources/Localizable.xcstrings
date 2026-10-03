@@ -9820,19 +9820,8 @@
       }
     },
     "Recovery": {
+      "extractionState": "manual",
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederherstellung"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Récupération"
-          }
-        },
         "tr": {
           "stringUnit": {
             "state": "translated",
@@ -9997,7 +9986,8 @@
             "value": "Fotoğraflar’dan Kaldır"
           }
         }
-      }
+      },
+      "extractionState": "manual"
     },
     "Remove selected similar videos from Photos?": {
       "localizations": {
@@ -12409,7 +12399,8 @@
             "value": "Benzer fotoğraflar"
           }
         }
-      }
+      },
+      "extractionState": "manual"
     },
     "Similar Photos": {
       "localizations": {
@@ -19875,6 +19866,1712 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exporter le plan de sécurité en attente au format JSON"
+          }
+        }
+      }
+    },
+    "%lld items": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld öğe"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Selected items: %lld": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen öğeler: %lld"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Photos: %lld · Videos: %lld": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar: %lld · Videolar: %lld"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "%lld previews could not be analyzed. Results cover only accessible items.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld önizleme analiz edilemedi. Sonuçlar yalnızca erişilebilen öğeleri kapsıyor."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "%lld selected outside this view": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu görünüm dışında %lld öğe seçili"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "%lld similar items": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld benzer öğe"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Album": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albüm"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "All Albums": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Albümler"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "All Photos & Videos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Fotoğraflar ve Videolar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Allow Photos access in System Settings to open this library.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu arşivi açmak için Sistem Ayarları’ndan Fotoğraflar erişimine izin verin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Analyzing your library…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiviniz analiz ediliyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Aperture": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diyafram"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Browse collections, compare suggestions, and choose what to remove.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koleksiyonları inceleyin, önerileri karşılaştırın ve kaldırılacak öğeleri seçin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Browse every photo and video. Compare similar shots using visual detail, capture time and location, then choose which items to remove.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm fotoğraf ve videoları görüntüleyin. Benzer çekimleri görsel ayrıntı, çekim zamanı ve konumla karşılaştırıp kaldırılacak öğeleri seçin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Browse every photo, select what you no longer need, and review before removing anything.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm fotoğrafları görüntüleyin, artık ihtiyaç duymadıklarınızı seçin ve kaldırmadan önce inceleyin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Browse your entire library or compare similar shots using images, capture time and location. Only remove items you choose.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm arşivinizi görüntüleyin veya benzer çekimleri görüntü, çekim zamanı ve konumla karşılaştırın. Yalnızca seçtiğiniz öğeleri kaldırın."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Camera": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Cancel Analysis": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analizi İptal Et"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Capture Date": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çekim Tarihi"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Capture date unavailable": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çekim tarihi bilgisi yok"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Change the filters or choose another source.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtreleri değiştirin veya başka bir kaynak seçin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Choose WhatsApp Albums": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp Albümlerini Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Choose a Folder": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasör Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Choose an Exported Folder": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dışa Aktarılmış Bir Klasör Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Cleanup": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizlik"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereinigen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nettoyage"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Close Preview": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi Kapat"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Comparing images and capture details…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görüntüler ve çekim bilgileri karşılaştırılıyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Connect Photos to choose an album.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albüm seçmek için Fotoğraflar’ı bağlayın."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Date unknown": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarih bilinmiyor"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Details": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayrıntılar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Dimensions": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boyutlar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Download Preview from iCloud": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi iCloud’dan İndir"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Duplicates & Similar Photos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyalar ve Benzer Fotoğraflar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Duration": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Süre"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Entire Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Arşiv"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Every Photo. Your Choice.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Her Fotoğraf. Seçim Sizin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Every item in a known duplicate group is selected.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilinen bir kopya grubundaki tüm öğeler seçili."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Favorite": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favori"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Favorites Only": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yalnızca Favoriler"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "File Created": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya Oluşturulma Tarihi"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "File Size": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya Boyutu"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Filter and sort library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivi filtrele ve sırala"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Find Duplicates & Similar Items": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyaları ve Benzer Öğeleri Bul"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Find Similar Photos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benzer Fotoğrafları Bul"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Focal Length": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odak Uzaklığı"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "History source": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geçmiş kaynağı"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "ISO": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ISO"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Includes favorites, edited or album items you selected manually.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle seçtiğiniz favori, düzenlenmiş veya albüm öğeleri de dahil."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora, Fotoğraflar’a veya seçtiğiniz klasörlere kaydedilmiş kopyaları temizleyebilir. WhatsApp’ın özel sohbet depolamasına erişemez."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Keptora opens only Photos or the folder you choose. Images, hashes, thumbnails, and decisions stay on your device. No account required.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora yalnızca seçtiğiniz Fotoğraflar arşivini veya klasörü açar. Görüntüler, hash’ler, küçük resimler ve kararlar cihazınızda kalır. Hesap gerekmez."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Keptora scans only what you choose. Photos, fingerprints, and review decisions never leave your device.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora yalnızca seçtiğiniz içeriği tarar. Fotoğraflar, parmak izleri ve inceleme kararları cihazınızdan çıkmaz."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Kind": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tür"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Largest First": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önce En Büyükler"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Lens": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lens"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Library Cleanup": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiv Temizliği"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Library could not be loaded": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiv yüklenemedi"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Library options": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiv seçenekleri"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Limited Photos access · Manage Access": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sınırlı Fotoğraflar erişimi · Erişimi Yönet"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Limited Photos access. Keptora can only show the items you allow.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar erişimi sınırlı. Keptora yalnızca izin verdiğiniz öğeleri gösterebilir."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Loading video…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video yükleniyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Loading your library…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiviniz yükleniyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Location": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konum"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Location unavailable": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konum bilgisi yok"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Make space for your next moment.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni anılarınıza yer açın."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Manual Library Cleanup": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle Arşiv Temizliği"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Media size, not freed space": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medya boyutu; boşalan alan değildir"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "No": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hayır"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "No items in this view": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu görünümde öğe yok"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "No manual cleanup history yet.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz elle temizleme geçmişi yok."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Oldest First": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önce En Eskiler"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Only the items listed here will be removed. Review the destination and recovery conditions before continuing.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yalnızca burada listelenen öğeler kaldırılacak. Devam etmeden önce hedefi ve kurtarma koşullarını inceleyin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Open Apple Photos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Fotoğraflar’ı Aç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Open Photos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar’ı Aç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Open Photos or a folder. Select any photo or video without waiting for duplicate analysis.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar’ı veya bir klasörü açın. Kopya analizini beklemeden istediğiniz fotoğraf veya videoyu seçin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Photo": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraf"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Photos can be recovered from Recently Deleted for up to 30 days unless deleted sooner. Folder files stay in a recovery area until you restore them.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar daha önce kalıcı silinmedikçe en fazla 30 gün boyunca Son Silinenler’den kurtarılabilir. Klasör dosyaları siz geri yükleyene kadar kurtarma alanında kalır."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Play Video": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videoyu Oynat"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Preview": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizle"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Preview unavailable": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizleme alınamıyor"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Private & On-Device": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gizli ve Cihazınızda"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Private processing on your device. No account required.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İşlemler cihazınızda yapılır. Hesap gerekmez."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Refresh Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivi Yenile"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Remove Selected Items": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen Öğeleri Kaldır"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Remove from selection": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçimden çıkar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Removing selected items…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen öğeler kaldırılıyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Restoring files…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar geri yükleniyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Review Before Removing": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaldırmadan Önce İncele"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Review Selection": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçimi İncele"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Review your selection before removing it. Photos uses Recently Deleted for up to 30 days unless deleted sooner. Folder files stay in a recovery area until restored.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçiminizi kaldırmadan önce inceleyin. Fotoğraflar daha önce kalıcı silinmedikçe en fazla 30 gün boyunca Son Silinenler’de tutulur. Klasör dosyaları geri yüklenene kadar kurtarma alanında kalır."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Reviewing selected items…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen öğeler inceleniyor…"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Select": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Deselect": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçimi Kaldır"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Select All in This View": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Görünümdeki Tümünü Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Select Day": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Günü Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Select Month": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayı Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Select in Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivden Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Selected Items": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen Öğeler"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Selection Details": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçim Ayrıntıları"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Show Entire Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Arşivi Göster"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Shutter Speed": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enstantane"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Some analysis could not be completed": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analizin bir kısmı tamamlanamadı"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Some item sizes are unavailable.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bazı öğelerin boyut bilgisi yok."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "This collection uses album membership. Removing a saved copy from Photos does not remove it from WhatsApp chats.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu koleksiyon albüm üyeliğini kullanır. Kaydedilmiş kopyayı Fotoğraflar’dan kaldırmak, WhatsApp sohbetlerindeki dosyayı kaldırmaz."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "This item has edits.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu öğede düzenlemeler var."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Time zone is unavailable. Time is shown as recorded.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saat dilimi bilgisi yok. Saat, kayıttaki haliyle gösteriliyor."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp içindeki medyayı yönetmek için WhatsApp → Ayarlar → Depolama ve Veriler → Depolamayı Yönet yolunu açın."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Try Again": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekrar Dene"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Retry": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeniden Dene"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Verified Copy Plans": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulanmış Kopya Planları"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Video": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Video is unavailable locally. Allow an iCloud download and try again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video cihazda bulunmuyor. iCloud’dan indirmeye izin verip tekrar deneyin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "View in History": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geçmişte Görüntüle"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Wait for analysis to finish or cancel it before cleanup.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temizlemeden önce analizin tamamlanmasını bekleyin veya analizi iptal edin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "WhatsApp Media": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp Medyası"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "WhatsApp Storage Guide": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp Depolama Rehberi"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Yes": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evet"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You can select any accessible item manually. Suggested batch selections preserve favorites and edited items.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erişebildiğiniz her öğeyi elle seçebilirsiniz. Önerilen toplu seçimler favorileri ve düzenlenmiş öğeleri korur."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Your photos. Your choice.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflarınız. Seçim sizin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Filter by Date": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarihe Göre Filtrele"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "From": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlangıç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "To": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitiş"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Date Range": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarih Aralığı"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Dates use capture information when available, otherwise file creation dates.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varsa çekim tarihi, yoksa dosya oluşturulma tarihi kullanılır."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Group by": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupla"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "All Items": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Öğeler"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Day": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gün"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Month": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ay"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Previous Item": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önceki Öğe"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Next Item": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonraki Öğe"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Manual selection, privacy and recovery are available without Pro.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle seçim, gizlilik ve kurtarma Pro olmadan da kullanılabilir."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Items go to Recently Deleted in Apple Photos for up to 30 days unless permanently deleted sooner. iCloud Photos changes also sync to your other devices.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öğeler daha önce kalıcı silinmedikçe en fazla 30 gün boyunca Apple Fotoğraflar’daki Son Silinenler’e taşınır. iCloud Fotoğraflar değişiklikleri diğer cihazlarınıza da eşitler."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Files move to a recovery folder on the same storage. This does not free disk space. Keep the recovery folder and record to restore them.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar aynı depolama alanındaki bir kurtarma klasörüne taşınır. Bu işlem disk alanı boşaltmaz. Geri yüklemek için kurtarma klasörünü ve kaydını saklayın."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Recover items in Apple Photos → Recently Deleted for up to 30 days unless permanently deleted sooner.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öğeleri daha önce kalıcı silinmedikçe en fazla 30 gün boyunca Apple Fotoğraflar → Son Silinenler’den kurtarabilirsiniz."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Files remain in the recovery folder on the same storage.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar aynı depolama alanındaki kurtarma klasöründe kalır."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Completed actions show their source, result and available recovery steps.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamamlanan işlemler kaynakları, sonuçları ve kullanılabilir kurtarma adımlarıyla gösterilir."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Browse Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivi Görüntüle"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Selected": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Not selected": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili değil"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Tap to change selection": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçimi değiştirmek için dokunun"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Tap to preview. Hold and drag to select multiple items.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemek için dokunun. Birden çok öğeyi seçmek için basılı tutup sürükleyin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Compare the images and capture details, then choose what to remove.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görüntüleri ve çekim bilgilerini karşılaştırıp kaldırılacak öğeleri seçin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Choose Items in Library": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivden Öğeleri Seç"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Sources & Analysis": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynaklar ve Analiz"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Screenshots": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekran Görüntüleri"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Large Videos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Büyük Videolar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Live Photos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Photo’lar"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Move to Recovery Folder": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurtarma Klasörüne Taşı"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Remove selected items?": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen öğeler kaldırılsın mı?"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Your selection changed. Review it again before removing items.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçiminiz değişti. Öğeleri kaldırmadan önce tekrar inceleyin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Restore these files before removing their recovery record.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurtarma kaydını kaldırmadan önce bu dosyaları geri yükleyin."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Use Library to manually select this item. Suggested cleanup keeps a copy and excludes personal items.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu öğeyi elle seçmek için Arşiv’i kullanın. Önerilen temizlik bir kopyayı saklar ve kişisel öğeleri dışarıda bırakır."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Videos by Size": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boyuta Göre Videolar"
+          }
+        }
+      }
+    },
+    "Items with unknown size appear after measured items.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boyutu bilinmeyen öğeler, boyutu ölçülmüş öğelerden sonra gösterilir."
+          }
+        }
+      }
+    },
+    "Media size unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medya boyutu bilgisi yok"
           }
         }
       }

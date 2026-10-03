@@ -4,6 +4,7 @@ struct MobileOnboardingView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @Environment(\.dismiss) private var dismiss
     @AppStorage("hasSeenMobileOnboarding") private var hasSeenMobileOnboarding = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var currentPage = 0
 
     private struct OnboardingStep: Identifiable {
@@ -24,15 +25,15 @@ struct MobileOnboardingView: View {
         ),
         OnboardingStep(
             id: 1,
-            title: "Proof, Not Guesswork",
-            subtitle: "Exact duplicates require SHA-256 byte-level verification. Similar photos are for comparison only — never auto-deleted.",
+            title: "Every Photo. Your Choice.",
+            subtitle: "Browse your entire library or compare similar shots using images, capture time and location. Only remove items you choose.",
             icon: "checkmark.seal.fill",
             tint: MobileKeptoraDesign.accent
         ),
         OnboardingStep(
             id: 2,
-            title: "Always Reversible",
-            subtitle: "One keeper photo is always protected. Cleaned files move to Recently Deleted or Keptora Bin and can be restored at any time.",
+            title: "Review Before Removing",
+            subtitle: "Photos can be recovered from Recently Deleted for up to 30 days unless deleted sooner. Folder files stay in a recovery area until you restore them.",
             icon: "arrow.uturn.backward.circle.fill",
             tint: MobileKeptoraDesign.coral
         )
@@ -57,23 +58,13 @@ struct MobileOnboardingView: View {
 
                 TabView(selection: $currentPage) {
                     ForEach(steps) { step in
-                        VStack(spacing: 24) {
-                            Spacer()
+                        ScrollView {
+                          VStack(spacing: 24) {
 
-                            ZStack {
-                                Circle()
-                                    .fill(step.tint.opacity(0.18))
-                                    .frame(width: 140, height: 140)
-                                    .blur(radius: 12)
-
-                                Circle()
-                                    .fill(step.tint.opacity(0.12))
-                                    .frame(width: 110, height: 110)
-
-                                Image(systemName: step.icon)
-                                    .font(.system(size: 54, weight: .semibold))
-                                    .foregroundStyle(step.tint)
-                            }
+                            Image(["onboarding_privacy", "onboarding_proof", "onboarding_restore"][step.id])
+                                .resizable().scaledToFit().frame(maxHeight: 270)
+                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .padding(.horizontal, 24).accessibilityHidden(true)
 
                             VStack(spacing: 12) {
                                 Text(step.title)
@@ -89,7 +80,7 @@ struct MobileOnboardingView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
 
-                            Spacer()
+                          }.padding(.vertical, 20)
                         }
                         .tag(step.id)
                     }
@@ -99,7 +90,7 @@ struct MobileOnboardingView: View {
                 VStack(spacing: 12) {
                     Button {
                         if currentPage < steps.count - 1 {
-                            withAnimation(.easeInOut(duration: 0.25)) {
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
                                 currentPage += 1
                             }
                         } else {

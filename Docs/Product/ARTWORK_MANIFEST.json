@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-03",
+  "illustrations": [
+    {
+      "name": "onboarding_privacy",
+      "path": "Keptora/Resources/Assets.xcassets/onboarding_privacy.imageset/onboarding_privacy.png",
+      "purpose": "On-device privacy",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "985d0f28868879e64a787e233fba81481c172bd04514fabe0c9983b36c6ca802",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Visually inspected; native light/dark layout acceptance pending"
+    },
+    {
+      "name": "onboarding_proof",
+      "path": "Keptora/Resources/Assets.xcassets/onboarding_proof.imageset/onboarding_proof.png",
+      "purpose": "Manual choice and comparison",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "0491c25692ad5c425736552747cf6118433dc1431107443350570711c6854736",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Visually inspected; native light/dark layout acceptance pending"
+    },
+    {
+      "name": "onboarding_restore",
+      "path": "Keptora/Resources/Assets.xcassets/onboarding_restore.imageset/onboarding_restore.png",
+      "purpose": "Source-specific recovery",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "9863cffdb3a353022b14cb2ee33262d72a7d60053cc00740e4e861f77a8696aa",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Visually inspected; native light/dark layout acceptance pending"
+    },
+    {
+      "name": "paywall_hero",
+      "path": "Keptora/Resources/Assets.xcassets/paywall_hero.imageset/paywall_hero.png",
+      "purpose": "Pro library illustration",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "0d45eefa63a56e18a908da94e86845cea20b99621f532d8cc9bb7319532dc2a3",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Visually inspected; native light/dark layout acceptance pending"
+    }
+  ],
+  "app_icon": "Existing macOS and iOS masters visually inspected and retained.",
+  "screenshots": "Legacy set is historical. Recapture from current native builds and review before App Store use."
+}
