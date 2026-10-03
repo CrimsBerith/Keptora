@@ -35,3 +35,7 @@ Linux hedefi yalnızca Foundation modellerini derler. Apple framework’leri sah
 Apple CI derleme/test sonuçları, gerçek cihazda silme/geri yükleme, iCloud/limited erişim, VoiceOver, büyük yazı ve açık/koyu tema görsel kabulü gerekir. Yeni App Store ekran görüntüleri bu kabulden sonra seçilmelidir; eski 12 ekran yeni ürün için onaylı değildir. Fotoğraflar boyutu public API ile katalogda bilinmeyebilir; ölçülen değerler ve bilinmeyen boyutlar ayrı sunulur. Yeni ayrıntılı ürün metinleri İngilizce/Türkçe tamamlandı; Almanca/Fransızca yeni uzun metinlerin çeviri kabulü sonraki dil kontrolündedir. Büyük gerçek arşivde süre/bellek ölçümü ve analiz eşiklerinin corpus ile kalibrasyonu yapılmadı.
 
 [Önceki UI/UX raporu](UI_UX_AUDIT.md), [ürün planı](PHOTO_CLEANER_PLAN.md), [görsel kararları](VISUAL_INVENTORY.md), [yeni görseller](ARTWORK.md) ve [Apple CI](../../.github/workflows/apple-validation.yml).
+
+## 67 görsel yenilemesi
+
+34 ikon/logo, 8 illüstrasyon, 13 test girdisi ve 12 tasarım önizlemesi yeniden üretildi. 66 görüntülenebilir çıktı tek tek açıldı; kasıtlı bozuk JPEG negatif test olarak doğrulandı. [Yeni inceleme raporu](VISUAL_REGENERATION_REVIEW.md) ve [galeri](VISUAL_GALLERY.html). 12 ekran native çekim değildir ve App Store için onaylanmadı.

@@ -1,3 +1,5 @@
+> Güncel karar: 67 dosya yeniden üretildi; bu eski envanterdeki koruma kararları artık geçerli değildir. [Dosya bazında güncel kabul](VISUAL_REGENERATION_REVIEW.md).
+
 # Keptora Görsel Envanteri ve Kararlar
 
 2026-10-03. Yeni dosyalarla birlikte 67 görsel envanterde. Her dosya için kullanım kararı verildi. Bu, bütün dosyaların tek tek native arayüzde görsel kabul aldığı anlamına gelmez.

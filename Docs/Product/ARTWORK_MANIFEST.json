@@ -9,9 +9,10 @@
         1536,
         1024
       ],
-      "sha256": "985d0f28868879e64a787e233fba81481c172bd04514fabe0c9983b36c6ca802",
+      "sha256": "85575cef476e80a5a97000c5a5849cc3de7614341ab997e74607a9c814f14d47",
       "origin": "OpenAI image generation, created for Keptora in this session",
-      "review": "Visually inspected; native light/dark layout acceptance pending"
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/privacy.png"
     },
     {
       "name": "onboarding_proof",
@@ -21,9 +22,10 @@
         1536,
         1024
       ],
-      "sha256": "0491c25692ad5c425736552747cf6118433dc1431107443350570711c6854736",
+      "sha256": "fe9eb9732b41dd6186a0d13085f42f2ee98401d571d381cbc09a491bcef878d9",
       "origin": "OpenAI image generation, created for Keptora in this session",
-      "review": "Visually inspected; native light/dark layout acceptance pending"
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/proof.png"
     },
     {
       "name": "onboarding_restore",
@@ -33,9 +35,10 @@
         1536,
         1024
       ],
-      "sha256": "9863cffdb3a353022b14cb2ee33262d72a7d60053cc00740e4e861f77a8696aa",
+      "sha256": "108e87fec8e6ec70b257c97d42d4bfee76fb2283601a6f52c499e3eb2b583173",
       "origin": "OpenAI image generation, created for Keptora in this session",
-      "review": "Visually inspected; native light/dark layout acceptance pending"
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/restore.png"
     },
     {
       "name": "paywall_hero",
@@ -45,11 +48,12 @@
         1536,
         1024
       ],
-      "sha256": "0d45eefa63a56e18a908da94e86845cea20b99621f532d8cc9bb7319532dc2a3",
+      "sha256": "9932d21f86fa3dca16be0e955207bb7ead0b9c33145c0ead464d868c6f9d7de7",
       "origin": "OpenAI image generation, created for Keptora in this session",
-      "review": "Visually inspected; native light/dark layout acceptance pending"
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/hero.png"
     }
   ],
-  "app_icon": "Existing macOS and iOS masters visually inspected and retained.",
-  "screenshots": "Legacy set is historical. Recapture from current native builds and review before App Store use."
+  "app_icon": "New October 2026 master and every OS size regenerated; per-file review recorded separately.",
+  "screenshots": "12 visibly labelled design previews, not native captures; not approved for App Store submission."
 }

@@ -12,3 +12,5 @@ xcuserdata/
 *.moved-aside
 Claude outputs/
 
+__pycache__/
+*.pyc

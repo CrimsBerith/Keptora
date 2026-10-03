@@ -1,0 +1,225 @@
+{
+  "origin": "OpenAI image generation; fictional photography; 2026-10-03",
+  "sources": {
+    "icon": {
+      "file": "icon.png",
+      "sha256": "b576eb116ce546cfc6b0c7aac8b314e1714d5baa182050a62899154c5aad6f53",
+      "pixels": [
+        1254,
+        1254
+      ]
+    },
+    "privacy": {
+      "file": "privacy.png",
+      "sha256": "0bf483a0320de24cf14a18d0c298c12c1d88e6e226b38cc443e8dd8d4e951583",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "family": {
+      "file": "family.png",
+      "sha256": "0993f33e949fcbd993da3f911304f43da849c040132d505982865937c8e4d76a",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "beach": {
+      "file": "beach.png",
+      "sha256": "5f41e2d0d1edeeaaccd9b897338fc761533bf9c732e0a136c13c2401321c1934",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "proof": {
+      "file": "proof.png",
+      "sha256": "00dc6ff130cc812881f7166b0f8a73b2b130b8dcbcef5d5ee8888c34796b8bf5",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "restore": {
+      "file": "restore.png",
+      "sha256": "450f0875464710092a1e214a72a5d493d35ceaa2eda7292637d52dfe809c5d20",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "hero": {
+      "file": "hero.png",
+      "sha256": "246a28eb51313eb1816ce06109547ad9bd8b94d97a7f16f95310319350acc1d1",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "poster": {
+      "file": "poster.png",
+      "sha256": "e722eb457dbbe6b461cb3e4c330e671a133eb9718ce443745ef50aa219ce7ecf",
+      "pixels": [
+        1254,
+        1254
+      ]
+    },
+    "sunset": {
+      "file": "sunset.png",
+      "sha256": "73d7bbba773b725ae6bbf7ea203d16da82769b68f850e73c8311c496cafe5e56",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "sunset2": {
+      "file": "sunset2.png",
+      "sha256": "55df430918bcee41c11e941e6bb967080c627ceec2470d66bf31eb2d5b406155",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "sunset3": {
+      "file": "sunset3.png",
+      "sha256": "13570850ff5c4887ded4f764ce64c3b9ce2171ae359fd5801739b485f9bd0007",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "dsc": {
+      "file": "dsc.png",
+      "sha256": "5e5b53a00c69c0d2034c16fa8d2d44dfe482443e3358e79b65506bb454d5e8f7",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "dsc_edit": {
+      "file": "dsc_edit.png",
+      "sha256": "8e216ec06d85875146889e17cf40429ccd60bd7a295715f1515481331a809fba",
+      "pixels": [
+        1536,
+        1024
+      ]
+    },
+    "mark_clean": {
+      "file": "mark_clean.png",
+      "sha256": "d69f1ae49770d403b6c759211577f31c7ba5bb564b4cdaeef4d404e730b8a665",
+      "pixels": [
+        1254,
+        1254
+      ]
+    },
+    "mono": {
+      "file": "mono.png",
+      "sha256": "de05716dfc3b87ed5e5b1fe82c94926698462a61270d9cf2b73ddd9ed110dce0",
+      "pixels": [
+        1254,
+        1254
+      ]
+    },
+    "mac1": {
+      "file": "mac1.png",
+      "sha256": "81fb22172743e11c5f1a289d398bda51fb2cdb61b07c1d48a41035004a8e2658",
+      "pixels": [
+        1586,
+        992
+      ]
+    },
+    "ios1": {
+      "file": "ios1.png",
+      "sha256": "fb540fc286023bf1fb83284f4f7bac85d00be58bf33e303e48570781cabe6eb9",
+      "pixels": [
+        851,
+        1848
+      ]
+    },
+    "mac2": {
+      "file": "mac2.png",
+      "sha256": "e9ea52b051b747b4ca8842c910e46615b413a5e1ac2113d15c2c7c83742ae82a",
+      "pixels": [
+        1586,
+        992
+      ]
+    },
+    "ios2": {
+      "file": "ios2.png",
+      "sha256": "40e5e9b6b529601da4493f0b7d090f3378c108c7e630099fe7685f64e2995b89",
+      "pixels": [
+        851,
+        1848
+      ]
+    },
+    "mac3": {
+      "file": "mac3.png",
+      "sha256": "6d85c3a0db9b0e248a9c85ea4fc0265c2af6f64d0fc09450964a7cde045b9907",
+      "pixels": [
+        1586,
+        992
+      ]
+    },
+    "ios3": {
+      "file": "ios3.png",
+      "sha256": "b24c417e1f331f0b04ef82dd811509d36731284813867e911f777706a1637e6b",
+      "pixels": [
+        851,
+        1847
+      ]
+    },
+    "mac4": {
+      "file": "mac4.png",
+      "sha256": "d0bd639f0d32aa83a25fd666fa5a4cc80a8bc3d47911f65b9117cc4fb122e898",
+      "pixels": [
+        1586,
+        992
+      ]
+    },
+    "ios4": {
+      "file": "ios4.png",
+      "sha256": "1d504f2fbc11d2aefe83b3d79d0d978d0c6b5045dda8a48cbe31e083b896b83f",
+      "pixels": [
+        851,
+        1849
+      ]
+    },
+    "mac5": {
+      "file": "mac5.png",
+      "sha256": "573ff150929a9250d2378caa760c5f9ac5f9e4742c8427aa39bcb66083781866",
+      "pixels": [
+        1586,
+        992
+      ]
+    },
+    "ios5": {
+      "file": "ios5.png",
+      "sha256": "f8dcf9ae7bb1f3d23fa2aeb82d9d3ea0c30675768e11ea485cc38cc3a68fa099",
+      "pixels": [
+        851,
+        1849
+      ]
+    },
+    "mac6": {
+      "file": "mac6.png",
+      "sha256": "a496fdb5af57b36cbedfc3b5976a20dcf45f58b46ee11ed61f5b6ce0441d971c",
+      "pixels": [
+        1586,
+        992
+      ]
+    },
+    "ios6": {
+      "file": "ios6.png",
+      "sha256": "65bf9b57da5eac408ab760504f5306473f8dfd99df8a0bfcb574ff6b353320e8",
+      "pixels": [
+        851,
+        1849
+      ]
+    }
+  },
+  "schema": 2,
+  "derived": [
+    "mac-export.png: deterministic OS mask export, not a generated master"
+  ]
+}
