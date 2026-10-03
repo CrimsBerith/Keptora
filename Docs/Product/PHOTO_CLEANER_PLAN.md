@@ -3,7 +3,7 @@
 **Tarih:** 3 Ekim 2026
 **Kapsam:** Önce iPhone; ortak çekirdek üzerinden macOS uyarlaması.
 **Girdiler:** [24 bulguluk UI/UX raporu](UI_UX_AUDIT.md), kullanıcının tüm arşivden serbest seçim/silme, mobil WhatsApp temizliği ve çekim bilgileriyle desteklenen benzerlik istekleri.
-**Durum:** Plan ve görsel envanter hazırlandı. Uygulamaya henüz görsel değişiklik veya özellik eklenmedi.
+**Durum:** Bu belge ilk ürün planını ve sonraki teslim notlarını içerir. Birleşik arşiv, kaynak rozetleri, manuel temizlik, başlangıç izinleri ve görsel yenileme kodlandı; native kabulü ayrıca gerekir. Güncel geliştirme sırası: [2.000–3.000 fotoğrafta kolay toplu temizlik planı](BULK_PHOTO_CLEANUP_PLAN.md).
 
 ## 1. Yeni ürün hedefi
 
@@ -244,7 +244,7 @@ Konum ve fotoğraf özellikleri mümkün olduğunca cihazda işlenecek. Mevcut f
 - Gerçek cihaz doğrulaması, benzerlik ve büyük arşiv ölçümleri.
 - Başarı durumları doğrulanmış güncel App Store görselleri.
 
-**Uygulama için temel önkoşul:** macOS/Xcode ve gerçek iPhone erişimi. Mevcut Linux ortamı rapor, plan ve bazı Python doğrulamaları için uygun; native UI/PhotoKit akışlarının tamamlandığını kanıtlayamaz. Takvim, bu ortam ve ekip kapasitesi belirlendikten sonra aşama bazında çıkarılmalı.
+**Güncel uygulama sırası:** Kullanıcının son talebiyle kaynak tikleri, kalite bulguları, toplu karar UI'ı, önbellek ve ortak testler önce burada kodlanacak. macOS/Xcode ve gerçek iPhone erişimi son native derleme/kabul aşaması için gerekir; kod geliştirmesine başlama engeli değildir. Linux'taki ortak testler native UI/PhotoKit davranışını kanıtlamaz. Güncel kapsam ve kabul ölçütleri [toplu temizlik planında](BULK_PHOTO_CLEANUP_PLAN.md) yer alır.
 
 
 ## 3 Ekim 2026 — Birleşik kaynak akışı
