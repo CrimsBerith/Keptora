@@ -11,11 +11,14 @@ struct MobileLibraryView: View {
     @State private var oldestFirst = false
     @State private var largestFirst = false
     @State private var grouping = 2
+    @State private var groupedResults = false
+    @State private var cloudScan = false
     @State private var dateFilters = false
     @State private var dateRangeEnabled = false
     @State private var fromDate = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
     @State private var toDate = Date()
     @State private var sources = false
+    @State private var pendingFolderPicker = false
     @State private var inspector: UniversalMediaAsset?
     @State private var reviewSelection = false
     @State private var favouritesOnly = false
@@ -25,7 +28,9 @@ struct MobileLibraryView: View {
     @State private var dragBase: Set<String> = []
 
     private var visible: [UniversalMediaAsset] {
-        store.assets.filter { asset in
+        let groupedIDs = groupedResults ? Set(store.reviewGroups.flatMap { $0.assets.map(\.id) }) : Set<String>()
+        return store.assets.filter { asset in
+            (!groupedResults || groupedIDs.contains(asset.id)) &&
             (media == 0 || (media == 1 ? asset.mediaKind == .image : asset.mediaKind == .video)) &&
             (albumID.isEmpty || asset.context?.albums.contains { $0.id == albumID } == true) &&
             (!favouritesOnly || asset.isFavorite) &&
@@ -71,8 +76,27 @@ struct MobileLibraryView: View {
                             }
                         } else if store.isLoadingCatalogue && store.assets.isEmpty {
                             ProgressView("Loading your library…").frame(maxWidth: .infinity, minHeight: 180)
+                        } else if groupedResults {
+                            if store.reviewGroups.isEmpty {
+                                ContentUnavailableView("No groups to review", systemImage: "rectangle.stack", description: Text(store.scanState == .completed ? LocalizedStringKey("No groups found in accessible items.") : LocalizedStringKey("Scan all connected sources to find exact copies and similar photos together.")))
+                            }
+                            ForEach(store.reviewGroups) { group in
+                                let items = group.assets.filter { item in visible.contains { $0.id == item.id } }
+                                if !items.isEmpty {
+                                    HStack {
+                                        Label(group.kind == .exact ? LocalizedStringKey("Exact Copies") : LocalizedStringKey("Similar Photos & Videos"), systemImage: group.kind == .exact ? "doc.on.doc" : "square.stack")
+                                            .font(.headline)
+                                        Spacer()
+                                        Text(items.count.formatted()).foregroundStyle(.secondary)
+                                    }
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 106), spacing: 4)], spacing: 4) {
+                                        ForEach(items) { asset in cell(asset, suggestedKeeper: asset.id == group.keeperID) }
+                                    }
+                                }
+                            }
                         } else if visible.isEmpty {
                             ContentUnavailableView("No items in this view", systemImage: "photo", description: Text("Change the filters or choose another source."))
+                            Button("Reset Filters") { media = 0; albumID = ""; favouritesOnly = false; dateRangeEnabled = false; search = ""; groupedResults = false; store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionKind = nil; store.libraryCollectionSortBySize = false }
                         } else {
                             ForEach(sections, id: \.date) { section in
                                 sectionHeader(section)
@@ -90,7 +114,7 @@ struct MobileLibraryView: View {
             .onPreferenceChange(ArchiveFrameKey.self) { frames = $0 }
             .simultaneousGesture(LongPressGesture(minimumDuration: 0.35).sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("archive")))
                 .onChanged { value in
-                    guard !store.isCleaningUp else { return }
+                    guard !store.isCleaningUp, !groupedResults else { return }
                     if case .second(true, let drag?) = value {
                         selecting = true
                         guard let target = frames.first(where: { $0.value.contains(drag.location) })?.key,
@@ -112,7 +136,7 @@ struct MobileLibraryView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
-                    Button("Choose a source") { sources = true }
+                    Button("Sources") { sources = true }
                     Button("Settings", systemImage: "gearshape") { store.present(.settings) }.accessibilityIdentifier("ios.library.settings")
                     Button("Refresh Library", systemImage: "arrow.clockwise") { Task { await store.loadCatalogue() } }
                 } label: { Image(systemName: "gearshape").frame(minWidth: 44, minHeight: 44) }
@@ -127,7 +151,10 @@ struct MobileLibraryView: View {
         .safeAreaInset(edge: .bottom) {
             if !store.selectedLibraryIDs.isEmpty { selectionBar }
         }
-        .sheet(isPresented: $sources) { NavigationStack { MobileSourceLibraryView().toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { sources = false } } } } }
+        .confirmationDialog("Download iCloud originals?", isPresented: $cloudScan) {
+            Button("Download and Scan") { store.startScan(allowNetwork: true) }
+        } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
+        .sheet(isPresented: $sources, onDismiss: { if pendingFolderPicker { pendingFolderPicker = false; store.present(.filePicker) } }) { NavigationStack { MobileSourceLibraryView(onChooseFolder: { pendingFolderPicker = true; sources = false }).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { sources = false } } } } }
         .sheet(item: $inspector) { MobilePhotoInspectorSheet(asset: $0, items: visible).environmentObject(store) }
         .sheet(isPresented: $reviewSelection) { MobileSelectionReviewSheet() }
         .sheet(isPresented: $dateFilters) {
@@ -140,6 +167,7 @@ struct MobileLibraryView: View {
                 }.navigationTitle("Date Range").toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dateFilters = false } } }
             }
         }
+        .onChange(of: store.connectedFolders) { _, _ in albumID = ""; media = 0; search = ""; dateRangeEnabled = false; favouritesOnly = false }
         .onChange(of: store.source) { _, _ in undoSelection = nil; dragStart = nil; selecting = false; dateRangeEnabled = false; albumID = ""; search = "" }
         .onChange(of: store.libraryCollectionIDs) { _, _ in albumID = ""; search = ""; media = 0; favouritesOnly = false; dateRangeEnabled = false; largestFirst = false }
         .onChange(of: store.selectedLibraryIDs) { _, _ in store.saveLibrarySelection() }
@@ -166,13 +194,53 @@ struct MobileLibraryView: View {
     private var catalogueHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label(store.source.title, systemImage: store.source == .photos ? "photo.stack" : "folder")
+                Label(store.libraryTitle, systemImage: "photo.stack")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 if store.isLoadingCatalogue { ProgressView() }
                 Text(visible.count.formatted()).monospacedDigit().foregroundStyle(.secondary)
             }
-            if store.authorization == .limited && store.source == .photos {
+            Button("Sources") { sources = true }.font(.footnote).frame(minHeight: 44)
+            DisclosureGroup("Scan Coverage") {
+            ForEach(store.coverage) { report in
+                HStack(alignment: .top) {
+                    Image(systemName: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
+                    Text(report.source.displayName)
+                    Spacer()
+                    Text(report.itemCount.formatted()).monospacedDigit()
+                }.font(.caption).foregroundStyle(report.error == nil ? Color.secondary : .orange)
+                if report.error != nil { Text("Some items in this source are unavailable. Reconnect or check access.").font(.caption).foregroundStyle(.secondary) }
+            }
+            ForEach(Array(store.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).font(.caption).foregroundStyle(.orange) }
+            Text("Photos includes iCloud Photos and saved WhatsApp albums. Files includes the folders you connect. Private chat storage is excluded.").font(.caption).foregroundStyle(.secondary)
+            }
+            Text("Connected sources only. Add Photos and folders in Sources.").font(.caption).foregroundStyle(.secondary)
+            if store.coverage.contains(where: { $0.error != nil }) || !store.connectionErrors.isEmpty {
+                Label("Some sources were not fully scanned. Check Scan Coverage.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
+            }
+            HStack {
+                if store.scanState.isScanning || store.isAnalyzing {
+                    ProgressView()
+                    Button("Cancel Scan") { store.cancelScan() }
+                } else {
+                    Button("Scan All Sources") { store.startScan() }.buttonStyle(.borderedProminent).accessibilityIdentifier("archive.scanAll")
+                    Button("Include Cloud Originals") { cloudScan = true }.font(.footnote)
+                }
+            }.disabled(store.isCleaningUp || store.isLoadingCatalogue)
+            if case .scanning(let processed, let total, let current) = store.scanState {
+                ProgressView(value: Double(processed), total: Double(max(total, 1)))
+                Text(current).font(.caption).lineLimit(2)
+            }
+            if store.isAnalyzing { Text("Analysis in progress. Groups may change.").font(.caption).foregroundStyle(.secondary) }
+            if let error = store.similarityError ?? store.videoSimilarityError { Text(error).font(.caption).foregroundStyle(.orange) }
+            if store.skippedCloudItems > 0 {
+                Text(String(format: String(localized: "%lld originals could not be analyzed. They remain in the library."), store.skippedCloudItems)).font(.caption).foregroundStyle(.secondary)
+            }
+            Picker("Library view", selection: $groupedResults) {
+                Text("All Items").tag(false)
+                Text("Copies & Similar").tag(true)
+            }.pickerStyle(.segmented).accessibilityIdentifier("archive.resultMode")
+            if store.authorization == .limited {
                 Button("Limited Photos access · Manage Access") { store.manageLimitedPhotosAccess() }.font(.footnote).frame(minHeight: 44)
             }
             if store.libraryCollectionIDs != nil {
@@ -227,7 +295,7 @@ struct MobileLibraryView: View {
         }
     }
 
-    private func cell(_ asset: UniversalMediaAsset) -> some View {
+    private func cell(_ asset: UniversalMediaAsset, suggestedKeeper: Bool = false) -> some View {
         let selected = store.selectedLibraryIDs.contains(asset.id)
         return Button {
             if selecting { store.toggleLibrarySelection(asset) } else { inspector = asset }
@@ -235,6 +303,13 @@ struct MobileLibraryView: View {
             ZStack(alignment: .bottomTrailing) {
                 MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit)
                     .overlay(selected ? MobileKeptoraDesign.accent.opacity(0.18) : .clear)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(store.sourceLabel(asset)).font(.caption2.weight(.semibold)).lineLimit(2)
+                        .padding(.horizontal, 5).padding(.vertical, 3)
+                        .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+                    if suggestedKeeper { Label("Suggested Keep", systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4)) }
+                    Spacer()
+                }.padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 HStack {
                     if asset.isFavorite { Image(systemName: "heart.fill") }
                     if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
@@ -249,7 +324,7 @@ struct MobileLibraryView: View {
             .background(GeometryReader { geo in Color.clear.preference(key: ArchiveFrameKey.self, value: [asset.id: geo.frame(in: .named("archive"))]) })
         }
         .buttonStyle(.plain).disabled(store.isCleaningUp)
-        .accessibilityLabel(asset.displayName)
+        .accessibilityLabel(asset.displayName + ", " + store.sourceLabel(asset))
         .accessibilityValue(selected ? "Selected" : "Not selected")
         .accessibilityHint(selecting ? "Tap to change selection" : "Tap to preview. Hold and drag to select multiple items.")
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -292,15 +367,25 @@ struct MobileSelectionReviewSheet: View {
             List {
                 Section {
                     Text(String(format: String(localized: "Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.title2.bold())
-                    Label(store.source.title, systemImage: store.source == .photos ? "photo" : "folder")
+                    Label(store.libraryTitle, systemImage: "photo.stack")
                     Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file) + " · " + String(localized: "Media size, not freed space")).foregroundStyle(.secondary)
                     if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.footnote) }
-                    Text(store.source == .photos ? "Items go to Recently Deleted in Apple Photos for up to 30 days unless permanently deleted sooner. iCloud Photos changes also sync to your other devices." : "Files move to a recovery folder on the same storage. This does not free disk space. Keep the recovery folder and record to restore them.")
+                    Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.")
                         .font(.footnote).foregroundStyle(.secondary)
                     if summary.personalItems > 0 { Label("Includes favorites, edited or album items you selected manually.", systemImage: "exclamationmark.triangle").font(.footnote) }
                     if store.exactGroups.contains(where: { $0.assets.allSatisfy { store.selectedLibraryIDs.contains($0.id) } }) {
                         Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                     }
+                }
+                Section("Removal by Source") {
+                    ForEach(store.connectedSources) { source in
+                        let items = store.librarySelection.filter { $0.sourceID == source.id }
+                        if !items.isEmpty {
+                            Text(source.displayName + " · " + items.count.formatted())
+                            Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Selected Items") {
                     ForEach(store.librarySelection) { asset in
@@ -308,6 +393,7 @@ struct MobileSelectionReviewSheet: View {
                             MobileAssetThumbnail(asset: asset).frame(width: 60, height: 60).clipShape(RoundedRectangle(cornerRadius: 8))
                             VStack(alignment: .leading) {
                                 Text(asset.displayName).lineLimit(2)
+                                Text(store.sourceLabel(asset)).font(.caption).foregroundStyle(.secondary)
                                 if let date = asset.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
                             }
                             Spacer()
@@ -323,7 +409,7 @@ struct MobileSelectionReviewSheet: View {
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 8) {
                     if store.isCleaningUp { ProgressView(store.cleanupStatus ?? String(localized: "Removing selected items…")) }
-                    Button(store.source == .photos ? "Remove from Photos" : "Move to Recovery Folder") {
+                    Button("Remove Selected Items") {
                         capturedIDs = store.selectedLibraryIDs; confirm = true
                     }.frame(maxWidth: .infinity).buttonStyle(MobilePrimaryButtonStyle())
                         .disabled(store.librarySelection.isEmpty || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
@@ -344,7 +430,7 @@ struct MobileSelectionReviewSheet: View {
                 Button("View in History") { store.selectedTab = .history; dismiss() }
                 Button("Done") { dismiss() }
             } message: {
-                Text(store.source == .photos ? "Selected items moved to Recently Deleted in Apple Photos." : "Selected files moved to the Keptora recovery folder. Disk space has not been freed.")
+                Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.")
             }
         }
     }
@@ -354,6 +440,7 @@ struct MobileCleanupHubView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @State private var whatsAppAlbumIDs: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs") ?? [])
     @State private var showGuide = false
+    @State private var pendingFolderPicker = false
     private var whatsAppAssets: [UniversalMediaAsset] {
         store.assets.filter { item in item.context?.albums.contains { $0.isWhatsAppNamed || whatsAppAlbumIDs.contains($0.id) } == true }
     }
@@ -405,12 +492,12 @@ struct MobileCleanupHubView: View {
             }.padding(18)
         }
         .background(MobileKeptoraDesign.canvas).navigationTitle("Cleanup")
-        .sheet(isPresented: $showGuide) {
+        .sheet(isPresented: $showGuide, onDismiss: { if pendingFolderPicker { pendingFolderPicker = false; store.present(.filePicker) } }) {
             NavigationStack {
                 List {
                     Text("To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.")
                     Text("Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.")
-                    Button("Choose an Exported Folder") { showGuide = false; store.present(.filePicker) }
+                    Button("Choose an Exported Folder") { pendingFolderPicker = true; showGuide = false }
                 }.navigationTitle("WhatsApp Storage Guide")
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showGuide = false } } }
             }

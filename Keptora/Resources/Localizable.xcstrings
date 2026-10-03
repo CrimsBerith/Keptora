@@ -4831,7 +4831,8 @@
             "value": "Dosyalar"
           }
         }
-      }
+      },
+      "extractionState": "manual"
     },
     "Files & iCloud Drive": {
       "localizations": {
@@ -21572,6 +21573,1064 @@
           "stringUnit": {
             "state": "translated",
             "value": "Medya boyutu bilgisi yok"
+          }
+        }
+      }
+    },
+    "All Connected Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Bağlı Kaynaklar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les sources connectées"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle verbundenen Quellen"
+          }
+        }
+      }
+    },
+    "Scan All Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Kaynakları Tara"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyser toutes les sources"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Quellen scannen"
+          }
+        }
+      }
+    },
+    "Include Cloud Originals": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bulut Asıllarını Dahil Et"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inclure les originaux du cloud"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud-Originale einbeziehen"
+          }
+        }
+      }
+    },
+    "Copies & Similar": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyalar & Benzerler"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copies et similaires"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopien und Ähnliche"
+          }
+        }
+      }
+    },
+    "Exact Copies": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birebir Kopyalar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copies identiques"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identische Kopien"
+          }
+        }
+      }
+    },
+    "Similar Photos & Videos": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benzer Fotoğraf ve Videolar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos et vidéos similaires"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ähnliche Fotos und Videos"
+          }
+        }
+      }
+    },
+    "Suggested Keep": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutma Önerisi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À conserver (suggestion)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behalten empfohlen"
+          }
+        }
+      }
+    },
+    "Scan Coverage": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarama Kapsamı"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portée de l’analyse"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanumfang"
+          }
+        }
+      }
+    },
+    "Library view": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşiv görünümü"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vue de la photothèque"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediathekansicht"
+          }
+        }
+      }
+    },
+    "No groups to review": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İncelenecek grup yok"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun groupe à examiner"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Gruppen zur Prüfung"
+          }
+        }
+      }
+    },
+    "Scan all connected sources to find exact copies and similar photos together.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birebir kopyaları ve benzer fotoğrafları birlikte görmek için tüm bağlı kaynakları tara."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysez toutes les sources connectées pour voir les copies identiques et les photos similaires ensemble."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanne alle verbundenen Quellen, um identische Kopien und ähnliche Fotos gemeinsam zu sehen."
+          }
+        }
+      }
+    },
+    "Photos includes iCloud Photos and saved WhatsApp albums. Files includes the folders you connect. Private chat storage is excluded.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar; izin verilen galeri, iCloud Fotoğrafları ve kaydedilmiş WhatsApp albümlerini kapsar. Dosyalar; bağladığın klasörleri kapsar. Özel sohbet depolamasına erişilemez."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos comprend les éléments autorisés, Photos iCloud et les albums WhatsApp enregistrés. Fichiers comprend les dossiers connectés. Le stockage privé des conversations est inaccessible."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos umfasst freigegebene Fotos, iCloud-Fotos und gespeicherte WhatsApp-Alben. Dateien umfasst verbundene Ordner. Privater Chatspeicher ist nicht zugänglich."
+          }
+        }
+      }
+    },
+    "Some items in this source are unavailable. Reconnect or check access.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kaynaktaki bazı öğelere erişilemiyor. Kaynağı yeniden bağla veya izinleri kontrol et."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certains éléments de cette source sont indisponibles. Reconnectez-la ou vérifiez les autorisations."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einige Elemente dieser Quelle sind nicht verfügbar. Verbinde sie erneut oder prüfe die Zugriffsrechte."
+          }
+        }
+      }
+    },
+    "Reconnect an unavailable folder in Sources.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erişilemeyen bir klasörü Kaynaklar bölümünden yeniden bağla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnectez un dossier indisponible dans Sources."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde einen nicht verfügbaren Ordner unter Quellen erneut."
+          }
+        }
+      }
+    },
+    "Connected sources are scanned together. Add folders from iCloud Drive, On My iPhone, or another provider in Files once; keep them connected for future scans.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı kaynaklar birlikte taranır. Dosyalar üzerinden iCloud Drive, iPhone’umda veya başka bir sağlayıcıdaki klasörleri bir kez ekle; sonraki taramalar için bağlı tut."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les sources connectées sont analysées ensemble. Ajoutez une fois les dossiers d’iCloud Drive, Sur mon iPhone ou d’un autre fournisseur dans Fichiers et gardez-les connectés."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbundene Quellen werden gemeinsam gescannt. Füge Ordner aus iCloud Drive, Auf meinem iPhone oder anderen Anbietern in Dateien einmal hinzu und behalte die Verbindung."
+          }
+        }
+      }
+    },
+    "Add Files or Cloud Folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya veya Bulut Klasörü Ekle"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un dossier local ou cloud"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei- oder Cloud-Ordner hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Folders…": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasör Ekle…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter des dossiers…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner hinzufügen…"
+          }
+        }
+      }
+    },
+    "Disconnect": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlantıyı Kes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déconnecter"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trennen"
+          }
+        }
+      }
+    },
+    "Connect Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğrafları Bağla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecter Photos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos verbinden"
+          }
+        }
+      }
+    },
+    "Photos Connected": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar Bağlı"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos connecté"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos verbunden"
+          }
+        }
+      }
+    },
+    "Photos / iCloud Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar / iCloud Fotoğrafları"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos / Photos iCloud"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos / iCloud-Fotos"
+          }
+        }
+      }
+    },
+    "WhatsApp · Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp · Fotoğraflar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp · Photos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp · Fotos"
+          }
+        }
+      }
+    },
+    "Cloud Files": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bulut Dosyaları"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers cloud"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud-Dateien"
+          }
+        }
+      }
+    },
+    "Cloud original needs download": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buluttaki asıl dosyanın indirilmesi gerekiyor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’original du cloud doit être téléchargé"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud-Original muss heruntergeladen werden"
+          }
+        }
+      }
+    },
+    "Cloud providers may download files according to their own settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bulut sağlayıcıları kendi ayarlarına göre dosya indirebilir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les fournisseurs cloud peuvent télécharger des fichiers selon leurs propres réglages."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloud-Anbieter können Dateien entsprechend ihren eigenen Einstellungen herunterladen."
+          }
+        }
+      }
+    },
+    "%lld originals could not be analyzed. They remain in the library.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld asıl dosya analiz edilemedi. Arşivde görünmeye devam eder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld originaux n’ont pas pu être analysés. Ils restent dans la photothèque."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Originale konnten nicht analysiert werden. Sie bleiben in der Mediathek."
+          }
+        }
+      }
+    },
+    "Analysis in progress. Groups may change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analiz sürüyor. Gruplar güncellenebilir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse en cours. Les groupes peuvent changer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse läuft. Gruppen können sich ändern."
+          }
+        }
+      }
+    },
+    "Scanning all connected sources…": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm bağlı kaynaklar taranıyor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse de toutes les sources connectées…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle verbundenen Quellen werden gescannt…"
+          }
+        }
+      }
+    },
+    "Comparing videos…": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videolar karşılaştırılıyor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparaison des vidéos…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videos werden verglichen…"
+          }
+        }
+      }
+    },
+    "Reset Filters": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtreleri Sıfırla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réinitialiser les filtres"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter zurücksetzen"
+          }
+        }
+      }
+    },
+    "Removal by Source": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynağa Göre Kaldırma"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suppression par source"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen nach Quelle"
+          }
+        }
+      }
+    },
+    "Recently Deleted in Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar → Son Silinenler"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos → Supprimés récemment"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos → Zuletzt gelöscht"
+          }
+        }
+      }
+    },
+    "Recovery Folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurtarma Klasörü"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossier de récupération"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederherstellungsordner"
+          }
+        }
+      }
+    },
+    "Moves in connected cloud folders may sync to other devices.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı bulut klasörlerindeki taşıma işlemleri diğer cihazlara yansıyabilir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les déplacements dans les dossiers cloud connectés peuvent être synchronisés sur d’autres appareils."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschiebungen in verbundenen Cloud-Ordnern können mit anderen Geräten synchronisiert werden."
+          }
+        }
+      }
+    },
+    "Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar öğeleri Son Silinenler’e taşınır; iCloud değişiklikleri diğer cihazlara yansır. Dosyalar aynı depolamadaki kurtarma klasörüne taşınır; bu işlem alan boşaltmaz. Temizlik yarıda kalırsa tamamlanan adımlar Geçmiş’te görünür."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les éléments Photos vont dans Supprimés récemment et les changements iCloud se synchronisent entre appareils. Les fichiers vont dans un dossier de récupération sur le même stockage, sans libérer d’espace. En cas d’interruption, les étapes terminées figurent dans l’historique."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos werden nach Zuletzt gelöscht verschoben; iCloud-Änderungen werden synchronisiert. Dateien kommen in einen Wiederherstellungsordner auf demselben Speicher, ohne Speicherplatz freizugeben. Bei einer Unterbrechung erscheinen abgeschlossene Schritte im Verlauf."
+          }
+        }
+      }
+    },
+    "Completed steps appear in History. Photos items go to Recently Deleted; files go to their source recovery folder.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamamlanan adımlar Geçmiş’te görünür. Fotoğraflar Son Silinenler’e, dosyalar kaynaklarının kurtarma klasörüne taşınır."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les étapes terminées figurent dans l’historique. Photos va dans Supprimés récemment, les fichiers dans le dossier de récupération de leur source."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgeschlossene Schritte erscheinen im Verlauf. Fotos kommen nach Zuletzt gelöscht, Dateien in den Wiederherstellungsordner ihrer Quelle."
+          }
+        }
+      }
+    },
+    "Advanced Folder Scan": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gelişmiş Klasör Taraması"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse avancée de dossiers"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweiterter Ordnerscan"
+          }
+        }
+      }
+    },
+    "Folder Plan Review": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasör Planını İncele"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Examiner le plan des dossiers"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordnerplan prüfen"
+          }
+        }
+      }
+    },
+    "Folder Categories": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasör Kategorileri"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catégories de dossiers"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordnerkategorien"
+          }
+        }
+      }
+    },
+    "Photos includes iCloud Photos when enabled.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar, etkinse iCloud Fotoğrafları’nı da içerir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos inclut Photos iCloud si activé."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos umfasst iCloud-Fotos, wenn aktiviert."
+          }
+        }
+      }
+    },
+    "A connected source is unavailable. Reconnect it and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı bir kaynağa erişilemiyor. Yeniden bağlayıp tekrar dene."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une source connectée est indisponible. Reconnectez-la et réessayez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine verbundene Quelle ist nicht verfügbar. Verbinde sie erneut und versuche es noch einmal."
+          }
+        }
+      }
+    },
+    "Open Unified Library": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birleşik Arşivi Aç"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir la photothèque unifiée"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemeinsame Mediathek öffnen"
+          }
+        }
+      }
+    },
+    "Browse and scan all connected sources together": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm bağlı kaynaklara birlikte göz at ve tara"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcourir et analyser toutes les sources connectées ensemble"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle verbundenen Quellen gemeinsam durchsuchen und scannen"
+          }
+        }
+      }
+    },
+    "Connected sources only. Add Photos and folders in Sources.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yalnızca bağlı kaynaklar kapsanır. Kaynaklar bölümünden Fotoğrafları ve klasörleri ekle."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seules les sources connectées sont incluses. Ajoutez Photos et des dossiers dans Sources."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur verbundene Quellen werden erfasst. Füge Fotos und Ordner unter Quellen hinzu."
+          }
+        }
+      }
+    },
+    "Some sources were not fully scanned. Check Scan Coverage.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bazı kaynaklar tam taranamadı. Tarama kapsamını kontrol et."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certaines sources n’ont pas été entièrement analysées. Vérifiez la portée de l’analyse."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einige Quellen wurden nicht vollständig gescannt. Prüfe den Scanumfang."
+          }
+        }
+      }
+    },
+    "No groups found in accessible items.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erişilebilen öğelerde grup bulunamadı."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun groupe trouvé parmi les éléments accessibles."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Gruppen in zugänglichen Elementen gefunden."
           }
         }
       }

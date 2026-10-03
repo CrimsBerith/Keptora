@@ -15,9 +15,9 @@ enum SidebarRoute: String, CaseIterable, Identifiable, Hashable {
     var title: LocalizedStringKey {
         switch self {
         case .archive:      return "Library"
-        case .home:         return "Sources & Analysis"
-        case .review:       return "Review"
-        case .smartBuckets: return "Smart Categories"
+        case .home:         return "Advanced Folder Scan"
+        case .review:       return "Folder Plan Review"
+        case .smartBuckets: return "Folder Categories"
         case .insights:     return "Insights"
         case .history:      return "History"
         case .diagnostics:  return "Support"

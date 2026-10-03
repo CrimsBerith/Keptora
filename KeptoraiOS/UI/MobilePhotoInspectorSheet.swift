@@ -28,6 +28,7 @@ struct MobilePhotoInspectorSheet: View {
         guard let index = currentIndex, items.indices.contains(index + delta) else { return }
         player?.pause(); player = nil; scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero; previewError = nil
         asset = items[index + delta]
+        allowNetwork = false
     }
     
     public var body: some View {
@@ -102,7 +103,8 @@ struct MobilePhotoInspectorSheet: View {
                 VStack(spacing: 8) {
                     if let previewError { Text(previewError).font(.caption).foregroundStyle(.white) }
                     if videoLoading { ProgressView("Loading video…").tint(.white) }
-                    if case .photoLibrary = asset.reference, !allowNetwork {
+                    Text(store.sourceLabel(asset)).font(.caption).foregroundStyle(.white)
+                    if !allowNetwork && (asset.requiresNetwork || { if case .photoLibrary = asset.reference { return true }; return false }()) {
                         Button("Download Preview from iCloud") { allowNetwork = true }.frame(minHeight: 44)
                     }
                     HStack {
@@ -161,7 +163,10 @@ struct MobilePhotoInspectorSheet: View {
         videoLoading = true; previewError = nil
         defer { videoLoading = false }
         switch asset.reference {
-        case .file(let url): player = AVPlayer(url: url)
+        case .file(let url):
+            do { try await FolderSourceAdapter(rootURL: url.deletingLastPathComponent(), cleanupAvailable: false).prepareForAccess(url, allowNetwork: allowNetwork) }
+            catch { previewError = error.localizedDescription; return }
+            player = AVPlayer(url: url)
         case .photoLibrary(let id):
             guard let photo = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
                 previewError = String(localized: "Preview unavailable"); return
@@ -227,6 +232,8 @@ private struct AssetMetadataSheet: View {
             }
             .task(id: asset.id) {
                 if case .file(let url) = asset.reference, asset.mediaKind == .image {
+                    do { try await FolderSourceAdapter(rootURL: url.deletingLastPathComponent(), cleanupAvailable: false).prepareForAccess(url, allowNetwork: allowNetwork) }
+                    catch { return }
                     detailed = await Task.detached { PhotoMetadataExtractor.extract(from: url) }.value
                 } else if asset.mediaKind == .image {
                     detailed = try? await PhotoLibrarySourceAdapter().metadata(for: asset, allowNetwork: allowNetwork)

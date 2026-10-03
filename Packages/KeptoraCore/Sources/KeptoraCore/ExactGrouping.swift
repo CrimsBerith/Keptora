@@ -53,6 +53,7 @@ public actor UniversalExactScanner {
     public func scan(
         adapter: any SourceAdapter,
         allowNetwork: Bool,
+        fingerprintAllAssets: Bool = false,
         resuming checkpoint: UniversalScanCheckpoint? = nil,
         checkpointUpdate: @escaping @Sendable (UniversalScanCheckpoint) -> Void = { _ in },
         progress: @escaping @Sendable (_ processed: Int, _ total: Int, _ current: String) -> Void
@@ -87,6 +88,8 @@ public actor UniversalExactScanner {
         // Assets with unique signatures cannot be duplicates and do not need full SHA-256 data hashing.
         var assetSignatures: [String: String] = [:]
         var signatureCounts: [String: Int] = [:]
+        var unknownKinds: Set<UniversalMediaKind> = []
+        let kindCounts = Dictionary(grouping: assets, by: \.mediaKind).mapValues(\.count)
 
         for asset in assets {
             let sig: String
@@ -103,6 +106,7 @@ public actor UniversalExactScanner {
             }
             assetSignatures[asset.id] = sig
             signatureCounts[sig, default: 0] += 1
+            if sig.hasPrefix("d:") { unknownKinds.insert(asset.mediaKind) }
         }
 
         // Phase 2: Processing and hashing candidate assets.
@@ -115,7 +119,10 @@ public actor UniversalExactScanner {
             }
 
             let sig = assetSignatures[asset.id] ?? "unknown"
-            let isCandidate = (signatureCounts[sig] ?? 0) > 1
+            // Unknown Photos sizes cannot exclude same-byte files in another
+            // source. Dimensions are metadata, not proof of distinct bytes.
+            let isCandidate = fingerprintAllAssets || (signatureCounts[sig] ?? 0) > 1 ||
+                (unknownKinds.contains(asset.mediaKind) && (kindCounts[asset.mediaKind] ?? 0) > 1)
 
             // Replay from prior checkpoint if valid and revision matches
             if let prior = resumableEntries[asset.id], Self.sameRevision(asset, prior.sourceAsset) {
@@ -136,7 +143,7 @@ public actor UniversalExactScanner {
                 )
                 let fingerprintedAsset = asset.with(
                     byteCount: resolvedByteCount > 0 ? resolvedByteCount : nil,
-                    requiresNetwork: false
+                    requiresNetwork: asset.requiresNetwork
                 )
                 groupsByFingerprint[fingerprint, default: []].append(fingerprintedAsset)
                 completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))

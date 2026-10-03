@@ -3,7 +3,6 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
-    @State private var showPhotosLibrary = false
     @State private var showRescanConfirmation = false
 
     var body: some View {
@@ -25,10 +24,7 @@ struct HomeView: View {
         .background(KeptoraDesign.canvas)
         .navigationTitle("Home")
         .accessibilityIdentifier("mac.page.library")
-        .sheet(isPresented: $showPhotosLibrary) {
-            MacPhotosLibraryView()
-                .environmentObject(store)
-        }
+
     }
 
     private var header: some View {
@@ -316,11 +312,11 @@ struct HomeView: View {
             .buttonStyle(.bordered)
             .help("Choose an iCloud Drive or Finder-connected cloud provider folder")
             .accessibilityIdentifier("mac.library.cloudFolder")
-            Button { showPhotosLibrary = true } label: {
-                Label("Apple Photos", systemImage: "photo.on.rectangle.angled")
+            Button { model.selectedRoute = .archive } label: {
+                Label("Open Unified Library", systemImage: "photo.stack")
             }
             .buttonStyle(.bordered)
-            .help("Scan Apple Photos library for duplicates")
+            .help("Browse and scan all connected sources together")
             .accessibilityIdentifier("mac.library.photos")
             Button { model.showOnboarding() } label: {
                 Label("How It Works", systemImage: "questionmark.circle")

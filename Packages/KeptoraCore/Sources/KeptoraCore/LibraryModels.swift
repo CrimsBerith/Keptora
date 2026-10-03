@@ -345,9 +345,11 @@ public protocol SourceAdapter: Sendable {
         progress: @escaping @Sendable (Int64) -> Void
     ) async throws -> UniversalExactFingerprint
     func assetByteCount(for asset: UniversalMediaAsset) async -> Int64?
+    func enumerationWarnings() async -> [String]
 }
 
 extension SourceAdapter {
+    public func enumerationWarnings() async -> [String] { [] }
     public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
         asset.byteCount
     }

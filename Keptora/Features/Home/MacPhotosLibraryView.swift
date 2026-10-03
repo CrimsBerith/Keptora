@@ -745,6 +745,7 @@ struct MacPhotosThumbnail: View {
     let asset: UniversalMediaAsset
     var pixelSize: CGFloat = 600
     var fit = false
+    var allowNetwork = false
     @State private var image: NSImage?
     @State private var finished = false
 
@@ -770,13 +771,15 @@ struct MacPhotosThumbnail: View {
             else { Label("Preview unavailable", systemImage: asset.mediaKind == .video ? "video.slash" : "photo.badge.exclamationmark").font(.caption).foregroundStyle(.secondary) }
         }
         .clipped()
-        .task(id: asset.id) { await load() }
+        .task(id: asset.id + "|" + String(allowNetwork)) { await load() }
     }
 
     private func load() async {
         image = nil; finished = false
         defer { finished = true }
         if case .file(let url) = asset.reference {
+            do { try await FolderSourceAdapter(rootURL: url.deletingLastPathComponent(), cleanupAvailable: false).prepareForAccess(url, allowNetwork: allowNetwork) }
+            catch { return }
             if asset.mediaKind == .video {
                 let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
                 generator.appliesPreferredTrackTransform = true
@@ -807,7 +810,7 @@ struct MacPhotosThumbnail: View {
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
             options.resizeMode = .fast
-            options.isNetworkAccessAllowed = false
+            options.isNetworkAccessAllowed = allowNetwork
             PHImageManager.default().requestImage(
                 for: photo,
                 targetSize: NSSize(width: pixelSize, height: pixelSize),

@@ -52,6 +52,34 @@ final class KeptoraiOSUITests: XCTestCase {
         app.buttons["Done"].tap()
     }
 
+    func testCombinedGroupsPreserveSelectionWhenReturningToAllItems() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        app.buttons["archive.selectMode"].tap()
+        app.segmentedControls["archive.resultMode"].buttons["Copies & Similar"].tap()
+        let item = app.buttons["archive.asset.ui-photo-keeper"]
+        for _ in 0..<8 where !item.isHittable { app.swipeUp() }
+        XCTAssertTrue(item.isHittable); item.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
+        for _ in 0..<8 where !app.segmentedControls["archive.resultMode"].isHittable { app.swipeDown() }
+        app.segmentedControls["archive.resultMode"].buttons["All Items"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+    }
+
+    func testScanAllSourcesFindsCopiesInRealSimulatorPhotos() {
+        let app = launch()
+        if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
+        let scan = app.buttons["archive.scanAll"]
+        XCTAssertTrue(scan.waitForExistence(timeout: 15)); scan.tap()
+        XCTAssertTrue(scan.waitForExistence(timeout: 120), "Scan and both similarity passes must finish")
+        app.segmentedControls["archive.resultMode"].buttons["Copies & Similar"].tap()
+        let exact = app.staticTexts["Exact Copies"].firstMatch
+        for _ in 0..<6 where !exact.isHittable { app.swipeUp() }
+        XCTAssertTrue(exact.exists, "The imported corpus includes two distinct copies of identical JPEG bytes")
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Unified scan — real simulator Photos results"
+        attachment.lifetime = .keepAlways; add(attachment)
+    }
+
     func testCaptureCurrentPhotoLibraryScreens() {
         let app = launch()
         if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }

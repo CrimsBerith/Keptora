@@ -9,8 +9,8 @@ struct MainRootView: View {
     @State private var hoveredRoute: SidebarRoute?
     @State private var isDropTargeted: Bool = false
 
-    private let primaryRoutes: [SidebarRoute] = [.archive, .home, .review, .smartBuckets, .history]
-    private let toolRoutes:    [SidebarRoute] = [.insights]
+    private let primaryRoutes: [SidebarRoute] = [.archive, .history]
+    private let toolRoutes:    [SidebarRoute] = [.home, .review, .smartBuckets, .insights]
 
     var body: some View {
         NavigationSplitView {

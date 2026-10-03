@@ -12,6 +12,7 @@ struct MobileAssetThumbnail: View {
     var allowNetwork = false
     @State private var image: UIImage?
     @State private var didFinish = false
+    @State private var needsDownload = false
 
     var body: some View {
         ZStack {
@@ -27,7 +28,7 @@ struct MobileAssetThumbnail: View {
             } else {
                 VStack(spacing: 6) {
                     Image(systemName: "photo.badge.exclamationmark").font(.title2)
-                    Text("Preview unavailable").font(.caption2).multilineTextAlignment(.center)
+                    Text(needsDownload ? LocalizedStringKey("Cloud original needs download") : LocalizedStringKey("Preview unavailable")).font(.caption2).multilineTextAlignment(.center)
                     Button("Retry") { Task { didFinish = false; await load(); didFinish = true } }
                         .font(.caption).frame(minHeight: 44)
                 }.foregroundStyle(.secondary).padding(4)
@@ -35,7 +36,7 @@ struct MobileAssetThumbnail: View {
         }
         .clipped()
         .task(id: cacheKey) {
-            image = nil; didFinish = false
+            image = nil; didFinish = false; needsDownload = false
             await load()
             if !Task.isCancelled { didFinish = true }
         }
@@ -54,6 +55,9 @@ struct MobileAssetThumbnail: View {
         var loadedImage: UIImage?
         switch asset.reference {
         case .file(let url):
+            do { try await FolderSourceAdapter(rootURL: url.deletingLastPathComponent(), cleanupAvailable: false).prepareForAccess(url, allowNetwork: allowNetwork) }
+            catch UniversalScanError.networkRequired { needsDownload = true; return }
+            catch { return }
             if asset.mediaKind == .video {
                 let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
                 generator.appliesPreferredTrackTransform = true

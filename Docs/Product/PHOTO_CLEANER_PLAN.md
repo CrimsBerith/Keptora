@@ -245,3 +245,10 @@ Konum ve fotoğraf özellikleri mümkün olduğunca cihazda işlenecek. Mevcut f
 - Başarı durumları doğrulanmış güncel App Store görselleri.
 
 **Uygulama için temel önkoşul:** macOS/Xcode ve gerçek iPhone erişimi. Mevcut Linux ortamı rapor, plan ve bazı Python doğrulamaları için uygun; native UI/PhotoKit akışlarının tamamlandığını kanıtlayamaz. Takvim, bu ortam ve ekip kapasitesi belirlendikten sonra aşama bazında çıkarılmalı.
+
+
+## 3 Ekim 2026 — Birleşik kaynak akışı
+
+Fotoğraflar ve çoklu izinli klasörler tek arşiv/taramada birleştirildi. Ana arşivde tüm öğeler, ortak birebir/benzer grupları, kaynak rozeti ve kaynak başına işlem hedefi yer alır. Mac klasör bağlantıları ve iPhone Dosyalar bağlantıları kalıcı bookmark ile saklanır. iOS’un özel WhatsApp/izin verilmemiş dosya erişimi kısıtları kaldırılmış değildir. Ayrıntılı bulgular, uygulama karşılıkları ve gerçek cihaz kabul listesi: [Birleşik Arşiv UI/UX Raporu](UNIFIED_LIBRARY_UX_AUDIT.md).
+
+Sonraki teslim kapısı: Apple CI derleme/test sonucu, gerçek iCloud/üçüncü taraf sağlayıcı, karma silme/geri alma ve büyük arşiv performans doğrulaması. Linux testlerini geçmiş olmak bu native doğrulamaların yerine geçmez.

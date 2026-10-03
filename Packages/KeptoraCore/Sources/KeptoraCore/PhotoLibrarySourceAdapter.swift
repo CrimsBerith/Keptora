@@ -25,6 +25,20 @@ private final class LockedPhotoHasher: @unchecked Sendable {
     }
 }
 
+private final class CancellablePhotosRequest: @unchecked Sendable {
+    private let lock = NSLock()
+    private var id: PHImageRequestID?
+    private var cancelled = false
+    func install(_ id: PHImageRequestID) {
+        lock.lock(); self.id = id; let shouldCancel = cancelled; lock.unlock()
+        if shouldCancel { PHImageManager.default().cancelImageRequest(id) }
+    }
+    func cancel() {
+        lock.lock(); cancelled = true; let current = id; lock.unlock()
+        if let current { PHImageManager.default().cancelImageRequest(current) }
+    }
+}
+
 private final class SingleShotContinuation<T>: @unchecked Sendable {
     private let lock = NSLock()
     private var isResumed = false
@@ -72,7 +86,10 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         guard authorization == .authorized || authorization == .limited else {
             throw UniversalScanError.sourcePermissionDenied
         }
-        let fetch = PHAsset.fetchAssets(with: nil)
+        let options = PHFetchOptions()
+        options.includeAllBurstAssets = true
+        options.includeHiddenAssets = true
+        let fetch = PHAsset.fetchAssets(with: options)
         let albumMemberships = Self.albumMemberships()
         var output: [UniversalMediaAsset] = []
         output.reserveCapacity(fetch.count)
@@ -152,13 +169,32 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         allowNetwork: Bool,
         progress: @escaping @Sendable (Int64) -> Void
     ) async throws -> UniversalExactFingerprint {
+        let resources = Self.originalResources(in: PHAssetResource.assetResources(for: photo), mediaType: .image)
+        if photo.mediaSubtypes.contains(.photoLive) || resources.count > 1 {
+            guard !resources.isEmpty else { throw UniversalScanError.inaccessibleAsset(displayName) }
+            if photo.mediaSubtypes.contains(.photoLive), !resources.contains(where: { $0.type == .pairedVideo || $0.type == .fullSizePairedVideo }) {
+                throw UniversalScanError.resourceUnavailable(displayName)
+            }
+            let options = PHAssetResourceRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
+            var family = SHA256(), bytes: Int64 = 0
+            for resource in resources {
+                let accumulator = LockedPhotoHasher()
+                try await requestData(for: resource, options: options) { data in _ = accumulator.append(data) }
+                let part = accumulator.finish()
+                family.update(data: Data("\(resource.type.rawValue)|\(part.byteCount)|\(part.digest)|".utf8))
+                bytes += part.byteCount; progress(bytes)
+            }
+            return UniversalExactFingerprint(algorithm: "photos-family-sha256-v2", digest: family.finalize().map { String(format: "%02x", $0) }.joined(), byteCount: bytes)
+        }
         let imgOptions = PHImageRequestOptions()
         imgOptions.isNetworkAccessAllowed = allowNetwork
         imgOptions.isSynchronous = false
         imgOptions.deliveryMode = .highQualityFormat
-        return try await withCheckedThrowingContinuation { continuation in
+        let request = CancellablePhotosRequest()
+        return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
-            PHImageManager.default().requestImageDataAndOrientation(for: photo, options: imgOptions) { data, _, _, info in
+            let requestID = PHImageManager.default().requestImageDataAndOrientation(for: photo, options: imgOptions) { data, _, _, info in
                 autoreleasepool {
                     if let error = info?[PHImageErrorKey] as? Error {
                         if !allowNetwork && Self.isNetworkAccessRequired(error) {
@@ -174,7 +210,6 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         singleShot.resume(throwing: UniversalScanError.networkRequired(displayName))
                     } else if let data {
                         var hasher = SHA256()
-                        hasher.update(data: Data("keptora-resource-v1|direct-image|".utf8))
                         hasher.update(data: data)
                         let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
                         let count = Int64(data.count)
@@ -185,7 +220,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     }
                 }
             }
-        }
+                request.install(requestID)
+            }
+            } onCancel: { request.cancel() }
     }
 
     private static func fingerprintVideo(
@@ -197,9 +234,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let vidOptions = PHVideoRequestOptions()
         vidOptions.isNetworkAccessAllowed = allowNetwork
         vidOptions.deliveryMode = .highQualityFormat
-        let avAsset: AVAsset = try await withCheckedThrowingContinuation { continuation in
+        let request = CancellablePhotosRequest()
+        let avAsset: AVAsset = try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
-            PHImageManager.default().requestAVAsset(forVideo: photo, options: vidOptions) { avAsset, _, info in
+            let requestID = PHImageManager.default().requestAVAsset(forVideo: photo, options: vidOptions) { avAsset, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
                     if !allowNetwork && Self.isNetworkAccessRequired(error) {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(displayName))
@@ -216,19 +255,25 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(displayName))
                 }
             }
-        }
+                request.install(requestID)
+            }
+            } onCancel: { request.cancel() }
         if let urlAsset = avAsset as? AVURLAsset {
             return try await StreamingSHA256.file(at: urlAsset.url, progress: progress)
         }
-        let resources = Self.originalResources(in: PHAssetResource.assetResources(for: photo), mediaType: .video)
+        let availableResources = PHAssetResource.assetResources(for: photo)
+        // An edited AVComposition without a current file URL must not be compared
+        // to its unedited resource as if those were the bytes the user sees.
+        guard !availableResources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBaseVideo }) else {
+            throw UniversalScanError.resourceUnavailable(displayName)
+        }
+        let resources = Self.originalResources(in: availableResources, mediaType: .video)
         guard let primary = resources.first else {
             throw UniversalScanError.inaccessibleAsset(displayName)
         }
         let resOptions = PHAssetResourceRequestOptions()
         resOptions.isNetworkAccessAllowed = allowNetwork
         let accumulator = LockedPhotoHasher()
-        let boundary = Data("keptora-resource-v1|\(primary.type.rawValue)|".utf8)
-        _ = accumulator.append(boundary, countAsContent: false)
         try await requestData(for: primary, options: resOptions) { chunk in
             progress(accumulator.append(chunk))
         }
@@ -324,9 +369,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             options.isNetworkAccessAllowed = allowNetwork
             options.isSynchronous = false
             let targetSize = CGSize(width: maximumPixelSize, height: maximumPixelSize)
-            return try await withCheckedThrowingContinuation { continuation in
+            let request = CancellablePhotosRequest()
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
                 let singleShot = SingleShotContinuation(continuation)
-                PHImageManager.default().requestImage(
+                let requestID = PHImageManager.default().requestImage(
                     for: photo,
                     targetSize: targetSize,
                     contentMode: .aspectFit,
@@ -364,7 +411,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         }
                     }
                 }
+                request.install(requestID)
             }
+            } onCancel: { request.cancel() }
         }
     }
 
@@ -410,9 +459,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let options = PHVideoRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = allowNetwork
-        let avAsset: AVAsset = try await withCheckedThrowingContinuation { continuation in
+        let request = CancellablePhotosRequest()
+        let avAsset: AVAsset = try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
-            PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
+            let requestID = PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
                     if !allowNetwork && Self.isNetworkAccessRequired(error) {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
@@ -431,7 +482,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
                 }
             }
-        }
+                request.install(requestID)
+            }
+            } onCancel: { request.cancel() }
         return try await UniversalVideoFrameSampler.sample(
             avAsset: avAsset,
             maximumPixelSize: maximumPixelSize

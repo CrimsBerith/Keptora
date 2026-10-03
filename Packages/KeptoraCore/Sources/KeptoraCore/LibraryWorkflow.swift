@@ -1,4 +1,166 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
+#if canImport(Photos)
+@preconcurrency import Photos
+#endif
+
+public enum LibraryRevisionValidator {
+    /// Check the metadata revision the user actually reviewed before hashing or
+    /// starting either kind of removal. This also covers manual archive choices.
+    public static func validate(_ assets: [UniversalMediaAsset]) throws {
+        for asset in assets {
+            switch asset.reference {
+            case .file(let url):
+                let values = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                if let date = asset.modificationDate, values.contentModificationDate != date { throw UnifiedLibraryError.selectionChanged }
+                if let size = asset.byteCount, values.fileSize.map(Int64.init) != size { throw UnifiedLibraryError.selectionChanged }
+            case .photoLibrary(let id):
+                #if canImport(Photos)
+                guard let current = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject,
+                      current.modificationDate == asset.modificationDate,
+                      current.isFavorite == asset.isFavorite,
+                      current.isHidden == asset.isHidden else { throw UnifiedLibraryError.selectionChanged }
+                #else
+                throw UnifiedLibraryError.sourceUnavailable(asset.sourceID)
+                #endif
+            }
+        }
+    }
+}
+
+public struct LibrarySourceCoverage: Equatable, Sendable, Identifiable {
+    public var id: String { source.id }
+    public let source: LibrarySource
+    public let authorization: SourceAuthorization
+    public let itemCount: Int
+    public let error: String?
+}
+
+public enum UnifiedLibraryError: LocalizedError {
+    case sourceUnavailable(String)
+    case selectionChanged
+    public var errorDescription: String? {
+        switch self {
+        case .sourceUnavailable: return NSLocalizedString("A connected source is unavailable. Reconnect it and try again.", comment: "Unavailable library source")
+        case .selectionChanged: return NSLocalizedString("Your selection changed. Review it again before removing items.", comment: "Stale selected item")
+        }
+    }
+}
+
+/// Routes each item to its owning adapter. Enumeration failure in one source does
+/// not hide accessible items in another; callers must display `coverage`.
+public actor UnifiedLibraryAdapter: SourceAdapter {
+    public nonisolated let source: LibrarySource
+    public nonisolated let capabilities = PlatformCapabilities(exactScan: true, similarityReview: true,
+        cleanupMode: .unavailable, canRestoreInApp: false, mayRequireNetworkDownload: true, canRevealInFileBrowser: false)
+    private let adapters: [any SourceAdapter]
+    public private(set) var coverage: [LibrarySourceCoverage] = []
+
+    public init(adapters: [any SourceAdapter]) {
+        self.adapters = adapters.sorted {
+            if ($0.source.kind == .photos) != ($1.source.kind == .photos) { return $0.source.kind == .photos }
+            return $0.source.id < $1.source.id
+        }
+        self.source = LibrarySource(id: "unified-v2:" + StableDigest.fnv1a64(adapters.map { $0.source.id }.sorted().joined(separator: "|")), kind: .photos, displayName: "All Connected Sources")
+    }
+    public func authorizationStatus() async -> SourceAuthorization { adapters.isEmpty ? .unavailable : .authorized }
+    public func requestAuthorization() async -> SourceAuthorization { await authorizationStatus() }
+    public func enumerateAssets() async throws -> [UniversalMediaAsset] {
+        var items: [UniversalMediaAsset] = [], reports: [LibrarySourceCoverage] = []
+        for adapter in adapters {
+            try Task.checkCancellation()
+            let auth = await adapter.authorizationStatus()
+            guard auth == .authorized || auth == .limited else {
+                reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: "Source access is unavailable")); continue
+            }
+            do {
+                let batch = try await adapter.enumerateAssets()
+                items.append(contentsOf: batch)
+                let warnings = await adapter.enumerationWarnings()
+                reports.append(.init(source: adapter.source, authorization: auth, itemCount: batch.count, error: warnings.isEmpty ? nil : warnings.joined(separator: "\n")))
+            } catch is CancellationError { throw CancellationError() }
+            catch { reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: error.localizedDescription)) }
+        }
+        coverage = reports
+        return Self.uniqueReferences(items)
+    }
+    /// An album or overlapping folder is another view of the same item. Separate
+    /// file copies and Photos exports remain separate so cross-source copies exist.
+    public nonisolated static func uniqueReferences(_ items: [UniversalMediaAsset]) -> [UniversalMediaAsset] {
+        var seen: Set<MediaAssetReference> = []
+        return items.filter { item in
+            let key: MediaAssetReference
+            switch item.reference {
+            case .file(let url): key = .file(url.standardizedFileURL.resolvingSymlinksInPath())
+            case .photoLibrary: key = item.reference
+            }
+            return seen.insert(key).inserted
+        }
+    }
+    private func owner(_ asset: UniversalMediaAsset) throws -> any SourceAdapter {
+        guard let adapter = adapters.first(where: { $0.source.id == asset.sourceID }) else { throw UnifiedLibraryError.sourceUnavailable(asset.sourceID) }
+        return adapter
+    }
+    public func exactFingerprint(for asset: UniversalMediaAsset, allowNetwork: Bool, progress: @escaping @Sendable (Int64) -> Void) async throws -> UniversalExactFingerprint {
+        try await owner(asset).exactFingerprint(for: asset, allowNetwork: allowNetwork, progress: progress)
+    }
+    public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
+        guard let adapter = try? owner(asset) else { return nil }
+        return await adapter.assetByteCount(for: asset)
+    }
+}
+
+#if canImport(CoreGraphics)
+extension UnifiedLibraryAdapter: SimilarityImageProviding, SimilarityVideoProviding {
+    public func similarityImage(for asset: UniversalMediaAsset, maximumPixelSize: Int, allowNetwork: Bool) async throws -> CGImage {
+        guard let provider = try owner(asset) as? any SimilarityImageProviding else { throw UnifiedLibraryError.sourceUnavailable(asset.sourceID) }
+        return try await provider.similarityImage(for: asset, maximumPixelSize: maximumPixelSize, allowNetwork: allowNetwork)
+    }
+    public func similarityVideoSample(for asset: UniversalMediaAsset, maximumPixelSize: Int, allowNetwork: Bool) async throws -> UniversalVideoSimilaritySample {
+        guard let provider = try owner(asset) as? any SimilarityVideoProviding else { throw UnifiedLibraryError.sourceUnavailable(asset.sourceID) }
+        return try await provider.similarityVideoSample(for: asset, maximumPixelSize: maximumPixelSize, allowNetwork: allowNetwork)
+    }
+}
+#endif
+
+public struct LibraryReviewGroup: Identifiable, Sendable {
+    public enum Kind: Sendable { case exact, similar }
+    public let id: String
+    public let kind: Kind
+    public let assets: [UniversalMediaAsset]
+    public let keeperID: String
+    public static func combined(exact: [UniversalExactGroup], similar: [UniversalSimilarityGroup]) -> [Self] {
+        let exactSets = exact.map { Set($0.assets.map(\.id)) }
+        return exact.map { Self(id: $0.id, kind: .exact, assets: $0.assets, keeperID: $0.keeperID) } + similar.filter { group in
+            let ids = Set(group.assets.map(\.id))
+            return !exactSets.contains { ids.isSubset(of: $0) }
+        }.map { Self(id: $0.id, kind: .similar, assets: $0.assets, keeperID: $0.keeperID) }
+    }
+}
+
+extension UniversalMediaAsset {
+    public func sourceLabel(in sources: [LibrarySource], whatsAppAlbumIDs: Set<String> = []) -> String {
+        let source = sources.first { $0.id == sourceID }
+        switch reference {
+        case .photoLibrary:
+            let whatsapp = context?.albums.contains { $0.isWhatsAppNamed || whatsAppAlbumIDs.contains($0.id) } == true
+            #if os(Linux)
+            return NSLocalizedString(whatsapp ? "WhatsApp · Photos" : "Photos / iCloud Photos", comment: "Photo source badge")
+            #else
+            return L10n.tr(whatsapp ? "WhatsApp · Photos" : "Photos / iCloud Photos")
+            #endif
+        case .file(let url):
+            #if os(Linux)
+            let prefix = NSLocalizedString(source?.kind == .fileProvider || requiresNetwork ? "Cloud Files" : "Files", comment: "File source badge")
+            #else
+            let prefix = L10n.tr(source?.kind == .fileProvider || requiresNetwork ? "Cloud Files" : "Files")
+            #endif
+            return prefix + " · " + (source?.displayName ?? url.deletingLastPathComponent().lastPathComponent)
+        }
+    }
+}
 
 /// Context helps a person compare media. It never constitutes proof of a duplicate.
 public struct MediaLocation: Hashable, Codable, Sendable {

@@ -56,7 +56,7 @@ public actor VideoSimilarityAnalyzer {
         allowNetwork: Bool = false,
         averageThreshold: Float = 0.31,
         maximumFrameDistance: Float = 0.48,
-        maximumAssets: Int = 1_500,
+        maximumAssets: Int = .max,
         progress: @escaping @Sendable (_ processed: Int, _ total: Int) -> Void
     ) async throws -> [UniversalSimilarityGroup] {
         let candidates = Array(assets.lazy.filter { $0.mediaKind == .video }.prefix(maximumAssets))

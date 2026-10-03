@@ -2,16 +2,26 @@
 import Foundation
 import ImageIO
 
+private final class EnumerationIssues: @unchecked Sendable {
+    private let lock = NSLock()
+    private var messages: [String] = []
+    func append(_ message: String) { lock.lock(); messages.append(message); lock.unlock() }
+    func snapshot() -> [String] { lock.lock(); defer { lock.unlock() }; return messages }
+}
+
 public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, SimilarityVideoProviding {
     public nonisolated let source: LibrarySource
     public nonisolated let capabilities: PlatformCapabilities
     public nonisolated let rootURL: URL
 
     private let supportedExtensions: Set<String> = SupportedMediaExtensions.allMedia
+    private var warnings: [String] = []
+    public func enumerationWarnings() async -> [String] { warnings }
 
     public init(rootURL: URL, cleanupAvailable: Bool) {
         self.rootURL = rootURL
-        let kind: LibrarySource.Kind = rootURL.path.contains("CloudStorage") ? .fileProvider : .folder
+        let cloudRoot = rootURL.path.contains("CloudStorage") || rootURL.path.contains("Mobile Documents") || (try? rootURL.resourceValues(forKeys: [.isUbiquitousItemKey]))?.isUbiquitousItem == true
+        let kind: LibrarySource.Kind = cloudRoot ? .fileProvider : .folder
         self.source = LibrarySource(
             id: "folder:\(StableDigest.fnv1a64(rootURL.standardizedFileURL.path))",
             kind: kind,
@@ -33,30 +43,33 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
         let keys: Set<URLResourceKey> = [
             .isRegularFileKey, .isHiddenKey, .fileSizeKey,
-            .creationDateKey, .contentModificationDateKey
+            .creationDateKey, .contentModificationDateKey,
+            .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey
         ]
+        let issues = EnumerationIssues()
         guard let enumerator = FileManager.default.enumerator(
             at: rootURL,
             includingPropertiesForKeys: Array(keys),
             options: [.skipsHiddenFiles, .skipsPackageDescendants],
-            errorHandler: { _, _ in true }
-        ) else { return [] }
+            errorHandler: { url, error in issues.append(url.lastPathComponent + ": " + error.localizedDescription); return true }
+        ) else { throw UniversalScanError.inaccessibleAsset(rootURL.lastPathComponent) }
 
         var assets: [UniversalMediaAsset] = []
-        let discovered = enumerator.compactMap { $0 as? URL }
-        for url in discovered {
+        for case let url as URL in enumerator {
             try Task.checkCancellation()
             if url.pathComponents.contains(".Keptora Quarantine") { continue }
             let ext = url.pathExtension.lowercased()
             guard supportedExtensions.contains(ext) else { continue }
-            let values = try? url.resourceValues(forKeys: keys)
+            let values: URLResourceValues?
+            do { values = try url.resourceValues(forKeys: keys) }
+            catch { issues.append(url.lastPathComponent + ": " + error.localizedDescription); continue }
             guard values?.isRegularFile == true else { continue }
             let kind: UniversalMediaKind = SupportedMediaExtensions.videos.contains(ext) ? .video : .image
-            let stablePath = url.standardizedFileURL.path
-            let metadata = kind == .image ? PhotoMetadataExtractor.extract(from: url) : nil
+            let cloudOnly = values?.isUbiquitousItem == true && values?.ubiquitousItemDownloadingStatus == .notDownloaded
+            let metadata = kind == .image && !cloudOnly ? PhotoMetadataExtractor.extract(from: url) : nil
             assets.append(
                 UniversalMediaAsset(
-                    id: "file:\(StableDigest.fnv1a64(source.id + "|" + stablePath))",
+                    id: "file:\(StableDigest.fnv1a64(url.standardizedFileURL.resolvingSymlinksInPath().path))",
                     sourceID: source.id,
                     reference: .file(url),
                     displayName: url.lastPathComponent,
@@ -65,6 +78,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
                     pixelWidth: metadata?.pixelWidth ?? 0, pixelHeight: metadata?.pixelHeight ?? 0,
                     creationDate: values?.creationDate,
                     modificationDate: values?.contentModificationDate,
+                    requiresNetwork: cloudOnly,
                     context: MediaContext(location: metadata.flatMap { m in
                         guard let lat = m.latitude, let lon = m.longitude else { return nil }
                         return MediaLocation(latitude: lat, longitude: lon)
@@ -72,6 +86,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
                 )
             )
         }
+        warnings = issues.snapshot()
         return assets.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
     }
 
@@ -81,6 +96,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
         progress: @escaping @Sendable (Int64) -> Void
     ) async throws -> UniversalExactFingerprint {
         guard case .file(let url) = asset.reference else { throw UniversalScanError.unsupportedReference }
+        try await ensureLocal(url, allowNetwork: allowNetwork)
         return try await StreamingSHA256.file(at: url, progress: progress)
     }
 
@@ -89,7 +105,9 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
         maximumPixelSize: Int,
         allowNetwork: Bool
     ) async throws -> CGImage {
-        guard case .file(let url) = asset.reference, asset.mediaKind == .image,
+        guard case .file(let url) = asset.reference, asset.mediaKind == .image else { throw UniversalScanError.unsupportedReference }
+        try await ensureLocal(url, allowNetwork: allowNetwork)
+        guard
               let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -109,9 +127,31 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
         guard case .file(let url) = asset.reference, asset.mediaKind == .video else {
             throw UniversalScanError.unsupportedReference
         }
+        try await ensureLocal(url, allowNetwork: allowNetwork)
         return try await UniversalVideoFrameSampler.sample(
             avAsset: AVURLAsset(url: url),
             maximumPixelSize: maximumPixelSize
         )
+    }
+
+    public func prepareForAccess(_ url: URL, allowNetwork: Bool) async throws {
+        try await ensureLocal(url, allowNetwork: allowNetwork)
+    }
+
+    private func ensureLocal(_ url: URL, allowNetwork: Bool) async throws {
+        let keys: Set<URLResourceKey> = [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey]
+        let values = try url.resourceValues(forKeys: keys)
+        guard values.isUbiquitousItem == true, values.ubiquitousItemDownloadingStatus == .notDownloaded else { return }
+        guard allowNetwork else { throw UniversalScanError.networkRequired(url.lastPathComponent) }
+        try FileManager.default.startDownloadingUbiquitousItem(at: url)
+        for _ in 0..<120 {
+            try Task.checkCancellation()
+            var refreshedURL = url
+            refreshedURL.removeCachedResourceValue(forKey: .ubiquitousItemDownloadingStatusKey)
+            let fresh = try refreshedURL.resourceValues(forKeys: keys)
+            if fresh.ubiquitousItemDownloadingStatus != .notDownloaded { return }
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        throw UniversalScanError.resourceUnavailable(url.lastPathComponent)
     }
 }

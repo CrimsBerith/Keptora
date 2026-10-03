@@ -39,3 +39,10 @@ Apple CI derleme/test sonuçları, gerçek cihazda silme/geri yükleme, iCloud/l
 ## 67 görsel yenilemesi
 
 34 ikon/logo, 8 illüstrasyon, 13 test girdisi ve 12 tasarım önizlemesi yeniden üretildi. 66 görüntülenebilir çıktı tek tek açıldı; kasıtlı bozuk JPEG negatif test olarak doğrulandı. [Yeni inceleme raporu](VISUAL_REGENERATION_REVIEW.md) ve [galeri](VISUAL_GALLERY.html). 12 ekran native çekim değildir ve App Store için onaylanmadı.
+
+
+## 3 Ekim 2026 — Tek arşiv ve kaynaklar arası tarama güncellemesi
+
+Yeni birleşik akış, iPhone ve Mac’te Fotoğraflar ile birden fazla izinli klasörü birlikte gösterip tarar; farklı kaynaklardaki kopyaları karşılaştırır. Birebir/benzer grupları ana arşivde birlikte sunulur, kayıt kaynağı ve tutma önerisi etiketlenir. Karma seçim kaynak başına kaldırma ve ayrı kurtarma geçmişi kullanır. Tüm bağlı kaynaklar işlenir; bütün telefonun özel uygulama depolamasına erişim vaadi verilmez.
+
+Bu güncellemenin doğrulama durumu ve kalan native kabul adımları [Birleşik Arşiv UI/UX Raporu](UNIFIED_LIBRARY_UX_AUDIT.md) içinde kayıtlıdır. 67 görselin yeniden üretim durumu önceki raporda geçerlidir; burada yeni native ekran görüntüsü onaylanmış sayılmaz.

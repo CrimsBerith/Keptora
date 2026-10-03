@@ -101,6 +101,7 @@ struct MobileReviewView: View {
                 }
             }
         }
+        .disabled(store.isCleaningUp)
         .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? String(localized: "Removing selected items…")).padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
@@ -157,7 +158,7 @@ struct MobileReviewView: View {
             }
             Button("Done", role: .cancel) {}
         } message: {
-            Text(store.source == .photos ? "Selected items moved to Recently Deleted in Apple Photos for up to 30 days unless permanently deleted sooner." : "Selected files moved to the Keptora recovery folder. Keep the folder and record to restore them. Disk space has not been freed.")
+            Text("Completed steps appear in History. Photos items go to Recently Deleted; files go to their source recovery folder.")
         }
         .confirmationDialog(
             String(format: String(localized: "Clear all %lld selections?"), Int64(selectedCount)),
@@ -474,24 +475,8 @@ struct MobileReviewView: View {
         .shadow(color: Color.black.opacity(0.10), radius: 16, y: -4)
     }
 
-    private var cleanupTitle: String {
-        if isSimilarVideoMode {
-            return store.source == .photos
-                ? String(localized: "Remove selected similar videos from Photos?")
-                : String(localized: "Move selected similar videos to Keptora Bin?")
-        }
-        switch store.source {
-        case .photos: return String(localized: "Remove exact copies from Photos?")
-        default: return String(localized: "Move exact copies to Keptora Bin?")
-        }
-    }
-
-    private var cleanupButtonTitle: String {
-        switch store.source {
-        case .photos: return String(localized: "Remove from Photos")
-        default: return String(localized: "Move to Bin")
-        }
-    }
+    private var cleanupTitle: String { String(localized: "Remove selected items?") }
+    private var cleanupButtonTitle: String { String(localized: "Remove Selected Items") }
 
     private var cleanupMessage: String {
         let kind = isSimilarVideoMode ? String(localized: "manually reviewed similar videos") : String(localized: "verified exact copies")
@@ -508,18 +493,7 @@ struct MobileReviewView: View {
             ? "\n\n🚨 " + String(format: String(localized: "In %1$lld group(s), every item is selected for removal."), Int64(zeroCount))
             : ""
         let keeperWarning = store.hasSelectedKeeper ? "\n\n⚠️ " + String(localized: "Includes original (keeper) photo/video. It will also be deleted.") : ""
-        switch store.source {
-        case .photos:
-            let baseNotice = store.hasSelectedKeeper
-                ? String(localized: "Recovery: Deleted items (including originals) move to Recently Deleted for up to 30 days.")
-                : String(localized: "Recovery: Protected keepers stay intact. Removed photos move to Recently Deleted for up to 30 days.")
-            return summary + zeroWarning + keeperWarning + "\n\n" + baseNotice
-        default:
-            let baseNotice = store.hasSelectedKeeper
-                ? String(localized: "Recovery: Deleted items (including originals) move safely to the recovery folder on the same storage. Disk space has not been freed.")
-                : String(localized: "Recovery: Protected keepers stay intact. Copies move safely to the recovery folder on the same storage. Disk space has not been freed.")
-            return summary + zeroWarning + keeperWarning + "\n\n" + baseNotice
-        }
+        return summary + zeroWarning + keeperWarning + "\n\n" + String(localized: "Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.")
     }
 }
 

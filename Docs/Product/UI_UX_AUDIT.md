@@ -1,5 +1,7 @@
 # Keptora — UI ve UX inceleme raporu
 
+> 3 Ekim 2026 güncellemesi: kaynakların tek arşivde birleştirilmesi, ortak kopya/benzer sonuçları ve platform erişim sınırları için [Birleşik Arşiv UI/UX Raporu](UNIFIED_LIBRARY_UX_AUDIT.md).
+
 **Tarih:** 3 Ekim 2026
 **İncelenen sürüm:** `51442d562b91be83e3f7fce9cf8180c145cafe50`
 **Kapsam:** Keptora macOS ve iPhone. Eris kapsam dışı.

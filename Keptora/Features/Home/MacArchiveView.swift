@@ -24,6 +24,27 @@ final class MacArchiveModel: ObservableObject {
     @Published var analyzing = false
     @Published var error: String?
     @Published var history: [MacRecoveryEntry] = []
+    @Published var exact: [UniversalExactGroup] = []
+    @Published var similarVideos: [UniversalSimilarityGroup] = []
+    @Published var coverage: [LibrarySourceCoverage] = []
+    @Published var connectionErrors: [String] = []
+    @Published var connectedFolders: [LibrarySource] = []
+    @Published var photosConnected = false
+    @Published var skippedCloudItems = 0
+    private var folderAdapters: [String: FolderSourceAdapter] = [:]
+    private var folderScopes: [String: URL] = [:]
+    private var bookmarks: [String: Data] = [:]
+    var connectedSources: [LibrarySource] { (photosConnected ? [.photos] : []) + connectedFolders }
+    var adapter: UnifiedLibraryAdapter {
+        var values: [any SourceAdapter] = []
+        if photosConnected { values.append(photos) }
+        values.append(contentsOf: connectedFolders.compactMap { folderAdapters[$0.id] })
+        return UnifiedLibraryAdapter(adapters: values)
+    }
+    var reviewGroups: [LibraryReviewGroup] { LibraryReviewGroup.combined(exact: exact, similar: similar + similarVideos) }
+    func sourceLabel(_ item: UniversalMediaAsset) -> String {
+        item.sourceLabel(in: connectedSources, whatsAppAlbumIDs: Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs.Mac") ?? []))
+    }
     @Published var similar: [UniversalSimilarityGroup] = []
     @Published var status: String?
     @Published var analysisTotal = 0
@@ -33,112 +54,150 @@ final class MacArchiveModel: ObservableObject {
     @Published var authorization: SourceAuthorization = .notDetermined
     private var generation = UUID()
     private var observer: MacArchivePhotoObserver?
-    private var selectionKey: String { "Keptora.ManualSelection.Mac." + (sourceRoot.map { StableDigest.fnv1a64($0.standardizedFileURL.path) } ?? "photos") }
+    private var selectionKey: String { "Keptora.ManualSelection.unified.Mac" }
     private func reconcileSelection() {
-        let saved = Set(UserDefaults.standard.stringArray(forKey: selectionKey) ?? [])
+        var saved = Set(UserDefaults.standard.stringArray(forKey: selectionKey) ?? [])
+        if UserDefaults.standard.object(forKey: selectionKey) == nil {
+            saved.formUnion(UserDefaults.standard.stringArray(forKey: "Keptora.ManualSelection.Mac.photos") ?? [])
+            for root in folderScopes.values { saved.formUnion(UserDefaults.standard.stringArray(forKey: "Keptora.ManualSelection.Mac." + StableDigest.fnv1a64(root.standardizedFileURL.path)) ?? []) }
+        }
+        for item in assets {
+            if case .file(let url) = item.reference {
+                let oldID = "file:" + StableDigest.fnv1a64(item.sourceID + "|" + url.standardizedFileURL.path)
+                if saved.remove(oldID) != nil { saved.insert(item.id) }
+            }
+        }
         selection = saved.intersection(assets.map(\.id))
     }
     private let photos = PhotoLibrarySourceAdapter()
     private let folders = FolderQuarantineExecutor()
     private let analyzer = VisualSimilarityAnalyzer()
-    private var scope: URL?
-    private var folderAdapter: FolderSourceAdapter?
     private var task: Task<Void, Never>?
     private let historyKey = "Keptora.ManualCleanupHistory.Mac"
     init() {
         if let data = UserDefaults.standard.data(forKey: historyKey), let entries = try? JSONDecoder().decode([MacRecoveryEntry].self, from: data) { history = entries }
     }
-    deinit { task?.cancel(); scope?.stopAccessingSecurityScopedResource() }
+    deinit { task?.cancel(); for url in folderScopes.values { url.stopAccessingSecurityScopedResource() } }
     var selected: [UniversalMediaAsset] { assets.filter { selection.contains($0.id) } }
     var albums: [MediaAlbum] {
         var values: [String: MediaAlbum] = [:]
         for asset in assets { for album in asset.context?.albums ?? [] { values[album.id] = album } }
         return values.values.sorted { $0.title < $1.title }
     }
+    func restoreConnections() async {
+        guard !sourceReady else { return }
+        let saved = UserDefaults.standard.dictionary(forKey: "Keptora.UnifiedFolderBookmarks.Mac")?.compactMapValues { $0 as? Data } ?? [:]
+        bookmarks = saved
+        for bookmark in saved.values {
+            do {
+                var stale = false
+                let url = try URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale)
+                try addFolder(url)
+            } catch { connectionErrors.append(String(localized: "Reconnect an unavailable folder in Sources.")) }
+        }
+        authorization = await photos.authorizationStatus()
+        photosConnected = authorization == .authorized || authorization == .limited
+        updateConnections(); refresh()
+    }
+    private func updateConnections() {
+        sourceReady = !connectedSources.isEmpty
+        sourceName = String(localized: "All Connected Sources")
+        // Kept only for compatibility; never used to route mixed selections.
+        sourceRoot = nil
+    }
     func connectPhotos() {
         guard !busy, !analyzing, !loading else { return }
-        task?.cancel(); loading = true
-        let current = UUID(); generation = current
         task = Task {
-            defer { if generation == current { loading = false } }
-            let auth = await photos.authorizationStatus()
-            let permission = auth == .notDetermined ? await photos.requestAuthorization() : auth
-            guard !Task.isCancelled, generation == current else { return }
-            authorization = permission
-            guard permission == .authorized || permission == .limited else {
-                error = String(localized: "Allow Photos access in System Settings to open this library."); return
-            }
-            scope?.stopAccessingSecurityScopedResource(); scope = nil; folderAdapter = nil
-            sourceReady = false; sourceRoot = nil; sourceName = String(localized: "Apple Photos")
-            selection.removeAll(); similar.removeAll(); assets.removeAll()
-            do {
-                let catalogue = try await photos.enumerateAssets()
-                guard !Task.isCancelled, generation == current else { return }
-                assets = catalogue; sourceReady = true; reconcileSelection()
-                observer = MacArchivePhotoObserver { [weak self] in Task { @MainActor in self?.refresh() } }
-            } catch { if generation == current { self.error = error.localizedDescription } }
+            let current = await photos.authorizationStatus()
+            authorization = current == .notDetermined ? await photos.requestAuthorization() : current
+            photosConnected = authorization == .authorized || authorization == .limited
+            guard photosConnected else { error = String(localized: "Allow Photos access in System Settings to open this library."); return }
+            updateConnections(); refresh()
         }
+    }
+    private func addFolder(_ root: URL) throws {
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        guard folderAdapters[adapter.source.id] == nil else { return }
+        guard root.startAccessingSecurityScopedResource() else { throw UniversalScanError.sourcePermissionDenied }
+        do {
+            let bookmark = try root.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            folderScopes[adapter.source.id] = root; folderAdapters[adapter.source.id] = adapter
+            bookmarks[adapter.source.id] = bookmark; connectedFolders.append(adapter.source)
+            UserDefaults.standard.set(bookmarks, forKey: "Keptora.UnifiedFolderBookmarks.Mac")
+        } catch { root.stopAccessingSecurityScopedResource(); throw error }
     }
     func chooseFolder() {
         guard !busy, !analyzing, !loading else { return }
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let root = panel.url else { return }
-        task?.cancel(); observer = nil; scope?.stopAccessingSecurityScopedResource()
-        if root.startAccessingSecurityScopedResource() { scope = root } else { scope = nil }
-        sourceReady = false; sourceRoot = root; sourceName = root.lastPathComponent
-        assets.removeAll(); selection.removeAll(); similar.removeAll()
-        folderAdapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
-        sourceReady = true; refresh()
+        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        for root in panel.urls { do { try addFolder(root) } catch { self.error = error.localizedDescription } }
+        updateConnections(); refresh()
+    }
+    func disconnectFolder(_ id: String) {
+        guard !busy, !loading, !analyzing else { return }
+        folderScopes.removeValue(forKey: id)?.stopAccessingSecurityScopedResource()
+        folderAdapters.removeValue(forKey: id); bookmarks.removeValue(forKey: id)
+        connectedFolders.removeAll { $0.id == id }
+        UserDefaults.standard.set(bookmarks, forKey: "Keptora.UnifiedFolderBookmarks.Mac")
+        updateConnections()
+        if sourceReady { refresh() } else { assets = []; selection = []; exact = []; similar = []; similarVideos = []; coverage = [] }
     }
     func refresh() {
         guard sourceReady, !busy, !analyzing, !loading else { return }
         task?.cancel(); loading = true
         let current = UUID(); generation = current
-        let adapter = folderAdapter
+        let adapter = self.adapter
         task = Task {
             defer { if generation == current { loading = false } }
             do {
-                let catalogue: [UniversalMediaAsset]
-                if let adapter { catalogue = try await adapter.enumerateAssets() }
-                else {
-                    authorization = await photos.authorizationStatus()
-                    guard authorization == .authorized || authorization == .limited else {
-                        assets.removeAll(); selection.removeAll(); similar.removeAll()
-                        error = String(localized: "Allow Photos access in System Settings to open this library."); return
-                    }
-                    catalogue = try await photos.enumerateAssets()
-                }
+                authorization = await photos.authorizationStatus()
+                let catalogue = try await adapter.enumerateAssets()
                 guard !Task.isCancelled, generation == current else { return }
+                coverage = await adapter.coverage
                 assets = catalogue; reconcileSelection()
-                similar.removeAll { group in !group.assets.allSatisfy { item in catalogue.contains { $0.id == item.id } } }
-                if let root = sourceRoot {
+                // Metadata or membership changes invalidate prior analysis.
+                exact = []; similar = []; similarVideos = []
+                for connected in connectedFolders {
+                    guard let root = folderScopes[connected.id] else { continue }
                     let records = try await folders.recoveryRecords(root: root)
-                    guard !Task.isCancelled, generation == current else { return }
-                    let bookmark = try? root.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
                     for record in records {
                         if let index = history.firstIndex(where: { $0.id == record.id }) { history[index].folderRecord = record; continue }
                         history.insert(MacRecoveryEntry(id: record.id, date: record.createdAt, count: record.operations.count, bytes: 0,
-                            folderRecord: record, bookmark: bookmark, isPhotos: false), at: 0)
+                            folderRecord: record, bookmark: bookmarks[connected.id], isPhotos: false), at: 0)
                     }
-                    persistHistory()
+                }
+                persistHistory()
+                if photosConnected && observer == nil {
+                    observer = MacArchivePhotoObserver { [weak self] in Task { @MainActor in self?.refresh() } }
                 }
             } catch is CancellationError { }
             catch { if generation == current { self.error = error.localizedDescription } }
         }
     }
-    func analyze() {
-        guard !busy, !loading, !analyzing, !assets.isEmpty else { return }
-        analyzing = true; status = String(localized: "Comparing images and capture details…")
+    func analyze(allowNetwork: Bool = false) {
+        guard !busy, !loading, !analyzing, sourceReady else { return }
+        analyzing = true; status = String(localized: "Scanning all connected sources…")
+        analysisProcessed = 0; analysisTotal = assets.count
+        let adapter = self.adapter
         task = Task {
             defer { analyzing = false; status = nil }
             do {
-                let provider: any SimilarityImageProviding
-                if let folderAdapter { provider = folderAdapter } else { provider = photos }
-                let groups = try await analyzer.analyze(assets: assets, provider: provider, maximumAssets: assets.count) { [weak self] done, total in
+                let result = try await UniversalExactScanner().scan(adapter: adapter, allowNetwork: allowNetwork, fingerprintAllAssets: true) { [weak self] done, total, _ in
                     Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
                 }
                 try Task.checkCancellation()
-                similar = groups; skippedPreviews = await analyzer.skippedPreviewCount
+                assets = result.assets; exact = result.groups; skippedCloudItems = result.skippedNetwork
+                coverage = await adapter.coverage; reconcileSelection()
+                status = String(localized: "Comparing images and capture details…")
+                similar = try await analyzer.analyze(assets: assets, provider: adapter, allowNetwork: allowNetwork, maximumAssets: assets.count) { [weak self] done, total in
+                    Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
+                }
+                skippedPreviews = await analyzer.skippedPreviewCount
+                status = String(localized: "Comparing videos…")
+                similarVideos = try await VideoSimilarityAnalyzer().analyze(assets: assets.filter { $0.mediaKind == .video }, provider: adapter, allowNetwork: allowNetwork) { [weak self] done, total in
+                    Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
+                }
+                try Task.checkCancellation()
             } catch is CancellationError { }
             catch { self.error = error.localizedDescription }
         }
@@ -151,31 +210,45 @@ final class MacArchiveModel: ObservableObject {
         busy = true; status = String(localized: "Reviewing selected items…")
         defer { busy = false; status = nil }
         do {
-            let summary = MediaSelectionSummary(snapshot)
-            if let root = sourceRoot, let adapter = folderAdapter {
+            try LibraryRevisionValidator.validate(snapshot)
+            let batches = Dictionary(grouping: snapshot, by: \.sourceID)
+            var prepared: [String: [(asset: UniversalMediaAsset, expectedDigest: String)]] = [:]
+            for (id, batch) in batches where id != LibrarySource.photos.id {
+                guard let folder = folderAdapters[id], let root = folderScopes[id], await folders.preflight(root: root) else { throw UniversalScanError.sourcePermissionDenied }
                 var candidates: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
-                for item in snapshot {
-                    let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false, progress: { _ in })
-                    candidates.append((item, fingerprint.digest))
-                }
-                let bookmark = try root.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-                let record = try await folders.quarantine(root: root, selections: candidates)
-                history.insert(MacRecoveryEntry(id: record.id, date: record.createdAt, count: snapshot.count, bytes: summary.knownBytes, folderRecord: record, bookmark: bookmark, isPhotos: false), at: 0)
-            } else {
-                let ids = snapshot.compactMap { item -> String? in if case .photoLibrary(let id) = item.reference { return id }; return nil }
-                guard ids.count == snapshot.count else { return false }
-                try await photos.deleteSelectedAssets(localIdentifiers: ids, intent: .manualSelection)
-                history.insert(MacRecoveryEntry(id: UUID(), date: Date(), count: snapshot.count, bytes: summary.knownBytes, folderRecord: nil, bookmark: nil, isPhotos: true), at: 0)
+                for item in batch { let hash = try await folder.exactFingerprint(for: item, allowNetwork: false, progress: { _ in }); candidates.append((item, hash.digest)) }
+                prepared[id] = candidates
             }
-            persistHistory()
-            assets.removeAll { expectedIDs.contains($0.id) }
-            similar.removeAll { $0.assets.contains { expectedIDs.contains($0.id) } }
-            selection.subtract(expectedIDs)
+            var completedIDs: Set<String> = []
+            defer {
+                persistHistory()
+                assets.removeAll { completedIDs.contains($0.id) }
+                exact.removeAll { $0.assets.contains { completedIDs.contains($0.id) } }
+                similar.removeAll { $0.assets.contains { completedIDs.contains($0.id) } }
+                similarVideos.removeAll { $0.assets.contains { completedIDs.contains($0.id) } }
+                selection.subtract(completedIDs)
+            }
+            if let batch = batches[LibrarySource.photos.id] {
+                let ids = batch.compactMap { item -> String? in if case .photoLibrary(let id) = item.reference { return id }; return nil }
+                guard ids.count == batch.count else { throw UniversalScanError.unsupportedReference }
+                try await photos.deleteSelectedAssets(localIdentifiers: ids, intent: .manualSelection)
+                history.insert(MacRecoveryEntry(id: UUID(), date: Date(), count: batch.count, bytes: MediaSelectionSummary(batch).knownBytes, folderRecord: nil, bookmark: nil, isPhotos: true), at: 0)
+                completedIDs.formUnion(batch.map(\.id))
+            }
+            for connected in connectedFolders {
+                guard let candidates = prepared[connected.id], let root = folderScopes[connected.id] else { continue }
+                let record = try await folders.quarantine(root: root, selections: candidates)
+                history.insert(MacRecoveryEntry(id: record.id, date: record.createdAt, count: candidates.count,
+                    bytes: MediaSelectionSummary(candidates.map(\.asset)).knownBytes, folderRecord: record,
+                    bookmark: bookmarks[connected.id], isPhotos: false), at: 0)
+                completedIDs.formUnion(candidates.map { $0.asset.id })
+            }
             return true
         } catch {
             let ns = error as NSError
             if ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError { return false }
             self.error = error.localizedDescription
+            Task { refresh() }
             return false
         }
     }
@@ -205,6 +278,8 @@ final class MacArchiveModel: ObservableObject {
 struct MacArchiveView: View {
     @EnvironmentObject private var archive: MacArchiveModel
     @State private var search = ""
+    @State private var groupedResults = false
+    @State private var cloudScan = false
     @State private var media = 0
     @State private var albumID = ""
     @State private var whatsapp = false
@@ -212,9 +287,12 @@ struct MacArchiveView: View {
     @State private var comparisonGroup: UniversalSimilarityGroup?
     @State private var showPlan = false
     @State private var inspected: UniversalMediaAsset?
+    @State private var previewNetwork = false
     @State private var undoIDs: Set<String>?
     private var visible: [UniversalMediaAsset] {
-        archive.assets.filter { item in
+        let groupedIDs = groupedResults ? Set(archive.reviewGroups.flatMap { $0.assets.map(\.id) }) : Set<String>()
+        return archive.assets.filter { item in
+            (!groupedResults || groupedIDs.contains(item.id)) &&
             (media == 0 || (media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (albumID.isEmpty || item.context?.albums.contains { $0.id == albumID } == true) &&
             (!whatsapp || item.context?.albums.contains { $0.isWhatsAppNamed || whatsappAlbumIDs.contains($0.id) } == true) &&
@@ -230,10 +308,31 @@ struct MacArchiveView: View {
                     Text(archive.sourceName).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Apple Photos") { archive.connectPhotos() }
-                Button("Choose Folder…") { archive.chooseFolder() }
+                Button(archive.photosConnected ? LocalizedStringKey("Photos Connected") : LocalizedStringKey("Connect Photos")) { archive.connectPhotos() }
+                Button("Add Folders…") { archive.chooseFolder() }
                 Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise") }.help("Refresh Library")
             }.padding(20).disabled(archive.busy || archive.analyzing)
+            DisclosureGroup("Sources") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Photos includes iCloud Photos and saved WhatsApp albums. Files includes the folders you connect. Private chat storage is excluded.").font(.callout).foregroundStyle(.secondary)
+                    Text("Cloud providers may download files according to their own settings.").font(.caption).foregroundStyle(.secondary)
+                    ForEach(archive.coverage) { report in
+                        HStack {
+                            Label(report.source.displayName, systemImage: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
+                            Spacer(); Text(report.itemCount.formatted())
+                        }.font(.callout)
+                        if report.error != nil { Text("Some items in this source are unavailable. Reconnect or check access.").font(.caption).foregroundStyle(.orange) }
+                    }
+                    ForEach(archive.connectedFolders) { folder in
+                        HStack { Text(folder.displayName); Spacer(); Button("Disconnect") { archive.disconnectFolder(folder.id) } }
+                    }
+                    ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).font(.caption).foregroundStyle(.orange) }
+                }
+            }.padding(.horizontal, 20).padding(.bottom, 12).disabled(archive.busy || archive.loading || archive.analyzing)
+            Text("Connected sources only. Add Photos and folders in Sources.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
+            if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
+                Label("Some sources were not fully scanned. Check Scan Coverage.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange).padding(12)
+            }
             Divider()
             if archive.assets.isEmpty && !archive.loading {
                 VStack(spacing: 16) {
@@ -244,7 +343,7 @@ struct MacArchiveView: View {
             } else {
                 filters
                 if archive.loading { ProgressView("Loading your library…").padding() }
-                if archive.authorization == .limited && archive.sourceRoot == nil {
+                if archive.authorization == .limited {
                     Text("Limited Photos access. Keptora can only show the items you allow.").font(.callout).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
                 if archive.skippedPreviews > 0 {
@@ -259,38 +358,34 @@ struct MacArchiveView: View {
                         } label: { Label(album.title, systemImage: whatsappAlbumIDs.contains(album.id) ? "checkmark" : "square") } }
                     }.padding(8)
                 }
+                if archive.skippedCloudItems > 0 {
+                    Text(String(format: String(localized: "%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
+                }
+                Picker("Library view", selection: $groupedResults) { Text("All Items").tag(false); Text("Copies & Similar").tag(true) }
+                    .pickerStyle(.segmented).frame(maxWidth: 400).padding(12)
                 ScrollView {
+                    if groupedResults {
+                        if archive.reviewGroups.isEmpty { Text("Scan all connected sources to find exact copies and similar photos together.").foregroundStyle(.secondary).padding(20) }
+                        LazyVStack(alignment: .leading, spacing: 16) {
+                            ForEach(archive.reviewGroups) { group in
+                                let items = group.assets.filter { item in visible.contains { $0.id == item.id } }
+                                if !items.isEmpty {
+                                    Label(group.kind == .exact ? LocalizedStringKey("Exact Copies") : LocalizedStringKey("Similar Photos & Videos"), systemImage: group.kind == .exact ? "doc.on.doc" : "square.stack").font(.headline)
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
+                                        ForEach(items) { item in archiveCell(item, suggestedKeeper: item.id == group.keeperID) }
+                                    }
+                                }
+                            }
+                        }.padding(20)
+                    } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
                         ForEach(visible) { item in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Button { inspected = item } label: {
-                                    MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
-                                }.buttonStyle(.plain)
-                                HStack {
-                                    Text(item.displayName).lineLimit(1)
-                                    Spacer()
-                                    Toggle("Select", isOn: Binding(get: { archive.selection.contains(item.id) }, set: { enabled in
-                                        undoIDs = archive.selection
-                                        if enabled { archive.selection.insert(item.id) } else { archive.selection.remove(item.id) }
-                                    })).toggleStyle(.checkbox).labelsHidden().accessibilityLabel("Select \(item.displayName)")
-                                }
-                                if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
-                                if item.isFavorite { Label("Favorite", systemImage: "heart.fill").font(.caption) }
-                            }
-                            .padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(archive.selection.contains(item.id) ? KeptoraDesign.accent : .clear, lineWidth: 2))
-                            .contextMenu { Button("Select") { archive.selection.insert(item.id) }; Button("Preview") { inspected = item } }
+                            archiveCell(item)
                         }
                     }.padding(20)
-                }.disabled(archive.busy)
-                if !archive.similar.isEmpty {
-                    ScrollView(.horizontal) {
-                        HStack {
-                            Button("Entire Library") { comparisonGroup = nil }
-                            ForEach(archive.similar) { group in Button(String(format: String(localized: "%lld similar items"), group.assets.count)) { comparisonGroup = group } }
-                        }.padding(12)
                     }
-                }
+                }.disabled(archive.busy)
+
             }
             Divider()
             HStack(spacing: 12) {
@@ -313,8 +408,10 @@ struct MacArchiveView: View {
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
         .sheet(item: $inspected) { item in
             VStack(spacing: 14) {
-                MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true).frame(minWidth: 600, minHeight: 420)
+                MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork).frame(minWidth: 600, minHeight: 420)
                 Text(item.displayName).font(.headline)
+                Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
+                if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
                 if let date = item.captureDateDescription { Text(date) }
                 if let context = item.context, let camera = context.camera { Text(camera) }
                 if let location = item.context?.location { Text(String(format: "%.5f, %.5f", location.latitude, location.longitude)) }
@@ -324,18 +421,63 @@ struct MacArchiveView: View {
         .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
             Button("OK") { archive.error = nil }
         } message: { Text(archive.error ?? "") }
+        .onChange(of: inspected?.id) { _ in previewNetwork = false }
+        .task { await archive.restoreConnections() }
+        .confirmationDialog("Download iCloud originals?", isPresented: $cloudScan) {
+            Button("Download and Scan") { archive.analyze(allowNetwork: true) }
+        } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
+        .onChange(of: archive.connectedFolders) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = ""; whatsapp = false }
         .onChange(of: archive.sourceName) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = ""; undoIDs = nil }
     }
+    private func archiveCell(_ item: UniversalMediaAsset, suggestedKeeper: Bool = false) -> some View {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Button { inspected = item } label: {
+                                    MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .overlay(alignment: .topLeading) {
+                                            Text(archive.sourceLabel(item)).font(.caption.weight(.semibold)).lineLimit(2)
+                                                .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6)
+                                        }
+                                }.buttonStyle(.plain)
+                                HStack {
+                                    Text(item.displayName).lineLimit(1)
+                                    Spacer()
+                                    Toggle("Select", isOn: Binding(get: { archive.selection.contains(item.id) }, set: { enabled in
+                                        undoIDs = archive.selection
+                                        if enabled { archive.selection.insert(item.id) } else { archive.selection.remove(item.id) }
+                                    })).toggleStyle(.checkbox).labelsHidden().accessibilityLabel("Select \(item.displayName)")
+                                }
+                                if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
+                                if suggestedKeeper { Label("Suggested Keep", systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
+                                if item.isFavorite { Label("Favorite", systemImage: "heart.fill").font(.caption) }
+                            }
+                            .padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(archive.selection.contains(item.id) ? KeptoraDesign.accent : .clear, lineWidth: 2))
+                            .contextMenu { Button("Select") { archive.selection.insert(item.id) }; Button("Preview") { inspected = item } }
+    }
     private var filters: some View {
-        HStack {
-            Picker("Media type", selection: $media) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }.pickerStyle(.segmented).frame(maxWidth: 240)
-            Picker("Album", selection: $albumID) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }.frame(maxWidth: 220)
-            Toggle("WhatsApp Media", isOn: $whatsapp).toggleStyle(.button)
-            TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
-            if archive.analyzing { Button("Cancel Analysis") { archive.cancelAnalysis() } }
-            else { Button("Find Similar Photos") { archive.analyze() }.disabled(archive.assets.isEmpty || archive.loading) }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Picker("Media type", selection: $media) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }.pickerStyle(.segmented).frame(maxWidth: 240)
+                Picker("Album", selection: $albumID) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }.frame(maxWidth: 220)
+                Toggle("WhatsApp Media", isOn: $whatsapp).toggleStyle(.button)
+                TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
+            }
+            HStack {
+                Button("Reset Filters") { media = 0; albumID = ""; whatsapp = false; search = ""; comparisonGroup = nil }
+                Spacer()
+                if archive.analyzing {
+                    ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1))).frame(maxWidth: 200)
+                    Text(archive.status ?? String(localized: "Analysis in progress. Groups may change.")).font(.caption)
+                    Button("Cancel Scan") { archive.cancelAnalysis() }
+                }
+                else {
+                    Button("Scan All Sources") { archive.analyze() }.accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.sourceReady || archive.loading)
+                    Button("Include Cloud Originals") { cloudScan = true }.disabled(!archive.sourceReady || archive.loading)
+                }
+            }
         }.padding(16).disabled(archive.busy)
     }
+
 }
 
 struct MacManualSelectionSheet: View {
@@ -351,11 +493,25 @@ struct MacManualSelectionSheet: View {
             Text(archive.sourceName + " · " + ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file))
             Text("Media size, not freed space").font(.caption).foregroundStyle(.secondary)
             if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
-            Text(archive.sourceRoot == nil ? "Items go to Recently Deleted in Apple Photos for up to 30 days unless permanently deleted sooner. iCloud Photos changes also sync to your other devices." : "Files move to a recovery folder on the same storage. This does not free disk space. Keep the recovery folder and record to restore them.").foregroundStyle(.secondary)
+            Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").foregroundStyle(.secondary)
+            ForEach(archive.connectedSources) { source in
+                let items = archive.selected.filter { $0.sourceID == source.id }
+                if !items.isEmpty {
+                    HStack {
+                        Text(source.displayName + " · " + items.count.formatted())
+                        Spacer()
+                        Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(.secondary)
             if summary.personalItems > 0 { Label("Includes favorites, edited or album items you selected manually.", systemImage: "exclamationmark.triangle") }
+            if archive.exact.contains(where: { $0.assets.allSatisfy { archive.selection.contains($0.id) } }) {
+                Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+            }
             List(archive.selected) { item in
                 HStack {
-                    Text(item.displayName); Spacer()
+                    VStack(alignment: .leading) { Text(item.displayName); Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary) }; Spacer()
                     Button { archive.selection.remove(item.id) } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).accessibilityLabel("Remove from selection")
                 }
             }.disabled(archive.busy)
@@ -363,7 +519,7 @@ struct MacManualSelectionSheet: View {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(archive.busy)
                 Spacer()
                 if archive.busy { ProgressView(archive.status ?? String(localized: "Removing selected items…")) }
-                Button(archive.sourceRoot == nil ? "Remove from Photos" : "Move to Recovery Folder") { expectedIDs = archive.selection; confirm = true }
+                Button("Remove Selected Items") { expectedIDs = archive.selection; confirm = true }
                     .buttonStyle(.borderedProminent).disabled(archive.busy || archive.selected.isEmpty)
             }
         }.padding(24).frame(minWidth: 640, minHeight: 500).interactiveDismissDisabled(archive.busy)

@@ -54,6 +54,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -only-testing:KeptoraiOSTests \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCombinedGroupsPreserveSelectionWhenReturningToAllItems \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testScanAllSourcesFindsCopiesInRealSimulatorPhotos \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testWhatsAppGuideExplainsSavedCopiesAndChatStorage \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
