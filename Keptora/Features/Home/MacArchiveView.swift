@@ -3,6 +3,95 @@ import KeptoraCore
 import Photos
 import SwiftUI
 
+struct MacSourceSetupView: View {
+    var isStartupSetup = false
+    @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
+    @State private var cannotOpenWhatsApp = false
+    private var controlsDisabled: Bool { archive.busy || archive.analyzing || archive.loading || archive.isRequestingPhotosAccess }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
+                        .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
+                    Text("Connect your library").font(.title.bold())
+                    Text("Approve Photos and connect folders once. Future scans combine every connected source.").foregroundStyle(.secondary)
+                    if archive.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Photos", systemImage: "photo.on.rectangle.angled").font(.headline)
+                            Text("Full Photos access includes iCloud Photos and WhatsApp media saved to Photos. Limited access shows only the items you approve.")
+                            if archive.photosConnected { Label("Photos Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
+                            else if archive.authorization == .notDetermined {
+                                Button("Connect Photos") { archive.connectPhotos() }
+                            } else {
+                                Text(archive.authorization == .unavailable ? LocalizedStringKey("Photos is not available on this device.") : (archive.authorization == .restricted ? LocalizedStringKey("Access is restricted on this device.") : LocalizedStringKey("Photos access disabled")))
+                                if archive.authorization == .denied { Button("Open Settings") { archive.openPhotosSettings() }.accessibilityIdentifier("mac.sourceSetup.openSettings") }
+                            }
+                            if archive.authorization == .limited {
+                                Text("Limited Photos access").foregroundStyle(.orange)
+                                Button("Manage Access") { archive.openPhotosSettings() }
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Files & cloud folders", systemImage: "folder.badge.plus").font(.headline)
+                            Text("Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable.")
+                            Text("Cloud providers may download files according to their own settings.").font(.callout).foregroundStyle(.secondary)
+                            ForEach(archive.connectedFolders) { folder in Label(folder.displayName, systemImage: "checkmark.circle") }
+                            Button("Add Folders…") { archive.chooseFolder() }.accessibilityIdentifier("mac.sourceSetup.folders")
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("WhatsApp storage & chat media", systemImage: "bubble.left.and.bubble.right").font(.headline)
+                            Text("Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.")
+                            Text("To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.")
+                            Button("Open WhatsApp") {
+                                if let url = URL(string: "whatsapp://") { cannotOpenWhatsApp = !NSWorkspace.shared.open(url) }
+                            }
+                            Text("Export the chat with media on your phone, transfer it to your Mac, extract the ZIP, then connect the extracted folder to view its photos and videos.")
+                            Button("Choose an Exported Folder") { archive.chooseFolder() }
+                            Text("Removing exported or saved copies does not free the original WhatsApp chat storage.").font(.callout).foregroundStyle(.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.callout).foregroundStyle(.secondary)
+                    Text("You can continue without access and add sources later.").font(.callout).foregroundStyle(.secondary)
+                    ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).foregroundStyle(.orange) }
+                }.padding(24).disabled(controlsDisabled)
+            }
+            Divider()
+            HStack {
+                Spacer()
+                Button(isStartupSetup ? LocalizedStringKey("Continue to Library") : LocalizedStringKey("Done")) {
+                    if isStartupSetup { sourceSetupCompleted = true }
+                    dismiss()
+                }.buttonStyle(.borderedProminent).disabled(archive.isRequestingPhotosAccess)
+                    .accessibilityIdentifier("mac.sourceSetup.continue")
+            }.padding(18)
+        }
+        .frame(width: 650, height: 600)
+        .accessibilityIdentifier("mac.sourceSetup")
+        .interactiveDismissDisabled(isStartupSetup)
+        .task {
+            if isStartupSetup, LibraryAccessPolicy.shouldRequestPhotosAtStartup(archive.authorization) {
+                await archive.requestPhotosAccess(showError: false)
+            }
+        }
+        .alert(cannotOpenWhatsApp ? LocalizedStringKey("WhatsApp could not be opened") : LocalizedStringKey("Something went wrong"),
+               isPresented: Binding(get: { cannotOpenWhatsApp || archive.error != nil }, set: { if !$0 { cannotOpenWhatsApp = false; archive.error = nil } })) {
+            Button("OK", role: .cancel) { cannotOpenWhatsApp = false; archive.error = nil }
+        } message: {
+            if cannotOpenWhatsApp { Text("Open WhatsApp manually if it is installed on this device.") }
+            else { Text(archive.error ?? "") }
+        }
+    }
+}
+
 struct MacRecoveryEntry: Identifiable, Codable {
     let id: UUID
     let date: Date
@@ -52,6 +141,8 @@ final class MacArchiveModel: ObservableObject {
     @Published var skippedPreviews = 0
     @Published var sourceReady = false
     @Published var authorization: SourceAuthorization = .notDetermined
+    @Published private(set) var isRequestingPhotosAccess = false
+    private var connectionsRestored = false
     private var generation = UUID()
     private var observer: MacArchivePhotoObserver?
     private var selectionKey: String { "Keptora.ManualSelection.unified.Mac" }
@@ -75,6 +166,9 @@ final class MacArchiveModel: ObservableObject {
     private var task: Task<Void, Never>?
     private let historyKey = "Keptora.ManualCleanupHistory.Mac"
     init() {
+        if LaunchArguments.contains(LaunchArguments.resetSourceSetupUITesting) {
+            UserDefaults.standard.removeObject(forKey: AppStorageKeys.macSourceSetupCompleted)
+        }
         if let data = UserDefaults.standard.data(forKey: historyKey), let entries = try? JSONDecoder().decode([MacRecoveryEntry].self, from: data) { history = entries }
     }
     deinit { task?.cancel(); for url in folderScopes.values { url.stopAccessingSecurityScopedResource() } }
@@ -85,7 +179,8 @@ final class MacArchiveModel: ObservableObject {
         return values.values.sorted { $0.title < $1.title }
     }
     func restoreConnections() async {
-        guard !sourceReady else { return }
+        guard !connectionsRestored else { return }
+        connectionsRestored = true
         let saved = UserDefaults.standard.dictionary(forKey: "Keptora.UnifiedFolderBookmarks.Mac")?.compactMapValues { $0 as? Data } ?? [:]
         bookmarks = saved
         for bookmark in saved.values {
@@ -95,7 +190,7 @@ final class MacArchiveModel: ObservableObject {
                 try addFolder(url)
             } catch { connectionErrors.append(String(localized: "Reconnect an unavailable folder in Sources.")) }
         }
-        authorization = await photos.authorizationStatus()
+        authorization = await currentPhotosAuthorization()
         photosConnected = authorization == .authorized || authorization == .limited
         updateConnections(); refresh()
     }
@@ -106,14 +201,38 @@ final class MacArchiveModel: ObservableObject {
         sourceRoot = nil
     }
     func connectPhotos() {
-        guard !busy, !analyzing, !loading else { return }
-        task = Task {
-            let current = await photos.authorizationStatus()
-            authorization = current == .notDetermined ? await photos.requestAuthorization() : current
-            photosConnected = authorization == .authorized || authorization == .limited
-            guard photosConnected else { error = String(localized: "Allow Photos access in System Settings to open this library."); return }
-            updateConnections(); refresh()
-        }
+        Task { await requestPhotosAccess() }
+    }
+    private func currentPhotosAuthorization() async -> SourceAuthorization {
+        if LaunchArguments.contains(LaunchArguments.photosDeniedUITesting) { return .denied }
+        return await photos.authorizationStatus()
+    }
+    func requestPhotosAccess(showError: Bool = true) async {
+        guard !busy, !analyzing, !isRequestingPhotosAccess else { return }
+        isRequestingPhotosAccess = true
+        defer { isRequestingPhotosAccess = false }
+        // Let the restored folder catalogue finish before adding another source.
+        if loading { await task?.value }
+        let current = await currentPhotosAuthorization()
+        authorization = current == .notDetermined ? await photos.requestAuthorization() : current
+        photosConnected = authorization == .authorized || authorization == .limited
+        updateConnections()
+        if photosConnected { refresh() }
+        else if showError { error = String(localized: "Allow Photos access in System Settings to open this library.") }
+    }
+    func refreshPhotosAccess() async {
+        guard connectionsRestored, !busy, !analyzing, !loading, !isRequestingPhotosAccess else { return }
+        let latest = await currentPhotosAuthorization()
+        let wasConnected = photosConnected
+        authorization = latest
+        photosConnected = latest == .authorized || latest == .limited
+        updateConnections()
+        if sourceReady { refresh() }
+        else if wasConnected { assets = []; selection = []; exact = []; similar = []; similarVideos = []; coverage = [] }
+    }
+    func openPhotosSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") else { return }
+        NSWorkspace.shared.open(url)
     }
     private func addFolder(_ root: URL) throws {
         let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
@@ -289,6 +408,7 @@ struct MacArchiveView: View {
     @State private var inspected: UniversalMediaAsset?
     @State private var previewNetwork = false
     @State private var undoIDs: Set<String>?
+    @State private var showAccessGuide = false
     private var visible: [UniversalMediaAsset] {
         let groupedIDs = groupedResults ? Set(archive.reviewGroups.flatMap { $0.assets.map(\.id) }) : Set<String>()
         return archive.assets.filter { item in
@@ -316,6 +436,7 @@ struct MacArchiveView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Photos includes iCloud Photos and saved WhatsApp albums. Files includes the folders you connect. Private chat storage is excluded.").font(.callout).foregroundStyle(.secondary)
                     Text("Cloud providers may download files according to their own settings.").font(.caption).foregroundStyle(.secondary)
+                    Button("Permissions & WhatsApp Guide") { showAccessGuide = true }
                     ForEach(archive.coverage) { report in
                         HStack {
                             Label(report.source.displayName, systemImage: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
@@ -422,7 +543,7 @@ struct MacArchiveView: View {
             Button("OK") { archive.error = nil }
         } message: { Text(archive.error ?? "") }
         .onChange(of: inspected?.id) { _ in previewNetwork = false }
-        .task { await archive.restoreConnections() }
+        .sheet(isPresented: $showAccessGuide) { MacSourceSetupView().environmentObject(archive) }
         .confirmationDialog("Download iCloud originals?", isPresented: $cloudScan) {
             Button("Download and Scan") { archive.analyze(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }

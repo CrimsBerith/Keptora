@@ -17,6 +17,7 @@ enum MobileModalRoute: String, Identifiable {
     case settings
     case paywall
     case onboarding
+    case sourceSetup
 
     var id: String { rawValue }
 }
@@ -90,6 +91,8 @@ final class MobileKeptoraStore: ObservableObject {
     @Published var currentSimilarityGroupIndex = 0
     @Published var selectedTab: MobileTab = .library
     @Published var modalRoute: MobileModalRoute?
+    @Published var startupSourcesPrepared = false
+    @Published private(set) var isRequestingPhotosAccess = false
     @Published var isShowingPhotosPermissionHelp = false
     @Published var errorMessage: String?
     @Published private(set) var isLoadingCatalogue = false
@@ -161,6 +164,9 @@ final class MobileKeptoraStore: ObservableObject {
     private var lastProgressUpdateTime = Date.distantPast
 
     init() {
+        if LaunchArguments.contains(LaunchArguments.resetSourceSetupUITesting) {
+            UserDefaults.standard.removeObject(forKey: AppStorageKeys.iOSSourceSetupCompleted)
+        }
         isPhotosDeniedUITesting = LaunchArguments.contains(LaunchArguments.photosDeniedUITesting)
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let decoded = try? JSONDecoder().decode([CleanupHistoryEntry].self, from: data) {
@@ -245,7 +251,9 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func connectPhotos() async {
-        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
+        guard !isCleaningUp, !scanState.isScanning, !isAnalyzing, !isRequestingPhotosAccess else { return }
+        isRequestingPhotosAccess = true
+        defer { isRequestingPhotosAccess = false }
         if photosConnected && (authorization == .authorized || authorization == .limited) { return }
         if isPhotosDeniedUITesting {
             authorization = .denied
@@ -278,6 +286,9 @@ final class MobileKeptoraStore: ObservableObject {
         photosConnected = true
         source = .photos
         resetResults(clearCheckpoint: false)
+        // Permission resolution must not keep the setup's Continue button locked
+        // while a large catalogue is loading.
+        isRequestingPhotosAccess = false
         await loadCatalogue()
     }
 
@@ -299,7 +310,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func refreshPhotosAuthorization() async {
-        guard !isPhotosDeniedUITesting,
+        guard startupSourcesPrepared, !isRequestingPhotosAccess, !isPhotosDeniedUITesting,
               !LaunchArguments.contains(LaunchArguments.comprehensiveUITesting),
               !LaunchArguments.contains(LaunchArguments.videoReviewUITesting),
               !LaunchArguments.contains(LaunchArguments.thousandsStressUITesting) else { return }

@@ -494,10 +494,8 @@ struct MobileCleanupHubView: View {
         .background(MobileKeptoraDesign.canvas).navigationTitle("Cleanup")
         .sheet(isPresented: $showGuide, onDismiss: { if pendingFolderPicker { pendingFolderPicker = false; store.present(.filePicker) } }) {
             NavigationStack {
-                List {
-                    Text("To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.")
-                    Text("Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.")
-                    Button("Choose an Exported Folder") { pendingFolderPicker = true; showGuide = false }
+                ScrollView {
+                    MobileWhatsAppAccessGuide(onChooseFolder: { pendingFolderPicker = true; showGuide = false }).padding()
                 }.navigationTitle("WhatsApp Storage Guide")
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showGuide = false } } }
             }

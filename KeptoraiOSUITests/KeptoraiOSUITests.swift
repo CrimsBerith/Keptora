@@ -15,7 +15,7 @@ final class KeptoraiOSUITests: XCTestCase {
         app.launchArguments += arguments + [
             "-AppleLanguages", "(\(language))",
             "-AppleLocale", locale,
-            "-hasSeenMobileOnboarding", "YES", "-Keptora.AppLanguage", "system"
+            "-hasSeenMobileOnboarding", "YES", "-Keptora.SourceSetup.iOS.v1", "YES", "-Keptora.AppLanguage", "system"
         ]
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 10))
@@ -28,6 +28,34 @@ final class KeptoraiOSUITests: XCTestCase {
         for _ in 0..<6 where !comparisons.isHittable { app.swipeUp() }
         XCTAssertTrue(comparisons.waitForExistence(timeout: 5))
         comparisons.tap()
+    }
+
+    func testStartupSetupCanContinueWithDeniedPhotosAndExplainsWhatsAppAccess() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-hasSeenMobileOnboarding", "YES",
+            "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Connect your library"].waitForExistence(timeout: 10))
+        let settings = app.buttons["ios.library.openSettings"]
+        for _ in 0..<5 where !settings.isHittable { app.swipeUp() }
+        XCTAssertTrue(settings.isHittable)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Startup source access — denied Photos"
+        attachment.lifetime = .keepAlways; add(attachment)
+        let exportedFolder = app.buttons["ios.whatsapp.exportedFolder"]
+        for _ in 0..<8 where !exportedFolder.isHittable { app.swipeUp() }
+        XCTAssertTrue(exportedFolder.isHittable)
+        XCTAssertTrue(app.staticTexts["Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage."].exists)
+        app.buttons["ios.sourceSetup.continue"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 5))
+        app.buttons["ios.library.options"].tap()
+        app.buttons["Sources"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["library.source.files"].waitForExistence(timeout: 5))
+        app.terminate()
+        app.launchArguments.removeAll { $0 == "-keptoraResetSourceSetupUITesting" }
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["ios.sourceSetup.continue"].waitForExistence(timeout: 1))
     }
 
     func testManualArchiveSelectionRetainsItemsWhenFiltering() {

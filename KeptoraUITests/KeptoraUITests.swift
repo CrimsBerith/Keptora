@@ -24,6 +24,27 @@ final class KeptoraUITests: XCTestCase {
         return app
     }
 
+    func testStartupSetupCanContinueWithDeniedPhotos() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-Keptora.Onboarding.Completed.v1", "YES",
+            "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Connect your library"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["mac.sourceSetup.openSettings"].exists)
+        XCTAssertTrue(app.buttons["mac.sourceSetup.folders"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Mac startup source access — denied Photos"
+        attachment.lifetime = .keepAlways; add(attachment)
+        app.buttons["mac.sourceSetup.continue"].tap()
+        XCTAssertFalse(app.buttons["mac.sourceSetup.continue"].waitForExistence(timeout: 1))
+        XCTAssertTrue(app.windows.firstMatch.exists)
+        app.terminate()
+        app.launchArguments.removeAll { $0 == "-keptoraResetSourceSetupUITesting" }
+        app.launch()
+        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["mac.sourceSetup.continue"].waitForExistence(timeout: 2))
+    }
+
     private func element(withIdentifier identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
     }

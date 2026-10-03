@@ -19,7 +19,7 @@
 
 | Kontrol | Bu ortamın sonucu |
 |---|---|
-| Swift ortak katalog/seçim/metadata politikası testleri | 11 test, 0 hata; gerçek paylaşılan kaynak kodu derlendi |
+| Swift ortak katalog/seçim/metadata/başlangıç izin politikası testleri | 22 test, 0 hata; gerçek paylaşılan kaynak kodu derlendi |
 | Swift sözdizimi | 132 uygulama/test/paket dosyasında temiz |
 | Xcode kaynak referansları | Eksik referans yok; iki yeni ekran dosyası hedeflerine bağlı |
 | PNG çözünürlük/SHA-256 ve asset referansları | Geçti: dört 1536×1024 PNG ve tüm asset referansları |
@@ -39,6 +39,10 @@ Apple CI derleme/test sonuçları, gerçek cihazda silme/geri yükleme, iCloud/l
 ## 67 görsel yenilemesi
 
 34 ikon/logo, 8 illüstrasyon, 13 test girdisi ve 12 tasarım önizlemesi yeniden üretildi. 66 görüntülenebilir çıktı tek tek açıldı; kasıtlı bozuk JPEG negatif test olarak doğrulandı. [Yeni inceleme raporu](VISUAL_REGENERATION_REVIEW.md) ve [galeri](VISUAL_GALLERY.html). 12 ekran native çekim değildir ve App Store için onaylanmadı.
+
+## Başlangıç izinleri ve WhatsApp erişimi
+
+iPhone ve Mac’e ilk kurulumda gerekli Fotoğraflar iznini isteyen, dosya/bulut klasörlerini bağlatan ve izin vermeden devam edilebilen başlangıç ekranı eklendi. Reddedilmiş izin Ayarlar’a, sınırlı erişim yönetim ekranına yönlendirilir. WhatsApp’ı açma, kendi depolama yöneticisi ve medyalı sohbet dışa aktarımını klasör olarak bağlama rehberi eklendi. WhatsApp’ın özel sohbet deposu için public erişim izni olmadığı açıkça belirtilir. Dört dilde yeni metinler ve sistem izin açıklamaları güncellendi. [Kapsam ve doğrulama raporu](STARTUP_ACCESS_REPORT.md).
 
 
 ## 3 Ekim 2026 — Tek arşiv ve kaynaklar arası tarama güncellemesi

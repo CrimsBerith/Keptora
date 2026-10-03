@@ -43,7 +43,8 @@ jobs:
           xcodebuild -project Keptora.xcodeproj -scheme Keptora \
             -destination 'platform=macOS' -derivedDataPath Build/CI \
             -resultBundlePath Build/MacTests.xcresult \
-            CODE_SIGNING_ALLOWED=NO -only-testing:KeptoraTests test
+            CODE_SIGNING_ALLOWED=NO -only-testing:KeptoraTests \
+            -only-testing:KeptoraUITests/KeptoraUITests/testStartupSetupCanContinueWithDeniedPhotos test
       - name: Prepare iPhone simulator with actual media
         run: bash Scripts/prepare_photo_cleaner_simulator.sh
       - name: iPhone unit and product UI tests
@@ -53,6 +54,7 @@ jobs:
             -derivedDataPath Build/CI -resultBundlePath Build/iPhoneTests.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             -only-testing:KeptoraiOSTests \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testStartupSetupCanContinueWithDeniedPhotosAndExplainsWhatsAppAccess \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCombinedGroupsPreserveSelectionWhenReturningToAllItems \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testScanAllSourcesFindsCopiesInRealSimulatorPhotos \

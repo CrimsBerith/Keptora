@@ -6,6 +6,17 @@ import CoreGraphics
 @preconcurrency import Photos
 #endif
 
+public enum LibraryAccessPolicy {
+    public static func needsStartupSetup(introductionCompleted: Bool, setupCompleted: Bool) -> Bool {
+        introductionCompleted && !setupCompleted
+    }
+
+    /// A denied, restricted or limited permission must never trigger another automatic prompt.
+    public static func shouldRequestPhotosAtStartup(_ authorization: SourceAuthorization) -> Bool {
+        authorization == .notDetermined
+    }
+}
+
 public enum LibraryRevisionValidator {
     /// Check the metadata revision the user actually reviewed before hashing or
     /// starting either kind of removal. This also covers manual archive choices.

@@ -1,3 +1,4 @@
+import KeptoraCore
 import SwiftUI
 
 struct MainRootView: View {
@@ -8,6 +9,10 @@ struct MainRootView: View {
     @StateObject private var archive = MacArchiveModel()
     @State private var hoveredRoute: SidebarRoute?
     @State private var isDropTargeted: Bool = false
+    @AppStorage(AppStorageKeys.onboardingCompleted) private var introductionCompleted = false
+    @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
+    @State private var startupSourcesPrepared = false
+    @State private var showSourceSetup = false
 
     private let primaryRoutes: [SidebarRoute] = [.archive, .history]
     private let toolRoutes:    [SidebarRoute] = [.home, .review, .smartBuckets, .insights]
@@ -92,9 +97,18 @@ struct MainRootView: View {
         .sheet(isPresented: $model.isShowingRestorePreview) {
             RestorePreviewSheet().environmentObject(model)
         }
-        .sheet(isPresented: $model.isShowingOnboarding) {
+        .sheet(isPresented: $model.isShowingOnboarding, onDismiss: { presentStartupIfNeeded() }) {
             OnboardingView().environmentObject(model)
         }
+        .sheet(isPresented: $showSourceSetup) {
+            MacSourceSetupView(isStartupSetup: true).environmentObject(archive)
+        }
+        .task {
+            await archive.restoreConnections()
+            startupSourcesPrepared = true
+            presentStartupIfNeeded()
+        }
+        .keptoraOnChange(of: sourceSetupCompleted) { _ in presentStartupIfNeeded() }
         .onAppear {
             if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
                 model.selectedRoute = .review
@@ -102,6 +116,7 @@ struct MainRootView: View {
         }
         .keptoraOnChange(of: scenePhase) { phase in
             if phase != .active { model.checkpointReviewSession() }
+            else if startupSourcesPrepared { Task { await archive.refreshPhotosAccess() } }
         }
         .alert("Something went wrong", isPresented: $model.isShowingError) {
             Button("Copy Diagnostics") { model.copyDiagnostics() }
@@ -109,6 +124,14 @@ struct MainRootView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(model.errorMessage ?? "An unknown error occurred.")
+        }
+    }
+
+    private func presentStartupIfNeeded() {
+        guard startupSourcesPrepared, !LaunchArguments.contains(LaunchArguments.portfolioUITesting),
+              !model.isShowingOnboarding, !store.isShowingPaywall, !model.isShowingRestorePreview else { return }
+        if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: introductionCompleted, setupCompleted: sourceSetupCompleted) {
+            showSourceSetup = true
         }
     }
 

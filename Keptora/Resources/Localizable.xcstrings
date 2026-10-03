@@ -22634,6 +22634,499 @@
           }
         }
       }
+    },
+    "Connect your library": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect your library"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşivini bağla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez votre photothèque"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediathek verbinden"
+          }
+        }
+      }
+    },
+    "Approve Photos and connect folders once. Future scans combine every connected source.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approve Photos and connect folders once. Future scans combine every connected source."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar iznini ver ve klasörleri bir kez bağla. Sonraki taramalar bağlı tüm kaynakları birlikte tarar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez Photos et connectez vos dossiers une fois. Les prochaines analyses réuniront toutes les sources connectées."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erlaube den Fotozugriff und verbinde Ordner einmalig. Künftige Scans erfassen alle verbundenen Quellen gemeinsam."
+          }
+        }
+      }
+    },
+    "Waiting for Photos access…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for Photos access…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar izni bekleniyor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente de l’autorisation Photos…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warten auf Fotozugriff…"
+          }
+        }
+      }
+    },
+    "Continue to Library": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue to Library"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arşive devam et"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuer vers la photothèque"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter zur Mediathek"
+          }
+        }
+      }
+    },
+    "Full Photos access includes iCloud Photos and WhatsApp media saved to Photos. Limited access shows only the items you approve.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full Photos access includes iCloud Photos and WhatsApp media saved to Photos. Limited access shows only the items you approve."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tam Fotoğraflar erişimi, iCloud Fotoğrafları ve Fotoğraflar’a kaydedilmiş WhatsApp medyasını kapsar. Sınırlı erişimde yalnızca izin verdiğin öğeler görünür."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accès complet comprend Photos iCloud et les médias WhatsApp enregistrés dans Photos. L’accès limité affiche uniquement les éléments autorisés."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vollständiger Fotozugriff umfasst iCloud-Fotos und in Fotos gespeicherte WhatsApp-Medien. Eingeschränkter Zugriff zeigt nur freigegebene Objekte."
+          }
+        }
+      }
+    },
+    "WhatsApp storage & chat media": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp storage & chat media"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp depolaması ve sohbet medyası"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stockage WhatsApp et médias des discussions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp-Speicher und Chatmedien"
+          }
+        }
+      }
+    },
+    "Open WhatsApp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open WhatsApp"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp’ı aç"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir WhatsApp"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp öffnen"
+          }
+        }
+      }
+    },
+    "To view chat media here: in WhatsApp, export the chat with media, save it to Files, extract the ZIP, then connect the extracted folder. Keptora displays the exported photos and videos.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To view chat media here: in WhatsApp, export the chat with media, save it to Files, extract the ZIP, then connect the extracted folder. Keptora displays the exported photos and videos."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sohbet medyasını burada görmek için WhatsApp’ta sohbeti medyasıyla dışa aktar, Dosyalar’a kaydet, ZIP’i aç ve çıkan klasörü bağla. Keptora dışa aktarılan fotoğraf ve videoları gösterir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour afficher les médias ici, exportez la discussion avec ses médias dans WhatsApp, enregistrez-la dans Fichiers, décompressez le ZIP et connectez le dossier extrait. Keptora affiche les photos et vidéos exportées."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportiere den Chat in WhatsApp mit Medien, sichere ihn in Dateien, entpacke die ZIP-Datei und verbinde den entpackten Ordner. Keptora zeigt die exportierten Fotos und Videos an."
+          }
+        }
+      }
+    },
+    "Removing exported or saved copies does not free the original WhatsApp chat storage.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removing exported or saved copies does not free the original WhatsApp chat storage."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dışa aktarılmış veya kaydedilmiş kopyaları kaldırmak, WhatsApp’taki asıl sohbet deposunda yer açmaz."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer les copies exportées ou enregistrées ne libère pas le stockage de la discussion d’origine dans WhatsApp."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Entfernen exportierter oder gespeicherter Kopien gibt keinen Speicher im ursprünglichen WhatsApp-Chat frei."
+          }
+        }
+      }
+    },
+    "WhatsApp could not be opened": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp could not be opened"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp açılamadı"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’ouvrir WhatsApp"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp konnte nicht geöffnet werden"
+          }
+        }
+      }
+    },
+    "Open WhatsApp manually if it is installed on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open WhatsApp manually if it is installed on this device."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WhatsApp bu aygıtta yüklüyse kendin açabilirsin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrez WhatsApp manuellement s’il est installé sur cet appareil."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne WhatsApp manuell, wenn es auf diesem Gerät installiert ist."
+          }
+        }
+      }
+    },
+    "Files & cloud folders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files & cloud folders"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar ve bulut klasörleri"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers et dossiers cloud"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien und Cloud-Ordner"
+          }
+        }
+      }
+    },
+    "Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resimler, İndirilenler, iCloud Drive veya başka bir bulut klasörünü seç. Keptora izin verdiğin klasörleri hatırlar; diğer uygulamaların özel depolaması erişime kapalıdır."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez Images, Téléchargements, iCloud Drive ou un autre dossier cloud. Keptora mémorise les dossiers autorisés ; le stockage privé des autres apps reste inaccessible."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle Bilder, Downloads, iCloud Drive oder einen anderen Cloud-Ordner. Keptora merkt sich freigegebene Ordner; der private Speicher anderer Apps ist nicht zugänglich."
+          }
+        }
+      }
+    },
+    "Export the chat with media on your phone, transfer it to your Mac, extract the ZIP, then connect the extracted folder to view its photos and videos.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export the chat with media on your phone, transfer it to your Mac, extract the ZIP, then connect the extracted folder to view its photos and videos."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telefonda sohbeti medyasıyla dışa aktar, Mac’e taşı, ZIP’i aç ve fotoğraf ve videolarını görmek için çıkan klasörü bağla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportez la discussion avec ses médias sur votre téléphone, transférez-la sur votre Mac, décompressez le ZIP et connectez le dossier extrait pour afficher ses photos et vidéos."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportiere den Chat mit Medien auf deinem Telefon, übertrage ihn auf den Mac, entpacke die ZIP-Datei und verbinde den entpackten Ordner, um die Fotos und Videos anzusehen."
+          }
+        }
+      }
+    },
+    "No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera, mikrofon, kişiler veya canlı konum izni gerekmez. Mevcut fotoğraf bilgileri yalnızca izin verdiğin medyadan okunur."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune autorisation de caméra, de microphone, de contacts ou de localisation en direct n’est nécessaire. Les informations existantes sont lues uniquement dans les médias autorisés."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera-, Mikrofon-, Kontakt- oder Live-Standortzugriff ist nicht erforderlich. Vorhandene Fotodaten werden nur aus freigegebenen Medien gelesen."
+          }
+        }
+      }
+    },
+    "You can continue without access and add sources later.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can continue without access and add sources later."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İzin vermeden devam edebilir, kaynakları daha sonra ekleyebilirsin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez continuer sans autorisation et ajouter des sources plus tard."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst ohne Zugriff fortfahren und später Quellen hinzufügen."
+          }
+        }
+      }
+    },
+    "Permissions & WhatsApp Guide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions & WhatsApp Guide"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İzinler ve WhatsApp rehberi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisations et guide WhatsApp"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungen und WhatsApp-Anleitung"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

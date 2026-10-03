@@ -1,9 +1,11 @@
+import KeptoraCore
 import SwiftUI
 
 struct MobileRootView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
     @AppStorage("hasSeenMobileOnboarding") private var hasSeenMobileOnboarding = false
+    @AppStorage(AppStorageKeys.iOSSourceSetupCompleted) private var sourceSetupCompleted = false
 
     var body: some View {
         TabView(selection: $store.selectedTab) {
@@ -21,12 +23,9 @@ struct MobileRootView: View {
                 .accessibilityIdentifier("tab.history")
         }
         .tint(MobileKeptoraDesign.accent)
-        .onAppear {
-            if !hasSeenMobileOnboarding {
-                store.present(.onboarding)
-            }
-        }
-        .sheet(item: $store.modalRoute) { route in
+        .onAppear { presentStartupIfNeeded() }
+        .onChange(of: store.startupSourcesPrepared) { _, _ in presentStartupIfNeeded() }
+        .sheet(item: $store.modalRoute, onDismiss: { presentStartupIfNeeded() }) { route in
             MobileModalHost(route: route)
         }
         .alert("Something went wrong", isPresented: Binding(
@@ -36,6 +35,14 @@ struct MobileRootView: View {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "")
+        }
+    }
+
+    private func presentStartupIfNeeded() {
+        guard store.startupSourcesPrepared, store.modalRoute == nil else { return }
+        if !hasSeenMobileOnboarding { store.present(.onboarding) }
+        else if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: hasSeenMobileOnboarding, setupCompleted: sourceSetupCompleted) {
+            store.present(.sourceSetup)
         }
     }
 }
@@ -59,6 +66,9 @@ private struct MobileModalHost: View {
                 MobilePaywallView()
             case .onboarding:
                 MobileOnboardingView()
+                    .interactiveDismissDisabled()
+            case .sourceSetup:
+                NavigationStack { MobileSourceLibraryView(isStartupSetup: true) }
             }
         }
         .alert("Something went wrong", isPresented: Binding(

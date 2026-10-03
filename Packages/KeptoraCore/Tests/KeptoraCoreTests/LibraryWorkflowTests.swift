@@ -3,6 +3,18 @@ import XCTest
 @testable import KeptoraCore
 
 final class LibraryWorkflowTests: XCTestCase {
+    func testStartupSetupFollowsIntroductionAndCompletesIndependentlyOfPermission() {
+        XCTAssertFalse(LibraryAccessPolicy.needsStartupSetup(introductionCompleted: false, setupCompleted: false))
+        XCTAssertTrue(LibraryAccessPolicy.needsStartupSetup(introductionCompleted: true, setupCompleted: false))
+        XCTAssertFalse(LibraryAccessPolicy.needsStartupSetup(introductionCompleted: true, setupCompleted: true))
+        XCTAssertFalse(LibraryAccessPolicy.needsStartupSetup(introductionCompleted: false, setupCompleted: true))
+    }
+    func testStartupNeverRepeatsDeniedRestrictedOrLimitedPhotosPrompts() {
+        XCTAssertTrue(LibraryAccessPolicy.shouldRequestPhotosAtStartup(.notDetermined))
+        for authorization: SourceAuthorization in [.denied, .restricted, .limited, .authorized, .unavailable] {
+            XCTAssertFalse(LibraryAccessPolicy.shouldRequestPhotosAtStartup(authorization), authorization.rawValue)
+        }
+    }
     private func asset(_ id: String, kind: UniversalMediaKind = .image, bytes: Int64? = nil,
                        favorite: Bool = false, context: MediaContext? = nil) -> UniversalMediaAsset {
         UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id),

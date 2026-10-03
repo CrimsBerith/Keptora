@@ -1,1 +1,1 @@
-"NSPhotoLibraryUsageDescription" = "Keptora a besoin d’accéder à votre photothèque pour l’analyser localement, trouver les copies exactes et examiner les photos et vidéos similaires. Vos médias ne sont jamais téléversés.";
+"NSPhotoLibraryUsageDescription" = "Keptora utilise l’accès à Photos que vous autorisez pour afficher vos photos et vidéos, comparer les copies et éléments similaires, et supprimer uniquement les éléments confirmés. Vos médias ne sont jamais envoyés.";

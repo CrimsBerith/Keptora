@@ -1,16 +1,33 @@
 import KeptoraCore
 import SwiftUI
+import UIKit
 
 struct MobileSourceLibraryView: View {
     var onChooseFolder: (() -> Void)? = nil
+    var isStartupSetup = false
     @EnvironmentObject private var store: MobileKeptoraStore
+    @AppStorage(AppStorageKeys.iOSSourceSetupCompleted) private var sourceSetupCompleted = false
+    @State private var showFolderPicker = false
+
+    private var photosConnected: Bool { store.connectedSources.contains { $0.id == LibrarySource.photos.id } }
+    private var controlsDisabled: Bool { store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing || store.isRequestingPhotosAccess || store.isLoadingCatalogue }
 
     var body: some View {
         ZStack {
             MobileAuroraBackground()
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
-                    sourceSection.disabled(store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
+                    if isStartupSetup {
+                        Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
+                            .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
+                        Text("Connect your library").font(.title2.bold())
+                        Text("Approve Photos and connect folders once. Future scans combine every connected source.").foregroundStyle(.secondary)
+                        if store.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
+                    }
+                    sourceSection.disabled(controlsDisabled)
+                    MobileWhatsAppAccessGuide(onChooseFolder: chooseFolder).disabled(controlsDisabled)
+                    Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.footnote).foregroundStyle(.secondary)
+                    if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(.secondary) }
                     privacyStrip
                 }
                 .padding(.horizontal, MobileKeptoraDesign.pagePadding)
@@ -18,24 +35,31 @@ struct MobileSourceLibraryView: View {
             }
         }
         .navigationTitle("Sources")
-        .accessibilityIdentifier("ios.page.library")
+        .accessibilityIdentifier(isStartupSetup ? "ios.sourceSetup" : "ios.page.library")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { store.present(.settings) } label: {
-                    ZStack {
-                        Circle().fill(MobileKeptoraDesign.brandGradient)
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                    .frame(width: 36, height: 36)
-                    .shadow(color: MobileKeptoraDesign.violet.opacity(0.30), radius: 8, y: 3)
-                    .padding(4)
-                    .contentShape(Rectangle())
+        .safeAreaInset(edge: .bottom) {
+            if isStartupSetup {
+                Button {
+                    sourceSetupCompleted = true
+                    store.dismissModal()
+                } label: {
+                    Text("Continue to Library").frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .accessibilityLabel("Settings")
-                .accessibilityIdentifier("ios.library.settings")
+                .buttonStyle(.borderedProminent)
+                .padding().background(.regularMaterial).disabled(store.isRequestingPhotosAccess)
+                .accessibilityIdentifier("ios.sourceSetup.continue")
+            }
+        }
+        .interactiveDismissDisabled(isStartupSetup)
+        .sheet(isPresented: $showFolderPicker) {
+            DirectoryPicker { url in
+                showFolderPicker = false
+                if let url { store.connectFolder(url) }
+            }
+        }
+        .task {
+            if isStartupSetup, LibraryAccessPolicy.shouldRequestPhotosAtStartup(store.authorization) {
+                await store.connectPhotos()
             }
         }
         .alert("Photos Access Needed", isPresented: $store.isShowingPhotosPermissionHelp) {
@@ -66,16 +90,17 @@ struct MobileSourceLibraryView: View {
             Button { Task { await store.connectPhotos() } } label: {
                 sourceCard(
                     title: "Photos",
-                    subtitle: store.source == .photos ? Text("Connected") : Text("Photos and videos on this device"),
+                    subtitle: photosConnected ? Text("Connected") : Text("Photos and videos on this device"),
                     image: "photo.on.rectangle.angled",
-                    selected: store.source == .photos,
+                    selected: photosConnected,
                     tint: MobileKeptoraDesign.coral
                 )
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("library.source.photos")
 
-            if store.authorization == .limited, store.source == .photos {
+            Text("Full Photos access includes iCloud Photos and WhatsApp media saved to Photos. Limited access shows only the items you approve.").font(.footnote).foregroundStyle(.secondary)
+            if store.authorization == .limited, photosConnected {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         Image(systemName: "photo.badge.exclamationmark")
@@ -120,7 +145,7 @@ struct MobileSourceLibraryView: View {
                 )
             }
 
-            if (store.source == .photos || store.source == .none) && (store.authorization == .denied || store.authorization == .restricted) {
+            if store.authorization == .denied || store.authorization == .restricted {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         Image(systemName: "hand.raised.fill")
@@ -190,7 +215,7 @@ struct MobileSourceLibraryView: View {
                     Button("Disconnect") { store.disconnectFolder(folder.id) }.font(.footnote).frame(minHeight: 44)
                 }
             }
-            Button { if let onChooseFolder { onChooseFolder() } else { store.present(.filePicker) } } label: {
+            Button(action: chooseFolder) {
                 sourceCard(
                     title: "Add Files or Cloud Folder",
                     subtitle: Text("Choose a folder or connected drive"),
@@ -202,6 +227,12 @@ struct MobileSourceLibraryView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("library.source.files")
         }
+    }
+
+    private func chooseFolder() {
+        if let onChooseFolder { onChooseFolder() }
+        else if isStartupSetup { showFolderPicker = true }
+        else { store.present(.filePicker) }
     }
 
     private var photosAccessHint: LocalizedStringKey {
@@ -299,5 +330,33 @@ struct MobileSourceLibraryView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(MobileKeptoraDesign.accent.opacity(0.18), lineWidth: 1)
         }
+    }
+}
+
+struct MobileWhatsAppAccessGuide: View {
+    let onChooseFolder: () -> Void
+    @State private var cannotOpenWhatsApp = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("WhatsApp storage & chat media", systemImage: "bubble.left.and.bubble.right").font(.headline)
+            Text("Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.")
+            Text("To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.")
+            Button("Open WhatsApp") {
+                guard let url = URL(string: "whatsapp://") else { return }
+                UIApplication.shared.open(url, options: [:]) { opened in
+                    Task { @MainActor in cannotOpenWhatsApp = !opened }
+                }
+            }.frame(minHeight: 44).accessibilityIdentifier("ios.whatsapp.open")
+            Text("To view chat media here: in WhatsApp, export the chat with media, save it to Files, extract the ZIP, then connect the extracted folder. Keptora displays the exported photos and videos.")
+            Button("Choose an Exported Folder", action: onChooseFolder).frame(minHeight: 44)
+                .accessibilityIdentifier("ios.whatsapp.exportedFolder")
+            Text("Removing exported or saved copies does not free the original WhatsApp chat storage.").font(.footnote).foregroundStyle(.secondary)
+        }
+        .font(.subheadline).padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .alert("WhatsApp could not be opened", isPresented: $cannotOpenWhatsApp) {
+            Button("OK", role: .cancel) { }
+        } message: { Text("Open WhatsApp manually if it is installed on this device.") }
     }
 }

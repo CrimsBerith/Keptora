@@ -4,6 +4,8 @@ Tarih: 3 Ekim 2026. Kapsam: Keptora iPhone uygulaması, macOS arşivi, ortak kay
 
 ## Kullanıcının istediği akış
 
+Başlangıç izin ekranı ve WhatsApp dışa aktarım rehberi ayrıca uygulandı: [başlangıç erişim raporu](STARTUP_ACCESS_REPORT.md). Bu ek çalışmada iki platformda kurulum, izin reddi/sınırlı erişim ve kurulumun tekrar gösterilmemesi ele alındı.
+
 1. İlk kurulumda Fotoğraflar izni verilir. Dosyalar/iCloud Drive/diğer sağlayıcılardaki istenen klasörler bir kez bağlanır. Mac’te birden fazla klasör aynı seçim penceresinde eklenebilir.
 2. Arşiv, bağlı ve erişilebilen kaynakların fotoğraf ve videolarını birlikte gösterir. WhatsApp’tan Fotoğraflar’a kaydedilen öğeler ikinci kez eklenmez; albüm üyeliği kaynak rozeti olarak kullanılır.
 3. **Tüm Kaynakları Tara**, aynı taramada bu kaynakların hepsini karşılaştırır. **Bulut Asıllarını Dahil Et** indirmeli taramayı açık onayla başlatır. Bulutta olup okunamayan asıllar arşivden kaybolmaz.
