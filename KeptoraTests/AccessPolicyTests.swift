@@ -1,7 +1,39 @@
 import XCTest
+import KeptoraCore
 @testable import Keptora
 
 final class AccessPolicyTests: XCTestCase {
+    @MainActor
+    func testArchiveSourceChoicesScopeTheGridAndKeepHiddenManualSelection() {
+        let key = AppStorageKeys.macExcludedScanSources
+        let saved = UserDefaults.standard.object(forKey: key)
+        UserDefaults.standard.removeObject(forKey: key)
+        defer {
+            if let saved { UserDefaults.standard.set(saved, forKey: key) }
+            else { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        let archive = MacArchiveModel()
+        let first = LibrarySource(id: "first", kind: .folder, displayName: "Pictures")
+        let second = LibrarySource(id: "second", kind: .fileProvider, displayName: "Cloud")
+        archive.connectedFolders = [first, second]
+        archive.assets = [first, second].map { source in
+            UniversalMediaAsset(id: source.id, sourceID: source.id, reference: .file(URL(fileURLWithPath: "/tmp/" + source.id + ".jpg")), displayName: source.id, mediaKind: .image)
+        }
+        archive.selection = [first.id]
+        archive.toggleScanSource(first.id)
+        XCTAssertEqual(archive.sourceSelectionState, .some)
+        XCTAssertEqual(archive.scopedAssets.map(\.id), [second.id])
+        XCTAssertEqual(archive.selected.map(\.id), [first.id])
+        XCTAssertEqual(MacArchiveModel().scanSourceSelection.excludedIDs, [first.id])
+        archive.toggleAllScanSources()
+        XCTAssertEqual(archive.sourceSelectionState, .all)
+        archive.toggleAllScanSources()
+        XCTAssertTrue(archive.scopedAssets.isEmpty)
+        XCTAssertFalse(archive.canScanSelectedSources)
+        archive.analyze()
+        XCTAssertFalse(archive.analyzing)
+        XCTAssertEqual(archive.selection, [first.id])
+    }
     func testFreePolicyAllowsFirstHundredUniqueReviews() {
         let reviewed = Set((0..<99).map { "asset-\($0)" })
         let policy = AccessPolicy(isLifetimeUnlocked: false, reviewedAssetIDs: reviewed)

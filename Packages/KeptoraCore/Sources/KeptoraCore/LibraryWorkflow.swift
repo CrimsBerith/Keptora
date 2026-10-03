@@ -47,6 +47,78 @@ public struct LibrarySourceCoverage: Equatable, Sendable, Identifiable {
     public let authorization: SourceAuthorization
     public let itemCount: Int
     public let error: String?
+    public init(source: LibrarySource, authorization: SourceAuthorization, itemCount: Int, error: String? = nil) {
+        self.source = source; self.authorization = authorization; self.itemCount = itemCount; self.error = error
+    }
+    public var statusKey: String {
+        if authorization == .limited { return error == nil ? "Limited Photos access" : "Some items unavailable" }
+        if authorization != .authorized { return "Access unavailable" }
+        return error == nil ? "Access granted" : "Some items unavailable"
+    }
+}
+
+public extension LibrarySource {
+    var scanTitle: String { kind == .photos ? "Photos / iCloud Photos" : displayName }
+    var scanSymbol: String {
+        switch kind {
+        case .photos: return "photo.on.rectangle.angled"
+        case .fileProvider: return "icloud"
+        case .externalVolume: return "externaldrive"
+        case .folder: return "folder"
+        }
+    }
+}
+
+/// Exclusions preserve the user's choices while newly connected sources start selected.
+public struct LibrarySourceSelection: Equatable, Codable, Sendable {
+    public enum State: Sendable { case none, some, all }
+    public private(set) var excludedIDs: Set<String>
+    public init(excludedIDs: Set<String> = []) { self.excludedIDs = excludedIDs }
+    public func selectedIDs(in sources: [LibrarySource], coverage: [LibrarySourceCoverage]) -> Set<String> {
+        Set(sources.filter { source in
+            guard !excludedIDs.contains(source.id) else { return false }
+            guard let report = coverage.first(where: { $0.id == source.id }) else { return true }
+            return report.authorization == .authorized || report.authorization == .limited
+        }.map(\.id))
+    }
+    public func state(in sources: [LibrarySource], coverage: [LibrarySourceCoverage]) -> State {
+        let available = Self().selectedIDs(in: sources, coverage: coverage)
+        let selected = selectedIDs(in: sources, coverage: coverage)
+        if selected.isEmpty { return .none }
+        return selected == available ? .all : .some
+    }
+    public mutating func setSelected(_ selected: Bool, id: String) {
+        if selected { excludedIDs.remove(id) } else { excludedIDs.insert(id) }
+    }
+    public mutating func toggleAll(in sources: [LibrarySource], coverage: [LibrarySourceCoverage]) {
+        let select = state(in: sources, coverage: coverage) != .all
+        for id in Self().selectedIDs(in: sources, coverage: coverage) { setSelected(select, id: id) }
+    }
+}
+
+/// Keep membership before deduplication: an overlapping folder remains usable when
+/// the other folder is unchecked. Real copies at separate paths remain separate.
+public struct LibrarySourceCatalogue: Sendable {
+    public private(set) var batches: [String: [UniversalMediaAsset]]
+    public init(batches: [String: [UniversalMediaAsset]] = [:]) { self.batches = batches }
+    public mutating func merge(_ other: Self) {
+        for (id, items) in other.batches { batches[id] = items }
+    }
+    public func assets(in sources: [LibrarySource], selectedIDs: Set<String>, current: [UniversalMediaAsset]? = nil) -> [UniversalMediaAsset] {
+        let ordered = sources.sorted {
+            if ($0.kind == .photos) != ($1.kind == .photos) { return $0.kind == .photos }
+            return $0.id < $1.id
+        }
+        let latest = current.map { Dictionary($0.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }) }
+        let items = ordered.filter { selectedIDs.contains($0.id) }.flatMap { source in
+            (batches[source.id] ?? current?.filter { $0.sourceID == source.id } ?? []).compactMap { item -> UniversalMediaAsset? in
+                guard let latest else { return item }
+                guard let updated = latest[item.id] else { return nil }
+                return updated.with(sourceID: item.sourceID, reference: item.reference)
+            }
+        }
+        return UnifiedLibraryAdapter.uniqueReferences(items)
+    }
 }
 
 public enum UnifiedLibraryError: LocalizedError {
@@ -68,20 +140,24 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
         cleanupMode: .unavailable, canRestoreInApp: false, mayRequireNetworkDownload: true, canRevealInFileBrowser: false)
     private let adapters: [any SourceAdapter]
     public private(set) var coverage: [LibrarySourceCoverage] = []
+    public private(set) var catalogue = LibrarySourceCatalogue()
 
-    public init(adapters: [any SourceAdapter]) {
-        self.adapters = adapters.sorted {
+    public init(adapters: [any SourceAdapter], selectedSourceIDs: Set<String>? = nil) {
+        let scoped = adapters.filter { selectedSourceIDs?.contains($0.source.id) ?? true }
+        self.adapters = scoped.sorted {
             if ($0.source.kind == .photos) != ($1.source.kind == .photos) { return $0.source.kind == .photos }
             return $0.source.id < $1.source.id
         }
-        self.source = LibrarySource(id: "unified-v2:" + StableDigest.fnv1a64(adapters.map { $0.source.id }.sorted().joined(separator: "|")), kind: .photos, displayName: "All Connected Sources")
+        self.source = LibrarySource(id: "unified-v2:" + StableDigest.fnv1a64(scoped.map { $0.source.id }.sorted().joined(separator: "|")), kind: .photos, displayName: "All Connected Sources")
     }
     public func authorizationStatus() async -> SourceAuthorization { adapters.isEmpty ? .unavailable : .authorized }
     public func requestAuthorization() async -> SourceAuthorization { await authorizationStatus() }
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
         var items: [UniversalMediaAsset] = [], reports: [LibrarySourceCoverage] = []
+        var batches: [String: [UniversalMediaAsset]] = [:]
         for adapter in adapters {
             try Task.checkCancellation()
+            batches[adapter.source.id] = []
             let auth = await adapter.authorizationStatus()
             guard auth == .authorized || auth == .limited else {
                 reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: "Source access is unavailable")); continue
@@ -89,12 +165,14 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
             do {
                 let batch = try await adapter.enumerateAssets()
                 items.append(contentsOf: batch)
+                batches[adapter.source.id] = Self.uniqueReferences(batch)
                 let warnings = await adapter.enumerationWarnings()
-                reports.append(.init(source: adapter.source, authorization: auth, itemCount: batch.count, error: warnings.isEmpty ? nil : warnings.joined(separator: "\n")))
+                reports.append(.init(source: adapter.source, authorization: auth, itemCount: batches[adapter.source.id]?.count ?? 0, error: warnings.isEmpty ? nil : warnings.joined(separator: "\n")))
             } catch is CancellationError { throw CancellationError() }
             catch { reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: error.localizedDescription)) }
         }
         coverage = reports
+        catalogue = LibrarySourceCatalogue(batches: batches)
         return Self.uniqueReferences(items)
     }
     /// An album or overlapping folder is another view of the same item. Separate
@@ -152,15 +230,14 @@ public struct LibraryReviewGroup: Identifiable, Sendable {
 }
 
 extension UniversalMediaAsset {
-    public func sourceLabel(in sources: [LibrarySource], whatsAppAlbumIDs: Set<String> = []) -> String {
+    public func sourceLabel(in sources: [LibrarySource]) -> String {
         let source = sources.first { $0.id == sourceID }
         switch reference {
         case .photoLibrary:
-            let whatsapp = context?.albums.contains { $0.isWhatsAppNamed || whatsAppAlbumIDs.contains($0.id) } == true
             #if os(Linux)
-            return NSLocalizedString(whatsapp ? "WhatsApp · Photos" : "Photos / iCloud Photos", comment: "Photo source badge")
+            return NSLocalizedString("Photos / iCloud Photos", comment: "Photo source badge")
             #else
-            return L10n.tr(whatsapp ? "WhatsApp · Photos" : "Photos / iCloud Photos")
+            return L10n.tr("Photos / iCloud Photos")
             #endif
         case .file(let url):
             #if os(Linux)
@@ -194,10 +271,6 @@ public struct MediaAlbum: Hashable, Codable, Sendable, Identifiable {
     public let id: String
     public let title: String
     public init(id: String, title: String) { self.id = id; self.title = title }
-    /// An album name is a collection label, not authenticated app provenance.
-    public var isWhatsAppNamed: Bool {
-        title.lowercased().replacingOccurrences(of: " ", with: "").contains("whatsapp")
-    }
 }
 
 public struct MediaContext: Hashable, Codable, Sendable {

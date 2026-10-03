@@ -45,11 +45,6 @@ final class LibraryWorkflowTests: XCTestCase {
         XCTAssertEqual(summary.knownBytes, 10); XCTAssertEqual(summary.unknownSizeCount, 1)
         XCTAssertEqual(summary.personalItems, 1)
     }
-    func testAlbumLabelIsExplicitRatherThanFilenameProvenance() {
-        XCTAssertTrue(MediaAlbum(id: "wa", title: "WhatsApp Images").isWhatsAppNamed)
-        XCTAssertFalse(MediaAlbum(id: "trip", title: "Vacation").isWhatsAppNamed)
-        XCTAssertTrue(asset("IMG-WA0001").context?.albums.isEmpty ?? true)
-    }
     func testUnreliableCaptureTimeIsNotUsedAsEvidence() {
         let date = Date(timeIntervalSince1970: 100)
         let a = asset("a", context: MediaContext(captureDate: date, captureTimeIsReliable: false))
@@ -144,13 +139,132 @@ final class LibraryWorkflowTests: XCTestCase {
         XCTAssertNotEqual(UnifiedLibraryAdapter(adapters: [photos]).source.id, UnifiedLibraryAdapter(adapters: [photos, file]).source.id)
     }
 
-    func testSourceBadgesUseAlbumMembershipAndConnectedFolderInsteadOfFilenameGuessing() {
+    func testSourceBadgesDescribeActualStorageInsteadOfAlbumOrFilenameProvenance() {
         let fakeName = asset("WhatsApp-IMG-001")
         XCTAssertFalse(fakeName.sourceLabel(in: []).contains("WhatsApp"))
         let saved = fakeName.with(context: MediaContext(albums: [.init(id: "assigned", title: "Saved")]))
-        XCTAssertTrue(saved.sourceLabel(in: [], whatsAppAlbumIDs: ["assigned"]).contains("WhatsApp"))
+        XCTAssertEqual(saved.sourceLabel(in: []), fakeName.sourceLabel(in: []))
         let file = fakeName.with(sourceID: "folder", reference: .file(URL(fileURLWithPath: "/Downloads/Trip/photo.jpg")))
         XCTAssertTrue(file.sourceLabel(in: [.init(id: "folder", kind: .folder, displayName: "Downloads")]).contains("Downloads"))
+    }
+
+    func testMasterCheckboxTransitionsThroughPartialAllAndNone() {
+        let sources: [LibrarySource] = [.photos, .init(id: "files", kind: .folder, displayName: "Files")]
+        var choice = LibrarySourceSelection()
+        XCTAssertEqual(choice.state(in: sources, coverage: []), .all)
+        choice.setSelected(false, id: sources[0].id)
+        XCTAssertEqual(choice.state(in: sources, coverage: []), .some)
+        choice.toggleAll(in: sources, coverage: [])
+        XCTAssertEqual(choice.selectedIDs(in: sources, coverage: []), Set(sources.map(\.id)))
+        choice.toggleAll(in: sources, coverage: [])
+        XCTAssertEqual(choice.state(in: sources, coverage: []), .none)
+        choice.toggleAll(in: sources, coverage: [])
+        XCTAssertEqual(choice.state(in: sources, coverage: []), .all)
+    }
+
+    func testSourceChoicesSurviveReloadAndNewSourcesStartSelected() throws {
+        var choice = LibrarySourceSelection(); choice.setSelected(false, id: LibrarySource.photos.id)
+        let restored = try JSONDecoder().decode(LibrarySourceSelection.self, from: JSONEncoder().encode(choice))
+        let added = LibrarySource(id: "new-folder", kind: .folder, displayName: "Downloads")
+        XCTAssertEqual(restored.selectedIDs(in: [.photos, added], coverage: []), [added.id])
+        XCTAssertEqual(restored.excludedIDs, [LibrarySource.photos.id])
+    }
+
+    func testMasterSelectionSkipsUnavailableAccessButIncludesLimitedPhotosAndWarnings() {
+        let sources: [LibrarySource] = [.photos, .init(id: "denied", kind: .folder, displayName: "Denied"),
+            .init(id: "partial", kind: .folder, displayName: "Partial")]
+        let reports: [LibrarySourceCoverage] = [.init(source: sources[0], authorization: .limited, itemCount: 4),
+            .init(source: sources[1], authorization: .denied, itemCount: 0),
+            .init(source: sources[2], authorization: .authorized, itemCount: 1, error: "Some files unreadable")]
+        var choice = LibrarySourceSelection()
+        XCTAssertEqual(choice.selectedIDs(in: sources, coverage: reports), [sources[0].id, sources[2].id])
+        XCTAssertEqual(choice.state(in: sources, coverage: reports), .all)
+        choice.toggleAll(in: sources, coverage: reports)
+        XCTAssertEqual(choice.excludedIDs, [sources[0].id, sources[2].id])
+        XCTAssertEqual(LibrarySourceSelection().state(in: [], coverage: []), .none)
+    }
+
+    func testScanScopeDoesNotEnumerateUncheckedSourcesAndBindsCheckpointIdentity() async throws {
+        let photos = WorkflowSource(source: .photos, cancels: true)
+        let files = LibrarySource(id: "files", kind: .folder, displayName: "Files")
+        let file = WorkflowSource(source: files, items: [asset("a").with(sourceID: files.id)])
+        let adapter = UnifiedLibraryAdapter(adapters: [photos, file], selectedSourceIDs: [files.id])
+        let items = try await adapter.enumerateAssets()
+        let reports = await adapter.coverage
+        XCTAssertEqual(items.map(\.id), ["a"])
+        XCTAssertEqual(reports.map(\.id), [files.id])
+        XCTAssertEqual(adapter.source.id, UnifiedLibraryAdapter(adapters: [file]).source.id)
+        XCTAssertNotEqual(adapter.source.id, UnifiedLibraryAdapter(adapters: [photos, file]).source.id)
+        let empty = UnifiedLibraryAdapter(adapters: [photos, file], selectedSourceIDs: [])
+        let emptyItems = try await empty.enumerateAssets()
+        XCTAssertTrue(emptyItems.isEmpty)
+        let auth = await empty.authorizationStatus(); XCTAssertEqual(auth, .unavailable)
+    }
+
+    func testOverlappingFolderKeepsItemsWithCorrectOwnerWhenOtherFolderIsUnchecked() async throws {
+        let parent = LibrarySource(id: "a-parent", kind: .folder, displayName: "Pictures")
+        let child = LibrarySource(id: "b-child", kind: .folder, displayName: "Holiday")
+        let same = asset("same").with(sourceID: parent.id, reference: .file(URL(fileURLWithPath: "/Pictures/Holiday/a.jpg")))
+        let alias = same.with(sourceID: child.id)
+        let copy = asset("copy").with(sourceID: child.id, reference: .file(URL(fileURLWithPath: "/Pictures/Holiday/b.jpg")))
+        let adapter = UnifiedLibraryAdapter(adapters: [WorkflowSource(source: parent, items: [same]), WorkflowSource(source: child, items: [alias, copy])])
+        let all = try await adapter.enumerateAssets()
+        let catalogue = await adapter.catalogue
+        XCTAssertEqual(all.count, 2)
+        let childOnly = catalogue.assets(in: [parent, child], selectedIDs: [child.id], current: all)
+        XCTAssertEqual(childOnly.map(\.id), [same.id, copy.id])
+        XCTAssertTrue(childOnly.allSatisfy { $0.sourceID == child.id })
+        let fingerprint = try await adapter.exactFingerprint(for: childOnly[0], allowNetwork: false, progress: { _ in })
+        XCTAssertEqual(fingerprint.digest, "same")
+    }
+
+    func testScopedRefreshPreservesUncheckedCatalogueAndManualSelectionButDropsRemovedItems() {
+        let photos = asset("photo").with(sourceID: LibrarySource.photos.id)
+        let files = LibrarySource(id: "files", kind: .folder, displayName: "Files")
+        let removed = asset("removed").with(sourceID: files.id)
+        let added = asset("added").with(sourceID: files.id)
+        var catalogue = LibrarySourceCatalogue(batches: [LibrarySource.photos.id: [photos], files.id: [removed]])
+        var selection = LibrarySelection(ids: [photos.id, removed.id])
+        catalogue.merge(.init(batches: [files.id: [added]]))
+        let all = catalogue.assets(in: [.photos, files], selectedIDs: [LibrarySource.photos.id, files.id])
+        selection.reconcile(with: all)
+        XCTAssertEqual(Set(all.map(\.id)), [photos.id, added.id])
+        XCTAssertEqual(selection.ids, [photos.id])
+        let visible = catalogue.assets(in: [.photos, files], selectedIDs: [files.id], current: all)
+        XCTAssertEqual(selection.hiddenCount(in: visible), 1)
+        XCTAssertTrue(catalogue.assets(in: [.photos, files], selectedIDs: [files.id], current: [photos]).isEmpty)
+    }
+
+    func testPartialScanKeepsMeasuredSizesOutsideScopeAndUpdatesScannedRevisions() {
+        let files = LibrarySource(id: "files", kind: .folder, displayName: "Files")
+        let rawPhoto = asset("photo").with(sourceID: LibrarySource.photos.id)
+        let rawFile = asset("file").with(sourceID: files.id)
+        let measuredPhoto = rawPhoto.with(byteCount: .some(123))
+        let scannedFile = rawFile.with(byteCount: .some(456), modificationDate: .some(Date(timeIntervalSince1970: 100)))
+        let catalogue = LibrarySourceCatalogue(batches: [LibrarySource.photos.id: [rawPhoto], files.id: [scannedFile]])
+        let all = catalogue.assets(in: [.photos, files], selectedIDs: [LibrarySource.photos.id, files.id], current: [scannedFile, measuredPhoto, rawFile])
+        XCTAssertEqual(all.map(\.byteCount), [123, 456])
+        XCTAssertEqual(all.last?.modificationDate, scannedFile.modificationDate)
+    }
+
+    func testThreeThousandItemScopeCountsOverlapsOnceAndPreservesHiddenSelections() {
+        let parent = LibrarySource(id: "files", kind: .folder, displayName: "Pictures")
+        let child = LibrarySource(id: "nested", kind: .fileProvider, displayName: "Cloud")
+        let photos = (0..<1500).map { asset("p-\($0)").with(sourceID: LibrarySource.photos.id) }
+        let files = (0..<1500).map { asset("f-\($0)").with(sourceID: parent.id, reference: .file(URL(fileURLWithPath: "/Pictures/\($0).jpg"))) }
+        let aliases = files.prefix(500).map { $0.with(sourceID: child.id) }
+        let sources: [LibrarySource] = [.photos, parent, child]
+        let catalogue = LibrarySourceCatalogue(batches: [LibrarySource.photos.id: photos, parent.id: files, child.id: aliases])
+        let all = catalogue.assets(in: sources, selectedIDs: Set(sources.map(\.id)))
+        XCTAssertEqual(all.count, 3000)
+        let subset = catalogue.assets(in: sources, selectedIDs: [child.id], current: all)
+        XCTAssertEqual(subset.count, 500)
+        XCTAssertTrue(subset.allSatisfy { $0.sourceID == child.id })
+        let combined = catalogue.assets(in: sources, selectedIDs: [LibrarySource.photos.id, child.id], current: all)
+        XCTAssertEqual(combined.count, 2000)
+        let selection = LibrarySelection(ids: Set(all.map(\.id)))
+        XCTAssertEqual(selection.hiddenCount(in: subset), 2500)
+        XCTAssertEqual(selection.assets(in: all).count, 3000)
     }
 
     func testCombinedReviewKeepsSimilarRelationsAcrossExactGroupsAndHidesRedundantExactOnlyGroups() {

@@ -19872,15 +19872,33 @@
       }
     },
     "%lld items": {
+      "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items"
+          }
+        },
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld öğe"
           }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld éléments"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Elemente"
+          }
         }
-      },
-      "extractionState": "manual"
+      }
     },
     "Selected items: %lld": {
       "localizations": {
@@ -21391,15 +21409,33 @@
       "extractionState": "manual"
     },
     "Not selected": {
+      "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not selected"
+          }
+        },
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Seçili değil"
           }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non sélectionné"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht ausgewählt"
+          }
         }
-      },
-      "extractionState": "manual"
+      }
     },
     "Tap to change selection": {
       "localizations": {
@@ -23124,6 +23160,615 @@
           "stringUnit": {
             "state": "translated",
             "value": "Berechtigungen und WhatsApp-Anleitung"
+          }
+        }
+      }
+    },
+    "%lld sources selected · %lld items": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sources selected · %lld items"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kaynak seçili · %lld öğe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sources sélectionnées · %lld éléments"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Quellen ausgewählt · %lld Elemente"
+          }
+        }
+      }
+    },
+    "Access granted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access granted"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erişim verildi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès autorisé"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugriff erlaubt"
+          }
+        }
+      }
+    },
+    "Access unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access unavailable"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erişim yok"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès indisponible"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Zugriff"
+          }
+        }
+      }
+    },
+    "Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar üzerinden iCloud Drive, iPhone’umda veya başka bir sağlayıcının klasörlerini ekleyin. Seçili kaynaklar arşivinizde birlikte görünür."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez des dossiers depuis iCloud Drive, Sur mon iPhone ou un autre fournisseur dans Fichiers. Les sources sélectionnées s’affichent ensemble dans votre bibliothèque."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fügen Sie über Dateien Ordner aus iCloud Drive, Auf meinem iPhone oder einem anderen Anbieter hinzu. Ausgewählte Quellen erscheinen gemeinsam in Ihrer Mediathek."
+          }
+        }
+      }
+    },
+    "Connect Photos and folders once. Choose which sources to include in each scan.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Photos and folders once. Choose which sources to include in each scan."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğrafları ve klasörleri bir kez bağlayın. Her taramada hangi kaynakların yer alacağını seçin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez Photos et vos dossiers une fois. Choisissez les sources à inclure dans chaque analyse."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinden Sie Fotos und Ordner einmal. Wählen Sie die Quellen für jeden Scan."
+          }
+        }
+      }
+    },
+    "Full Photos access includes iCloud Photos. Limited access shows only the items you approve.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full Photos access includes iCloud Photos. Limited access shows only the items you approve."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tam Fotoğraflar erişimi iCloud Fotoğrafları da kapsar. Sınırlı erişimde yalnızca izin verdiğiniz öğeler görünür."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accès complet à Photos inclut Photos iCloud. L’accès limité n’affiche que les éléments que vous autorisez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voller Zugriff auf Fotos umfasst iCloud-Fotos. Bei eingeschränktem Zugriff werden nur freigegebene Elemente angezeigt."
+          }
+        }
+      }
+    },
+    "Loading item count…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading item count…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öğe sayısı yükleniyor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chargement du nombre d’éléments…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elementanzahl wird geladen…"
+          }
+        }
+      }
+    },
+    "Manage Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage Sources"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynakları yönet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gérer les sources"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellen verwalten"
+          }
+        }
+      }
+    },
+    "Partially selected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partially selected"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kısmen seçili"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partiellement sélectionné"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilweise ausgewählt"
+          }
+        }
+      }
+    },
+    "Permissions & Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions & Sources"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İzinler ve kaynaklar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisations et sources"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungen und Quellen"
+          }
+        }
+      }
+    },
+    "Photos includes iCloud Photos. Files includes the folders you connect.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos includes iCloud Photos. Files includes the folders you connect."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraflar, iCloud Fotoğrafları da kapsar. Dosyalar, bağladığınız klasörleri kapsar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos inclut Photos iCloud. Fichiers inclut les dossiers que vous connectez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos umfasst iCloud-Fotos. Dateien umfasst die verbundenen Ordner."
+          }
+        }
+      }
+    },
+    "Scan Selected Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan Selected Sources"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili kaynakları tara"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyser les sources sélectionnées"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Quellen scannen"
+          }
+        }
+      }
+    },
+    "Scan selected sources to find exact copies and similar photos together.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan selected sources to find exact copies and similar photos together."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyaları ve benzer fotoğrafları birlikte bulmak için seçili kaynakları tarayın."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysez les sources sélectionnées pour trouver les copies exactes et les photos similaires ensemble."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scannen Sie die ausgewählten Quellen, um identische Kopien und ähnliche Fotos gemeinsam zu finden."
+          }
+        }
+      }
+    },
+    "Scanning selected sources…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning selected sources…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili kaynaklar taranıyor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse des sources sélectionnées…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Quellen werden gescannt…"
+          }
+        }
+      }
+    },
+    "Select at least one source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select at least one source"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En az bir kaynak seçin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionnez au moins une source"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mindestens eine Quelle auswählen"
+          }
+        }
+      }
+    },
+    "Selected Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selected Sources"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili kaynaklar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources sélectionnées"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Quellen"
+          }
+        }
+      }
+    },
+    "Selected sources appear together. The same item in overlapping folders is counted once.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selected sources appear together. The same item in overlapping folders is counted once."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçili kaynaklar birlikte gösterilir. İç içe klasörlerdeki aynı öğe bir kez sayılır."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les sources sélectionnées s’affichent ensemble. Un élément présent dans des dossiers qui se chevauchent n’est compté qu’une fois."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Quellen werden gemeinsam angezeigt. Dasselbe Element in überlappenden Ordnern wird einmal gezählt."
+          }
+        }
+      }
+    },
+    "Some items unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some items unavailable"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bazı öğelere erişilemiyor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certains éléments sont indisponibles"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einige Elemente nicht verfügbar"
+          }
+        }
+      }
+    },
+    "Some sources have limited access. Check Source Access.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some sources have limited access. Check Source Access."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bazı kaynaklara erişim sınırlı. Kaynak erişimini kontrol edin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accès à certaines sources est limité. Vérifiez l’accès aux sources."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Zugriff auf einige Quellen ist eingeschränkt. Prüfen Sie den Quellenzugriff."
+          }
+        }
+      }
+    },
+    "Source Access": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source Access"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaynak erişimi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès aux sources"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellenzugriff"
+          }
+        }
+      }
+    },
+    "Tick a source above to show its photos and videos.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tick a source above to show its photos and videos."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğraf ve videoları görmek için yukarıdan bir kaynağı tikleyin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cochez une source ci-dessus pour afficher ses photos et vidéos."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie oben eine Quelle aus, um ihre Fotos und Videos anzuzeigen."
           }
         }
       }

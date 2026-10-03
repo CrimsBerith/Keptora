@@ -2,6 +2,73 @@ import KeptoraCore
 import SwiftUI
 import UIKit
 
+struct MobileScanSourcesSection: View {
+    @EnvironmentObject private var store: MobileKeptoraStore
+    private var masterSymbol: String {
+        switch store.sourceSelectionState {
+        case .none: return "square"
+        case .some: return "minus.square.fill"
+        case .all: return "checkmark.square.fill"
+        }
+    }
+    private var masterValue: LocalizedStringKey {
+        switch store.sourceSelectionState {
+        case .none: return "Not selected"
+        case .some: return "Partially selected"
+        case .all: return "Selected"
+        }
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button { store.toggleAllScanSources() } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: masterSymbol).font(.title3).foregroundStyle(MobileKeptoraDesign.accent)
+                    Text("All Connected Sources").font(.headline)
+                    Spacer(minLength: 0)
+                }.frame(maxWidth: .infinity, minHeight: 48, alignment: .leading).contentShape(Rectangle())
+            }.buttonStyle(.plain)
+                .accessibilityValue(Text(masterValue)).accessibilityIdentifier("sources.selectAll")
+                .disabled(store.sourceControlsDisabled || LibrarySourceSelection().selectedIDs(in: store.connectedSources, coverage: store.coverage).isEmpty)
+            Divider()
+            ForEach(store.connectedSources) { source in
+                let report = store.coverage.first { $0.id == source.id }
+                let available = report == nil || report?.authorization == .authorized || report?.authorization == .limited
+                let selected = store.selectedSourceIDs.contains(source.id)
+                Button { store.toggleScanSource(source.id) } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: selected ? "checkmark.square.fill" : "square")
+                            .font(.title3).foregroundStyle(selected ? MobileKeptoraDesign.accent : Color.secondary)
+                        Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(source.kind == .photos ? String(localized: "Photos / iCloud Photos") : source.displayName).font(.subheadline.weight(.semibold))
+                            if let report {
+                                Text(String(format: String(localized: "%lld items"), report.itemCount))
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text(LocalizedStringKey(report.statusKey)).font(.caption)
+                                    .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
+                            } else { Text("Loading item count…").font(.caption).foregroundStyle(.secondary) }
+                        }
+                        Spacer(minLength: 0)
+                    }.padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 54, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain).disabled(store.sourceControlsDisabled || !available)
+                    .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
+                    .accessibilityIdentifier("sources.source." + source.id)
+            }
+            Divider()
+            if store.selectedSourceIDs.isEmpty {
+                Text("Select at least one source").font(.footnote).foregroundStyle(.secondary)
+                    .padding(.top, 12).accessibilityIdentifier("sources.emptySelection")
+            } else {
+                Text(String(format: String(localized: "%lld sources selected · %lld items"), store.selectedSourceIDs.count, store.scopedAssets.count))
+                    .font(.footnote).foregroundStyle(.secondary).padding(.top, 12).accessibilityIdentifier("sources.summary")
+            }
+            Text("Selected sources appear together. The same item in overlapping folders is counted once.")
+                .font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+        }.padding(14)
+            .background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
 struct MobileSourceLibraryView: View {
     var onChooseFolder: (() -> Void)? = nil
     var isStartupSetup = false
@@ -21,11 +88,10 @@ struct MobileSourceLibraryView: View {
                         Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
                             .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
                         Text("Connect your library").font(.title2.bold())
-                        Text("Approve Photos and connect folders once. Future scans combine every connected source.").foregroundStyle(.secondary)
+                        Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(.secondary)
                         if store.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
                     }
                     sourceSection.disabled(controlsDisabled)
-                    MobileWhatsAppAccessGuide(onChooseFolder: chooseFolder).disabled(controlsDisabled)
                     Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.footnote).foregroundStyle(.secondary)
                     if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(.secondary) }
                     privacyStrip
@@ -87,19 +153,22 @@ struct MobileSourceLibraryView: View {
             }
             .padding(.leading, 4)
 
-            Button { Task { await store.connectPhotos() } } label: {
-                sourceCard(
-                    title: "Photos",
-                    subtitle: photosConnected ? Text("Connected") : Text("Photos and videos on this device"),
-                    image: "photo.on.rectangle.angled",
-                    selected: photosConnected,
-                    tint: MobileKeptoraDesign.coral
-                )
+            if !photosConnected {
+                Button { Task { await store.connectPhotos() } } label: {
+                    sourceCard(
+                        title: "Photos",
+                        subtitle: photosConnected ? Text("Connected") : Text("Photos and videos on this device"),
+                        image: "photo.on.rectangle.angled",
+                        selected: photosConnected,
+                        tint: MobileKeptoraDesign.coral
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("library.source.photos")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("library.source.photos")
+            if !store.connectedSources.isEmpty { MobileScanSourcesSection() }
 
-            Text("Full Photos access includes iCloud Photos and WhatsApp media saved to Photos. Limited access shows only the items you approve.").font(.footnote).foregroundStyle(.secondary)
+            Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.").font(.footnote).foregroundStyle(.secondary)
             if store.authorization == .limited, photosConnected {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
@@ -205,7 +274,7 @@ struct MobileSourceLibraryView: View {
                 )
             }
 
-            Text("Connected sources are scanned together. Add folders from iCloud Drive, On My iPhone, or another provider in Files once; keep them connected for future scans.")
+            Text("Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library.")
                 .font(.footnote).foregroundStyle(.secondary)
             Text("Cloud providers may download files according to their own settings.").font(.footnote).foregroundStyle(.secondary)
             ForEach(store.connectedFolders) { folder in
@@ -330,33 +399,5 @@ struct MobileSourceLibraryView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(MobileKeptoraDesign.accent.opacity(0.18), lineWidth: 1)
         }
-    }
-}
-
-struct MobileWhatsAppAccessGuide: View {
-    let onChooseFolder: () -> Void
-    @State private var cannotOpenWhatsApp = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("WhatsApp storage & chat media", systemImage: "bubble.left.and.bubble.right").font(.headline)
-            Text("Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.")
-            Text("To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.")
-            Button("Open WhatsApp") {
-                guard let url = URL(string: "whatsapp://") else { return }
-                UIApplication.shared.open(url, options: [:]) { opened in
-                    Task { @MainActor in cannotOpenWhatsApp = !opened }
-                }
-            }.frame(minHeight: 44).accessibilityIdentifier("ios.whatsapp.open")
-            Text("To view chat media here: in WhatsApp, export the chat with media, save it to Files, extract the ZIP, then connect the extracted folder. Keptora displays the exported photos and videos.")
-            Button("Choose an Exported Folder", action: onChooseFolder).frame(minHeight: 44)
-                .accessibilityIdentifier("ios.whatsapp.exportedFolder")
-            Text("Removing exported or saved copies does not free the original WhatsApp chat storage.").font(.footnote).foregroundStyle(.secondary)
-        }
-        .font(.subheadline).padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
-        .alert("WhatsApp could not be opened", isPresented: $cannotOpenWhatsApp) {
-            Button("OK", role: .cancel) { }
-        } message: { Text("Open WhatsApp manually if it is installed on this device.") }
     }
 }

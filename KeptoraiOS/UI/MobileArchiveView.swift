@@ -29,7 +29,7 @@ struct MobileLibraryView: View {
 
     private var visible: [UniversalMediaAsset] {
         let groupedIDs = groupedResults ? Set(store.reviewGroups.flatMap { $0.assets.map(\.id) }) : Set<String>()
-        return store.assets.filter { asset in
+        return store.scopedAssets.filter { asset in
             (!groupedResults || groupedIDs.contains(asset.id)) &&
             (media == 0 || (media == 1 ? asset.mediaKind == .image : asset.mediaKind == .video)) &&
             (albumID.isEmpty || asset.context?.albums.contains { $0.id == albumID } == true) &&
@@ -76,9 +76,11 @@ struct MobileLibraryView: View {
                             }
                         } else if store.isLoadingCatalogue && store.assets.isEmpty {
                             ProgressView("Loading your library…").frame(maxWidth: .infinity, minHeight: 180)
+                        } else if store.selectedSourceIDs.isEmpty {
+                            ContentUnavailableView("Select at least one source", systemImage: "checklist", description: Text("Tick a source above to show its photos and videos."))
                         } else if groupedResults {
                             if store.reviewGroups.isEmpty {
-                                ContentUnavailableView("No groups to review", systemImage: "rectangle.stack", description: Text(store.scanState == .completed ? LocalizedStringKey("No groups found in accessible items.") : LocalizedStringKey("Scan all connected sources to find exact copies and similar photos together.")))
+                                ContentUnavailableView("No groups to review", systemImage: "rectangle.stack", description: Text(store.scanState == .completed ? LocalizedStringKey("No groups found in accessible items.") : LocalizedStringKey("Scan selected sources to find exact copies and similar photos together.")))
                             }
                             ForEach(store.reviewGroups) { group in
                                 let items = group.assets.filter { item in visible.contains { $0.id == item.id } }
@@ -167,6 +169,7 @@ struct MobileLibraryView: View {
                 }.navigationTitle("Date Range").toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dateFilters = false } } }
             }
         }
+        .onChange(of: store.scanSourceSelection) { _, _ in groupedResults = false; albumID = ""; media = 0; search = ""; dateRangeEnabled = false; favouritesOnly = false; largestFirst = false; dragStart = nil }
         .onChange(of: store.connectedFolders) { _, _ in albumID = ""; media = 0; search = ""; dateRangeEnabled = false; favouritesOnly = false }
         .onChange(of: store.source) { _, _ in undoSelection = nil; dragStart = nil; selecting = false; dateRangeEnabled = false; albumID = ""; search = "" }
         .onChange(of: store.libraryCollectionIDs) { _, _ in albumID = ""; search = ""; media = 0; favouritesOnly = false; dateRangeEnabled = false; largestFirst = false }
@@ -200,8 +203,9 @@ struct MobileLibraryView: View {
                 if store.isLoadingCatalogue { ProgressView() }
                 Text(visible.count.formatted()).monospacedDigit().foregroundStyle(.secondary)
             }
-            Button("Sources") { sources = true }.font(.footnote).frame(minHeight: 44)
-            DisclosureGroup("Scan Coverage") {
+            MobileScanSourcesSection()
+            Button("Manage Sources") { sources = true }.font(.footnote).frame(minHeight: 44)
+            DisclosureGroup("Source Access") {
             ForEach(store.coverage) { report in
                 HStack(alignment: .top) {
                     Image(systemName: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
@@ -212,19 +216,19 @@ struct MobileLibraryView: View {
                 if report.error != nil { Text("Some items in this source are unavailable. Reconnect or check access.").font(.caption).foregroundStyle(.secondary) }
             }
             ForEach(Array(store.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).font(.caption).foregroundStyle(.orange) }
-            Text("Photos includes iCloud Photos and saved WhatsApp albums. Files includes the folders you connect. Private chat storage is excluded.").font(.caption).foregroundStyle(.secondary)
+            Text("Photos includes iCloud Photos. Files includes the folders you connect.").font(.caption).foregroundStyle(.secondary)
             }
             Text("Connected sources only. Add Photos and folders in Sources.").font(.caption).foregroundStyle(.secondary)
             if store.coverage.contains(where: { $0.error != nil }) || !store.connectionErrors.isEmpty {
-                Label("Some sources were not fully scanned. Check Scan Coverage.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
+                Label("Some sources have limited access. Check Source Access.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
             }
             HStack {
                 if store.scanState.isScanning || store.isAnalyzing {
                     ProgressView()
                     Button("Cancel Scan") { store.cancelScan() }
                 } else {
-                    Button("Scan All Sources") { store.startScan() }.buttonStyle(.borderedProminent).accessibilityIdentifier("archive.scanAll")
-                    Button("Include Cloud Originals") { cloudScan = true }.font(.footnote)
+                    Button("Scan Selected Sources") { store.startScan() }.buttonStyle(.borderedProminent).accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
+                    Button("Include Cloud Originals") { cloudScan = true }.font(.footnote).disabled(!store.canScanSelectedSources)
                 }
             }.disabled(store.isCleaningUp || store.isLoadingCatalogue)
             if case .scanning(let processed, let total, let current) = store.scanState {
@@ -438,38 +442,20 @@ struct MobileSelectionReviewSheet: View {
 
 struct MobileCleanupHubView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
-    @State private var whatsAppAlbumIDs: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs") ?? [])
-    @State private var showGuide = false
-    @State private var pendingFolderPicker = false
-    private var whatsAppAssets: [UniversalMediaAsset] {
-        store.assets.filter { item in item.context?.albums.contains { $0.isWhatsAppNamed || whatsAppAlbumIDs.contains($0.id) } == true }
-    }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Make space for your next moment.").font(.title.bold())
                 Text("Browse collections, compare suggestions, and choose what to remove.").foregroundStyle(.secondary)
-                collection("WhatsApp Media", icon: "message", items: whatsAppAssets)
-                Text("This collection uses album membership. Removing a saved copy from Photos does not remove it from WhatsApp chats.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                Menu("Choose WhatsApp Albums") {
-                    ForEach(store.albums) { album in
-                        Button {
-                            if !whatsAppAlbumIDs.insert(album.id).inserted { whatsAppAlbumIDs.remove(album.id) }
-                            UserDefaults.standard.set(Array(whatsAppAlbumIDs), forKey: "Keptora.WhatsAppAlbumIDs")
-                        } label: { Label(album.title, systemImage: whatsAppAlbumIDs.contains(album.id) ? "checkmark" : "square") }
-                    }
-                    if store.albums.isEmpty { Text("Connect Photos to choose an album.") }
-                }.frame(minHeight: 44)
-                HStack {
-                    Button("Select in Library") { store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionSortBySize = false; store.libraryCollectionKind = nil; store.selectedTab = .library }
-                    Spacer()
-                    Button("WhatsApp Storage Guide") { showGuide = true }
-                }.font(.footnote).frame(minHeight: 44)
-                collection("Screenshots", icon: "viewfinder", items: store.assets.filter { $0.context?.isScreenshot == true })
-                collection("Videos by Size", icon: "video", items: store.assets.filter { $0.mediaKind == .video }.sorted { ($0.byteCount ?? 0) > ($1.byteCount ?? 0) })
-                if store.assets.contains(where: { $0.mediaKind == .video && $0.byteCount == nil }) { Text("Items with unknown size appear after measured items.").font(.footnote).foregroundStyle(.secondary) }
-                collection("Live Photos", icon: "livephoto", items: store.assets.filter { $0.context?.isLivePhoto == true })
+                if store.connectedSources.isEmpty {
+                    NavigationLink { MobileSourceLibraryView() } label: {
+                        Label("Connect your library", systemImage: "folder.badge.plus")
+                    }.buttonStyle(.borderedProminent)
+                } else { MobileScanSourcesSection() }
+                collection("Screenshots", icon: "viewfinder", items: store.scopedAssets.filter { $0.context?.isScreenshot == true })
+                collection("Videos by Size", icon: "video", items: store.scopedAssets.filter { $0.mediaKind == .video }.sorted { ($0.byteCount ?? 0) > ($1.byteCount ?? 0) })
+                if store.scopedAssets.contains(where: { $0.mediaKind == .video && $0.byteCount == nil }) { Text("Items with unknown size appear after measured items.").font(.footnote).foregroundStyle(.secondary) }
+                collection("Live Photos", icon: "livephoto", items: store.scopedAssets.filter { $0.context?.isLivePhoto == true })
                 NavigationLink {
                     MobileReviewView()
                 } label: {
@@ -480,7 +466,7 @@ struct MobileCleanupHubView: View {
                     Button("Cancel Analysis") { store.cancelScan() }.frame(minHeight: 44)
                 } else {
                     Button("Find Duplicates & Similar Items") { store.startScan() }
-                        .frame(maxWidth: .infinity).buttonStyle(MobilePrimaryButtonStyle()).disabled(store.source == .none || store.isCleaningUp)
+                        .frame(maxWidth: .infinity).buttonStyle(MobilePrimaryButtonStyle()).disabled(!store.canScanSelectedSources)
                 }
                 if store.skippedSimilarityPreviews > 0 {
                     Text(String(format: String(localized: "%lld previews could not be analyzed. Results cover only accessible items."), store.skippedSimilarityPreviews)).font(.footnote).foregroundStyle(.secondary)
@@ -492,14 +478,6 @@ struct MobileCleanupHubView: View {
             }.padding(18)
         }
         .background(MobileKeptoraDesign.canvas).navigationTitle("Cleanup")
-        .sheet(isPresented: $showGuide, onDismiss: { if pendingFolderPicker { pendingFolderPicker = false; store.present(.filePicker) } }) {
-            NavigationStack {
-                ScrollView {
-                    MobileWhatsAppAccessGuide(onChooseFolder: { pendingFolderPicker = true; showGuide = false }).padding()
-                }.navigationTitle("WhatsApp Storage Guide")
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showGuide = false } } }
-            }
-        }
     }
     private func collection(_ title: String, icon: String, items: [UniversalMediaAsset]) -> some View {
         Button { store.openCollection(items, title: String(localized: String.LocalizationValue(title)), sortBySize: title == "Videos by Size", kind: title) } label: {

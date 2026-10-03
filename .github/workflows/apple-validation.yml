@@ -54,11 +54,11 @@ jobs:
             -derivedDataPath Build/CI -resultBundlePath Build/iPhoneTests.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             -only-testing:KeptoraiOSTests \
-            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testStartupSetupCanContinueWithDeniedPhotosAndExplainsWhatsAppAccess \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCombinedGroupsPreserveSelectionWhenReturningToAllItems \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testScanAllSourcesFindsCopiesInRealSimulatorPhotos \
-            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testWhatsAppGuideExplainsSavedCopiesAndChatStorage \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSourceCheckboxesPreserveManualSelectionAndPersist \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
             test

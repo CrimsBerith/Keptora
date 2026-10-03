@@ -3,12 +3,73 @@ import KeptoraCore
 import Photos
 import SwiftUI
 
+struct MacScanSourcesSection: View {
+    @EnvironmentObject private var archive: MacArchiveModel
+    private var masterSymbol: String {
+        switch archive.sourceSelectionState {
+        case .none: return "square"
+        case .some: return "minus.square.fill"
+        case .all: return "checkmark.square.fill"
+        }
+    }
+    private var masterValue: LocalizedStringKey {
+        switch archive.sourceSelectionState {
+        case .none: return "Not selected"
+        case .some: return "Partially selected"
+        case .all: return "Selected"
+        }
+    }
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                Button { archive.toggleAllScanSources() } label: {
+                    Label("All Connected Sources", systemImage: masterSymbol).font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityValue(Text(masterValue)).accessibilityIdentifier("sources.selectAll")
+                    .disabled(archive.sourceControlsDisabled || LibrarySourceSelection().selectedIDs(in: archive.connectedSources, coverage: archive.coverage).isEmpty)
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(archive.connectedSources) { source in
+                            let report = archive.coverage.first { $0.id == source.id }
+                            let available = report == nil || report?.authorization == .authorized || report?.authorization == .limited
+                            let selected = archive.selectedSourceIDs.contains(source.id)
+                            Button { archive.toggleScanSource(source.id) } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: selected ? "checkmark.square.fill" : "square").foregroundStyle(selected ? KeptoraDesign.accent : Color.secondary)
+                                    Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
+                                    Text(source.kind == .photos ? String(localized: "Photos / iCloud Photos") : source.displayName)
+                                    Spacer()
+                                    if let report {
+                                        Text(String(format: String(localized: "%lld items"), report.itemCount)).monospacedDigit().foregroundStyle(.secondary)
+                                        Text(LocalizedStringKey(report.statusKey)).font(.caption)
+                                            .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
+                                    } else { Text("Loading item count…").foregroundStyle(.secondary) }
+                                }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
+                            }.buttonStyle(.plain).disabled(archive.sourceControlsDisabled || !available)
+                                .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
+                                .accessibilityIdentifier("sources.source." + source.id)
+                        }
+                    }
+                }.frame(height: min(CGFloat(archive.connectedSources.count) * 38, 160))
+                Divider()
+                if archive.selectedSourceIDs.isEmpty {
+                    Text("Select at least one source").foregroundStyle(.secondary).accessibilityIdentifier("sources.emptySelection")
+                } else {
+                    Text(String(format: String(localized: "%lld sources selected · %lld items"), archive.selectedSourceIDs.count, archive.scopedAssets.count))
+                        .foregroundStyle(.secondary).accessibilityIdentifier("sources.summary")
+                }
+                Text("Selected sources appear together. The same item in overlapping folders is counted once.").font(.caption).foregroundStyle(.secondary)
+            }.padding(6).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
 struct MacSourceSetupView: View {
     var isStartupSetup = false
     @EnvironmentObject private var archive: MacArchiveModel
     @Environment(\.dismiss) private var dismiss
     @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
-    @State private var cannotOpenWhatsApp = false
     private var controlsDisabled: Bool { archive.busy || archive.analyzing || archive.loading || archive.isRequestingPhotosAccess }
 
     var body: some View {
@@ -18,12 +79,13 @@ struct MacSourceSetupView: View {
                     Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
                         .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
                     Text("Connect your library").font(.title.bold())
-                    Text("Approve Photos and connect folders once. Future scans combine every connected source.").foregroundStyle(.secondary)
+                    Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(.secondary)
                     if archive.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
+                    if !archive.connectedSources.isEmpty { MacScanSourcesSection() }
                     GroupBox {
                         VStack(alignment: .leading, spacing: 12) {
                             Label("Photos", systemImage: "photo.on.rectangle.angled").font(.headline)
-                            Text("Full Photos access includes iCloud Photos and WhatsApp media saved to Photos. Limited access shows only the items you approve.")
+                            Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.")
                             if archive.photosConnected { Label("Photos Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
                             else if archive.authorization == .notDetermined {
                                 Button("Connect Photos") { archive.connectPhotos() }
@@ -44,19 +106,6 @@ struct MacSourceSetupView: View {
                             Text("Cloud providers may download files according to their own settings.").font(.callout).foregroundStyle(.secondary)
                             ForEach(archive.connectedFolders) { folder in Label(folder.displayName, systemImage: "checkmark.circle") }
                             Button("Add Folders…") { archive.chooseFolder() }.accessibilityIdentifier("mac.sourceSetup.folders")
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    GroupBox {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label("WhatsApp storage & chat media", systemImage: "bubble.left.and.bubble.right").font(.headline)
-                            Text("Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage.")
-                            Text("To manage media kept inside WhatsApp, open WhatsApp → Settings → Storage and Data → Manage Storage.")
-                            Button("Open WhatsApp") {
-                                if let url = URL(string: "whatsapp://") { cannotOpenWhatsApp = !NSWorkspace.shared.open(url) }
-                            }
-                            Text("Export the chat with media on your phone, transfer it to your Mac, extract the ZIP, then connect the extracted folder to view its photos and videos.")
-                            Button("Choose an Exported Folder") { archive.chooseFolder() }
-                            Text("Removing exported or saved copies does not free the original WhatsApp chat storage.").font(.callout).foregroundStyle(.secondary)
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                     Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.callout).foregroundStyle(.secondary)
@@ -82,13 +131,9 @@ struct MacSourceSetupView: View {
                 await archive.requestPhotosAccess(showError: false)
             }
         }
-        .alert(cannotOpenWhatsApp ? LocalizedStringKey("WhatsApp could not be opened") : LocalizedStringKey("Something went wrong"),
-               isPresented: Binding(get: { cannotOpenWhatsApp || archive.error != nil }, set: { if !$0 { cannotOpenWhatsApp = false; archive.error = nil } })) {
-            Button("OK", role: .cancel) { cannotOpenWhatsApp = false; archive.error = nil }
-        } message: {
-            if cannotOpenWhatsApp { Text("Open WhatsApp manually if it is installed on this device.") }
-            else { Text(archive.error ?? "") }
-        }
+        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
+            Button("OK", role: .cancel) { archive.error = nil }
+        } message: { Text(archive.error ?? "") }
     }
 }
 
@@ -120,19 +165,42 @@ final class MacArchiveModel: ObservableObject {
     @Published var connectedFolders: [LibrarySource] = []
     @Published var photosConnected = false
     @Published var skippedCloudItems = 0
+    @Published private(set) var scanSourceSelection = LibrarySourceSelection(excludedIDs: Set(UserDefaults.standard.stringArray(forKey: AppStorageKeys.macExcludedScanSources) ?? []))
+    private var sourceCatalogue = LibrarySourceCatalogue()
     private var folderAdapters: [String: FolderSourceAdapter] = [:]
     private var folderScopes: [String: URL] = [:]
     private var bookmarks: [String: Data] = [:]
     var connectedSources: [LibrarySource] { (photosConnected ? [.photos] : []) + connectedFolders }
-    var adapter: UnifiedLibraryAdapter {
+    var selectedSourceIDs: Set<String> { scanSourceSelection.selectedIDs(in: connectedSources, coverage: coverage) }
+    var scopedAssets: [UniversalMediaAsset] { sourceCatalogue.assets(in: connectedSources, selectedIDs: selectedSourceIDs, current: assets) }
+    var sourceControlsDisabled: Bool { busy || loading || analyzing || isRequestingPhotosAccess }
+    var canScanSelectedSources: Bool { !sourceControlsDisabled && !selectedSourceIDs.isEmpty }
+    var sourceSelectionState: LibrarySourceSelection.State { scanSourceSelection.state(in: connectedSources, coverage: coverage) }
+    func toggleScanSource(_ id: String) {
+        guard !sourceControlsDisabled, LibrarySourceSelection().selectedIDs(in: connectedSources, coverage: coverage).contains(id) else { return }
+        scanSourceSelection.setSelected(!selectedSourceIDs.contains(id), id: id)
+        scanSourcesChanged()
+    }
+    func toggleAllScanSources() {
+        guard !sourceControlsDisabled else { return }
+        scanSourceSelection.toggleAll(in: connectedSources, coverage: coverage)
+        scanSourcesChanged()
+    }
+    private func scanSourcesChanged() {
+        UserDefaults.standard.set(Array(scanSourceSelection.excludedIDs).sorted(), forKey: AppStorageKeys.macExcludedScanSources)
+        exact = []; similar = []; similarVideos = []; skippedCloudItems = 0; skippedPreviews = 0
+    }
+    private var connectedAdapters: [any SourceAdapter] {
         var values: [any SourceAdapter] = []
         if photosConnected { values.append(photos) }
         values.append(contentsOf: connectedFolders.compactMap { folderAdapters[$0.id] })
-        return UnifiedLibraryAdapter(adapters: values)
+        return values
     }
+    var adapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters) }
+    private var scanAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters, selectedSourceIDs: selectedSourceIDs) }
     var reviewGroups: [LibraryReviewGroup] { LibraryReviewGroup.combined(exact: exact, similar: similar + similarVideos) }
     func sourceLabel(_ item: UniversalMediaAsset) -> String {
-        item.sourceLabel(in: connectedSources, whatsAppAlbumIDs: Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs.Mac") ?? []))
+        item.sourceLabel(in: connectedSources)
     }
     @Published var similar: [UniversalSimilarityGroup] = []
     @Published var status: String?
@@ -175,7 +243,7 @@ final class MacArchiveModel: ObservableObject {
     var selected: [UniversalMediaAsset] { assets.filter { selection.contains($0.id) } }
     var albums: [MediaAlbum] {
         var values: [String: MediaAlbum] = [:]
-        for asset in assets { for album in asset.context?.albums ?? [] { values[album.id] = album } }
+        for asset in scopedAssets { for album in asset.context?.albums ?? [] { values[album.id] = album } }
         return values.values.sorted { $0.title < $1.title }
     }
     func restoreConnections() async {
@@ -273,6 +341,7 @@ final class MacArchiveModel: ObservableObject {
                 let catalogue = try await adapter.enumerateAssets()
                 guard !Task.isCancelled, generation == current else { return }
                 coverage = await adapter.coverage
+                sourceCatalogue = await adapter.catalogue
                 assets = catalogue; reconcileSelection()
                 // Metadata or membership changes invalidate prior analysis.
                 exact = []; similar = []; similarVideos = []
@@ -294,10 +363,11 @@ final class MacArchiveModel: ObservableObject {
         }
     }
     func analyze(allowNetwork: Bool = false) {
-        guard !busy, !loading, !analyzing, sourceReady else { return }
-        analyzing = true; status = String(localized: "Scanning all connected sources…")
-        analysisProcessed = 0; analysisTotal = assets.count
-        let adapter = self.adapter
+        guard canScanSelectedSources else { return }
+        analyzing = true; status = String(localized: "Scanning selected sources…")
+        analysisProcessed = 0; analysisTotal = scopedAssets.count
+        let adapter = scanAdapter
+        exact = []; similar = []; similarVideos = []
         task = Task {
             defer { analyzing = false; status = nil }
             do {
@@ -305,15 +375,23 @@ final class MacArchiveModel: ObservableObject {
                     Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
                 }
                 try Task.checkCancellation()
-                assets = result.assets; exact = result.groups; skippedCloudItems = result.skippedNetwork
-                coverage = await adapter.coverage; reconcileSelection()
+                sourceCatalogue.merge(await adapter.catalogue)
+                let scanned = result.assets.map { asset in
+                    guard let fingerprint = result.fingerprintsByAssetID[asset.id] else { return asset }
+                    return asset.with(byteCount: .some(fingerprint.byteCount))
+                }
+                assets = sourceCatalogue.assets(in: connectedSources, selectedIDs: Set(connectedSources.map(\.id)), current: scanned + assets)
+                exact = result.groups; skippedCloudItems = result.skippedNetwork
+                let reports = await adapter.coverage
+                coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
+                reconcileSelection()
                 status = String(localized: "Comparing images and capture details…")
-                similar = try await analyzer.analyze(assets: assets, provider: adapter, allowNetwork: allowNetwork, maximumAssets: assets.count) { [weak self] done, total in
+                similar = try await analyzer.analyze(assets: result.assets, provider: adapter, allowNetwork: allowNetwork, maximumAssets: result.assets.count) { [weak self] done, total in
                     Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
                 }
                 skippedPreviews = await analyzer.skippedPreviewCount
                 status = String(localized: "Comparing videos…")
-                similarVideos = try await VideoSimilarityAnalyzer().analyze(assets: assets.filter { $0.mediaKind == .video }, provider: adapter, allowNetwork: allowNetwork) { [weak self] done, total in
+                similarVideos = try await VideoSimilarityAnalyzer().analyze(assets: result.assets.filter { $0.mediaKind == .video }, provider: adapter, allowNetwork: allowNetwork) { [weak self] done, total in
                     Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
                 }
                 try Task.checkCancellation()
@@ -401,8 +479,6 @@ struct MacArchiveView: View {
     @State private var cloudScan = false
     @State private var media = 0
     @State private var albumID = ""
-    @State private var whatsapp = false
-    @State private var whatsappAlbumIDs: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs.Mac") ?? [])
     @State private var comparisonGroup: UniversalSimilarityGroup?
     @State private var showPlan = false
     @State private var inspected: UniversalMediaAsset?
@@ -411,11 +487,10 @@ struct MacArchiveView: View {
     @State private var showAccessGuide = false
     private var visible: [UniversalMediaAsset] {
         let groupedIDs = groupedResults ? Set(archive.reviewGroups.flatMap { $0.assets.map(\.id) }) : Set<String>()
-        return archive.assets.filter { item in
+        return archive.scopedAssets.filter { item in
             (!groupedResults || groupedIDs.contains(item.id)) &&
             (media == 0 || (media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (albumID.isEmpty || item.context?.albums.contains { $0.id == albumID } == true) &&
-            (!whatsapp || item.context?.albums.contains { $0.isWhatsAppNamed || whatsappAlbumIDs.contains($0.id) } == true) &&
             (comparisonGroup == nil || comparisonGroup!.assets.contains { $0.id == item.id }) &&
             (search.isEmpty || item.displayName.localizedCaseInsensitiveContains(search))
         }.sorted { ($0.context?.captureDate ?? $0.creationDate ?? .distantPast) > ($1.context?.captureDate ?? $1.creationDate ?? .distantPast) }
@@ -425,18 +500,19 @@ struct MacArchiveView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading) {
                     Text("All Photos & Videos").font(.title2.bold())
-                    Text(archive.sourceName).foregroundStyle(.secondary)
+                    Text(archive.sourceSelectionState == .all ? LocalizedStringKey("All Connected Sources") : LocalizedStringKey("Selected Sources")).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button(archive.photosConnected ? LocalizedStringKey("Photos Connected") : LocalizedStringKey("Connect Photos")) { archive.connectPhotos() }
                 Button("Add Folders…") { archive.chooseFolder() }
                 Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise") }.help("Refresh Library")
             }.padding(20).disabled(archive.busy || archive.analyzing)
-            DisclosureGroup("Sources") {
+            if !archive.connectedSources.isEmpty { MacScanSourcesSection().padding(.horizontal, 20).padding(.bottom, 12) }
+            DisclosureGroup("Source Access") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Photos includes iCloud Photos and saved WhatsApp albums. Files includes the folders you connect. Private chat storage is excluded.").font(.callout).foregroundStyle(.secondary)
+                    Text("Photos includes iCloud Photos. Files includes the folders you connect.").font(.callout).foregroundStyle(.secondary)
                     Text("Cloud providers may download files according to their own settings.").font(.caption).foregroundStyle(.secondary)
-                    Button("Permissions & WhatsApp Guide") { showAccessGuide = true }
+                    Button("Permissions & Sources") { showAccessGuide = true }
                     ForEach(archive.coverage) { report in
                         HStack {
                             Label(report.source.displayName, systemImage: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
@@ -452,7 +528,7 @@ struct MacArchiveView: View {
             }.padding(.horizontal, 20).padding(.bottom, 12).disabled(archive.busy || archive.loading || archive.analyzing)
             Text("Connected sources only. Add Photos and folders in Sources.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
             if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
-                Label("Some sources were not fully scanned. Check Scan Coverage.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange).padding(12)
+                Label("Some sources have limited access. Check Source Access.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange).padding(12)
             }
             Divider()
             if archive.assets.isEmpty && !archive.loading {
@@ -464,20 +540,15 @@ struct MacArchiveView: View {
             } else {
                 filters
                 if archive.loading { ProgressView("Loading your library…").padding() }
+                if archive.selectedSourceIDs.isEmpty {
+                    Text("Select at least one source").font(.headline).padding()
+                    Text("Tick a source above to show its photos and videos.").foregroundStyle(.secondary)
+                }
                 if archive.authorization == .limited {
                     Text("Limited Photos access. Keptora can only show the items you allow.").font(.callout).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
                 if archive.skippedPreviews > 0 {
                     Text(String(format: String(localized: "%lld previews could not be analyzed. Results cover only accessible items."), archive.skippedPreviews)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
-                }
-                if whatsapp {
-                    Text("This collection uses album membership. Removing a saved copy from Photos does not remove it from WhatsApp chats.").font(.callout).foregroundStyle(.secondary).padding(.horizontal, 20)
-                    Menu("Choose WhatsApp Albums") {
-                        ForEach(archive.albums) { album in Button {
-                            if !whatsappAlbumIDs.insert(album.id).inserted { whatsappAlbumIDs.remove(album.id) }
-                            UserDefaults.standard.set(Array(whatsappAlbumIDs), forKey: "Keptora.WhatsAppAlbumIDs.Mac")
-                        } label: { Label(album.title, systemImage: whatsappAlbumIDs.contains(album.id) ? "checkmark" : "square") } }
-                    }.padding(8)
                 }
                 if archive.skippedCloudItems > 0 {
                     Text(String(format: String(localized: "%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
@@ -486,7 +557,7 @@ struct MacArchiveView: View {
                     .pickerStyle(.segmented).frame(maxWidth: 400).padding(12)
                 ScrollView {
                     if groupedResults {
-                        if archive.reviewGroups.isEmpty { Text("Scan all connected sources to find exact copies and similar photos together.").foregroundStyle(.secondary).padding(20) }
+                        if archive.reviewGroups.isEmpty { Text("Scan selected sources to find exact copies and similar photos together.").foregroundStyle(.secondary).padding(20) }
                         LazyVStack(alignment: .leading, spacing: 16) {
                             ForEach(archive.reviewGroups) { group in
                                 let items = group.assets.filter { item in visible.contains { $0.id == item.id } }
@@ -547,7 +618,8 @@ struct MacArchiveView: View {
         .confirmationDialog("Download iCloud originals?", isPresented: $cloudScan) {
             Button("Download and Scan") { archive.analyze(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
-        .onChange(of: archive.connectedFolders) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = ""; whatsapp = false }
+        .onChange(of: archive.connectedFolders) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.scanSourceSelection) { _ in comparisonGroup = nil; groupedResults = false; albumID = ""; media = 0; search = "" }
         .onChange(of: archive.sourceName) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = ""; undoIDs = nil }
     }
     private func archiveCell(_ item: UniversalMediaAsset, suggestedKeeper: Bool = false) -> some View {
@@ -580,11 +652,10 @@ struct MacArchiveView: View {
             HStack {
                 Picker("Media type", selection: $media) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }.pickerStyle(.segmented).frame(maxWidth: 240)
                 Picker("Album", selection: $albumID) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }.frame(maxWidth: 220)
-                Toggle("WhatsApp Media", isOn: $whatsapp).toggleStyle(.button)
                 TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
             }
             HStack {
-                Button("Reset Filters") { media = 0; albumID = ""; whatsapp = false; search = ""; comparisonGroup = nil }
+                Button("Reset Filters") { media = 0; albumID = ""; search = ""; comparisonGroup = nil }
                 Spacer()
                 if archive.analyzing {
                     ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1))).frame(maxWidth: 200)
@@ -592,8 +663,8 @@ struct MacArchiveView: View {
                     Button("Cancel Scan") { archive.cancelAnalysis() }
                 }
                 else {
-                    Button("Scan All Sources") { archive.analyze() }.accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.sourceReady || archive.loading)
-                    Button("Include Cloud Originals") { cloudScan = true }.disabled(!archive.sourceReady || archive.loading)
+                    Button("Scan Selected Sources") { archive.analyze() }.accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
+                    Button("Include Cloud Originals") { cloudScan = true }.disabled(!archive.canScanSelectedSources)
                 }
             }
         }.padding(16).disabled(archive.busy)

@@ -129,21 +129,51 @@ final class MobileKeptoraStore: ObservableObject {
     @Published private(set) var connectedFolders: [LibrarySource] = []
     @Published private(set) var coverage: [LibrarySourceCoverage] = []
     @Published private(set) var connectionErrors: [String] = []
+    @Published private(set) var scanSourceSelection = LibrarySourceSelection(excludedIDs: Set(UserDefaults.standard.stringArray(forKey: AppStorageKeys.iOSExcludedScanSources) ?? []))
+    private var sourceCatalogue = LibrarySourceCatalogue()
     private var folderAdapters: [String: FolderSourceAdapter] = [:]
     private var folderScopes: [String: URL] = [:]
     private var folderBookmarks: [String: Data] = [:]
     private var photosConnected = false
     var connectedSources: [LibrarySource] { (photosConnected ? [.photos] : []) + connectedFolders }
-    var libraryTitle: String { String(localized: "All Connected Sources") }
-    var unifiedAdapter: UnifiedLibraryAdapter {
+    var libraryTitle: String { sourceSelectionState == .all ? String(localized: "All Connected Sources") : String(localized: "Selected Sources") }
+    var selectedSourceIDs: Set<String> { scanSourceSelection.selectedIDs(in: connectedSources, coverage: coverage) }
+    var scopedAssets: [UniversalMediaAsset] { sourceCatalogue.assets(in: connectedSources, selectedIDs: selectedSourceIDs, current: assets) }
+    var sourceControlsDisabled: Bool { isCleaningUp || scanState.isScanning || isAnalyzing || isLoadingCatalogue || isRequestingPhotosAccess }
+    var canScanSelectedSources: Bool { !sourceControlsDisabled && !selectedSourceIDs.isEmpty }
+    var sourceSelectionState: LibrarySourceSelection.State { scanSourceSelection.state(in: connectedSources, coverage: coverage) }
+    func toggleScanSource(_ id: String) {
+        guard !sourceControlsDisabled, connectedSources.contains(where: { $0.id == id }),
+              LibrarySourceSelection().selectedIDs(in: connectedSources, coverage: coverage).contains(id) else { return }
+        scanSourceSelection.setSelected(!selectedSourceIDs.contains(id), id: id)
+        scanSourcesChanged()
+    }
+    func toggleAllScanSources() {
+        guard !sourceControlsDisabled else { return }
+        scanSourceSelection.toggleAll(in: connectedSources, coverage: coverage)
+        scanSourcesChanged()
+    }
+    private func scanSourcesChanged() {
+        UserDefaults.standard.set(Array(scanSourceSelection.excludedIDs).sorted(), forKey: AppStorageKeys.iOSExcludedScanSources)
+        exactGroups = []; similarityGroups = []; similarVideoGroups = []
+        selectedAssetIDs = []; selectedSimilarVideoAssetIDs = []
+        scanFingerprintsByAssetID = [:]; scanState = .idle
+        skippedCloudItems = 0; similarityError = nil; videoSimilarityError = nil
+        libraryCollectionIDs = nil; libraryCollectionTitle = nil; libraryCollectionKind = nil
+        libraryCollectionSortBySize = false
+        clearScanCheckpoint()
+    }
+    private var connectedAdapters: [any SourceAdapter] {
         var adapters: [any SourceAdapter] = []
         if photosConnected { adapters.append(photosAdapter) }
         adapters.append(contentsOf: connectedFolders.compactMap { folderAdapters[$0.id] })
-        return UnifiedLibraryAdapter(adapters: adapters)
+        return adapters
     }
+    var unifiedAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters) }
+    private var scanAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters, selectedSourceIDs: selectedSourceIDs) }
     var reviewGroups: [LibraryReviewGroup] { LibraryReviewGroup.combined(exact: exactGroups, similar: similarityGroups + similarVideoGroups) }
     func sourceLabel(_ asset: UniversalMediaAsset) -> String {
-        asset.sourceLabel(in: connectedSources, whatsAppAlbumIDs: Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs") ?? []))
+        asset.sourceLabel(in: connectedSources)
     }
     private var scanTask: Task<Void, Never>?
     private var lastScanAllowedNetwork = false
@@ -183,6 +213,11 @@ final class MobileKeptoraStore: ObservableObject {
             seedVideoReviewForUITesting()
         } else if isPhotosDeniedUITesting {
             authorization = .denied
+        }
+        if LaunchArguments.contains(LaunchArguments.videoReviewUITesting) || LaunchArguments.contains(LaunchArguments.comprehensiveUITesting) || LaunchArguments.contains(LaunchArguments.thousandsStressUITesting) {
+            connectedFolders = Set(assets.map(\.sourceID)).sorted().map { LibrarySource(id: $0, kind: .folder, displayName: "Test Library") }
+            sourceCatalogue = LibrarySourceCatalogue(batches: Dictionary(grouping: assets, by: \.sourceID))
+            coverage = connectedFolders.map { LibrarySourceCoverage(source: $0, authorization: .authorized, itemCount: sourceCatalogue.batches[$0.id]?.count ?? 0) }
         }
     }
 
@@ -411,7 +446,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     var albums: [MediaAlbum] {
         var unique: [String: MediaAlbum] = [:]
-        for asset in assets { for album in asset.context?.albums ?? [] { unique[album.id] = album } }
+        for asset in scopedAssets { for album in asset.context?.albums ?? [] { unique[album.id] = album } }
         return unique.values.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 
@@ -438,9 +473,6 @@ final class MobileKeptoraStore: ObservableObject {
 
     func collectionContains(_ item: UniversalMediaAsset) -> Bool {
         switch libraryCollectionKind {
-        case "WhatsApp Media":
-            let ids = Set(UserDefaults.standard.stringArray(forKey: "Keptora.WhatsAppAlbumIDs") ?? [])
-            return item.context?.albums.contains { $0.isWhatsAppNamed || ids.contains($0.id) } == true
         case "Screenshots": return item.context?.isScreenshot == true
         case "Videos by Size": return item.mediaKind == .video
         case "Live Photos": return item.context?.isLivePhoto == true
@@ -465,6 +497,7 @@ final class MobileKeptoraStore: ObservableObject {
                 let reports = await adapter.coverage
                 guard !Task.isCancelled, requestedSource == source, catalogueGeneration == generation else { return }
                 coverage = reports
+                sourceCatalogue = await adapter.catalogue
                 let previous = Dictionary(assets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
                 if catalogue.contains(where: { item in previous[item.id]?.modificationDate != item.modificationDate }) || Set(previous.keys) != Set(catalogue.map(\.id)) {
                     exactGroups = []; similarityGroups = []; similarVideoGroups = []
@@ -551,7 +584,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     func startScan(allowNetwork: Bool = false) {
-        guard !isCleaningUp && !scanState.isScanning && !isAnalyzing else { return }
+        guard canScanSelectedSources else { return }
         scanTask?.cancel()
         catalogueTask?.cancel()
         catalogueGeneration = UUID(); isLoadingCatalogue = false
@@ -567,7 +600,7 @@ final class MobileKeptoraStore: ObservableObject {
         let checkpoint = loadScanCheckpoint(allowNetwork: allowNetwork)
         if checkpoint == nil { clearScanCheckpoint() }
         suspendedForBackground = false
-        scanState = .scanning(processed: 0, total: max(assets.count, 1), current: String(localized: "Connecting to library…"))
+        scanState = .scanning(processed: 0, total: max(scopedAssets.count, 1), current: String(localized: "Connecting to library…"))
         lastProgressUpdateTime = Date()
         UIApplication.shared.isIdleTimerDisabled = true
         scanTask = Task { [weak self] in
@@ -578,7 +611,7 @@ final class MobileKeptoraStore: ObservableObject {
                 }
             }
             do {
-                let adapter = unifiedAdapter
+                let adapter = scanAdapter
                 let imageProvider = adapter
                 let videoProvider = adapter
                 print("[KeptoraScan] Calling scanner.scan...")
@@ -609,12 +642,15 @@ final class MobileKeptoraStore: ObservableObject {
                 )
                 guard !Task.isCancelled, scanGeneration == generation else { return }
                 print("[KeptoraScan] Exact scan done: \(result.assets.count) assets, \(result.groups.count) exact duplicate groups, skippedNetwork: \(result.skippedNetwork)")
-                assets = result.assets.map { asset in
+                sourceCatalogue.merge(await adapter.catalogue)
+                let scanned = result.assets.map { asset in
                     guard let fingerprint = result.fingerprintsByAssetID[asset.id] else { return asset }
                     return asset.with(byteCount: .some(fingerprint.byteCount))
                 }
+                assets = sourceCatalogue.assets(in: connectedSources, selectedIDs: Set(connectedSources.map(\.id)), current: scanned + assets)
                 selectedLibraryIDs.formIntersection(assets.map(\.id)); saveLibrarySelection()
-                coverage = await adapter.coverage
+                let reports = await adapter.coverage
+                coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
                 exactGroups = result.groups
                 scanFingerprintsByAssetID = result.fingerprintsByAssetID
                 skippedCloudItems = result.skippedNetwork
@@ -1013,7 +1049,7 @@ final class MobileKeptoraStore: ObservableObject {
         }()
         guard let data = checkpointData,
               let checkpoint = try? JSONDecoder().decode(UniversalScanCheckpoint.self, from: data) else { return nil }
-        let expectedSourceID = unifiedAdapter.source.id
+        let expectedSourceID = scanAdapter.source.id
         guard checkpoint.sourceID == expectedSourceID, checkpoint.allowNetwork == allowNetwork else { return nil }
         return checkpoint
     }

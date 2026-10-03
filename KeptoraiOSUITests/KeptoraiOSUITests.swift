@@ -15,7 +15,8 @@ final class KeptoraiOSUITests: XCTestCase {
         app.launchArguments += arguments + [
             "-AppleLanguages", "(\(language))",
             "-AppleLocale", locale,
-            "-hasSeenMobileOnboarding", "YES", "-Keptora.SourceSetup.iOS.v1", "YES", "-Keptora.AppLanguage", "system"
+            "-hasSeenMobileOnboarding", "YES", "-Keptora.SourceSetup.iOS.v1", "YES", "-Keptora.AppLanguage", "system",
+            "-Keptora.ScanSources.Excluded.iOS.v1", "()"
         ]
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 10))
@@ -30,7 +31,7 @@ final class KeptoraiOSUITests: XCTestCase {
         comparisons.tap()
     }
 
-    func testStartupSetupCanContinueWithDeniedPhotosAndExplainsWhatsAppAccess() {
+    func testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles() {
         let app = XCUIApplication()
         app.launchArguments = ["-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-hasSeenMobileOnboarding", "YES",
             "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
@@ -42,10 +43,9 @@ final class KeptoraiOSUITests: XCTestCase {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Startup source access — denied Photos"
         attachment.lifetime = .keepAlways; add(attachment)
-        let exportedFolder = app.buttons["ios.whatsapp.exportedFolder"]
-        for _ in 0..<8 where !exportedFolder.isHittable { app.swipeUp() }
-        XCTAssertTrue(exportedFolder.isHittable)
-        XCTAssertTrue(app.staticTexts["Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage."].exists)
+        let files = app.buttons["library.source.files"]
+        for _ in 0..<8 where !files.isHittable { app.swipeUp() }
+        XCTAssertTrue(files.isHittable)
         app.buttons["ios.sourceSetup.continue"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 5))
         app.buttons["ios.library.options"].tap()
@@ -62,7 +62,8 @@ final class KeptoraiOSUITests: XCTestCase {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         app.buttons["archive.selectMode"].tap()
         let item = app.buttons["archive.asset.ui-photo-keeper"]
-        XCTAssertTrue(item.waitForExistence(timeout: 5)); item.tap()
+        for _ in 0..<8 where !item.isHittable { app.swipeUp() }
+        XCTAssertTrue(item.isHittable); item.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
         app.segmentedControls.buttons["Videos"].tap()
         XCTAssertTrue(app.staticTexts["1 selected outside this view"].waitForExistence(timeout: 3))
@@ -72,12 +73,34 @@ final class KeptoraiOSUITests: XCTestCase {
         app.buttons["Close"].tap()
     }
 
-    func testWhatsAppGuideExplainsSavedCopiesAndChatStorage() {
+    func testSourceCheckboxesPreserveManualSelectionAndPersist() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        app.tabBars.buttons.element(boundBy: 1).tap()
-        app.buttons["WhatsApp Storage Guide"].tap()
-        XCTAssertTrue(app.staticTexts["Keptora can clean copies saved in Photos or folders you choose. It cannot access WhatsApp's private chat storage."].waitForExistence(timeout: 3))
-        app.buttons["Done"].tap()
+        app.buttons["archive.selectMode"].tap()
+        let item = app.buttons["archive.asset.ui-photo-keeper"]
+        for _ in 0..<8 where !item.isHittable { app.swipeUp() }
+        XCTAssertTrue(item.isHittable); item.tap()
+        let source = app.buttons["sources.source.ui-test"]
+        for _ in 0..<10 where !source.isHittable { app.swipeDown() }
+        XCTAssertTrue(source.isHittable)
+        XCTAssertEqual(source.value as? String, "Selected")
+        source.tap()
+        XCTAssertEqual(source.value as? String, "Not selected")
+        XCTAssertTrue(app.staticTexts["sources.emptySelection"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["archive.scanAll"].isEnabled)
+        XCTAssertTrue(app.staticTexts["1 selected outside this view"].exists)
+        app.buttons["Review Selection"].tap()
+        XCTAssertTrue(app.staticTexts["Portrait Original.heic"].waitForExistence(timeout: 3))
+        app.buttons["Close"].tap()
+        app.terminate()
+        if let index = app.launchArguments.firstIndex(of: "-Keptora.ScanSources.Excluded.iOS.v1") {
+            app.launchArguments.removeSubrange(index...index + 1)
+        }
+        app.launch()
+        XCTAssertTrue(source.waitForExistence(timeout: 10))
+        XCTAssertEqual(source.value as? String, "Not selected")
+        app.buttons["sources.selectAll"].tap()
+        XCTAssertEqual(source.value as? String, "Selected")
+        XCTAssertTrue(app.buttons["archive.scanAll"].isEnabled)
     }
 
     func testCombinedGroupsPreserveSelectionWhenReturningToAllItems() {

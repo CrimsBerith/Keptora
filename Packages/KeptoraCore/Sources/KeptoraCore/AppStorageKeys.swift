@@ -13,6 +13,8 @@ public enum AppStorageKeys {
     public static let onboardingCompleted = "Keptora.Onboarding.Completed.v1"
     public static let macSourceSetupCompleted = "Keptora.SourceSetup.Mac.v1"
     public static let iOSSourceSetupCompleted = "Keptora.SourceSetup.iOS.v1"
+    public static let macExcludedScanSources = "Keptora.ScanSources.Excluded.Mac.v1"
+    public static let iOSExcludedScanSources = "Keptora.ScanSources.Excluded.iOS.v1"
     public static let reviewCheckpoint = "Keptora.ReviewCheckpoint.v1"
     public static let trialReviewedAssetIDs = "Keptora.Trial.ReviewedAssetIDs.v1"
     public static let excludedFolderNames = "Keptora.ExcludedFolderNames"
