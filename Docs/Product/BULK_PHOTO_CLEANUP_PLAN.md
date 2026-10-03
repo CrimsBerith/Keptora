@@ -1,5 +1,7 @@
 # Keptora — 2.000–3.000 fotoğrafta kolay toplu temizlik planı
 
+> 4 Ekim 2026: kaynak tikleri tesliminden sonraki güncel eksikler, uygulama önceliği ve kabul ölçütleri [Kolay Kullanım ve Güvenilir Çalışma Planı](USABILITY_AND_RELIABILITY_PLAN.md) içinde. Bu belge ayrıntılı ürün kararlarını korur; geliştirme sırası yeni plandan izlenir.
+
 **Tarih:** 3 Ekim 2026. **İncelenen GitHub sürümü:** `d517fb8f969835c382797c4e9241ba3cf15c2bdc`, `feat/photo-cleaner-library`.
 
 **Ana hedef:** Kullanıcı kaynaklarını tikler, bir kez tarar, bütün seçili fotoğrafları aynı arşivde görür, yan yana duran kopya/çok benzer kareleri karşılaştırır ve gereksiz olanları az adımla kaldırır. Teknik ayrıntıların öğrenilmesi gerekmez.

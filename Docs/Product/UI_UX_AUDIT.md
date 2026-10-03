@@ -1,5 +1,7 @@
 # Keptora — UI ve UX inceleme raporu
 
+> 4 Ekim 2026: `cc2b668` sürümünden sonraki güncel kod bulguları ve kalan işler [Kolay Kullanım ve Güvenilir Çalışma Planı](USABILITY_AND_RELIABILITY_PLAN.md) içinde. Aşağıdaki inceleme kendi tarihindeki sürüme aittir.
+
 > 3 Ekim 2026 güncellemesi: kaynakların tek arşivde birleştirilmesi, ortak kopya/benzer sonuçları ve platform erişim sınırları için [Birleşik Arşiv UI/UX Raporu](UNIFIED_LIBRARY_UX_AUDIT.md).
 
 **Tarih:** 3 Ekim 2026
