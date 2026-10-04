@@ -117,9 +117,10 @@ final class KeptoraiOSUITests: XCTestCase {
         let keep = app.buttons["archive.keep.ui-similar-photo-b"]
         reveal(keep, in: app); keep.tap()
         reveal(app.staticTexts["Chosen by You"].firstMatch, in: app)
-        let others = app.buttons["Select Others"].firstMatch
+        let others = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "archive.others.")).firstMatch
         reveal(others, in: app); others.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
+        XCTAssertFalse(others.isEnabled)
         XCTAssertEqual(app.buttons["archive.asset.ui-similar-photo-b"].value as? String, "Not selected")
         XCTAssertFalse(app.buttons["Compare Group"].exists)
         app.buttons["archive.undoSelection"].tap()
@@ -137,6 +138,23 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
         app.buttons["archive.undoSelection"].tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+    }
+
+    func testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        app.segmentedControls.buttons["Photos"].tap()
+        let copies = app.buttons["archive.finding.copies"]
+        reveal(copies, in: app, scrollDown: true); copies.tap()
+        let select = app.buttons["archive.selectExtraCopies"]
+        reveal(select, in: app, scrollDown: true)
+        XCTAssertTrue(select.isEnabled)
+        XCTAssertEqual(select.label, "Select Extra Copies (1)")
+        select.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
+        XCTAssertEqual(select.label, "Extra Copies Selected"); XCTAssertFalse(select.isEnabled)
+        app.buttons["archive.undoSelection"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        XCTAssertTrue(select.isEnabled)
     }
 
     func testCombinedGroupsPreserveSelectionWhenReturningToAllItems() {

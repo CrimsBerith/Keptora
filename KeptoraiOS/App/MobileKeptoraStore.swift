@@ -476,37 +476,46 @@ final class MobileKeptoraStore: ObservableObject {
         guard !isCleaningUp else { return }
         let related = groups.filter { $0.assets.contains { $0.id == asset.id } }
         guard !related.isEmpty else { return }
-        rememberLibrarySelection()
-        for group in related { decisions.keep(asset.id, in: group) }
-        selectedLibraryIDs.remove(asset.id)
-        persistDecisions(); saveLibrarySelection()
+        var updated = decisions
+        for group in related { updated.keep(asset.id, in: group) }
+        applyLibraryDecisions(updated, selection: selectedLibraryIDs.subtracting([asset.id]))
     }
     func toggleProtection(_ asset: UniversalMediaAsset) {
         guard !isCleaningUp else { return }
-        rememberLibrarySelection()
-        decisions.toggleProtection(asset.id)
-        if decisions.protectedIDs.contains(asset.id) { selectedLibraryIDs.remove(asset.id) }
-        persistDecisions(); saveLibrarySelection()
+        var updated = decisions
+        updated.toggleProtection(asset.id)
+        applyLibraryDecisions(updated, selection: updated.protectedIDs.contains(asset.id) ? selectedLibraryIDs.subtracting([asset.id]) : selectedLibraryIDs)
     }
     func protect(_ group: LibraryReviewGroup) {
         guard !isCleaningUp else { return }
-        rememberLibrarySelection()
-        decisions.protect(group)
-        let ids = Set(group.assets.map(\.id))
-        selectedLibraryIDs.subtract(ids); selectedAssetIDs.subtract(ids); selectedSimilarVideoAssetIDs.subtract(ids)
+        var updated = decisions
+        updated.protect(group)
+        applyLibraryDecisions(updated, selection: selectedLibraryIDs.subtracting(group.assets.map(\.id)))
+    }
+    private func applyLibraryDecisions(_ updated: LibraryReviewDecisions, selection ids: Set<String>) {
+        guard !isCleaningUp, updated != decisions || ids != selectedLibraryIDs else { return }
+        rememberLibrarySelection(); decisions = updated; selectedLibraryIDs = ids
         persistDecisions(); saveLibrarySelection()
     }
+    func groupSuggestionCandidates(_ group: LibraryReviewGroup) -> [UniversalMediaAsset] {
+        decisions.candidates(in: group, respecting: reviewGroups)
+    }
+    func exactSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
+        decisions.exactSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
+    }
     @discardableResult
-    func selectOthers(in group: LibraryReviewGroup, isUnlocked: Bool) -> Bool {
+    func selectOthers(in group: LibraryReviewGroup, isUnlocked: Bool, visibleIDs: Set<String>? = nil) -> Bool {
         guard !isCleaningUp else { return false }
-        let candidates = decisions.candidates(in: group, respecting: reviewGroups)
+        let candidates = groupSuggestionCandidates(group).filter { !selectedLibraryIDs.contains($0.id) && (visibleIDs?.contains($0.id) ?? true) }
+        guard !candidates.isEmpty else { return true }
         guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
         selectLibraryItems(candidates); return true
     }
     @discardableResult
-    func selectExactSuggestions(isUnlocked: Bool) -> Bool {
+    func selectExactSuggestions(isUnlocked: Bool, visibleIDs: Set<String>? = nil) -> Bool {
         guard !isCleaningUp else { return false }
-        let candidates = decisions.exactSuggestions(reviewGroups)
+        let candidates = exactSuggestionCandidates(visibleIDs: visibleIDs).filter { !selectedLibraryIDs.contains($0.id) }
+        guard !candidates.isEmpty else { return true }
         guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
         selectLibraryItems(candidates); return true
     }

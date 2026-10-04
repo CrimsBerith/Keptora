@@ -4,6 +4,34 @@ import KeptoraCore
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    func testRepeatedArchiveDecisionsPreserveMeaningfulUndo() {
+        let model = MacArchiveModel(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        model.assets = [a, b]; model.decisions = LibraryReviewDecisions()
+        model.exact = [UniversalExactGroup(digest: namespace, assets: [a, b], keeperID: a.id)]
+        let group = model.reviewGroups[0], original = model.decisions
+        model.selection = [a.id, b.id]
+        model.keep(b, in: group); model.keep(b, in: group); model.undoSelection()
+        XCTAssertEqual(model.selection, [a.id, b.id]); XCTAssertEqual(model.decisions, original)
+        model.protect(group); model.protect(group); model.undoSelection()
+        XCTAssertEqual(model.selection, [a.id, b.id]); XCTAssertEqual(model.decisions, original)
+    }
+
+    func testArchiveCopySuggestionsRespectVisibleScopeAndKeepOutsideSelection() {
+        let model = MacArchiveModel(), namespace = UUID().uuidString
+        let items = (0..<3).map { n in UniversalMediaAsset(id: namespace + "\(n)", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "\(n)"), displayName: "\(n).jpg", mediaKind: .image) }
+        model.assets = items; model.decisions = LibraryReviewDecisions()
+        model.exact = [UniversalExactGroup(digest: namespace, assets: items, keeperID: items[0].id)]
+        model.selection = [items[2].id]
+        model.selectExactSuggestions(visibleIDs: [items[1].id])
+        XCTAssertEqual(model.selection, [items[1].id, items[2].id])
+        model.selectExactSuggestions(visibleIDs: [items[1].id]); model.undoSelection()
+        XCTAssertEqual(model.selection, [items[2].id])
+        model.selectOthers(in: model.reviewGroups[0], visibleIDs: [items[1].id])
+        XCTAssertEqual(model.selection, [items[1].id, items[2].id])
+    }
+
     func testArchiveSelectionUndoRestoresProtectionAndKeeperTogether() {
         let model = MacArchiveModel(), namespace = UUID().uuidString
         let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)

@@ -5,6 +5,35 @@ import KeptoraCore
 @MainActor
 final class KeptoraiOSEdgeCaseTests: XCTestCase {
 
+    func testRepeatedKeeperAndProtectionActionsPreserveLastMeaningfulUndo() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        store.assets = [a, b]; store.decisions = LibraryReviewDecisions()
+        store.exactGroups = [UniversalExactGroup(digest: namespace, assets: [a, b], keeperID: a.id)]
+        let group = store.reviewGroups[0], original = store.decisions
+        store.selectedLibraryIDs = [a.id, b.id]
+        store.keep(b, in: group); store.keep(b, in: group); store.undoLibrarySelection()
+        XCTAssertEqual(store.selectedLibraryIDs, [a.id, b.id]); XCTAssertEqual(store.decisions, original)
+        store.protect(group); store.protect(group); store.undoLibrarySelection()
+        XCTAssertEqual(store.selectedLibraryIDs, [a.id, b.id]); XCTAssertEqual(store.decisions, original)
+    }
+
+    func testScopedCopySuggestionDoesNotSelectHiddenItemsOrReauthorizeNoOp() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let items = (0..<102).map { n in UniversalMediaAsset(id: namespace + "\(n)", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "\(n)"), displayName: "\(n).jpg", mediaKind: .image) }
+        store.assets = items; store.decisions = LibraryReviewDecisions(); store.selectedLibraryIDs = []
+        store.exactGroups = [UniversalExactGroup(digest: namespace, assets: items, keeperID: items[0].id)]
+        XCTAssertTrue(store.selectExactSuggestions(isUnlocked: true, visibleIDs: [items[1].id]))
+        XCTAssertEqual(store.selectedLibraryIDs, [items[1].id])
+        store.replaceLibrarySelection([])
+        XCTAssertTrue(store.selectOthers(in: store.reviewGroups[0], isUnlocked: true, visibleIDs: [items[1].id]))
+        XCTAssertEqual(store.selectedLibraryIDs, [items[1].id])
+        store.selectedLibraryIDs = Set(items.dropFirst().map(\.id))
+        XCTAssertTrue(store.selectExactSuggestions(isUnlocked: false), "Already selected items do not consume review allowance")
+        XCTAssertTrue(store.selectOthers(in: store.reviewGroups[0], isUnlocked: false))
+    }
+
     func testUndoWorksAfterLastItemIsDeselectedAndClearIsNoOp() {
         let store = MobileKeptoraStore(), id = UUID().uuidString
         let asset = UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: "photo.jpg", mediaKind: .image)

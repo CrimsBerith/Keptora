@@ -188,16 +188,26 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
         if !protectedIDs.insert(id).inserted { protectedIDs.remove(id) }
     }
     public func candidates(in group: LibraryReviewGroup, respecting groups: [LibraryReviewGroup] = []) -> [UniversalMediaAsset] {
-        let keeperID = keeper(in: group)
-        let chosenKeepers = Set(choices.values.map(\.keeperID))
-        let relatedKeepers = Set(groups.map { keeper(in: $0) })
-        return group.assets.filter { $0.id != keeperID && !chosenKeepers.contains($0.id) && !relatedKeepers.contains($0.id) && !$0.isProtectedFromGlobalSelection && !protectedIDs.contains($0.id) }
+        eligibleMembers(group, excluding: exclusions(in: groups).union([keeper(in: group)]))
+    }
+    /// Compute the shared exclusions once for a whole gallery render.
+    public func candidatesByGroup(_ groups: [LibraryReviewGroup]) -> [String: [UniversalMediaAsset]] {
+        let excluded = exclusions(in: groups)
+        var result: [String: [UniversalMediaAsset]] = [:]
+        for group in groups { result[group.id] = eligibleMembers(group, excluding: excluded) }
+        return result
+    }
+    private func exclusions(in groups: [LibraryReviewGroup]) -> Set<String> {
+        Set(groups.map { keeper(in: $0) }).union(choices.values.map(\.keeperID)).union(protectedIDs)
+    }
+    private func eligibleMembers(_ group: LibraryReviewGroup, excluding ids: Set<String>) -> [UniversalMediaAsset] {
+        group.assets.filter { !ids.contains($0.id) && !$0.isProtectedFromGlobalSelection }
     }
     public func exactSuggestions(_ groups: [LibraryReviewGroup]) -> [UniversalMediaAsset] {
         let exact = groups.filter { $0.kind == .exact }
         // Keepers in other overlapping groups are protected too.
-        let keepers = Set(groups.map { keeper(in: $0) })
-        return UnifiedLibraryAdapter.uniqueReferences(exact.flatMap { candidates(in: $0) }).filter { !keepers.contains($0.id) }
+        let excluded = exclusions(in: groups)
+        return UnifiedLibraryAdapter.uniqueReferences(exact.flatMap { eligibleMembers($0, excluding: excluded) })
     }
 }
 

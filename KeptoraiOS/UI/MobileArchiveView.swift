@@ -78,9 +78,11 @@ struct MobileLibraryView: View {
                             if store.scanState.isScanning { Text("Results appear as they become available.").foregroundStyle(.secondary).padding(.vertical, 40) }
                             else {
                             ContentUnavailableView("No items in this view", systemImage: "photo", description: Text("Change the filters or choose another source."))
-                            Button("Reset Filters") { media = 0; albumID = ""; favouritesOnly = false; dateRangeEnabled = false; search = ""; store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionKind = nil; store.libraryCollectionSortBySize = false }
+                            Button("Reset Filters") { resetFilters() }.accessibilityIdentifier("archive.resetFilters")
                             }
                         } else if smartOrder {
+                            let candidatesByGroup = store.decisions.candidatesByGroup(store.reviewGroups)
+                            let visibleIDs = Set(visible.map(\.id))
                             let blocks = LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
                             ForEach(blocks) { block in
                                 let membership = block.groupsByAsset
@@ -92,7 +94,7 @@ struct MobileLibraryView: View {
                                         }
                                     }.scrollTargetLayout()
                                     ForEach(block.groups) { group in
-                                        groupActions(group)
+                                        groupActions(group, candidates: (candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) })
                                     }
                                 }
                             }
@@ -217,7 +219,6 @@ struct MobileLibraryView: View {
                     Button("Scan Selected Sources") { store.startScan() }.buttonStyle(.borderedProminent).accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
                     Menu {
                         Button("Include Cloud Originals") { cloudScan = true }
-                        Button("Select Exact Copy Suggestions") { if !store.selectExactSuggestions(isUnlocked: purchase.isUnlocked) { store.present(.paywall) } }
                     } label: { Image(systemName: "ellipsis.circle").frame(width: 44, height: 44) }
                     .accessibilityLabel("Scan and selection options").disabled(!store.canScanSelectedSources)
                 }
@@ -254,6 +255,7 @@ struct MobileLibraryView: View {
                         .accessibilityIdentifier("archive.finding." + option.rawValue)
                     }
                 }.accessibilityIdentifier("archive.resultMode")
+            if finding == .copies { exactBatchSelection }
             if store.authorization == .limited {
                 Button("Limited Photos access · Manage Access") { store.manageLimitedPhotosAccess() }.font(.footnote).frame(minHeight: 44)
             }
@@ -280,6 +282,7 @@ struct MobileLibraryView: View {
                 Toggle("Keep Related Shots Together", isOn: $smartOrder)
                 Picker("Group by", selection: $grouping) { Text("All Items").tag(0); Text("Day").tag(1); Text("Month").tag(2) }
                 Button("Date Range") { dateFilters = true }
+                Button("Reset Filters") { resetFilters() }
             } label: { Image(systemName: "line.3.horizontal.decrease.circle").frame(width: 44, height: 44) }
             .accessibilityLabel("Filter and sort library")
         }
@@ -290,6 +293,31 @@ struct MobileLibraryView: View {
         let lower = Calendar.current.startOfDay(for: fromDate)
         let upper = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: toDate)) ?? toDate
         return date >= lower && date < upper
+    }
+    private func resetFilters() {
+        finding = .all; media = 0; albumID = ""; favouritesOnly = false; dateRangeEnabled = false; search = ""
+        oldestFirst = false; largestFirst = false; grouping = 2; smartOrder = true
+        store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionKind = nil; store.libraryCollectionSortBySize = false
+    }
+
+    private var exactBatchSelection: some View {
+        let scope = Set(visible.map(\.id))
+        let candidates = store.exactSuggestionCandidates(visibleIDs: scope)
+        let remaining = candidates.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+        return Group {
+            if !candidates.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button {
+                        if !store.selectExactSuggestions(isUnlocked: purchase.isUnlocked, visibleIDs: scope) { store.present(.paywall) }
+                    } label: {
+                        if remaining == 0 { Text("Extra Copies Selected") }
+                        else { Text(L10n.format("Select Extra Copies (%lld)", remaining)) }
+                    }.buttonStyle(.bordered).frame(minHeight: 44).disabled(remaining == 0)
+                        .accessibilityIdentifier("archive.selectExtraCopies")
+                    Text("Items suggested to keep and protected items stay unselected.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }.disabled(store.isCleaningUp || store.isLoadingCatalogue || store.scanState.isScanning || store.isAnalyzing)
     }
 
     private func sectionHeader(_ section: (date: Date, assets: [UniversalMediaAsset])) -> some View {
@@ -356,13 +384,19 @@ struct MobileLibraryView: View {
             }
     }
 
-    private func groupActions(_ group: LibraryReviewGroup) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func groupActions(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset]) -> some View {
+        let remaining = candidates.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+        return VStack(alignment: .leading, spacing: 4) {
             Text(LocalizedStringKey(group.titleKey)).font(.caption.weight(.semibold))
             Text(LocalizedStringKey(store.decisions.keeperReason(in: group, quality: store.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
             HStack {
-                Button("Select Others") { if !store.selectOthers(in: group, isUnlocked: purchase.isUnlocked) { store.present(.paywall) } }
-                    .buttonStyle(.bordered).frame(minHeight: 44).accessibilityIdentifier("archive.others.\(group.id)")
+                Button {
+                    if !store.selectOthers(in: group, isUnlocked: purchase.isUnlocked, visibleIDs: Set(candidates.map(\.id))) { store.present(.paywall) }
+                } label: {
+                    if candidates.isEmpty { Text("No Other Items to Select") }
+                    else if remaining == 0 { Text("Others Selected") }
+                    else { Text(L10n.format("Select Others (%lld)", remaining)) }
+                }.buttonStyle(.bordered).frame(minHeight: 44).disabled(remaining == 0).accessibilityIdentifier("archive.others.\(group.id)")
                 Menu {
                     Button("Protect Group") { store.protect(group) }
                 } label: { Label("Group Actions", systemImage: "ellipsis.circle").frame(minHeight: 44) }

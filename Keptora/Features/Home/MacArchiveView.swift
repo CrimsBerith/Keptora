@@ -243,19 +243,34 @@ final class MacArchiveModel: ObservableObject {
         guard !busy else { return }
         let related = groups.filter { $0.assets.contains { $0.id == item.id } }
         guard !related.isEmpty else { return }
-        rememberSelection()
-        for group in related { decisions.keep(item.id, in: group) }
-        selection.remove(item.id); persistDecisions()
+        var updated = decisions
+        for group in related { updated.keep(item.id, in: group) }
+        applyDecisions(updated, selection: selection.subtracting([item.id]))
     }
     func toggleProtection(_ item: UniversalMediaAsset) {
-        guard !busy else { return }; rememberSelection(); decisions.toggleProtection(item.id)
-        if decisions.protectedIDs.contains(item.id) { selection.remove(item.id) }; persistDecisions()
+        guard !busy else { return }
+        var updated = decisions; updated.toggleProtection(item.id)
+        applyDecisions(updated, selection: updated.protectedIDs.contains(item.id) ? selection.subtracting([item.id]) : selection)
     }
     func protect(_ group: LibraryReviewGroup) {
-        guard !busy else { return }; rememberSelection(); decisions.protect(group); selection.subtract(group.assets.map(\.id)); persistDecisions()
+        guard !busy else { return }
+        var updated = decisions; updated.protect(group)
+        applyDecisions(updated, selection: selection.subtracting(group.assets.map(\.id)))
     }
-    func selectOthers(in group: LibraryReviewGroup) { selectItems(decisions.candidates(in: group, respecting: reviewGroups)) }
-    func selectExactSuggestions() { selectItems(decisions.exactSuggestions(reviewGroups)) }
+    private func applyDecisions(_ updated: LibraryReviewDecisions, selection ids: Set<String>) {
+        guard !busy, updated != decisions || ids != selection else { return }
+        rememberSelection(); decisions = updated; selection = ids; persistDecisions()
+    }
+    func groupSuggestionCandidates(_ group: LibraryReviewGroup) -> [UniversalMediaAsset] {
+        decisions.candidates(in: group, respecting: reviewGroups)
+    }
+    func exactSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
+        decisions.exactSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
+    }
+    func selectOthers(in group: LibraryReviewGroup, visibleIDs: Set<String>? = nil) {
+        selectItems(groupSuggestionCandidates(group).filter { visibleIDs?.contains($0.id) ?? true })
+    }
+    func selectExactSuggestions(visibleIDs: Set<String>? = nil) { selectItems(exactSuggestionCandidates(visibleIDs: visibleIDs)) }
     func selectItems(_ items: [UniversalMediaAsset]) { setSelection(selection.union(items.map(\.id))) }
     func toggleSelection(_ item: UniversalMediaAsset) {
         var ids = selection
@@ -658,6 +673,7 @@ struct MacArchiveView: View {
                 Picker("Library view", selection: $finding) {
                     ForEach(LibraryFindingFilter.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
                 }.pickerStyle(.segmented).frame(maxWidth: 640).padding(12)
+                if finding == .copies { exactBatchSelection.padding(.horizontal, 20) }
                 if archive.sessionProgress.isFinished && !archive.sessionProgress.isComplete && !archive.sessionProgress.stages.values.contains(where: { $0.status == .cancelled }) {
                     Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption).padding(.horizontal, 20)
                 }
@@ -671,7 +687,19 @@ struct MacArchiveView: View {
                 }
                 ScrollView {
                     Text("Click a photo to select or deselect it.").font(.caption).foregroundStyle(.secondary).padding(.top, 12)
+                    if visible.isEmpty && !archive.loading && !archive.selectedSourceIDs.isEmpty {
+                        if archive.analyzing { Text("Results appear as they become available.").foregroundStyle(.secondary).padding(30) }
+                        else {
+                            VStack(spacing: 12) {
+                                Text("No items in this view").font(.headline)
+                                Text("Change the filters or choose another source.").foregroundStyle(.secondary)
+                                Button("Reset Filters") { resetFilters() }.accessibilityIdentifier("mac.archive.resetFilters")
+                            }.padding(30)
+                        }
+                    }
                     if smartOrder {
+                        let candidatesByGroup = archive.decisions.candidatesByGroup(archive.reviewGroups)
+                        let visibleIDs = Set(visible.map(\.id))
                         let blocks = LibraryReviewBlock.make(assets: visible, groups: archive.reviewGroups, quality: archive.qualityAssessments, smart: true)
                         LazyVStack(alignment: .leading, spacing: 16) {
                             ForEach(blocks) { block in
@@ -681,12 +709,7 @@ struct MacArchiveView: View {
                                     ForEach(block.assets) { item in archiveCell(item, groups: membership[item.id] ?? []) }
                                 }
                                 ForEach(block.groups) { group in
-                                    Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
-                                    HStack {
-                                        Text(LocalizedStringKey(group.titleKey)).font(.caption)
-                                        Button("Select Others") { archive.selectOthers(in: group) }.accessibilityIdentifier("mac.archive.others.\(group.id)")
-                                        Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
-                                    }.disabled(archive.analyzing)
+                                    groupActions(group, candidates: (candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) })
                                 }
                             }
                         }.padding(20)
@@ -754,6 +777,38 @@ struct MacArchiveView: View {
         Button("Clear Selection") { archive.setSelection([]) }.disabled(archive.selection.isEmpty)
         Button("Review Selection") { showPlan = true }.buttonStyle(.borderedProminent).disabled(archive.selection.isEmpty)
     }
+    private var exactBatchSelection: some View {
+        let scope = Set(visible.map(\.id))
+        let candidates = archive.exactSuggestionCandidates(visibleIDs: scope)
+        let remaining = candidates.filter { !archive.selection.contains($0.id) }.count
+        return Group {
+            if !candidates.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button { archive.selectExactSuggestions(visibleIDs: scope) } label: {
+                        if remaining == 0 { Text("Extra Copies Selected") }
+                        else { Text(L10n.format("Select Extra Copies (%lld)", remaining)) }
+                    }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.selectExtraCopies")
+                    Text("Items suggested to keep and protected items stay unselected.").font(.caption).foregroundStyle(.secondary)
+                }.padding(.bottom, 8)
+            }
+        }.disabled(archive.busy || archive.loading || archive.analyzing)
+    }
+    private func groupActions(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset]) -> some View {
+        let remaining = candidates.filter { !archive.selection.contains($0.id) }.count
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(group.titleKey)).font(.caption.weight(.semibold))
+            Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button { archive.selectOthers(in: group, visibleIDs: Set(candidates.map(\.id))) } label: {
+                    if candidates.isEmpty { Text("No Other Items to Select") }
+                    else if remaining == 0 { Text("Others Selected") }
+                    else { Text(L10n.format("Select Others (%lld)", remaining)) }
+                }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.others.\(group.id)")
+                Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
+            }
+        }.disabled(archive.busy || archive.analyzing)
+    }
+    private func resetFilters() { media = 0; albumID = ""; search = ""; finding = .all; smartOrder = true }
     private func archiveCell(_ item: UniversalMediaAsset, groups: [LibraryReviewGroup] = []) -> some View {
         let selected = archive.selection.contains(item.id)
         let kept = !selected && groups.contains { archive.decisions.keeper(in: $0) == item.id }
@@ -802,9 +857,8 @@ struct MacArchiveView: View {
                 TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
             }
             HStack {
-                Button("Reset Filters") { media = 0; albumID = ""; search = ""; finding = .all }
+                Button("Reset Filters") { resetFilters() }
                 Toggle("Keep Related Shots Together", isOn: $smartOrder).toggleStyle(.checkbox)
-                Button("Select Exact Copy Suggestions") { archive.selectExactSuggestions() }.disabled(archive.analyzing)
                 Spacer()
                 if archive.analyzing {
                     ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1))).frame(maxWidth: 200)

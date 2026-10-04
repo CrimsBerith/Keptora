@@ -105,8 +105,10 @@ final class BulkCleanupPolicyTests: XCTestCase {
         var decisions = LibraryReviewDecisions()
         XCTAssertTrue(decisions.candidates(in: groups[0], respecting: groups).isEmpty,
             "Select Others must not select a photo shown as kept in an overlapping group")
+        XCTAssertEqual(decisions.candidatesByGroup(groups)[groups[0].id]?.map(\.id), [])
         decisions.keep(c.id, in: groups[1])
         XCTAssertEqual(decisions.candidates(in: groups[0], respecting: groups).map(\.id), [b.id])
+        XCTAssertEqual(decisions.candidatesByGroup(groups)[groups[0].id]?.map(\.id), [b.id])
         decisions.protect(groups[1])
         XCTAssertTrue(decisions.candidates(in: groups[0], respecting: groups).isEmpty)
     }

@@ -66,6 +66,7 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testVerySimilarKeeperAndSelectOthersWorkInsideGallery \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPhotoTapSelectsWithoutMagnifierAndCanBeUndone \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testExactPhotoSelectionAndFinalReviewCanBeCancelled \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCombinedGroupsPreserveSelectionWhenReturningToAllItems \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testScanAllSourcesFindsCopiesInRealSimulatorPhotos \
