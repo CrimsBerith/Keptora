@@ -87,7 +87,10 @@ private actor BenchmarkRecorder {
         case .catalogue(let items, _, _):
             pass.items = items.count
             if !items.isEmpty, pass.firstCatalogueSeconds == nil { pass.firstCatalogueSeconds = elapsed }
-        case .exact(let groups, _, _, _): pass.exactGroups = groups.count
+        case .exact(let groups, _, _, _):
+            pass.exactGroups = groups.count
+            if !groups.isEmpty, pass.firstGroupSeconds == nil { pass.firstGroupSeconds = elapsed }
+        case .photos(let groups, _, _): if !groups.isEmpty, pass.firstGroupSeconds == nil { pass.firstGroupSeconds = elapsed }
         case .exactGroups(let groups): if !groups.isEmpty, pass.firstGroupSeconds == nil { pass.firstGroupSeconds = elapsed }
         case .photoGroups(let groups): if !groups.isEmpty, pass.firstGroupSeconds == nil { pass.firstGroupSeconds = elapsed }
         case .progress(let stage, let progress): if progress.isTerminal { pass.stageSeconds[stage.rawValue] = elapsed }

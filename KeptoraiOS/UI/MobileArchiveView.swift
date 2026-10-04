@@ -411,7 +411,7 @@ struct MobileLibraryView: View {
                     .accessibilityLabel("Clear Selection")
                 Button("Review Selection") { reviewSelection = true }.buttonStyle(.borderedProminent)
             }
-        }.padding(14).background(.bar)
+        }.padding(14).background(.bar).disabled(store.isCleaningUp)
     }
 }
 

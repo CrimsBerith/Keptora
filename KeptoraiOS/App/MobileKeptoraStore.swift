@@ -718,6 +718,7 @@ final class MobileKeptoraStore: ObservableObject {
             coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
             reconcileLibrarySelection(previous: previous)
         case .progress(let stage, let value):
+            guard sessionProgress.stages[stage]?.isTerminal != true || value.isTerminal else { return }
             sessionProgress.update(stage, value)
             if let focus = [AnalysisStage.photos, .exact, .videos, .catalogue].first(where: { sessionProgress.stages[$0]?.status == .running }),
                let progress = sessionProgress.stages[focus] {
@@ -726,15 +727,18 @@ final class MobileKeptoraStore: ObservableObject {
             if stage == .photos { similarityProgress = value.isTerminal ? nil : (value.processed, value.total) }
             if stage == .videos { videoSimilarityProgress = value.isTerminal ? nil : (value.processed, value.total) }
         case .exact(let groups, let fingerprints, let items, let issues):
+            sessionProgress.update(.exact, .init(status: issues.isEmpty ? .completed : .partial, processed: items.count, total: items.count))
             exactGroups = groups; scanFingerprintsByAssetID = fingerprints
             let latest = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
             assets = assets.map { latest[$0.id] ?? $0 }; replaceIssues(.exact, issues)
-        case .photoGroups(let groups): similarityGroups = groups
-        case .exactGroups(let groups): exactGroups = groups
+        case .photoGroups(let groups): if sessionProgress.stages[.photos]?.isTerminal != true { similarityGroups = groups }
+        case .exactGroups(let groups): if sessionProgress.stages[.exact]?.isTerminal != true { exactGroups = groups }
         case .photos(let groups, let quality, let issues):
+            sessionProgress.update(.photos, .init(status: issues.isEmpty ? .completed : .partial, processed: quality.count, total: quality.count))
             similarityGroups = groups; qualityAssessments = quality; replaceIssues(.photos, issues)
             skippedSimilarityPreviews = issues.count
         case .findings(let quality, let issues):
+            guard sessionProgress.stages[.photos]?.isTerminal != true else { return }
             qualityAssessments = quality; replaceIssues(.photos, issues)
         case .videos(let groups, let issues): similarVideoGroups = groups; replaceIssues(.videos, issues)
         case .metrics: break

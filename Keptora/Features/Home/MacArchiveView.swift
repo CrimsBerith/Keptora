@@ -427,19 +427,25 @@ final class MacArchiveModel: ObservableObject {
             coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
             reconcileSelection(previousSelection: previous)
         case .progress(let stage, let value):
+            guard sessionProgress.stages[stage]?.isTerminal != true || value.isTerminal else { return }
             sessionProgress.update(stage, value)
             if let focus = [AnalysisStage.photos, .exact, .videos, .catalogue].first(where: { sessionProgress.stages[$0]?.status == .running }),
                let progress = sessionProgress.stages[focus] {
                 status = L10n.tr(String.LocalizationValue(focus.titleKey)); analysisProcessed = progress.processed; analysisTotal = progress.total
             }
         case .exact(let groups, _, let items, let issues):
+            sessionProgress.update(.exact, .init(status: issues.isEmpty ? .completed : .partial, processed: items.count, total: items.count))
             exact = groups
             let latest = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
             assets = assets.map { latest[$0.id] ?? $0 }; replaceIssues(.exact, issues)
-        case .photoGroups(let groups): similar = groups
-        case .exactGroups(let groups): exact = groups
-        case .photos(let groups, let quality, let issues): similar = groups; qualityAssessments = quality; replaceIssues(.photos, issues); skippedPreviews = issues.count
-        case .findings(let quality, let issues): qualityAssessments = quality; replaceIssues(.photos, issues)
+        case .photoGroups(let groups): if sessionProgress.stages[.photos]?.isTerminal != true { similar = groups }
+        case .exactGroups(let groups): if sessionProgress.stages[.exact]?.isTerminal != true { exact = groups }
+        case .photos(let groups, let quality, let issues):
+            sessionProgress.update(.photos, .init(status: issues.isEmpty ? .completed : .partial, processed: quality.count, total: quality.count))
+            similar = groups; qualityAssessments = quality; replaceIssues(.photos, issues); skippedPreviews = issues.count
+        case .findings(let quality, let issues):
+            guard sessionProgress.stages[.photos]?.isTerminal != true else { return }
+            qualityAssessments = quality; replaceIssues(.photos, issues)
         case .videos(let groups, let issues): similarVideos = groups; replaceIssues(.videos, issues)
         case .metrics: break
         case .failure(_, let message): error = message

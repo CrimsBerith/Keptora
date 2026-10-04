@@ -22,6 +22,8 @@ final class BulkCleanupPolicyTests: XCTestCase {
         XCTAssertTrue(session.isFinished); XCTAssertFalse(session.isComplete)
         XCTAssertEqual(session.stages[.exact]?.status, .completed)
         XCTAssertEqual(session.stages[.photos]?.status, .cancelled)
+        session.update(.photos, .init(status: .running, processed: 10, total: 100))
+        XCTAssertEqual(session.stages[.photos]?.status, .cancelled, "Late progress cannot reopen a finished stage")
     }
     func testUnknownRevisionNeverReused() {
         XCTAssertNil(MediaRevisionPolicy.key(for: item("a", date: nil), algorithm: "v1"))

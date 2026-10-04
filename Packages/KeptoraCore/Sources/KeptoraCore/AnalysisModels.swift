@@ -65,7 +65,10 @@ public struct AnalysisStageProgress: Equatable, Sendable {
 public struct AnalysisSessionProgress: Sendable {
     public private(set) var stages: [AnalysisStage: AnalysisStageProgress] = [:]
     public init() { for stage in AnalysisStage.allCases { stages[stage] = .init() } }
-    public mutating func update(_ stage: AnalysisStage, _ progress: AnalysisStageProgress) { stages[stage] = progress }
+    public mutating func update(_ stage: AnalysisStage, _ progress: AnalysisStageProgress) {
+        guard stages[stage]?.isTerminal != true || progress.isTerminal else { return }
+        stages[stage] = progress
+    }
     public mutating func cancel() {
         for stage in AnalysisStage.allCases where stages[stage]?.isTerminal != true {
             stages[stage]?.status = .cancelled
