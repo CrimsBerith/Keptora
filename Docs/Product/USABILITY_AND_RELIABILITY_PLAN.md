@@ -4,7 +4,7 @@
 
 **Hedef:** 2.000–3.000 fotoğrafı olan kullanıcı kaynaklarını bir kez bağlar; seçili kaynakları birlikte tarar; kopyaları, çok benzer kareleri ve incelemeye değer fotoğrafları kolayca ayırt eder; saklayacağı kareleri seçer ve kaldıracağı öğeleri tek incelemede onaylar. Bütün seçili ve listelenebilir öğeler arşivde kalır.
 
-**Belgenin durumu:** Güncel kod ve önceki görüşmeler üzerinden hazırlanmış uygulama planıdır. Buradaki yeni işler henüz kodlanmadı. [Kaynak seçimi teslimi](SOURCE_SELECTION_DELIVERY.md) tamamlanmış temel olarak korunur. [Toplu temizlik planı](BULK_PHOTO_CLEANUP_PLAN.md) ayrıntılı ürün kararlarını içerir; uygulama önceliği ve güncel eksikler için bu belge esas alınır.
+**Belgenin durumu:** Uygulama paketleri kodlandı; güncel sonuçlar, 48 portable test ve son Apple kabulü [teslim raporunda](BULK_CLEANUP_DELIVERY.md) kayıtlı. Aşağıdaki bulgular ilk incelemenin başlangıç durumudur. Gerçek fotoğraf kalibrasyonu ve cihaz performansı son kabulde ölçülür. [Kaynak seçimi teslimi](SOURCE_SELECTION_DELIVERY.md) tamamlanmış temel olarak korunur. [Toplu temizlik planı](BULK_PHOTO_CLEANUP_PLAN.md) ayrıntılı ürün kararlarını içerir; uygulama önceliği ve güncel eksikler için bu belge esas alınır.
 
 **Çalışma sırası:** Ortak modeller, iPhone/Mac kodu, test senaryoları ve bu ortamda çalışabilen kontroller önce hazırlanır. Xcode derlemesi, Apple testlerini çalıştırma ve gerçek Mac/iPhone kabulü kullanıcı tarafından en son yapılır. Bu ortamın Linux olması geliştirmeye başlamak için engel değildir; Apple çalışma zamanı doğruluğu için son kabul gerekir.
 
@@ -180,7 +180,7 @@ Sentetik görüntü dönüşümleri sistematik regresyon içindir. Kalite/çok b
 
 ## 8. Teslim ve yayın kabulü
 
-Mevcut temel için önceki teslimde 29 portable çekirdek testi, 131 Swift dosyası sözdizimi ve proje/görsel kontrolleri geçti. Bu, yeni kalite sınıflarının, güncel native arayüzün veya 3.000 gerçek fotoğrafta hızın doğrulandığı anlamına gelmez. Bu plan teslimi uygulama davranışını değiştirmez.
+Mevcut temel için önceki teslimde 29 portable çekirdek testi, 131 Swift dosyası sözdizimi ve proje/görsel kontrolleri geçti. Bu, yeni kalite sınıflarının, güncel native arayüzün veya 3.000 gerçek fotoğrafta hızın doğrulandığı anlamına gelmez. Sonraki uygulama teslimi davranışı değiştirdi; yeni doğrulama ve kalan native kabul için [teslim raporuna](BULK_CLEANUP_DELIVERY.md) bakın.
 
 Kabul: kullanıcı kaynaklarını bağlayıp tek tarama yapabilir; bütün seçili listelenebilir öğeler görünür; exact/çok benzer/kalite şüphesi ayrılır; ilgili kareler yan yana ve gerekçeleri kısa; seçimler filtre/geçici erişim değişiminde kaybolmaz; toplu öneri korunan öğeleri ve en az bir keeper'ı bırakır; kullanıcı hangi kayıt yerinden ne kaldıracağını ve kurtarma/alan açma yolunu anlar. Native derleme, kaldırma davranışı ve ölçülmüş performans son kabulde tamamlanır.
 

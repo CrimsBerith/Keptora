@@ -13,6 +13,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  portable-core:
+    runs-on: ubuntu-latest
+    container: swift:6.0.3
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shared catalogue, selection, quality and cache policies
+        run: swift test --package-path Packages/KeptoraCore --parallel
   visual-assets:
     runs-on: ubuntu-latest
     timeout-minutes: 10
