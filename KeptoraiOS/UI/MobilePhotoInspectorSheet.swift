@@ -10,22 +10,28 @@ struct MobilePhotoInspectorSheet: View {
     @State private var allowNetwork = false
     @State private var player: AVPlayer?
     @State private var videoLoading = false
+    @State private var videoTask: Task<Void, Never>?
     @State private var previewError: String?
     @State private var asset: UniversalMediaAsset
     private let items: [UniversalMediaAsset]
+    private let group: LibraryReviewGroup?
+    @EnvironmentObject private var purchase: MobilePurchaseController
     
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
     @State private var showInfo = false
+    @State private var showPaywall = false
     
-    init(asset: UniversalMediaAsset, items: [UniversalMediaAsset] = []) {
+    init(asset: UniversalMediaAsset, items: [UniversalMediaAsset] = [], group: LibraryReviewGroup? = nil) {
+        self.group = group
         _asset = State(initialValue: asset); self.items = items
     }
     private var currentIndex: Int? { items.firstIndex { $0.id == asset.id } }
     private func move(_ delta: Int) {
         guard let index = currentIndex, items.indices.contains(index + delta) else { return }
+        videoTask?.cancel(); videoTask = nil
         player?.pause(); player = nil; scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero; previewError = nil
         asset = items[index + delta]
         allowNetwork = false
@@ -103,22 +109,39 @@ struct MobilePhotoInspectorSheet: View {
                 VStack(spacing: 8) {
                     if let previewError { Text(previewError).font(.caption).foregroundStyle(.white) }
                     if videoLoading { ProgressView("Loading video…").tint(.white) }
+                    if let index = currentIndex { Text(L10n.format("%lld of %lld", index + 1, items.count)).font(.caption).foregroundStyle(.white) }
                     Text(store.sourceLabel(asset)).font(.caption).foregroundStyle(.white)
+                    if let quality = store.qualityAssessments[asset.id] {
+                        ForEach(quality.findings, id: \.rawValue) { value in Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(.white) }
+                        if quality.state == .unavailable { Text("Quality could not be assessed.").font(.caption).foregroundStyle(.white) }
+                        if quality.state == .insufficientDetail { Text("Not enough detail to judge focus.").font(.caption).foregroundStyle(.white) }
+                        Text("Quality hints require your review.").font(.caption2).foregroundStyle(.white.opacity(0.7))
+                    }
+                    if let group {
+                        if store.decisions.keeper(in: group) == asset.id { Label("Kept in This Group", systemImage: "bookmark.fill").foregroundStyle(.white) }
+                        ViewThatFits(in: .horizontal) {
+                            HStack { decisionButtons(group) }
+                            VStack { decisionButtons(group) }
+                        }.frame(minHeight: 44)
+                    }
                     if !allowNetwork && (asset.requiresNetwork || { if case .photoLibrary = asset.reference { return true }; return false }()) {
                         Button("Download Preview from iCloud") { allowNetwork = true }.frame(minHeight: 44)
                     }
+                    Menu {
+                        Button(store.decisions.protectedIDs.contains(asset.id) ? "Unprotect Photo" : "Protect Photo") { store.toggleProtection(asset) }
+                    } label: { Label("Photo Actions", systemImage: "ellipsis.circle").frame(minHeight: 44) }
                     HStack {
                         if !items.isEmpty {
                             Button { move(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.accessibilityLabel("Previous Item").disabled((currentIndex ?? 0) <= 0)
                             Button { move(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }.accessibilityLabel("Next Item").disabled((currentIndex ?? 0) >= items.count - 1)
                         }
-                        if asset.mediaKind == .video && player == nil { Button("Play Video") { Task { await loadVideo() } }.disabled(videoLoading) }
+                        if asset.mediaKind == .video && player == nil { Button("Play Video") { videoTask = Task { await loadVideo() } }.disabled(videoLoading) }
                         Spacer()
                         Button(store.selectedLibraryIDs.contains(asset.id) ? "Deselect" : "Select") { store.toggleLibrarySelection(asset) }
                     }.buttonStyle(.borderedProminent).frame(minHeight: 44)
                 }.padding(12).background(.black.opacity(0.85))
             }
-            .onDisappear { player?.pause() }
+            .onDisappear { videoTask?.cancel(); player?.pause() }
             .navigationTitle(asset.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -151,6 +174,7 @@ struct MobilePhotoInspectorSheet: View {
                     }
                 }
             }
+            .sheet(isPresented: $showPaywall) { MobilePaywallView() }
             .sheet(isPresented: $showInfo) {
                 AssetMetadataSheet(asset: asset, allowNetwork: allowNetwork)
                     .presentationDetents([.medium, .fraction(0.65)])
@@ -159,6 +183,10 @@ struct MobilePhotoInspectorSheet: View {
         }
     }
 
+    @ViewBuilder private func decisionButtons(_ group: LibraryReviewGroup) -> some View {
+        Button("Keep This Photo") { store.keep(asset, in: group) }.frame(minHeight: 44)
+        Button("Select Others") { if !store.selectOthers(in: group, isUnlocked: purchase.isUnlocked) { showPaywall = true } }.frame(minHeight: 44)
+    }
     private func loadVideo() async {
         videoLoading = true; previewError = nil
         defer { videoLoading = false }
@@ -169,15 +197,16 @@ struct MobilePhotoInspectorSheet: View {
             player = AVPlayer(url: url)
         case .photoLibrary(let id):
             guard let photo = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
-                previewError = String(localized: "Preview unavailable"); return
+                previewError = L10n.tr("Preview unavailable"); return
             }
             let options = PHVideoRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
             let avAsset = await withCheckedContinuation { (continuation: CheckedContinuation<AVAsset?, Never>) in
                 PHImageManager.default().requestAVAsset(forVideo: photo, options: options) { value, _, _ in continuation.resume(returning: value) }
             }
             if let avAsset { player = AVPlayer(playerItem: AVPlayerItem(asset: avAsset)) }
-            else { previewError = String(localized: "Video is unavailable locally. Allow an iCloud download and try again.") }
+            else { previewError = L10n.tr("Video is unavailable locally. Allow an iCloud download and try again.") }
         }
+        if Task.isCancelled { player = nil; return }
         player?.play()
     }
 }
@@ -199,7 +228,7 @@ private struct AssetMetadataSheet: View {
                     if let bytes = asset.byteCount {
                         LabeledContent("File Size", value: ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
                     }
-                    LabeledContent("Kind", value: asset.mediaKind == .image ? String(localized: "Photo") : String(localized: "Video"))
+                    LabeledContent("Kind", value: asset.mediaKind == .image ? L10n.tr("Photo") : L10n.tr("Video"))
                     if let duration = asset.duration {
                         LabeledContent("Duration", value: String(format: "%.1f s", duration))
                     }
@@ -225,7 +254,7 @@ private struct AssetMetadataSheet: View {
                     ForEach(asset.context?.albums ?? []) { album in LabeledContent("Album", value: album.title) }
                 }
                 Section("Selection Details") {
-                    LabeledContent("Favorite", value: asset.isFavorite ? String(localized: "Yes") : String(localized: "No"))
+                    LabeledContent("Favorite", value: asset.isFavorite ? L10n.tr("Yes") : L10n.tr("No"))
                     if asset.hasAdjustments { Text("This item has edits.") }
                     Text("You can select any accessible item manually. Suggested batch selections preserve favorites and edited items.").font(.footnote).foregroundStyle(.secondary)
                 }

@@ -7,7 +7,7 @@ import SwiftUI
 struct MobileAssetThumbnail: View {
     let asset: UniversalMediaAsset
     /// Longest edge requested from PhotoKit; grid cells use the default, full-screen viewers pass more.
-    var pixelSize: CGFloat = 500
+    var pixelSize: CGFloat = 384
     var contentMode: ContentMode = .fill
     var allowNetwork = false
     @State private var image: UIImage?
@@ -47,7 +47,7 @@ struct MobileAssetThumbnail: View {
     }
 
     private func load() async {
-        if let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
+        if asset.modificationDate != nil, let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
             self.image = cached
             return
         }
@@ -61,7 +61,7 @@ struct MobileAssetThumbnail: View {
             if asset.mediaKind == .video {
                 let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
                 generator.appliesPreferredTrackTransform = true
-                generator.maximumSize = CGSize(width: max(pixelSize, 600), height: max(pixelSize, 600))
+                generator.maximumSize = CGSize(width: max(pixelSize, 64), height: max(pixelSize, 64))
                 loadedImage = await withTaskCancellationHandler {
                     if let frame = try? await generator.image(at: CMTime(seconds: 0.2, preferredTimescale: 600)).image {
                         return UIImage(cgImage: frame)
@@ -71,15 +71,19 @@ struct MobileAssetThumbnail: View {
                     generator.cancelAllCGImageGeneration()
                 }
             } else {
-                loadedImage = await Task.detached(priority: .utility) {
+                let work = Task.detached(priority: .utility) { () -> UIImage? in
+                    try? await MediaWorkGate.thumbnails.withPermit {
+                    guard !Task.isCancelled else { return nil as UIImage? }
                     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                           let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                             kCGImageSourceCreateThumbnailFromImageAlways: true,
-                            kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 600),
+                            kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 64),
                             kCGImageSourceCreateThumbnailWithTransform: true
                           ] as CFDictionary) else { return nil }
                     return UIImage(cgImage: cgImage)
-                }.value
+                    }
+                }
+                loadedImage = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
             }
         case .photoLibrary(let localIdentifier):
             let result = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
@@ -117,7 +121,7 @@ struct MobileAssetThumbnail: View {
         }
 
         if let loadedImage, !Task.isCancelled {
-            MobileThumbnailCache.shared.setImage(loadedImage, forKey: cacheKey)
+            if asset.modificationDate != nil { MobileThumbnailCache.shared.setImage(loadedImage, forKey: cacheKey) }
             self.image = loadedImage
         }
     }
@@ -137,7 +141,7 @@ final class MobileThumbnailCache: @unchecked Sendable {
     }
 
     func setImage(_ image: UIImage, forKey key: String) {
-        let cost = Int(image.size.width * image.size.height * 4)
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? Int(image.size.width * image.scale * image.size.height * image.scale * 4)
         cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 }
@@ -151,15 +155,13 @@ private final class PhotoImageRequest: @unchecked Sendable {
     private var wasCancelled = false
 
     func setID(_ id: PHImageRequestID) {
-        lock.lock(); defer { lock.unlock() }
-        requestID = id
-        if wasCancelled { PHImageManager.default().cancelImageRequest(id) }
+        lock.lock(); requestID = id; let cancelNow = wasCancelled; lock.unlock()
+        if cancelNow { PHImageManager.default().cancelImageRequest(id) }
     }
 
     func cancel() {
-        lock.lock(); defer { lock.unlock() }
-        wasCancelled = true
-        if requestID != PHInvalidImageRequestID { PHImageManager.default().cancelImageRequest(requestID) }
+        lock.lock(); wasCancelled = true; let id = requestID; lock.unlock()
+        if id != PHInvalidImageRequestID { PHImageManager.default().cancelImageRequest(id) }
     }
 
     func resumeOnce(_ body: () -> Void) {

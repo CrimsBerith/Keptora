@@ -38,10 +38,10 @@ struct MacScanSourcesSection: View {
                                 HStack(spacing: 10) {
                                     Image(systemName: selected ? "checkmark.square.fill" : "square").foregroundStyle(selected ? KeptoraDesign.accent : Color.secondary)
                                     Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
-                                    Text(source.kind == .photos ? String(localized: "Photos / iCloud Photos") : source.displayName)
+                                    Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName)
                                     Spacer()
                                     if let report {
-                                        Text(String(format: String(localized: "%lld items"), report.itemCount)).monospacedDigit().foregroundStyle(.secondary)
+                                        (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete")).monospacedDigit().foregroundStyle(.secondary)
                                         Text(LocalizedStringKey(report.statusKey)).font(.caption)
                                             .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
                                     } else { Text("Loading item count…").foregroundStyle(.secondary) }
@@ -56,7 +56,7 @@ struct MacScanSourcesSection: View {
                 if archive.selectedSourceIDs.isEmpty {
                     Text("Select at least one source").foregroundStyle(.secondary).accessibilityIdentifier("sources.emptySelection")
                 } else {
-                    Text(String(format: String(localized: "%lld sources selected · %lld items"), archive.selectedSourceIDs.count, archive.scopedAssets.count))
+                    Text(String(format: L10n.tr("%lld sources selected · %lld items"), archive.selectedSourceIDs.count, archive.scopedAssets.count))
                         .foregroundStyle(.secondary).accessibilityIdentifier("sources.summary")
                 }
                 Text("Selected sources appear together. The same item in overlapping folders is counted once.").font(.caption).foregroundStyle(.secondary)
@@ -150,12 +150,14 @@ struct MacRecoveryEntry: Identifiable, Codable {
 @MainActor
 final class MacArchiveModel: ObservableObject {
     @Published var assets: [UniversalMediaAsset] = []
-    @Published var selection: Set<String> = [] { didSet { if sourceReady { UserDefaults.standard.set(Array(selection).sorted(), forKey: selectionKey) } } }
-    @Published var sourceName = String(localized: "Choose a source")
+    @Published var selection: Set<String> = [] { didSet { if sourceReady { persistSelection() } } }
+    @Published var sourceName = L10n.tr("Choose a source")
     @Published var sourceRoot: URL?
     @Published var busy = false
     @Published var loading = false
     @Published var analyzing = false
+    @Published var analysisPaused = false
+    private var lastAnalysisAllowedNetwork = false
     @Published var error: String?
     @Published var history: [MacRecoveryEntry] = []
     @Published var exact: [UniversalExactGroup] = []
@@ -188,7 +190,7 @@ final class MacArchiveModel: ObservableObject {
     }
     private func scanSourcesChanged() {
         UserDefaults.standard.set(Array(scanSourceSelection.excludedIDs).sorted(), forKey: AppStorageKeys.macExcludedScanSources)
-        exact = []; similar = []; similarVideos = []; skippedCloudItems = 0; skippedPreviews = 0
+        exact = []; similar = []; similarVideos = []; qualityAssessments = [:]; analysisIssues = []; sessionProgress = .init(); skippedCloudItems = 0; skippedPreviews = 0
     }
     private var connectedAdapters: [any SourceAdapter] {
         var values: [any SourceAdapter] = []
@@ -214,7 +216,38 @@ final class MacArchiveModel: ObservableObject {
     private var generation = UUID()
     private var observer: MacArchivePhotoObserver?
     private var selectionKey: String { "Keptora.ManualSelection.unified.Mac" }
-    private func reconcileSelection() {
+    @Published var qualityAssessments: [String: QualityAssessment] = [:]
+    @Published var analysisIssues: [AnalysisIssue] = []
+    @Published var sessionProgress = AnalysisSessionProgress()
+    @Published var pendingSelection: [UniversalMediaAsset] = []
+    @Published var unresolvedSelectionIDs: Set<String> = []
+    @Published var decisions = (UserDefaults.standard.data(forKey: "Keptora.ReviewDecisions.Mac").flatMap { try? JSONDecoder().decode(LibraryReviewDecisions.self, from: $0) }) ?? LibraryReviewDecisions()
+    private let selectionArchive = LibrarySelectionArchive(name: "selection-mac-v3")
+    private var selectionSequence = 0
+    private var archivedSelectionLoaded = false
+    private func persistSelection() {
+        UserDefaults.standard.set(Array(selection).sorted(), forKey: selectionKey)
+        selectionSequence += 1
+        let sequence = selectionSequence, snapshot = selected
+        Task { try? await selectionArchive.save(snapshot, sequence: sequence) }
+    }
+    func discardPendingSelection() {
+        selection.subtract(pendingSelection.map(\.id)); selection.subtract(unresolvedSelectionIDs); unresolvedSelectionIDs = []; pendingSelection = []
+    }
+    func keep(_ item: UniversalMediaAsset, in group: LibraryReviewGroup) {
+        guard !busy else { return }; decisions.keep(item.id, in: group); selection.remove(item.id); persistDecisions()
+    }
+    func toggleProtection(_ item: UniversalMediaAsset) {
+        guard !busy else { return }; decisions.toggleProtection(item.id)
+        if decisions.protectedIDs.contains(item.id) { selection.remove(item.id) }; persistDecisions()
+    }
+    func protect(_ group: LibraryReviewGroup) {
+        guard !busy else { return }; decisions.protect(group); selection.subtract(group.assets.map(\.id)); persistDecisions()
+    }
+    func selectOthers(in group: LibraryReviewGroup) { guard !busy else { return }; selection.formUnion(decisions.candidates(in: group).map(\.id)) }
+    func selectExactSuggestions() { guard !busy else { return }; selection.formUnion(decisions.exactSuggestions(reviewGroups).map(\.id)) }
+    private func persistDecisions() { UserDefaults.standard.set(try? JSONEncoder().encode(decisions), forKey: "Keptora.ReviewDecisions.Mac") }
+    private func reconcileSelection(previousSelection: [UniversalMediaAsset] = []) {
         var saved = Set(UserDefaults.standard.stringArray(forKey: selectionKey) ?? [])
         if UserDefaults.standard.object(forKey: selectionKey) == nil {
             saved.formUnion(UserDefaults.standard.stringArray(forKey: "Keptora.ManualSelection.Mac.photos") ?? [])
@@ -226,7 +259,8 @@ final class MacArchiveModel: ObservableObject {
                 if saved.remove(oldID) != nil { saved.insert(item.id) }
             }
         }
-        selection = saved.intersection(assets.map(\.id))
+        let resolved = PendingLibrarySelection(ids: saved, current: assets, previous: previousSelection + pendingSelection, coverage: coverage)
+        pendingSelection = resolved.pending; unresolvedSelectionIDs = resolved.unresolvedIDs; selection = resolved.ids
     }
     private let photos = PhotoLibrarySourceAdapter()
     private let folders = FolderQuarantineExecutor()
@@ -240,7 +274,7 @@ final class MacArchiveModel: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: historyKey), let entries = try? JSONDecoder().decode([MacRecoveryEntry].self, from: data) { history = entries }
     }
     deinit { task?.cancel(); for url in folderScopes.values { url.stopAccessingSecurityScopedResource() } }
-    var selected: [UniversalMediaAsset] { assets.filter { selection.contains($0.id) } }
+    var selected: [UniversalMediaAsset] { assets.filter { selection.contains($0.id) } + pendingSelection.filter { selection.contains($0.id) } }
     var albums: [MediaAlbum] {
         var values: [String: MediaAlbum] = [:]
         for asset in scopedAssets { for album in asset.context?.albums ?? [] { values[album.id] = album } }
@@ -256,7 +290,7 @@ final class MacArchiveModel: ObservableObject {
                 var stale = false
                 let url = try URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale)
                 try addFolder(url)
-            } catch { connectionErrors.append(String(localized: "Reconnect an unavailable folder in Sources.")) }
+            } catch { connectionErrors.append(L10n.tr("Reconnect an unavailable folder in Sources.")) }
         }
         authorization = await currentPhotosAuthorization()
         photosConnected = authorization == .authorized || authorization == .limited
@@ -264,7 +298,7 @@ final class MacArchiveModel: ObservableObject {
     }
     private func updateConnections() {
         sourceReady = !connectedSources.isEmpty
-        sourceName = String(localized: "All Connected Sources")
+        sourceName = L10n.tr("All Connected Sources")
         // Kept only for compatibility; never used to route mixed selections.
         sourceRoot = nil
     }
@@ -286,7 +320,7 @@ final class MacArchiveModel: ObservableObject {
         photosConnected = authorization == .authorized || authorization == .limited
         updateConnections()
         if photosConnected { refresh() }
-        else if showError { error = String(localized: "Allow Photos access in System Settings to open this library.") }
+        else if showError { error = L10n.tr("Allow Photos access in System Settings to open this library.") }
     }
     func refreshPhotosAccess() async {
         guard connectionsRestored, !busy, !analyzing, !loading, !isRequestingPhotosAccess else { return }
@@ -296,7 +330,7 @@ final class MacArchiveModel: ObservableObject {
         photosConnected = latest == .authorized || latest == .limited
         updateConnections()
         if sourceReady { refresh() }
-        else if wasConnected { assets = []; selection = []; exact = []; similar = []; similarVideos = []; coverage = [] }
+        else if wasConnected { pendingSelection = selected; assets = []; exact = []; similar = []; similarVideos = []; coverage = [] }
     }
     func openPhotosSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") else { return }
@@ -327,7 +361,7 @@ final class MacArchiveModel: ObservableObject {
         connectedFolders.removeAll { $0.id == id }
         UserDefaults.standard.set(bookmarks, forKey: "Keptora.UnifiedFolderBookmarks.Mac")
         updateConnections()
-        if sourceReady { refresh() } else { assets = []; selection = []; exact = []; similar = []; similarVideos = []; coverage = [] }
+        if sourceReady { refresh() } else { pendingSelection = selected; assets = []; exact = []; similar = []; similarVideos = []; coverage = [] }
     }
     func refresh() {
         guard sourceReady, !busy, !analyzing, !loading else { return }
@@ -342,9 +376,14 @@ final class MacArchiveModel: ObservableObject {
                 guard !Task.isCancelled, generation == current else { return }
                 coverage = await adapter.coverage
                 sourceCatalogue = await adapter.catalogue
-                assets = catalogue; reconcileSelection()
+                if !archivedSelectionLoaded {
+                    pendingSelection = await selectionArchive.load(); archivedSelectionLoaded = true
+                    guard !Task.isCancelled, generation == current else { return }
+                }
+                let previous = assets + pendingSelection
+                assets = catalogue; reconcileSelection(previousSelection: previous)
                 // Metadata or membership changes invalidate prior analysis.
-                exact = []; similar = []; similarVideos = []
+                exact = []; similar = []; similarVideos = []; qualityAssessments = [:]; analysisIssues = []; sessionProgress = .init()
                 for connected in connectedFolders {
                     guard let root = folderScopes[connected.id] else { continue }
                     let records = try await folders.recoveryRecords(root: root)
@@ -364,47 +403,70 @@ final class MacArchiveModel: ObservableObject {
     }
     func analyze(allowNetwork: Bool = false) {
         guard canScanSelectedSources else { return }
-        analyzing = true; status = String(localized: "Scanning selected sources…")
-        analysisProcessed = 0; analysisTotal = scopedAssets.count
-        let adapter = scanAdapter
+        let current = UUID(); generation = current
+        analysisPaused = false; lastAnalysisAllowedNetwork = allowNetwork
+        analyzing = true; sessionProgress = .init(); analysisIssues = []; qualityAssessments = [:]
         exact = []; similar = []; similarVideos = []
+        status = L10n.tr("Loading sources"); analysisProcessed = 0; analysisTotal = scopedAssets.count
+        let adapter = scanAdapter
         task = Task {
-            defer { analyzing = false; status = nil }
-            do {
-                let result = try await UniversalExactScanner().scan(adapter: adapter, allowNetwork: allowNetwork, fingerprintAllAssets: true) { [weak self] done, total, _ in
-                    Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
-                }
-                try Task.checkCancellation()
-                sourceCatalogue.merge(await adapter.catalogue)
-                let scanned = result.assets.map { asset in
-                    guard let fingerprint = result.fingerprintsByAssetID[asset.id] else { return asset }
-                    return asset.with(byteCount: .some(fingerprint.byteCount))
-                }
-                assets = sourceCatalogue.assets(in: connectedSources, selectedIDs: Set(connectedSources.map(\.id)), current: scanned + assets)
-                exact = result.groups; skippedCloudItems = result.skippedNetwork
-                let reports = await adapter.coverage
-                coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
-                reconcileSelection()
-                status = String(localized: "Comparing images and capture details…")
-                similar = try await analyzer.analyze(assets: result.assets, provider: adapter, allowNetwork: allowNetwork, maximumAssets: result.assets.count) { [weak self] done, total in
-                    Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
-                }
-                skippedPreviews = await analyzer.skippedPreviewCount
-                status = String(localized: "Comparing videos…")
-                similarVideos = try await VideoSimilarityAnalyzer().analyze(assets: result.assets.filter { $0.mediaKind == .video }, provider: adapter, allowNetwork: allowNetwork) { [weak self] done, total in
-                    Task { @MainActor in self?.analysisProcessed = done; self?.analysisTotal = total }
-                }
-                try Task.checkCancellation()
-            } catch is CancellationError { }
-            catch { self.error = error.localizedDescription }
+            defer { if generation == current { analyzing = false; status = nil } }
+            let coordinator = LibraryAnalysisCoordinator { [weak self] update in await self?.receiveAnalysis(update, generation: current) }
+            do { try await coordinator.run(adapter: adapter, allowNetwork: allowNetwork) }
+            catch is CancellationError { if generation == current { sessionProgress.cancel() } }
+            catch { if generation == current { self.error = error.localizedDescription } }
         }
     }
-    func cancelAnalysis() { task?.cancel() }
-    func removeSelection(expectedIDs: Set<String>) async -> Bool {
+    private func receiveAnalysis(_ update: LibraryAnalysisUpdate, generation current: UUID) {
+        guard generation == current, !Task.isCancelled else { return }
+        switch update {
+        case .catalogue(let items, let reports, let catalogue):
+            let previous = assets + pendingSelection
+            sourceCatalogue.merge(catalogue)
+            assets = sourceCatalogue.assets(in: connectedSources, selectedIDs: Set(connectedSources.map(\.id)), current: items + assets)
+            coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
+            reconcileSelection(previousSelection: previous)
+        case .progress(let stage, let value):
+            sessionProgress.update(stage, value)
+            if let focus = [AnalysisStage.photos, .exact, .videos, .catalogue].first(where: { sessionProgress.stages[$0]?.status == .running }),
+               let progress = sessionProgress.stages[focus] {
+                status = L10n.tr(String.LocalizationValue(focus.titleKey)); analysisProcessed = progress.processed; analysisTotal = progress.total
+            }
+        case .exact(let groups, _, let items, let issues):
+            exact = groups
+            let latest = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+            assets = assets.map { latest[$0.id] ?? $0 }; replaceIssues(.exact, issues)
+        case .photoGroups(let groups): similar = groups
+        case .exactGroups(let groups): exact = groups
+        case .photos(let groups, let quality, let issues): similar = groups; qualityAssessments = quality; replaceIssues(.photos, issues); skippedPreviews = issues.count
+        case .findings(let quality, let issues): qualityAssessments = quality; replaceIssues(.photos, issues)
+        case .videos(let groups, let issues): similarVideos = groups; replaceIssues(.videos, issues)
+        case .metrics: break
+        case .failure(_, let message): error = message
+        case .finished(let progress): sessionProgress = progress
+        }
+    }
+    private func replaceIssues(_ stage: AnalysisStage, _ issues: [AnalysisIssue]) {
+        analysisIssues.removeAll { $0.stage == stage }; analysisIssues.append(contentsOf: issues)
+        skippedCloudItems = Set(analysisIssues.filter { $0.reason == .downloadRequired }.map(\.assetID)).count
+    }
+    func cancelAnalysis() {
+        generation = UUID(); analysisPaused = false; task?.cancel()
+        analyzing = false; status = nil; sessionProgress.cancel()
+    }
+    func pauseAnalysis() {
+        cancelAnalysis(); analysisPaused = true
+    }
+    func resumeAnalysis() { analyze(allowNetwork: lastAnalysisAllowedNetwork) }
+    func removeSelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil) async -> Bool {
         guard !busy, !loading, !analyzing, selection == expectedIDs else { return false }
+        guard unresolvedSelectionIDs.intersection(selection).isEmpty, pendingSelection.filter({ selection.contains($0.id) }).isEmpty else {
+            error = L10n.tr("Reconnect unavailable sources or remove their items from your selection."); return false
+        }
         let snapshot = selected
+        if let reviewedAssets, Set(snapshot) != Set(reviewedAssets) { error = L10n.tr("Your selection changed. Review it again before removing items."); return false }
         guard !snapshot.isEmpty, snapshot.count == expectedIDs.count else { return false }
-        busy = true; status = String(localized: "Reviewing selected items…")
+        busy = true; status = L10n.tr("Reviewing selected items…")
         defer { busy = false; status = nil }
         do {
             try LibraryRevisionValidator.validate(snapshot)
@@ -451,7 +513,7 @@ final class MacArchiveModel: ObservableObject {
     }
     func restore(_ entry: MacRecoveryEntry) async {
         guard !busy, let record = entry.folderRecord, record.restoredAt == nil else { return }
-        busy = true; status = String(localized: "Restoring files…")
+        busy = true; status = L10n.tr("Restoring files…")
         defer { busy = false; status = nil; refresh() }
         do {
             var recoveryScope: URL?
@@ -475,7 +537,9 @@ final class MacArchiveModel: ObservableObject {
 struct MacArchiveView: View {
     @EnvironmentObject private var archive: MacArchiveModel
     @State private var search = ""
-    @State private var groupedResults = false
+    @State private var finding: LibraryFindingFilter = .all
+    @State private var smartOrder = true
+    @State private var comparing: LibraryReviewGroup?
     @State private var cloudScan = false
     @State private var media = 0
     @State private var albumID = ""
@@ -486,9 +550,9 @@ struct MacArchiveView: View {
     @State private var undoIDs: Set<String>?
     @State private var showAccessGuide = false
     private var visible: [UniversalMediaAsset] {
-        let groupedIDs = groupedResults ? Set(archive.reviewGroups.flatMap { $0.assets.map(\.id) }) : Set<String>()
+        let findingIDs = finding.ids(groups: archive.reviewGroups, quality: archive.qualityAssessments)
         return archive.scopedAssets.filter { item in
-            (!groupedResults || groupedIDs.contains(item.id)) &&
+            (findingIDs == nil || findingIDs!.contains(item.id)) &&
             (media == 0 || (media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (albumID.isEmpty || item.context?.albums.contains { $0.id == albumID } == true) &&
             (comparisonGroup == nil || comparisonGroup!.assets.contains { $0.id == item.id }) &&
@@ -507,7 +571,11 @@ struct MacArchiveView: View {
                 Button("Add Folders…") { archive.chooseFolder() }
                 Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise") }.help("Refresh Library")
             }.padding(20).disabled(archive.busy || archive.analyzing)
-            if !archive.connectedSources.isEmpty { MacScanSourcesSection().padding(.horizontal, 20).padding(.bottom, 12) }
+            if !archive.connectedSources.isEmpty {
+                Button { showAccessGuide = true } label: {
+                    HStack { Label("Scan Sources", systemImage: "checklist"); Spacer(); Text(archive.selectedSourceIDs.count.formatted()); Image(systemName: "chevron.right") }
+                }.padding(.horizontal, 20).padding(.bottom, 12).accessibilityIdentifier("mac.archive.sourcesSummary")
+            }
             DisclosureGroup("Source Access") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Photos includes iCloud Photos. Files includes the folders you connect.").font(.callout).foregroundStyle(.secondary)
@@ -515,7 +583,7 @@ struct MacArchiveView: View {
                     Button("Permissions & Sources") { showAccessGuide = true }
                     ForEach(archive.coverage) { report in
                         HStack {
-                            Label(report.source.displayName, systemImage: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
+                            Label(report.source.localizedScanTitle, systemImage: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
                             Spacer(); Text(report.itemCount.formatted())
                         }.font(.callout)
                         if report.error != nil { Text("Some items in this source are unavailable. Reconnect or check access.").font(.caption).foregroundStyle(.orange) }
@@ -548,23 +616,42 @@ struct MacArchiveView: View {
                     Text("Limited Photos access. Keptora can only show the items you allow.").font(.callout).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
                 if archive.skippedPreviews > 0 {
-                    Text(String(format: String(localized: "%lld previews could not be analyzed. Results cover only accessible items."), archive.skippedPreviews)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
+                    Text(String(format: L10n.tr("%lld previews could not be analyzed. Results cover only accessible items."), archive.skippedPreviews)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
                 if archive.skippedCloudItems > 0 {
-                    Text(String(format: String(localized: "%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
+                    Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
-                Picker("Library view", selection: $groupedResults) { Text("All Items").tag(false); Text("Copies & Similar").tag(true) }
-                    .pickerStyle(.segmented).frame(maxWidth: 400).padding(12)
+                Picker("Library view", selection: $finding) {
+                    ForEach(LibraryFindingFilter.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
+                }.pickerStyle(.segmented).frame(maxWidth: 640).padding(12)
+                if archive.sessionProgress.isFinished && !archive.sessionProgress.isComplete && !archive.sessionProgress.stages.values.contains(where: { $0.status == .cancelled }) {
+                    Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption).padding(.horizontal, 20)
+                }
+                if !archive.analysisIssues.isEmpty {
+                    DisclosureGroup("Items needing attention") {
+                        ForEach(AnalysisIssueReason.allCases, id: \.rawValue) { reason in
+                            let count = Set(archive.analysisIssues.filter { $0.reason == reason }.map(\.assetID)).count
+                            if count > 0 { HStack { Text(LocalizedStringKey(reason.titleKey)); Spacer(); Text(count.formatted()) } }
+                        }
+                    }.padding(.horizontal, 20)
+                }
                 ScrollView {
-                    if groupedResults {
-                        if archive.reviewGroups.isEmpty { Text("Scan selected sources to find exact copies and similar photos together.").foregroundStyle(.secondary).padding(20) }
+                    if smartOrder {
+                        let blocks = LibraryReviewBlock.make(assets: visible, groups: archive.reviewGroups, quality: archive.qualityAssessments, smart: true)
                         LazyVStack(alignment: .leading, spacing: 16) {
-                            ForEach(archive.reviewGroups) { group in
-                                let items = group.assets.filter { item in visible.contains { $0.id == item.id } }
-                                if !items.isEmpty {
-                                    Label(group.kind == .exact ? LocalizedStringKey("Exact Copies") : LocalizedStringKey("Similar Photos & Videos"), systemImage: group.kind == .exact ? "doc.on.doc" : "square.stack").font(.headline)
-                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
-                                        ForEach(items) { item in archiveCell(item, suggestedKeeper: item.id == group.keeperID) }
+                            ForEach(blocks) { block in
+                                let keepers = Set(block.groups.map { archive.decisions.keeper(in: $0) })
+                                Text(LocalizedStringKey(block.titleKey)).font(.headline)
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
+                                    ForEach(block.assets) { item in archiveCell(item, suggestedKeeper: keepers.contains(item.id)) }
+                                }
+                                ForEach(block.groups) { group in
+                                    Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
+                                    HStack {
+                                        Text(LocalizedStringKey(group.titleKey)).font(.caption)
+                                        Button("Compare Group") { comparing = group }
+                                        Button("Select Others") { undoIDs = archive.selection; archive.selectOthers(in: group) }
+                                        Button("Protect Group") { undoIDs = archive.selection; archive.protect(group) }
                                     }
                                 }
                             }
@@ -583,21 +670,22 @@ struct MacArchiveView: View {
             HStack(spacing: 12) {
                 let summary = MediaSelectionSummary(archive.selected)
                 VStack(alignment: .leading) {
-                    Text(String(format: String(localized: "Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
+                    Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
                     let hidden = archive.selection.subtracting(visible.map(\.id)).count
-                    if hidden > 0 { Text(String(format: String(localized: "%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
+                    if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
                 }
                 Spacer()
                 if let status = archive.status { ProgressView().controlSize(.small); Text(status).font(.caption) }
                 Button("Select All in This View") { undoIDs = archive.selection; archive.selection.formUnion(visible.map(\.id)) }.keyboardShortcut("a", modifiers: [.command])
                 if let undoIDs { Button("Undo") { archive.selection = undoIDs; self.undoIDs = nil }.keyboardShortcut("z", modifiers: [.command]) }
                 Button("Clear Selection") { undoIDs = archive.selection; archive.selection.removeAll() }
-                Button("Review Selection") { showPlan = true }.buttonStyle(.borderedProminent).disabled(archive.selected.isEmpty)
+                Button("Review Selection") { showPlan = true }.buttonStyle(.borderedProminent).disabled(archive.selection.isEmpty)
             }.padding(16).disabled(archive.busy || archive.loading || archive.analyzing)
         }
         .background(KeptoraDesign.canvas)
         .accessibilityIdentifier("mac.page.archive")
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
+        .sheet(item: $comparing) { group in MacArchiveGroupReview(group: group).environmentObject(archive) }
         .sheet(item: $inspected) { item in
             VStack(spacing: 14) {
                 MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork).frame(minWidth: 600, minHeight: 420)
@@ -619,7 +707,7 @@ struct MacArchiveView: View {
             Button("Download and Scan") { archive.analyze(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
         .onChange(of: archive.connectedFolders) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = "" }
-        .onChange(of: archive.scanSourceSelection) { _ in comparisonGroup = nil; groupedResults = false; albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.scanSourceSelection) { _ in comparisonGroup = nil; finding = .all; albumID = ""; media = 0; search = "" }
         .onChange(of: archive.sourceName) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = ""; undoIDs = nil }
     }
     private func archiveCell(_ item: UniversalMediaAsset, suggestedKeeper: Bool = false) -> some View {
@@ -627,7 +715,7 @@ struct MacArchiveView: View {
                                 Button { inspected = item } label: {
                                     MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
                                         .overlay(alignment: .topLeading) {
-                                            Text(archive.sourceLabel(item)).font(.caption.weight(.semibold)).lineLimit(2)
+                                            Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources)).font(.caption.weight(.semibold)).lineLimit(1)
                                                 .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6)
                                         }
                                 }.buttonStyle(.plain)
@@ -640,12 +728,14 @@ struct MacArchiveView: View {
                                     })).toggleStyle(.checkbox).labelsHidden().accessibilityLabel("Select \(item.displayName)")
                                 }
                                 if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
+                                if let value = archive.qualityAssessments[item.id]?.findings.first { Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(.secondary) }
+                                if archive.decisions.protectedIDs.contains(item.id) { Label("Protected", systemImage: "lock.fill").font(.caption) }
                                 if suggestedKeeper { Label("Suggested Keep", systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
                                 if item.isFavorite { Label("Favorite", systemImage: "heart.fill").font(.caption) }
                             }
                             .padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(archive.selection.contains(item.id) ? KeptoraDesign.accent : .clear, lineWidth: 2))
-                            .contextMenu { Button("Select") { archive.selection.insert(item.id) }; Button("Preview") { inspected = item } }
+                            .contextMenu { Button("Select") { archive.selection.insert(item.id) }; Button("Preview") { inspected = item }; Button(archive.decisions.protectedIDs.contains(item.id) ? "Unprotect Photo" : "Protect Photo") { archive.toggleProtection(item) } }
     }
     private var filters: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -655,14 +745,18 @@ struct MacArchiveView: View {
                 TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
             }
             HStack {
-                Button("Reset Filters") { media = 0; albumID = ""; search = ""; comparisonGroup = nil }
+                Button("Reset Filters") { media = 0; albumID = ""; search = ""; comparisonGroup = nil; finding = .all }
+                Toggle("Keep Related Shots Together", isOn: $smartOrder).toggleStyle(.checkbox)
+                Button("Select Exact Copy Suggestions") { undoIDs = archive.selection; archive.selectExactSuggestions() }.disabled(archive.analyzing)
                 Spacer()
                 if archive.analyzing {
                     ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1))).frame(maxWidth: 200)
-                    Text(archive.status ?? String(localized: "Analysis in progress. Groups may change.")).font(.caption)
+                    Text(archive.status ?? L10n.tr("Analysis in progress. Groups may change.")).font(.caption)
+                    Button("Pause Scan") { archive.pauseAnalysis() }
                     Button("Cancel Scan") { archive.cancelAnalysis() }
                 }
                 else {
+                    if archive.analysisPaused { Button("Resume Scan") { archive.resumeAnalysis() }.disabled(!archive.canScanSelectedSources) }
                     Button("Scan Selected Sources") { archive.analyze() }.accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
                     Button("Include Cloud Originals") { cloudScan = true }.disabled(!archive.canScanSelectedSources)
                 }
@@ -677,46 +771,52 @@ struct MacManualSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var confirm = false
     @State private var expectedIDs: Set<String> = []
+    @State private var reviewedItems: [UniversalMediaAsset] = []
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Review Selection").font(.title.bold())
-            let summary = MediaSelectionSummary(archive.selected)
-            Text(String(format: String(localized: "Photos: %lld · Videos: %lld"), summary.photos, summary.videos))
-            Text(archive.sourceName + " · " + ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file))
+            let summary = MediaSelectionSummary(reviewedItems)
+            Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos))
+            Text(L10n.tr("Selected Items") + " · " + ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file))
             Text("Media size, not freed space").font(.caption).foregroundStyle(.secondary)
             if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
             Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").foregroundStyle(.secondary)
             ForEach(archive.connectedSources) { source in
-                let items = archive.selected.filter { $0.sourceID == source.id }
+                let items = reviewedItems.filter { $0.sourceID == source.id }
                 if !items.isEmpty {
                     HStack {
-                        Text(source.displayName + " · " + items.count.formatted())
+                        Text(source.localizedScanTitle + " · " + items.count.formatted())
                         Spacer()
                         Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
             }
             Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(.secondary)
-            if summary.personalItems > 0 { Label("Includes favorites, edited or album items you selected manually.", systemImage: "exclamationmark.triangle") }
+            if summary.personalItems > 0 { Label("Includes favorites, hidden, edited or shared items you selected manually.", systemImage: "exclamationmark.triangle") }
             if archive.exact.contains(where: { $0.assets.allSatisfy { archive.selection.contains($0.id) } }) {
                 Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
             }
-            List(archive.selected) { item in
+            if (!archive.unresolvedSelectionIDs.intersection(archive.selection).isEmpty || !archive.pendingSelection.filter({ archive.selection.contains($0.id) }).isEmpty) {
+                Text("Reconnect unavailable sources or remove their items from your selection.")
+                Button("Remove Unavailable Items from Selection") { archive.discardPendingSelection(); reviewedItems.removeAll { !archive.selection.contains($0.id) } }
+            }
+            List(reviewedItems) { item in
                 HStack {
                     VStack(alignment: .leading) { Text(item.displayName); Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary) }; Spacer()
-                    Button { archive.selection.remove(item.id) } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).accessibilityLabel("Remove from selection")
+                    Button { archive.selection.remove(item.id); reviewedItems.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).accessibilityLabel("Remove from selection")
                 }
             }.disabled(archive.busy)
             HStack {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(archive.busy)
                 Spacer()
-                if archive.busy { ProgressView(archive.status ?? String(localized: "Removing selected items…")) }
-                Button("Remove Selected Items") { expectedIDs = archive.selection; confirm = true }
-                    .buttonStyle(.borderedProminent).disabled(archive.busy || archive.selected.isEmpty)
+                if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
+                Button("Remove Selected Items") { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
+                    .buttonStyle(.borderedProminent).disabled(archive.busy || archive.loading || archive.analyzing || archive.selected.isEmpty || (!archive.unresolvedSelectionIDs.intersection(archive.selection).isEmpty || !archive.pendingSelection.filter({ archive.selection.contains($0.id) }).isEmpty))
             }
         }.padding(24).frame(minWidth: 640, minHeight: 500).interactiveDismissDisabled(archive.busy)
+        .onAppear { reviewedItems = archive.selected }
         .alert("Remove selected items?", isPresented: $confirm) {
-            Button("Remove Selected Items", role: .destructive) { Task { if await archive.removeSelection(expectedIDs: expectedIDs) { dismiss() } } }
+            Button("Remove Selected Items", role: .destructive) { Task { if await archive.removeSelection(expectedIDs: expectedIDs, reviewedAssets: reviewedItems) { dismiss() } } }
             Button("Cancel", role: .cancel) { }
         } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }
         .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
@@ -735,7 +835,7 @@ struct MacManualHistoryView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(entry.date.formatted()).font(.headline)
-                        Text(String(format: String(localized: "%lld items"), entry.count))
+                        Text(String(format: L10n.tr("%lld items"), entry.count))
                         Text(entry.isPhotos ? "Recover items in Apple Photos → Recently Deleted for up to 30 days unless permanently deleted sooner." : "Files remain in the recovery folder on the same storage.").font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -770,4 +870,51 @@ private final class MacArchivePhotoObserver: NSObject, PHPhotoLibraryChangeObser
     }
     deinit { PHPhotoLibrary.shared().unregisterChangeObserver(self) }
     func photoLibraryDidChange(_ changeInstance: PHChange) { changed() }
+}
+
+private struct MacArchiveGroupReview: View {
+    @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.dismiss) private var dismiss
+    let group: LibraryReviewGroup
+    @State private var allowNetwork = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack { Text(LocalizedStringKey(group.titleKey)).font(.title2.bold()); Spacer(); Button("Close") { dismiss() } }
+            Text("Compare details before choosing what to keep.").foregroundStyle(.secondary)
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 440), spacing: 16)], spacing: 16) {
+                    ForEach(group.assets) { item in MacArchiveComparisonTile(item: item, group: group, allowNetwork: allowNetwork).environmentObject(archive) }
+                }
+            }
+            HStack {
+                Toggle("Download Preview from iCloud", isOn: $allowNetwork)
+                Spacer()
+                Button("Protect Group") { archive.protect(group) }
+                Button("Select Others") { archive.selectOthers(in: group) }.buttonStyle(.borderedProminent)
+            }
+            Text("Quality hints require your review.").font(.caption).foregroundStyle(.secondary)
+        }.padding(24).frame(minWidth: 650, minHeight: 550)
+    }
+}
+private struct MacArchiveComparisonTile: View {
+    @EnvironmentObject private var archive: MacArchiveModel
+    let item: UniversalMediaAsset
+    let group: LibraryReviewGroup
+    let allowNetwork: Bool
+    @State private var scale: CGFloat = 1
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: allowNetwork)
+                .scaleEffect(scale).frame(height: 260).clipped()
+                .gesture(MagnificationGesture().onChanged { scale = min(4, max(1, $0)) })
+                .onTapGesture(count: 2) { scale = scale > 1 ? 1 : 2 }
+            Text(item.displayName).lineLimit(1)
+            Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
+            if let date = item.captureDateDescription { Text(date).font(.caption) }
+            Text("\(item.pixelWidth) × \(item.pixelHeight)").font(.caption)
+            ForEach(archive.qualityAssessments[item.id]?.findings ?? [], id: \.rawValue) { value in Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption) }
+            if archive.decisions.keeper(in: group) == item.id { Label("Kept in This Group", systemImage: "bookmark.fill") }
+            Button("Keep This Photo") { archive.keep(item, in: group) }
+        }.padding(12).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+    }
 }

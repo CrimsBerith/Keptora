@@ -25,6 +25,9 @@ final class KeptoraiOSUITests: XCTestCase {
 
     private func openComparisons(_ app: XCUIApplication) {
         app.tabBars.buttons.element(boundBy: 1).tap()
+        let tools = app.buttons["More Review Tools"]
+        for _ in 0..<6 where !tools.isHittable { app.swipeUp() }
+        if tools.exists { tools.tap() }
         let comparisons = app.buttons["cleanup.comparisons"]
         for _ in 0..<6 where !comparisons.isHittable { app.swipeUp() }
         XCTAssertTrue(comparisons.waitForExistence(timeout: 5))
@@ -79,6 +82,9 @@ final class KeptoraiOSUITests: XCTestCase {
         let item = app.buttons["archive.asset.ui-photo-keeper"]
         for _ in 0..<8 where !item.isHittable { app.swipeUp() }
         XCTAssertTrue(item.isHittable); item.tap()
+        let sources = app.buttons["archive.sourcesSummary"]
+        for _ in 0..<10 where !sources.isHittable { app.swipeDown() }
+        sources.tap()
         let source = app.buttons["sources.source.ui-test"]
         for _ in 0..<10 where !source.isHittable { app.swipeDown() }
         XCTAssertTrue(source.isHittable)
@@ -86,6 +92,7 @@ final class KeptoraiOSUITests: XCTestCase {
         source.tap()
         XCTAssertEqual(source.value as? String, "Not selected")
         XCTAssertTrue(app.staticTexts["sources.emptySelection"].waitForExistence(timeout: 3))
+        app.buttons["Done"].firstMatch.tap()
         XCTAssertFalse(app.buttons["archive.scanAll"].isEnabled)
         XCTAssertTrue(app.staticTexts["1 selected outside this view"].exists)
         app.buttons["Review Selection"].tap()
@@ -96,23 +103,45 @@ final class KeptoraiOSUITests: XCTestCase {
             app.launchArguments.removeSubrange(index...index + 1)
         }
         app.launch()
+        XCTAssertTrue(app.buttons["archive.sourcesSummary"].waitForExistence(timeout: 10))
+        app.buttons["archive.sourcesSummary"].tap()
         XCTAssertTrue(source.waitForExistence(timeout: 10))
         XCTAssertEqual(source.value as? String, "Not selected")
         app.buttons["sources.selectAll"].tap()
         XCTAssertEqual(source.value as? String, "Selected")
+        app.buttons["Done"].firstMatch.tap()
         XCTAssertTrue(app.buttons["archive.scanAll"].isEnabled)
+    }
+
+    func testVerySimilarComparisonCanChangeKeeperAndSelectOthers() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        let filter = app.buttons["archive.finding.verySimilar"]
+        for _ in 0..<6 where !filter.isHittable { app.swipeDown() }
+        XCTAssertTrue(filter.waitForExistence(timeout: 5))
+        for _ in 0..<3 where !filter.isHittable { app.descendants(matching: .any)["archive.resultMode"].swipeLeft() }
+        filter.tap()
+        let compare = app.buttons["Compare Group"].firstMatch
+        for _ in 0..<8 where !compare.isHittable { app.swipeUp() }
+        XCTAssertTrue(compare.isHittable); compare.tap()
+        XCTAssertTrue(app.buttons["Next Item"].waitForExistence(timeout: 5))
+        app.buttons["Next Item"].tap()
+        app.buttons["Keep This Photo"].tap()
+        XCTAssertTrue(app.staticTexts["Kept in This Group"].exists)
+        app.buttons["Select Others"].tap()
+        app.buttons["Close Preview"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
     }
 
     func testCombinedGroupsPreserveSelectionWhenReturningToAllItems() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         app.buttons["archive.selectMode"].tap()
-        app.segmentedControls["archive.resultMode"].buttons["Copies & Similar"].tap()
+        app.buttons["archive.finding.copies"].tap()
         let item = app.buttons["archive.asset.ui-photo-keeper"]
         for _ in 0..<8 where !item.isHittable { app.swipeUp() }
         XCTAssertTrue(item.isHittable); item.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
-        for _ in 0..<8 where !app.segmentedControls["archive.resultMode"].isHittable { app.swipeDown() }
-        app.segmentedControls["archive.resultMode"].buttons["All Items"].tap()
+        for _ in 0..<8 where !app.buttons["archive.finding.all"].isHittable { app.swipeDown() }
+        app.buttons["archive.finding.all"].tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
     }
 
@@ -122,7 +151,7 @@ final class KeptoraiOSUITests: XCTestCase {
         let scan = app.buttons["archive.scanAll"]
         XCTAssertTrue(scan.waitForExistence(timeout: 15)); scan.tap()
         XCTAssertTrue(scan.waitForExistence(timeout: 120), "Scan and both similarity passes must finish")
-        app.segmentedControls["archive.resultMode"].buttons["Copies & Similar"].tap()
+        app.buttons["archive.finding.copies"].tap()
         let exact = app.staticTexts["Exact Copies"].firstMatch
         for _ in 0..<6 where !exact.isHittable { app.swipeUp() }
         XCTAssertTrue(exact.exists, "The imported corpus includes two distinct copies of identical JPEG bytes")

@@ -40,9 +40,9 @@ struct MobileScanSourcesSection: View {
                             .font(.title3).foregroundStyle(selected ? MobileKeptoraDesign.accent : Color.secondary)
                         Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(source.kind == .photos ? String(localized: "Photos / iCloud Photos") : source.displayName).font(.subheadline.weight(.semibold))
+                            Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName).font(.subheadline.weight(.semibold))
                             if let report {
-                                Text(String(format: String(localized: "%lld items"), report.itemCount))
+                                (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete"))
                                     .font(.caption).foregroundStyle(.secondary)
                                 Text(LocalizedStringKey(report.statusKey)).font(.caption)
                                     .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
@@ -59,7 +59,7 @@ struct MobileScanSourcesSection: View {
                 Text("Select at least one source").font(.footnote).foregroundStyle(.secondary)
                     .padding(.top, 12).accessibilityIdentifier("sources.emptySelection")
             } else {
-                Text(String(format: String(localized: "%lld sources selected · %lld items"), store.selectedSourceIDs.count, store.scopedAssets.count))
+                Text(String(format: L10n.tr("%lld sources selected · %lld items"), store.selectedSourceIDs.count, store.scopedAssets.count))
                     .font(.footnote).foregroundStyle(.secondary).padding(.top, 12).accessibilityIdentifier("sources.summary")
             }
             Text("Selected sources appear together. The same item in overlapping folders is counted once.")

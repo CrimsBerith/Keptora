@@ -5,6 +5,31 @@ import KeptoraCore
 @MainActor
 final class KeptoraiOSEdgeCaseTests: XCTestCase {
 
+    func testDetailedReviewAndLibraryShareOneSelectionBasket() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let keeper = UniversalMediaAsset(id: namespace + "-keep", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "-keep"), displayName: "keep.jpg", mediaKind: .image)
+        let copy = UniversalMediaAsset(id: namespace + "-copy", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "-copy"), displayName: "copy.jpg", mediaKind: .image)
+        let group = UniversalExactGroup(digest: namespace, assets: [keeper, copy], keeperID: keeper.id)
+        store.exactGroups = [group]
+        XCTAssertTrue(store.selectAllSafeCopies(in: group, isUnlocked: true))
+        XCTAssertEqual(store.selectedLibraryIDs, [copy.id])
+        store.selectedLibraryIDs.removeAll()
+        XCTAssertTrue(store.selectedAssetIDs.isEmpty)
+        store.toggleLibrarySelection(copy)
+        XCTAssertEqual(store.selectedAssetIDs, [copy.id])
+    }
+    func testUserKeeperAndGroupProtectionRemoveItemsFromSharedBasket() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        store.exactGroups = [UniversalExactGroup(digest: namespace, assets: [a, b], keeperID: a.id)]
+        let group = store.reviewGroups[0]
+        store.selectedLibraryIDs = [a.id, b.id]
+        store.keep(b, in: group)
+        XCTAssertEqual(store.selectedLibraryIDs, [a.id]); XCTAssertEqual(store.decisions.keeper(in: group), b.id)
+        store.protect(group); XCTAssertTrue(store.selectedLibraryIDs.isEmpty)
+    }
+
     func testLimitedPhotosAccessActionMapping() {
         XCTAssertEqual(MobileKeptoraStore.photosAuthorizationAction(for: .limited), .connect)
     }
@@ -56,6 +81,8 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         // User can manually select keeper if desired
         let toggledKeeper = store.toggleSelection(keeperAsset, in: group, isUnlocked: true)
         XCTAssertTrue(toggledKeeper)
+        XCTAssertFalse(store.selectedAssetIDs.contains(keeperAsset.id))
+        store.toggleLibrarySelection(keeperAsset)
         XCTAssertTrue(store.selectedAssetIDs.contains(keeperAsset.id))
         XCTAssertTrue(store.hasSelectedKeeper)
     }
@@ -95,6 +122,7 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
             keeperID: protectedFav.id
         )
         
+        store.exactGroups = [group]
         XCTAssertEqual(group.safeCopies.map(\.id), [plainCopy.id])
         _ = store.selectAllSafeCopies(in: group, isUnlocked: true)
         XCTAssertEqual(store.selectedAssetIDs, [plainCopy.id])
