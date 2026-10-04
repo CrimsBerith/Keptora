@@ -4,7 +4,7 @@
 
 **Hedef:** 2.000–3.000 fotoğrafı olan kullanıcı kaynaklarını bir kez bağlar; seçili kaynakları birlikte tarar; kopyaları, çok benzer kareleri ve incelemeye değer fotoğrafları kolayca ayırt eder; saklayacağı kareleri seçer ve kaldıracağı öğeleri tek incelemede onaylar. Bütün seçili ve listelenebilir öğeler arşivde kalır.
 
-**Son kullanıcı kararı:** Karşılaştırma ekranı ve swipe/sürükleyerek karar verme önerileri kaldırılmıştır. Galeride dokunarak seçim, **Bunu Sakla / Diğerlerini Seç**, ayrı büyüteç ve sabit geri alma çubuğu uygulanmıştır. Bu konuda aşağıdaki ilk plan yerine [güncel seçim teslimi](PHOTO_SELECTION_DELIVERY.md) esas alınır; ortak test sayısı 49'dur.
+**Son kullanıcı kararı:** Karşılaştırma ekranı, swipe/sürükleyerek karar verme ve büyüteç düğmesi kaldırılmıştır. Galeride dokunarak seçim, **Bunu Sakla / Diğerlerini Seç** ve sabit geri alma çubuğu uygulanmıştır. Bu konuda aşağıdaki ilk plan yerine [güncel seçim teslimi](PHOTO_SELECTION_DELIVERY.md) esas alınır; ortak test sayısı 49'dur.
 
 **Belgenin durumu:** Uygulama paketleri kodlandı; güncel sonuçlar, 48 portable test ve son Apple kabulü [teslim raporunda](BULK_CLEANUP_DELIVERY.md) kayıtlı. Aşağıdaki bulgular ilk incelemenin başlangıç durumudur. Gerçek fotoğraf kalibrasyonu ve cihaz performansı son kabulde ölçülür. [Kaynak seçimi teslimi](SOURCE_SELECTION_DELIVERY.md) tamamlanmış temel olarak korunur. [Toplu temizlik planı](BULK_PHOTO_CLEANUP_PLAN.md) ayrıntılı ürün kararlarını içerir; uygulama önceliği ve güncel eksikler için bu belge esas alınır.
 

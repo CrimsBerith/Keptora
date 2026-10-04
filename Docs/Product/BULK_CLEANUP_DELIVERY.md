@@ -12,7 +12,7 @@
 2. Ana galeride kısa kaynak özeti ve tek tarama eylemi bulunur. Bulut asıllarını indirme seçeneği ikincil menüdedir; ayrıca onay ister.
 3. Bütün listelenebilir seçili öğeler aynı galeride görünür. Varsayılan akıllı düzen ilişkili kareleri yan yana getirir; her ID bir kez görünür. Tarih düzenine geçilebilir.
 4. Tümü, Birebir Kopyalar, Çok Benzer ve İncelemeye Değer filtreleri kullanılır. Kısa kaynak rozetleri ile kalite bulguları farklı gösterilir.
-5. Galeride fotoğrafın altında **Bunu Sakla**, grup altında **Diğerlerini Seç** ve menüde **Grubu Koru** kullanılır. Büyüteç tek öğenin önizlemesini açar. Saklama gerekçesi gösterilir; ayrı karşılaştırma veya swipe kararı yoktur.
+5. Galeride fotoğrafa dokunmak/tıklamak doğrudan seçimi değiştirir. Fotoğrafın altında **Bunu Sakla**, grup altında **Diğerlerini Seç** ve menüde **Grubu Koru** kullanılır. Saklama gerekçesi gösterilir; hücrede büyüteç düğmesi, ayrı karşılaştırma veya swipe kararı yoktur.
 6. Ana galeri ve son inceleme aynı seçim sepetini kullanır. Görünüm dışındaki seçimler korunur. Son seçim geri alınabilir. Son inceleme bir anlık görüntüye sabitlenir; değişen seçim/revizyon kaldırmadan önce reddedilir.
 7. Erişilemeyen kaynakların seçimleri bekler. Kullanıcı kaynağı yeniden bağlar veya yalnız seçimden çıkarır. Dosya gerçekten kaldırılmışsa ancak başarılı tam sayım bunu doğrulayınca uzlaştırılır. Eski kayıtta metadata yoksa kimlik sessizce düşürülmez.
 

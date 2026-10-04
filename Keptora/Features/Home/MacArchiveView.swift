@@ -670,7 +670,7 @@ struct MacArchiveView: View {
                     }.padding(.horizontal, 20)
                 }
                 ScrollView {
-                    Text("Click a photo to select it. Use the magnifier to enlarge it.").font(.caption).foregroundStyle(.secondary).padding(.top, 12)
+                    Text("Click a photo to select or deselect it.").font(.caption).foregroundStyle(.secondary).padding(.top, 12)
                     if smartOrder {
                         let blocks = LibraryReviewBlock.make(assets: visible, groups: archive.reviewGroups, quality: archive.qualityAssessments, smart: true)
                         LazyVStack(alignment: .leading, spacing: 16) {
@@ -758,14 +758,13 @@ struct MacArchiveView: View {
         let selected = archive.selection.contains(item.id)
         let kept = !selected && groups.contains { archive.decisions.keeper(in: $0) == item.id }
         return VStack(alignment: .leading, spacing: 8) {
-                            ZStack(alignment: .topTrailing) {
                                 Button { archive.toggleSelection(item) } label: {
                                     MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
                                         .allowsHitTesting(false).accessibilityHidden(true)
                                         .overlay(selected ? Color.black.opacity(0.28) : .clear, in: RoundedRectangle(cornerRadius: 12))
                                         .overlay(alignment: .topLeading) {
                                             Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources)).font(.caption.weight(.semibold)).lineLimit(1)
-                                                .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6).padding(.trailing, 44)
+                                                .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6)
                                         }.overlay(alignment: .bottomTrailing) {
                                             Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
                                                 .foregroundStyle(selected ? KeptoraDesign.accent : .white).padding(8)
@@ -774,11 +773,6 @@ struct MacArchiveView: View {
                                     .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
                                     .accessibilityHint("Tap to change selection").accessibilityAddTraits(selected ? .isSelected : [])
                                     .accessibilityIdentifier("mac.archive.asset.\(item.id)")
-                                Button { inspected = item } label: {
-                                    Image(systemName: "magnifyingglass").foregroundStyle(.white).frame(width: 44, height: 44)
-                                        .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
-                                }.buttonStyle(.plain).accessibilityLabel("Open Preview").accessibilityIdentifier("mac.archive.preview.\(item.id)")
-                            }
                                 HStack {
                                     Text(item.displayName).lineLimit(1)
                                     Spacer()

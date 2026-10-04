@@ -25387,35 +25387,6 @@
         }
       }
     },
-    "Tap a photo to select it. Use the magnifier to enlarge it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap a photo to select it. Use the magnifier to enlarge it."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seçmek için fotoğrafa dokunun. Büyütmek için büyütece dokunun."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Touchez une photo pour la sélectionner. Utilisez la loupe pour l’agrandir."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto zum Auswählen antippen. Zum Vergrößern die Lupe verwenden."
-          }
-        }
-      }
-    },
     "Browse collections, select photos, and choose what to remove.": {
       "extractionState": "manual",
       "localizations": {
@@ -25474,35 +25445,6 @@
         }
       }
     },
-    "Click a photo to select it. Use the magnifier to enlarge it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Click a photo to select it. Use the magnifier to enlarge it."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seçmek için fotoğrafa tıklayın. Büyütmek için büyütece tıklayın."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cliquez sur une photo pour la sélectionner. Utilisez la loupe pour l’agrandir."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto zum Auswählen anklicken. Zum Vergrößern die Lupe verwenden."
-          }
-        }
-      }
-    },
     "See related photos together. Click to select, choose what to keep, and review before removing anything.": {
       "extractionState": "manual",
       "localizations": {
@@ -25528,6 +25470,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zusammengehörige Fotos nebeneinander sehen. Zum Auswählen anklicken, Fotos zum Behalten bestimmen und vor dem Entfernen prüfen."
+          }
+        }
+      }
+    },
+    "Tap a photo to select or deselect it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a photo to select or deselect it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğrafı seçmek veya seçimden çıkarmak için dokunun."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez une photo pour la sélectionner ou la désélectionner."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto antippen, um es auszuwählen oder die Auswahl aufzuheben."
+          }
+        }
+      }
+    },
+    "Click a photo to select or deselect it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click a photo to select or deselect it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğrafı seçmek veya seçimden çıkarmak için tıklayın."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez sur une photo pour la sélectionner ou la désélectionner."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto anklicken, um es auszuwählen oder die Auswahl aufzuheben."
           }
         }
       }

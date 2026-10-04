@@ -21,7 +21,6 @@ struct MobileLibraryView: View {
     @State private var toDate = Date()
     @State private var sources = false
     @State private var pendingFolderPicker = false
-    @State private var inspector: UniversalMediaAsset?
     @State private var reviewSelection = false
     @State private var favouritesOnly = false
 
@@ -139,7 +138,6 @@ struct MobileLibraryView: View {
             Button("Download and Scan") { store.startScan(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
         .sheet(isPresented: $sources, onDismiss: { if pendingFolderPicker { pendingFolderPicker = false; store.present(.filePicker) } }) { NavigationStack { MobileSourceLibraryView(onChooseFolder: { pendingFolderPicker = true; sources = false }).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { sources = false } } } } }
-        .sheet(item: $inspector) { MobilePhotoInspectorSheet(asset: $0).environmentObject(store) }
         .sheet(isPresented: $reviewSelection) { MobileSelectionReviewSheet() }
         .sheet(isPresented: $dateFilters) {
             NavigationStack {
@@ -262,7 +260,7 @@ struct MobileLibraryView: View {
             if store.libraryCollectionIDs != nil {
                 Button("Show Entire Library") { store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionSortBySize = false; store.libraryCollectionKind = nil }.frame(minHeight: 44)
             }
-            Text("Tap a photo to select it. Use the magnifier to enlarge it.").font(.caption).foregroundStyle(.secondary)
+            Text("Tap a photo to select or deselect it.").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -312,7 +310,6 @@ struct MobileLibraryView: View {
         if kept { spoken.append(L10n.tr("Kept in This Group")) }
         if store.decisions.protectedIDs.contains(asset.id) { spoken.append(L10n.tr("Protected")) }
         return VStack(spacing: 0) {
-          ZStack(alignment: .topTrailing) {
             Button { store.toggleLibrarySelection(asset) } label: {
             ZStack(alignment: .bottomTrailing) {
                 MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).allowsHitTesting(false).accessibilityHidden(true)
@@ -327,7 +324,7 @@ struct MobileLibraryView: View {
                     if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
                     if kept { Label("Kept in This Group", systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).lineLimit(1).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4)) }
                     Spacer()
-                }.padding(5).padding(.trailing, 34).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }.padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 HStack {
                     if asset.isFavorite { Image(systemName: "heart.fill") }
                     if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
@@ -347,12 +344,6 @@ struct MobileLibraryView: View {
             .accessibilityHint("Tap to change selection")
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityIdentifier("archive.asset.\(asset.id)")
-            Button { inspector = asset } label: {
-                Image(systemName: "magnifyingglass").font(.body.weight(.semibold)).foregroundStyle(.white)
-                    .frame(width: 44, height: 44).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
-            }.buttonStyle(.plain)
-                .accessibilityLabel("Open Preview").accessibilityIdentifier("archive.preview.\(asset.id)")
-          }
           if !groups.isEmpty {
               Button("Keep This") { store.keep(asset, in: groups) }
                   .font(.caption.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)

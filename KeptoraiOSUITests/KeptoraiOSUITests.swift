@@ -126,18 +126,13 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
     }
 
-    func testPhotoTapSelectsAndMagnifierOpensOnlyOnePhoto() {
+    func testPhotoTapSelectsWithoutMagnifierAndCanBeUndone() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         let item = app.buttons["archive.asset.ui-photo-copy"]
         reveal(item, in: app); item.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
         XCTAssertFalse(app.buttons["Close Preview"].exists)
-        let preview = app.buttons["archive.preview.ui-photo-copy"]
-        reveal(preview, in: app); preview.tap()
-        XCTAssertTrue(app.buttons["Close Preview"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Next Item"].exists)
-        app.buttons["Close Preview"].tap()
-        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+        XCTAssertFalse(app.buttons["archive.preview.ui-photo-copy"].exists)
         reveal(item, in: app); item.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
         app.buttons["archive.undoSelection"].tap()
