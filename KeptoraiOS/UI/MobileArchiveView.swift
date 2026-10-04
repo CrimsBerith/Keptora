@@ -406,7 +406,7 @@ struct MobileLibraryView: View {
 
     private var selectionBar: some View {
         VStack(spacing: 8) {
-            HStack {
+            VStack(alignment: .leading, spacing: 6) {
                 let summary = MediaSelectionSummary(store.librarySelection)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(String(format: L10n.tr("Selected items: %lld"), store.selectedLibraryIDs.count)).font(.headline)
@@ -414,8 +414,7 @@ struct MobileLibraryView: View {
                     let hidden = store.selectedLibraryIDs.subtracting(visible.map(\.id)).count
                     if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file)).font(.subheadline.weight(.semibold))
                     Text("Media size, not freed space").font(.caption2).foregroundStyle(.secondary)
                     if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption2).foregroundStyle(.secondary) }
@@ -443,7 +442,9 @@ struct MobileSelectionReviewSheet: View {
     @State private var confirm = false
     @State private var capturedIDs: Set<String> = []
     @State private var completed = false
-    @State private var reviewedItems: [UniversalMediaAsset] = []
+    @State private var review = FrozenSelectionReview()
+    @State private var captured = false
+    private var reviewedItems: [UniversalMediaAsset] { review.items }
     private var summary: MediaSelectionSummary { MediaSelectionSummary(reviewedItems) }
     var body: some View {
         NavigationStack {
@@ -456,7 +457,8 @@ struct MobileSelectionReviewSheet: View {
                     Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.")
                         .font(.footnote).foregroundStyle(.secondary)
                     if summary.personalItems > 0 { Label("Includes favorites, hidden, edited or shared items you selected manually.", systemImage: "exclamationmark.triangle").font(.footnote) }
-                    if store.exactGroups.contains(where: { $0.assets.allSatisfy { store.selectedLibraryIDs.contains($0.id) } }) {
+                    let reviewedIDs = Set(reviewedItems.map(\.id))
+                    if store.exactGroups.contains(where: { $0.assets.allSatisfy { reviewedIDs.contains($0.id) } }) {
                         Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                     }
                 }
@@ -473,10 +475,15 @@ struct MobileSelectionReviewSheet: View {
                 if (!store.unresolvedSelectionIDs.intersection(store.selectedLibraryIDs).isEmpty || !store.pendingSelection.filter({ store.selectedLibraryIDs.contains($0.id) }).isEmpty) {
                     Section("Unavailable Selected Items") {
                         Text("Reconnect unavailable sources or remove their items from your selection.")
-                        Button("Remove Unavailable Items from Selection") { store.discardPendingSelection(); reviewedItems.removeAll { !store.selectedLibraryIDs.contains($0.id) } }
+                        Button("Remove Unavailable Items from Selection") {
+                            review.discard(Set(store.pendingSelection.map(\.id)).union(store.unresolvedSelectionIDs))
+                            store.discardPendingSelection()
+                        }
                     }
                 }
                 Section("Selected Items") {
+                    Text("Removing an item from this list keeps it in your library.").font(.footnote).foregroundStyle(.secondary)
+                    if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(.secondary) }
                     ForEach(reviewedItems) { asset in
                         HStack {
                             MobileAssetThumbnail(asset: asset).frame(width: 60, height: 60).clipShape(RoundedRectangle(cornerRadius: 8))
@@ -486,8 +493,12 @@ struct MobileSelectionReviewSheet: View {
                                 if let date = asset.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
                             }
                             Spacer()
-                            Button { store.toggleLibrarySelection(asset); reviewedItems.removeAll { $0.id == asset.id } } label: { Image(systemName: "minus.circle").frame(width: 44, height: 44) }
+                            Button {
+                                if review.remove(asset.id) { store.replaceLibrarySelection(store.selectedLibraryIDs.subtracting([asset.id])) }
+                            } label: { Image(systemName: "minus.circle").frame(width: 44, height: 44) }
                                 .buttonStyle(.borderless).accessibilityLabel("Remove from selection")
+                                .accessibilityHint("This item will stay in your library.")
+                                .accessibilityIdentifier("archive.review.exclude." + asset.id)
                         }
                     }
                 }
@@ -498,14 +509,20 @@ struct MobileSelectionReviewSheet: View {
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 8) {
                     if store.isCleaningUp { ProgressView(store.cleanupStatus ?? L10n.tr("Removing selected items…")) }
+                    Text(L10n.format("Selected items: %lld", reviewedItems.count)).font(.headline)
+                    if review.canUndoRemoval {
+                        Button("Undo Review Change") {
+                            if let asset = review.undoRemoval() { store.replaceLibrarySelection(store.selectedLibraryIDs.union([asset.id])) }
+                        }.frame(minHeight: 44).disabled(store.isCleaningUp).accessibilityIdentifier("archive.review.undo")
+                    }
                     Button("Remove Selected Items") {
                         capturedIDs = Set(reviewedItems.map(\.id)); confirm = true
                     }.frame(maxWidth: .infinity).buttonStyle(MobilePrimaryButtonStyle())
-                        .disabled(store.librarySelection.isEmpty || (!store.unresolvedSelectionIDs.intersection(store.selectedLibraryIDs).isEmpty || !store.pendingSelection.filter({ store.selectedLibraryIDs.contains($0.id) }).isEmpty) || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
+                        .disabled(reviewedItems.isEmpty || (!store.unresolvedSelectionIDs.intersection(store.selectedLibraryIDs).isEmpty || !store.pendingSelection.filter({ store.selectedLibraryIDs.contains($0.id) }).isEmpty) || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
                     if store.scanState.isScanning || store.isAnalyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.footnote) }
                 }.padding(16).background(.bar)
             }
-            .onAppear { reviewedItems = store.librarySelection }
+            .onAppear { if !captured { review = FrozenSelectionReview(store.librarySelection); captured = true } }
             .interactiveDismissDisabled(store.isCleaningUp)
             .alert("Something went wrong", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") { store.errorMessage = nil }

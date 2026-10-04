@@ -290,6 +290,25 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
     }
 
+    func testFinalReviewRemovalCanBeUndoneEvenWhenEmpty() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        let copy = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(copy, in: app); copy.tap()
+        app.buttons["archive.reviewSelection"].tap()
+        let exclude = app.buttons["archive.review.exclude.ui-photo-copy"]
+        reveal(exclude, in: app, scrollDown: true); exclude.tap()
+        XCTAssertTrue(app.staticTexts["No items selected."].exists)
+        XCTAssertFalse(app.buttons["Remove Selected Items"].isEnabled)
+        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        app.buttons["archive.review.undo"].tap()
+        XCTAssertTrue(app.staticTexts["Portrait Copy.heic"].exists)
+        XCTAssertTrue(app.buttons["Remove Selected Items"].isEnabled)
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+        XCTAssertFalse(app.buttons["archive.review.undo"].exists)
+        app.buttons["archive.review.close"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+    }
+
     func testLibraryReviewAndHistoryTabsShowFixtureContent() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].exists)

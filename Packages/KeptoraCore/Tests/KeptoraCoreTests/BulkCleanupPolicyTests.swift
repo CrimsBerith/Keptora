@@ -9,6 +9,47 @@ final class BulkCleanupPolicyTests: XCTestCase {
             displayName: id + ".jpg", mediaKind: .image, byteCount: bytes, pixelWidth: 2000, pixelHeight: 1500,
             modificationDate: date, isFavorite: favorite, hasAlbumMembership: album)
     }
+    func testReviewUndoRestoresLastRemovedItemAtOriginalPosition() {
+        let assets = [item("a"), item("b"), item("c")]
+        var review = FrozenSelectionReview(assets)
+        XCTAssertTrue(review.remove("b"))
+        XCTAssertEqual(review.items.map(\.id), ["a", "c"])
+        XCTAssertTrue(review.canUndoRemoval)
+        XCTAssertEqual(review.undoRemoval(), assets[1])
+        XCTAssertEqual(review.items, assets)
+        XCTAssertFalse(review.canUndoRemoval)
+        XCTAssertNil(review.undoRemoval())
+    }
+    func testReviewNoOpDoesNotLoseUndoAndLastItemCanBeRestored() {
+        let a = item("a"), b = item("b")
+        var review = FrozenSelectionReview([a, b])
+        review.remove("a"); review.remove("b")
+        XCTAssertTrue(review.items.isEmpty)
+        XCTAssertFalse(review.remove("missing"))
+        XCTAssertEqual(review.undoRemoval(), b)
+        XCTAssertEqual(review.items, [b], "Undo restores only the most recent removal")
+    }
+    func testReviewUndoKeepsFrozenRevisionAndDeduplicatesIDs() {
+        let original = item("a"), newer = original.with(byteCount: .some(999))
+        var review = FrozenSelectionReview([original, newer])
+        XCTAssertEqual(review.items, [original])
+        review.remove(original.id)
+        let restored = review.undoRemoval()
+        XCTAssertEqual(restored, original)
+        XCTAssertFalse(MediaRevisionPolicy.same(restored!, newer, algorithm: "review"), "Later changes still fail cleanup's revision check")
+    }
+    func testReviewDiscardDoesNotRestoreUnavailableItems() {
+        let a = item("a"), b = item("b"), c = item("c")
+        var review = FrozenSelectionReview([a, b, c])
+        review.remove("b")
+        review.discard(["a"])
+        XCTAssertEqual(review.undoRemoval(), b)
+        XCTAssertEqual(review.items, [b, c])
+        review.remove("b"); review.discard(["b"])
+        XCTAssertFalse(review.canUndoRemoval)
+        XCTAssertNil(review.undoRemoval())
+        XCTAssertEqual(review.items, [c])
+    }
     func testSessionFinishesOnlyAfterAllStagesAndReportsPartial() {
         var session = AnalysisSessionProgress()
         for stage in [AnalysisStage.catalogue, .exact, .photos] { session.update(stage, .init(status: .completed)) }

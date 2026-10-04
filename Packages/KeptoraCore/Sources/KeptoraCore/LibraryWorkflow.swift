@@ -364,6 +364,48 @@ public struct LibrarySelection: Equatable, Sendable {
     }
 }
 
+/// The final review keeps the captured asset revisions, including when undoing a
+/// removal. It never substitutes newer catalogue entries into the deletion plan.
+public struct FrozenSelectionReview: Equatable, Sendable {
+    public private(set) var items: [UniversalMediaAsset]
+    private var removed: (item: UniversalMediaAsset, index: Int)?
+    public var canUndoRemoval: Bool { removed != nil }
+
+    public init(_ items: [UniversalMediaAsset] = []) {
+        var seen = Set<String>()
+        self.items = items.filter { seen.insert($0.id).inserted }
+    }
+
+    @discardableResult public mutating func remove(_ id: String) -> Bool {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return false }
+        removed = (items.remove(at: index), index)
+        return true
+    }
+
+    @discardableResult public mutating func undoRemoval() -> UniversalMediaAsset? {
+        guard let previous = removed else { return nil }
+        items.insert(previous.item, at: min(previous.index, items.count))
+        removed = nil
+        return previous.item
+    }
+
+    /// Explicitly discarded unavailable items must not return through review undo.
+    public mutating func discard(_ ids: Set<String>) {
+        if var previous = removed {
+            if ids.contains(previous.item.id) { removed = nil }
+            else {
+                previous.index -= items.prefix(previous.index).filter { ids.contains($0.id) }.count
+                removed = previous
+            }
+        }
+        items.removeAll { ids.contains($0.id) }
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.items == rhs.items && lhs.removed?.item == rhs.removed?.item && lhs.removed?.index == rhs.removed?.index
+    }
+}
+
 public struct MediaSelectionSummary: Equatable, Sendable {
     public let photos: Int
     public let videos: Int

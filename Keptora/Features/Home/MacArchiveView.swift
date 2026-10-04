@@ -509,7 +509,10 @@ final class MacArchiveModel: ObservableObject {
     }
     func resumeAnalysis() { analyze(allowNetwork: lastAnalysisAllowedNetwork) }
     func removeSelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil) async -> Bool {
-        guard !busy, !loading, !analyzing, selection == expectedIDs else { return false }
+        guard !busy, !loading, !analyzing else { return false }
+        guard selection == expectedIDs else {
+            error = L10n.tr("Your selection changed. Review it again before removing items."); return false
+        }
         guard unresolvedSelectionIDs.intersection(selection).isEmpty, pendingSelection.filter({ selection.contains($0.id) }).isEmpty else {
             error = L10n.tr("Reconnect unavailable sources or remove their items from your selection."); return false
         }
@@ -724,7 +727,7 @@ struct MacArchiveView: View {
 
             }
             Divider()
-            HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
                 let summary = MediaSelectionSummary(archive.selected)
                 VStack(alignment: .leading) {
                     Text(String(format: L10n.tr("Selected items: %lld"), archive.selection.count)).font(.headline)
@@ -734,11 +737,10 @@ struct MacArchiveView: View {
                     let hidden = archive.selection.subtracting(visible.map(\.id)).count
                     if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
                 }
-                Spacer()
-                if let status = archive.status { ProgressView().controlSize(.small); Text(status).font(.caption) }
+                if let status = archive.status { HStack { ProgressView().controlSize(.small); Text(status).font(.caption) } }
                 ViewThatFits(in: .horizontal) {
                     HStack { selectionButtons }
-                    VStack(alignment: .trailing) { selectionButtons }
+                    VStack(alignment: .leading) { selectionButtons }
                 }
             }.padding(16).disabled(archive.busy || archive.loading || archive.analyzing)
         }
@@ -882,50 +884,49 @@ struct MacManualSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var confirm = false
     @State private var expectedIDs: Set<String> = []
-    @State private var reviewedItems: [UniversalMediaAsset] = []
+    @State private var review = FrozenSelectionReview()
+    @State private var captured = false
+    private var reviewedItems: [UniversalMediaAsset] { review.items }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Review Selection").font(.title.bold())
-            let summary = MediaSelectionSummary(reviewedItems)
-            Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos))
-            Text(L10n.tr("Selected Items") + " · " + ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file))
-            Text("Media size, not freed space").font(.caption).foregroundStyle(.secondary)
-            if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
-            Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").foregroundStyle(.secondary)
-            ForEach(archive.connectedSources) { source in
-                let items = reviewedItems.filter { $0.sourceID == source.id }
-                if !items.isEmpty {
-                    HStack {
-                        Text(source.localizedScanTitle + " · " + items.count.formatted())
-                        Spacer()
-                        Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(.secondary)
+            List {
+                Section { reviewSummary }
+                Section("Removal by Source") {
+                    ForEach(archive.connectedSources) { source in
+                        let items = reviewedItems.filter { $0.sourceID == source.id }
+                        if !items.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(source.localizedScanTitle + " · " + items.count.formatted())
+                                Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(.secondary)
+                }
+                if hasUnavailableSelection {
+                    Section("Unavailable Selected Items") {
+                        Text("Reconnect unavailable sources or remove their items from your selection.")
+                        Button("Remove Unavailable Items from Selection") {
+                            review.discard(Set(archive.pendingSelection.map(\.id)).union(archive.unresolvedSelectionIDs))
+                            archive.discardPendingSelection()
+                        }
                     }
                 }
-            }
-            Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(.secondary)
-            if summary.personalItems > 0 { Label("Includes favorites, hidden, edited or shared items you selected manually.", systemImage: "exclamationmark.triangle") }
-            if archive.exact.contains(where: { $0.assets.allSatisfy { archive.selection.contains($0.id) } }) {
-                Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
-            }
-            if (!archive.unresolvedSelectionIDs.intersection(archive.selection).isEmpty || !archive.pendingSelection.filter({ archive.selection.contains($0.id) }).isEmpty) {
-                Text("Reconnect unavailable sources or remove their items from your selection.")
-                Button("Remove Unavailable Items from Selection") { archive.discardPendingSelection(); reviewedItems.removeAll { !archive.selection.contains($0.id) } }
-            }
-            List(reviewedItems) { item in
-                HStack {
-                    VStack(alignment: .leading) { Text(item.displayName); Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary) }; Spacer()
-                    Button { archive.setSelection(archive.selection.subtracting([item.id])); reviewedItems.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).accessibilityLabel("Remove from selection")
+                Section("Selected Items") {
+                    Text("Removing an item from this list keeps it in your library.").font(.callout).foregroundStyle(.secondary)
+                    if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(.secondary) }
+                    ForEach(reviewedItems) { item in reviewRow(item) }
                 }
             }.disabled(archive.busy)
-            HStack {
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(archive.busy)
-                Spacer()
-                if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
-                Button("Remove Selected Items") { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
-                    .buttonStyle(.borderedProminent).disabled(archive.busy || archive.loading || archive.analyzing || archive.selected.isEmpty || (!archive.unresolvedSelectionIDs.intersection(archive.selection).isEmpty || !archive.pendingSelection.filter({ archive.selection.contains($0.id) }).isEmpty))
+            Text(L10n.format("Selected items: %lld", reviewedItems.count)).font(.headline)
+            if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
+            ViewThatFits(in: .horizontal) {
+                HStack { reviewButtons }
+                VStack(alignment: .leading) { reviewButtons }
             }
-        }.padding(24).frame(minWidth: 640, minHeight: 500).interactiveDismissDisabled(archive.busy)
-        .onAppear { reviewedItems = archive.selected }
+        }.padding(24).frame(minWidth: 500, minHeight: 500).interactiveDismissDisabled(archive.busy)
+        .onAppear { if !captured { review = FrozenSelectionReview(archive.selected); captured = true } }
         .alert("Remove selected items?", isPresented: $confirm) {
             Button("Remove Selected Items", role: .destructive) { Task { if await archive.removeSelection(expectedIDs: expectedIDs, reviewedAssets: reviewedItems) { dismiss() } } }
             Button("Cancel", role: .cancel) { }
@@ -933,6 +934,51 @@ struct MacManualSelectionSheet: View {
         .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
             Button("OK") { archive.error = nil }
         } message: { Text(archive.error ?? "") }
+    }
+    private var hasUnavailableSelection: Bool {
+        !archive.unresolvedSelectionIDs.intersection(archive.selection).isEmpty || archive.pendingSelection.contains { archive.selection.contains($0.id) }
+    }
+    private var reviewSummary: some View {
+        let summary = MediaSelectionSummary(reviewedItems)
+        let reviewedIDs = Set(reviewedItems.map(\.id))
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
+            Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file))
+            Text("Media size, not freed space").font(.caption).foregroundStyle(.secondary)
+            if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
+            Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").foregroundStyle(.secondary)
+            if summary.personalItems > 0 { Label("Includes favorites, hidden, edited or shared items you selected manually.", systemImage: "exclamationmark.triangle") }
+            if archive.exact.contains(where: { $0.assets.allSatisfy { reviewedIDs.contains($0.id) } }) {
+                Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+            }
+        }
+    }
+    private func reviewRow(_ item: UniversalMediaAsset) -> some View {
+        HStack(spacing: 12) {
+            MacPhotosThumbnail(asset: item, pixelSize: 160).frame(width: 76, height: 76).clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.displayName).lineLimit(2)
+                Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
+                if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
+            }
+            Spacer()
+            Button {
+                if review.remove(item.id) { archive.setSelection(archive.selection.subtracting([item.id])) }
+            } label: { Image(systemName: "minus.circle").frame(width: 32, height: 32) }
+                .buttonStyle(.borderless).accessibilityLabel("Remove from selection")
+                .accessibilityHint("This item will stay in your library.")
+                .accessibilityIdentifier("mac.archive.review.exclude." + item.id)
+        }.padding(.vertical, 4)
+    }
+    @ViewBuilder private var reviewButtons: some View {
+        Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(archive.busy)
+        if review.canUndoRemoval {
+            Button("Undo Review Change") {
+                if let item = review.undoRemoval() { archive.setSelection(archive.selection.union([item.id])) }
+            }.keyboardShortcut("z", modifiers: [.command]).disabled(archive.busy).accessibilityIdentifier("mac.archive.review.undo")
+        }
+        Button("Remove Selected Items") { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
+            .buttonStyle(.borderedProminent).disabled(archive.busy || archive.loading || archive.analyzing || reviewedItems.isEmpty || hasUnavailableSelection)
     }
 }
 

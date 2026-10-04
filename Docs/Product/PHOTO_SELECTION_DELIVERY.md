@@ -31,10 +31,20 @@ iPhone'da dört bulgu filtresi iki sütunda aynı anda görünür. Normal galeri
 - Örtüşen grupların hücre ilişkileri blok başına bir kez indekslenir; her hücre için bütün ilişkiler yeniden aranmaz.
 - iPhone temizlik sekmesinden eski ayrıntılı karşılaştırma bağlantısı çıkarıldı. Mac'in gelişmiş klasör incelemesindeki swipe düğmesi/ekran girişi ve karşılaştırma düzeni çıkarıldı; eski görüntüleyicinin karşılaştırma kontrolü kaldırıldı. Mac **İncelemeye Değer** kısayolu ortak galeri ve ortak seçim sepetini açar. Geçmiş/veri uyumluluğu için kullanılmayan eski bileşenler silinmedi.
 
+## Son inceleme ve dar ekran düzeni
+
+- iPhone ve Mac seçim çubuğunda özet ve eylemler ayrı satırlara alındı. Düğmeler genişlik yetmediğinde dikey yerleşir; uzun çeviriler ve büyük yazı için özetin eylemlerle aynı yatay alanı paylaşması önlendi.
+- Mac son incelemesi küçük fotoğraf önizlemeleri, kaynak ve çekim tarihiyle gösterilir. Uzun kurtarma/kaynak açıklamaları aynı kaydırılabilir listenin bölümlerindedir; listeyi ekran dışına itmez. İnceleme penceresinin asgari genişliği 640'tan 500 noktaya indirildi.
+- İki platformda seçimden çıkarma, öğenin kitaplıkta kalacağını açıklayan metin ve VoiceOver ipucuyla gösterilir. Sabit alt alanda güncel adet ve **Son Çıkarmayı Geri Al** vardır. Liste boşalınca açık boş durum gösterilir, kaldırma kapanır, son çıkarılan fotoğraf aynı ekranda geri alınabilir.
+- `FrozenSelectionReview`, incelemeyi yalnız açılışta yakalar. Son çıkarılan öğeyi eski sırası ve aynı dosya/fotoğraf revizyonuyla geri koyar. Sonradan gelen katalog kayıtları otomatik olarak silme planına alınmaz. Erişilemeyen öğeler açık eylemle çıkarıldığında bu öğeler inceleme geri almasıyla dönmez.
+- Bütün kopyaların seçili olduğu uyarısı incelemedeki sabit öğelere dayanır. Mac'te seçim inceleme sonrasında değişirse sessizce durmak yerine yeniden inceleme gerektiği açıklanır. Mevcut kimlik ve revizyon doğrulamaları devam eder.
+- Ek doğrulama: **53 ortak paket testi geçti**; dört yeni test boş listeyi geri alma, son anlamlı çıkarma, sıralama, eski revizyonun korunması ve erişilemeyen öğeyi geri getirmeme davranışını kapsar. **137 Swift dosyası** sözdizimi kontrolünden geçti; proje referansları, görsel referansları ve dört dilde metin biçimleri doğrulandı.
+- Yeni iPhone son inceleme/boş liste/geri alma UI senaryosu Apple CI listesine eklendi. Mac için değişmiş seçim ve geri yüklenen eski revizyonu kaldırmadan reddetme testi hazırlandı. Bu Apple testleri Linux ortamında çalıştırılmadı. Dört yeni inceleme metni EN/TR/FR/DE olarak eklendi; görsel dosyalar değiştirilmedi.
+
 ## Doğrulama
 
-- Ortak paket: **49 taşınabilir test**; yeni test, grup seçiminin örtüşen ilişkideki saklanacak kareyi işaretlememesini doğrular.
-- iPhone için altı, Mac için dört yeni yerel karar/geri alma testi hazırlandı. Son öğeyi seçimden çıkarma, koruma ve saklamayı birlikte geri alma, örtüşen gruplar, bekleyen seçim, kaldırılan kimliğin yeniden seçilmemesi, tekrarlanan karar ve görünüm kapsamı kapsanır.
+- Ortak paket: **53 taşınabilir test**; grup seçiminin örtüşen ilişkideki saklanacak kareyi işaretlememesi ve sabit son inceleme/geri alma politikası doğrulanır.
+- iPhone için altı, Mac için beş yeni yerel karar/geri alma/güvenlik testi hazırlandı. Son öğeyi seçimden çıkarma, koruma ve saklamayı birlikte geri alma, örtüşen gruplar, bekleyen seçim, kaldırılan kimliğin yeniden seçilmemesi, tekrarlanan karar, görünüm kapsamı ve değişmiş son incelemenin reddi kapsanır.
 - iPhone UI testleri dokunarak seçim, büyüteç düğmesinin bulunmaması, geri alma, galeri içinde saklama/toplu seçim ve son incelemeyi iptal etme akışına uyarlandı. Yeni temel senaryolar Apple CI listesine eklendi. Ekran görüntüleri test sonuç paketine eklenir.
 - Yeni/güncellenen **11 seçim metni EN/TR/FR/DE** olarak hazırlandı. **137 uygulama/paket/test Swift dosyasının sözdizimi**, proje referansları ve yerelleştirme kontrolleri geçti. Mevcut **67 görselin** hash/boyut/fixture kontrolleri geçti.
 - Son sadeleştirmede **6 ek durum/adet metni** dört dilde eklendi. Ortak aday politikası kontrolleri genişletildi; **49 taşınabilir test tekrar geçti**. Filtreli toplu kopya seçimi ve geri alma için yeni iPhone UI senaryosu Apple CI listesine alındı; Apple testleri burada çalıştırılmadı.

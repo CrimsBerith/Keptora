@@ -4,6 +4,23 @@ import KeptoraCore
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    func testFinalReviewRejectsChangedSelectionAndRestoredStaleRevision() async {
+        let model = MacArchiveModel(), id = UUID().uuidString
+        let original = UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: "a.jpg", mediaKind: .image, byteCount: 100)
+        model.assets = [original]; model.selection = []
+        let changedSelection = await model.removeSelection(expectedIDs: [id], reviewedAssets: [original])
+        XCTAssertFalse(changedSelection)
+        XCTAssertEqual(model.error, L10n.tr("Your selection changed. Review it again before removing items."))
+        var review = FrozenSelectionReview([original])
+        review.remove(id); review.undoRemoval()
+        model.error = nil; model.selection = [id]; model.assets = [original.with(byteCount: .some(999))]
+        let staleRevision = await model.removeSelection(expectedIDs: [id], reviewedAssets: review.items)
+        XCTAssertFalse(staleRevision)
+        XCTAssertEqual(model.error, L10n.tr("Your selection changed. Review it again before removing items."))
+        XCTAssertEqual(model.selection, [id])
+        XCTAssertFalse(model.busy)
+    }
+
     func testRepeatedArchiveDecisionsPreserveMeaningfulUndo() {
         let model = MacArchiveModel(), namespace = UUID().uuidString
         let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
