@@ -284,7 +284,7 @@ struct MainRootView: View {
         case .archive:      MacArchiveView()
         case .home:         HomeView()
         case .review:       ReviewStudioView()
-        case .smartBuckets: SmartBucketsDashboardView()
+        case .smartBuckets: MacArchiveView(initialFinding: .review)
         case .insights:     ReviewInsightsView()
         case .history:      CombinedCleanupHistoryView()
         case .diagnostics:  DiagnosticsView()

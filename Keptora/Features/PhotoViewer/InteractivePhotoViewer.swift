@@ -135,14 +135,6 @@ struct InteractivePhotoViewerView: View {
                         .font(.headline)
                         .foregroundStyle(.white.opacity(0.8))
                 }
-            } else if state.isSideBySideComparing, let compareItem = state.compareItem {
-                HStack(spacing: 8) {
-                    singleViewport(image: loadedImage, title: state.currentItem?.displayName ?? "Original", isFailed: isLoadFailed)
-                    singleViewport(image: compareImage, title: compareItem.displayName, isFailed: isCompareFailed)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 50)
-                .padding(.bottom, 80)
             } else {
                 singleViewport(image: loadedImage, title: nil, isFailed: isLoadFailed)
                     .padding(.top, 40)
@@ -200,7 +192,6 @@ struct InteractivePhotoViewerView: View {
         .keptoraAnimation(.spring(response: 0.35, dampingFraction: 0.8), value: state.showInspector)
         .keptoraAnimation(.easeInOut(duration: 0.2), value: state.isSideBySideComparing)
         .task(id: state.selectedIndex) { await loadCurrentAsset() }
-        .task(id: state.compareTargetIndex) { await loadCompareAsset() }
         .keptoraOnChange(of: state.selectedIndex) {
             baseZoomScale = 1.0
             basePanOffset = .zero
@@ -404,59 +395,8 @@ struct InteractivePhotoViewerView: View {
                     .stroke(Color.white.opacity(0.15), lineWidth: 1)
             }
             
-            // Group 3: Comparison & Tools Cluster
+            // Explicit tools for the current photo.
             HStack(spacing: 8) {
-                if state.items.count > 1 {
-                    Button(action: {
-                        state.isSideBySideComparing.toggle()
-                        if state.isSideBySideComparing {
-                            if state.compareTargetIndex == nil {
-                                state.compareTargetIndex = (state.selectedIndex + 1) % state.items.count
-                            }
-                            Task { await loadCompareAsset() }
-                        }
-                    }) {
-                        Image(systemName: state.isSideBySideComparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
-                            .foregroundStyle(state.isSideBySideComparing ? KeptoraDesign.accent : .white.opacity(0.85))
-                    }
-                    .buttonStyle(.plain)
-                    .help(state.isSideBySideComparing ? "Exit comparison mode" : "Compare side-by-side")
-                    .accessibilityLabel(state.isSideBySideComparing ? "Exit comparison mode" : "Compare side-by-side")
-
-                    if state.isSideBySideComparing {
-                        Menu {
-                            ForEach(Array(state.items.enumerated()), id: \.element.id) { idx, item in
-                                if idx != state.selectedIndex {
-                                    Button {
-                                        state.compareTargetIndex = idx
-                                        Task { await loadCompareAsset() }
-                                    } label: {
-                                        HStack {
-                                            Text(item.displayName)
-                                            if state.compareTargetIndex == idx {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 3) {
-                                Text(state.compareItem?.displayName ?? "Target")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .lineLimit(1)
-                                    .frame(maxWidth: 80)
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 9))
-                            }
-                            .foregroundStyle(.white.opacity(0.85))
-                        }
-                        .menuStyle(.borderlessButton)
-                    }
-
-                    Divider().frame(height: 14).background(Color.white.opacity(0.2))
-                }
-
                 // Reveal in Finder
                 Button(action: revealCurrentInFinder) {
                     Image(systemName: "folder")

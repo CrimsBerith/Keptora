@@ -14,7 +14,7 @@ struct OnboardingView: View {
         ),
         OnboardingPage(
             title: "Every Photo. Your Choice.",
-            detail: "Browse every photo and video. Compare similar shots using visual detail, capture time and location, then choose which items to remove.",
+            detail: "See related photos together. Click to select, choose what to keep, and review before removing anything.",
             imageName: "onboarding_proof",
             accent: Color(red: 0.14, green: 0.42, blue: 0.88)
         ),

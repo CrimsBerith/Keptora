@@ -12,30 +12,13 @@ struct MobilePhotoInspectorSheet: View {
     @State private var videoLoading = false
     @State private var videoTask: Task<Void, Never>?
     @State private var previewError: String?
-    @State private var asset: UniversalMediaAsset
-    private let items: [UniversalMediaAsset]
-    private let group: LibraryReviewGroup?
-    @EnvironmentObject private var purchase: MobilePurchaseController
+    let asset: UniversalMediaAsset
     
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
     @State private var showInfo = false
-    @State private var showPaywall = false
-    
-    init(asset: UniversalMediaAsset, items: [UniversalMediaAsset] = [], group: LibraryReviewGroup? = nil) {
-        self.group = group
-        _asset = State(initialValue: asset); self.items = items
-    }
-    private var currentIndex: Int? { items.firstIndex { $0.id == asset.id } }
-    private func move(_ delta: Int) {
-        guard let index = currentIndex, items.indices.contains(index + delta) else { return }
-        videoTask?.cancel(); videoTask = nil
-        player?.pause(); player = nil; scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero; previewError = nil
-        asset = items[index + delta]
-        allowNetwork = false
-    }
     
     public var body: some View {
         NavigationStack {
@@ -109,20 +92,12 @@ struct MobilePhotoInspectorSheet: View {
                 VStack(spacing: 8) {
                     if let previewError { Text(previewError).font(.caption).foregroundStyle(.white) }
                     if videoLoading { ProgressView("Loading video…").tint(.white) }
-                    if let index = currentIndex { Text(L10n.format("%lld of %lld", index + 1, items.count)).font(.caption).foregroundStyle(.white) }
                     Text(store.sourceLabel(asset)).font(.caption).foregroundStyle(.white)
                     if let quality = store.qualityAssessments[asset.id] {
                         ForEach(quality.findings, id: \.rawValue) { value in Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(.white) }
                         if quality.state == .unavailable { Text("Quality could not be assessed.").font(.caption).foregroundStyle(.white) }
                         if quality.state == .insufficientDetail { Text("Not enough detail to judge focus.").font(.caption).foregroundStyle(.white) }
                         Text("Quality hints require your review.").font(.caption2).foregroundStyle(.white.opacity(0.7))
-                    }
-                    if let group {
-                        if store.decisions.keeper(in: group) == asset.id { Label("Kept in This Group", systemImage: "bookmark.fill").foregroundStyle(.white) }
-                        ViewThatFits(in: .horizontal) {
-                            HStack { decisionButtons(group) }
-                            VStack { decisionButtons(group) }
-                        }.frame(minHeight: 44)
                     }
                     if !allowNetwork && (asset.requiresNetwork || { if case .photoLibrary = asset.reference { return true }; return false }()) {
                         Button("Download Preview from iCloud") { allowNetwork = true }.frame(minHeight: 44)
@@ -131,10 +106,6 @@ struct MobilePhotoInspectorSheet: View {
                         Button(store.decisions.protectedIDs.contains(asset.id) ? "Unprotect Photo" : "Protect Photo") { store.toggleProtection(asset) }
                     } label: { Label("Photo Actions", systemImage: "ellipsis.circle").frame(minHeight: 44) }
                     HStack {
-                        if !items.isEmpty {
-                            Button { move(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.accessibilityLabel("Previous Item").disabled((currentIndex ?? 0) <= 0)
-                            Button { move(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }.accessibilityLabel("Next Item").disabled((currentIndex ?? 0) >= items.count - 1)
-                        }
                         if asset.mediaKind == .video && player == nil { Button("Play Video") { videoTask = Task { await loadVideo() } }.disabled(videoLoading) }
                         Spacer()
                         Button(store.selectedLibraryIDs.contains(asset.id) ? "Deselect" : "Select") { store.toggleLibrarySelection(asset) }
@@ -174,7 +145,6 @@ struct MobilePhotoInspectorSheet: View {
                     }
                 }
             }
-            .sheet(isPresented: $showPaywall) { MobilePaywallView() }
             .sheet(isPresented: $showInfo) {
                 AssetMetadataSheet(asset: asset, allowNetwork: allowNetwork)
                     .presentationDetents([.medium, .fraction(0.65)])
@@ -183,10 +153,6 @@ struct MobilePhotoInspectorSheet: View {
         }
     }
 
-    @ViewBuilder private func decisionButtons(_ group: LibraryReviewGroup) -> some View {
-        Button("Keep This Photo") { store.keep(asset, in: group) }.frame(minHeight: 44)
-        Button("Select Others") { if !store.selectOthers(in: group, isUnlocked: purchase.isUnlocked) { showPaywall = true } }.frame(minHeight: 44)
-    }
     private func loadVideo() async {
         videoLoading = true; previewError = nil
         defer { videoLoading = false }

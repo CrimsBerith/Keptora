@@ -17,7 +17,7 @@ enum SidebarRoute: String, CaseIterable, Identifiable, Hashable {
         case .archive:      return "Library"
         case .home:         return "Advanced Folder Scan"
         case .review:       return "Folder Plan Review"
-        case .smartBuckets: return "Folder Categories"
+        case .smartBuckets: return "Worth Reviewing"
         case .insights:     return "Insights"
         case .history:      return "History"
         case .diagnostics:  return "Support"

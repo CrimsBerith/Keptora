@@ -5,7 +5,6 @@ struct MobileLibraryView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var selecting = false
     @State private var visibleAnchor: String?
     @State private var media = 0
     @State private var albumID = ""
@@ -15,7 +14,6 @@ struct MobileLibraryView: View {
     @State private var grouping = 2
     @State private var finding: LibraryFindingFilter = .all
     @State private var smartOrder = true
-    @State private var comparing: LibraryReviewGroup?
     @State private var cloudScan = false
     @State private var dateFilters = false
     @State private var dateRangeEnabled = false
@@ -26,11 +24,6 @@ struct MobileLibraryView: View {
     @State private var inspector: UniversalMediaAsset?
     @State private var reviewSelection = false
     @State private var favouritesOnly = false
-    @State private var undoSelection: Set<String>?
-    @State private var frames: [String: CGRect] = [:]
-    @State private var dragStart: Int?
-    @State private var dragBase: Set<String> = []
-    @State private var dragItems: [UniversalMediaAsset] = []
 
     private var visible: [UniversalMediaAsset] {
         let findingIDs = finding.ids(groups: store.reviewGroups, quality: store.qualityAssessments)
@@ -65,7 +58,6 @@ struct MobileLibraryView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
                     if store.source == .none {
@@ -92,23 +84,16 @@ struct MobileLibraryView: View {
                         } else if smartOrder {
                             let blocks = LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
                             ForEach(blocks) { block in
-                                let keepers = Set(block.groups.map { store.decisions.keeper(in: $0) })
+                                let membership = block.groupsByAsset
                                 VStack(alignment: .leading, spacing: 10) {
                                     Text(LocalizedStringKey(block.titleKey)).font(.headline)
                                     LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 106), spacing: 4)], spacing: 4) {
                                         ForEach(block.assets) { asset in
-                                            cell(asset, suggestedKeeper: keepers.contains(asset.id)).id(asset.id)
+                                            cell(asset, groups: membership[asset.id] ?? []).id(asset.id)
                                         }
                                     }.scrollTargetLayout()
                                     ForEach(block.groups) { group in
-                                        Text(LocalizedStringKey(store.decisions.keeperReason(in: group, quality: store.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
-                                        HStack {
-                                            Button("Compare Group") { comparing = group }
-                                            Menu {
-                                                Button("Select Others") { undoSelection = store.selectedLibraryIDs; if !store.selectOthers(in: group, isUnlocked: purchase.isUnlocked) { store.present(.paywall) } }
-                                                Button("Protect Group") { undoSelection = store.selectedLibraryIDs; store.protect(group) }
-                                            } label: { Label("Group Actions", systemImage: "ellipsis.circle").frame(minHeight: 44) }
-                                        }.font(.footnote)
+                                        groupActions(group)
                                     }
                                 }
                             }
@@ -126,28 +111,7 @@ struct MobileLibraryView: View {
                 .padding(.vertical, 16)
             }
             .scrollPosition(id: $visibleAnchor, anchor: .top)
-            .coordinateSpace(name: "archive")
-            .onPreferenceChange(ArchiveFrameKey.self) { frames = $0 }
-            .simultaneousGesture(LongPressGesture(minimumDuration: 0.35).sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("archive")))
-                .onChanged { value in
-                    guard !store.isCleaningUp, !store.scanState.isScanning, !store.isAnalyzing else { return }
-                    if case .second(true, let drag?) = value {
-                        selecting = true
-                        if dragStart == nil {
-                            dragItems = smartOrder ? LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true).flatMap { $0.assets } : visible
-                        }
-                        guard let target = frames.first(where: { $0.value.contains(drag.location) })?.key,
-                              let index = dragItems.firstIndex(where: { $0.id == target }) else { return }
-                        if dragStart == nil { dragStart = index; dragBase = store.selectedLibraryIDs; undoSelection = dragBase }
-                        let start = dragStart ?? index
-                        store.selectedLibraryIDs = dragBase.union(dragItems[min(start, index)...max(start, index)].map(\.id))
-                        if let frame = frames[target], drag.location.y > frame.maxY - 8, index + 3 < dragItems.count {
-                            proxy.scrollTo(dragItems[index + 3].id, anchor: .bottom)
-                        }
-                    }
-                }.onEnded { _ in dragStart = nil; dragItems = []; store.saveLibrarySelection() })
             .refreshable { await store.loadCatalogue() }
-        }
         .background(MobileKeptoraDesign.canvas)
         .navigationTitle(store.libraryCollectionKind.map { L10n.tr(String.LocalizationValue($0)) } ?? store.libraryCollectionTitle ?? L10n.tr("Library"))
         .navigationBarTitleDisplayMode(.inline)
@@ -162,22 +126,20 @@ struct MobileLibraryView: View {
                 .accessibilityLabel("Library options").accessibilityIdentifier("ios.library.options")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(selecting ? "Done" : "Select") { selecting.toggle() }
-                    .disabled(store.assets.isEmpty || store.isCleaningUp)
-                    .accessibilityIdentifier("archive.selectMode")
+                Button { store.selectLibraryItems(visible) } label: { Image(systemName: "checkmark.circle").frame(minWidth: 44, minHeight: 44) }
+                    .disabled(visible.isEmpty || store.isCleaningUp)
+                    .accessibilityLabel("Select All in This View")
+                    .accessibilityIdentifier("archive.selectAll")
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if !store.selectedLibraryIDs.isEmpty { selectionBar }
+            if !store.selectedLibraryIDs.isEmpty || store.canUndoLibrarySelection { selectionBar }
         }
         .confirmationDialog("Download iCloud originals?", isPresented: $cloudScan) {
             Button("Download and Scan") { store.startScan(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
         .sheet(isPresented: $sources, onDismiss: { if pendingFolderPicker { pendingFolderPicker = false; store.present(.filePicker) } }) { NavigationStack { MobileSourceLibraryView(onChooseFolder: { pendingFolderPicker = true; sources = false }).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { sources = false } } } } }
-        .sheet(item: $comparing) { group in
-            if let first = group.assets.first { MobilePhotoInspectorSheet(asset: first, items: group.assets, group: group).environmentObject(store) }
-        }
-        .sheet(item: $inspector) { MobilePhotoInspectorSheet(asset: $0, items: visible).environmentObject(store) }
+        .sheet(item: $inspector) { MobilePhotoInspectorSheet(asset: $0).environmentObject(store) }
         .sheet(isPresented: $reviewSelection) { MobileSelectionReviewSheet() }
         .sheet(isPresented: $dateFilters) {
             NavigationStack {
@@ -189,9 +151,9 @@ struct MobileLibraryView: View {
                 }.navigationTitle("Date Range").toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dateFilters = false } } }
             }
         }
-        .onChange(of: store.scanSourceSelection) { _, _ in finding = .all; albumID = ""; media = 0; search = ""; dateRangeEnabled = false; favouritesOnly = false; largestFirst = false; dragStart = nil }
+        .onChange(of: store.scanSourceSelection) { _, _ in finding = .all; albumID = ""; media = 0; search = ""; dateRangeEnabled = false; favouritesOnly = false; largestFirst = false }
         .onChange(of: store.connectedFolders) { _, _ in albumID = ""; media = 0; search = ""; dateRangeEnabled = false; favouritesOnly = false }
-        .onChange(of: store.source) { _, _ in undoSelection = nil; dragStart = nil; selecting = false; dateRangeEnabled = false; albumID = ""; search = "" }
+        .onChange(of: store.source) { _, _ in dateRangeEnabled = false; albumID = ""; search = "" }
         .onChange(of: store.libraryCollectionIDs) { _, _ in albumID = ""; search = ""; media = 0; favouritesOnly = false; dateRangeEnabled = false; largestFirst = false }
         .onChange(of: store.selectedLibraryIDs) { _, _ in store.saveLibrarySelection() }
         .alert("Photos Access Needed", isPresented: Binding(get: { store.isShowingPhotosPermissionHelp && !sources }, set: { if !$0 { store.isShowingPhotosPermissionHelp = false } })) {
@@ -257,7 +219,7 @@ struct MobileLibraryView: View {
                     Button("Scan Selected Sources") { store.startScan() }.buttonStyle(.borderedProminent).accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
                     Menu {
                         Button("Include Cloud Originals") { cloudScan = true }
-                        Button("Select Exact Copy Suggestions") { undoSelection = store.selectedLibraryIDs; if !store.selectExactSuggestions(isUnlocked: purchase.isUnlocked) { store.present(.paywall) } }
+                        Button("Select Exact Copy Suggestions") { if !store.selectExactSuggestions(isUnlocked: purchase.isUnlocked) { store.present(.paywall) } }
                     } label: { Image(systemName: "ellipsis.circle").frame(width: 44, height: 44) }
                     .accessibilityLabel("Scan and selection options").disabled(!store.canScanSelectedSources)
                 }
@@ -285,30 +247,22 @@ struct MobileLibraryView: View {
                     }
                 }
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                     ForEach(LibraryFindingFilter.allCases) { option in
                         Button { finding = option } label: {
-                            Text(LocalizedStringKey(option.titleKey)).font(.subheadline.weight(.semibold)).padding(.horizontal, 12).frame(minHeight: 44)
+                            Text(LocalizedStringKey(option.titleKey)).font(.subheadline.weight(.semibold)).padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: 44)
                         }.background(finding == option ? MobileKeptoraDesign.accent.opacity(0.16) : Color.clear, in: Capsule())
                         .accessibilityAddTraits(finding == option ? .isSelected : [])
                         .accessibilityIdentifier("archive.finding." + option.rawValue)
                     }
-                }
-            }.accessibilityIdentifier("archive.resultMode")
+                }.accessibilityIdentifier("archive.resultMode")
             if store.authorization == .limited {
                 Button("Limited Photos access · Manage Access") { store.manageLimitedPhotosAccess() }.font(.footnote).frame(minHeight: 44)
             }
             if store.libraryCollectionIDs != nil {
                 Button("Show Entire Library") { store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionSortBySize = false; store.libraryCollectionKind = nil }.frame(minHeight: 44)
             }
-            if selecting {
-                HStack {
-                    Button("Select All in This View") { undoSelection = store.selectedLibraryIDs; store.selectedLibraryIDs.formUnion(visible.map(\.id)) }
-                    Spacer()
-                    if let previous = undoSelection { Button("Undo") { store.selectedLibraryIDs = previous; undoSelection = nil } }
-                }.font(.footnote).frame(minHeight: 44)
-            }
+            Text("Tap a photo to select it. Use the magnifier to enlarge it.").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -345,55 +299,84 @@ struct MobileLibraryView: View {
             Text(section.date == .distantFuture ? L10n.tr(largestFirst || store.libraryCollectionSortBySize ? "Largest First" : "All Items") : section.date == .distantPast ? L10n.tr("Date unknown") : (grouping == 1 ? section.date.formatted(Date.FormatStyle(date: .complete, time: .omitted, locale: L10n.currentLocale)) : section.date.formatted(.dateTime.locale(L10n.currentLocale).month(.wide).year())))
                 .font(.headline)
             Spacer()
-            if selecting {
-                Button(section.date == .distantFuture ? "Select All in This View" : grouping == 1 ? "Select Day" : "Select Month") { undoSelection = store.selectedLibraryIDs; store.selectedLibraryIDs.formUnion(section.assets.map(\.id)) }
+                Button(section.date == .distantFuture ? "Select All in This View" : grouping == 1 ? "Select Day" : "Select Month") { store.selectLibraryItems(section.assets) }
                     .font(.footnote).frame(minHeight: 44)
-            }
         }
     }
 
-    private func cell(_ asset: UniversalMediaAsset, suggestedKeeper: Bool = false) -> some View {
+    private func cell(_ asset: UniversalMediaAsset, groups: [LibraryReviewGroup] = []) -> some View {
         let selected = store.selectedLibraryIDs.contains(asset.id)
+        let kept = !selected && groups.contains { store.decisions.keeper(in: $0) == asset.id }
         var spoken = [asset.displayName, store.sourceLabel(asset)]
         if let finding = store.qualityAssessments[asset.id]?.findings.first { spoken.append(L10n.tr(String.LocalizationValue(finding.titleKey))) }
-        if suggestedKeeper { spoken.append(L10n.tr("Suggested Keep")) }
+        if kept { spoken.append(L10n.tr("Kept in This Group")) }
         if store.decisions.protectedIDs.contains(asset.id) { spoken.append(L10n.tr("Protected")) }
-        return Button {
-            if selecting { store.toggleLibrarySelection(asset) } else { inspector = asset }
-        } label: {
+        return VStack(spacing: 0) {
+          ZStack(alignment: .topTrailing) {
+            Button { store.toggleLibrarySelection(asset) } label: {
             ZStack(alignment: .bottomTrailing) {
                 MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).allowsHitTesting(false).accessibilityHidden(true)
-                    .overlay(selected ? MobileKeptoraDesign.accent.opacity(0.18) : .clear)
+                    .overlay(selected ? Color.black.opacity(0.28) : .clear)
                 VStack(alignment: .leading, spacing: 4) {
                     Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources)).font(.caption2.weight(.semibold)).lineLimit(1)
                         .padding(.horizontal, 5).padding(.vertical, 3)
                         .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
                     if let issue = store.qualityAssessments[asset.id]?.findings.first {
-                        Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol).font(.caption2).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+                        Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol).font(.caption2).lineLimit(1).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
                     }
                     if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
-                    if suggestedKeeper { Label("Suggested Keep", systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4)) }
+                    if kept { Label("Kept in This Group", systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).lineLimit(1).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4)) }
                     Spacer()
-                }.padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }.padding(5).padding(.trailing, 34).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 HStack {
                     if asset.isFavorite { Image(systemName: "heart.fill") }
                     if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
                     Spacer()
-                    if selecting { Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2) }
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
+                        .foregroundStyle(selected ? MobileKeptoraDesign.accent : .white)
                 }
                 .font(.caption2.weight(.semibold)).foregroundStyle(.white)
                 .padding(8).background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
             }
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? MobileKeptoraDesign.accent : .clear, lineWidth: 3))
-            .background(GeometryReader { geo in Color.clear.preference(key: ArchiveFrameKey.self, value: [asset.id: geo.frame(in: .named("archive"))]) })
-        }
-        .buttonStyle(.plain).disabled(store.isCleaningUp)
-        .accessibilityLabel(spoken.joined(separator: ", "))
-        .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
-        .accessibilityHint(selecting ? "Tap to change selection" : "Tap to preview. Hold and drag to select multiple items.")
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityIdentifier("archive.asset.\(asset.id)")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(spoken.joined(separator: ", "))
+            .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
+            .accessibilityHint("Tap to change selection")
+            .accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityIdentifier("archive.asset.\(asset.id)")
+            Button { inspector = asset } label: {
+                Image(systemName: "magnifyingglass").font(.body.weight(.semibold)).foregroundStyle(.white)
+                    .frame(width: 44, height: 44).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
+            }.buttonStyle(.plain)
+                .accessibilityLabel("Open Preview").accessibilityIdentifier("archive.preview.\(asset.id)")
+          }
+          if !groups.isEmpty {
+              Button("Keep This") { store.keep(asset, in: groups) }
+                  .font(.caption.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
+                  .buttonStyle(.bordered).disabled(store.scanState.isScanning || store.isAnalyzing)
+                  .accessibilityIdentifier("archive.keep.\(asset.id)")
+          }
+        }.disabled(store.isCleaningUp)
+            .contextMenu {
+                Button(store.decisions.protectedIDs.contains(asset.id) ? "Unprotect Photo" : "Protect Photo") { store.toggleProtection(asset) }
+            }
+    }
+
+    private func groupActions(_ group: LibraryReviewGroup) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(group.titleKey)).font(.caption.weight(.semibold))
+            Text(LocalizedStringKey(store.decisions.keeperReason(in: group, quality: store.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("Select Others") { if !store.selectOthers(in: group, isUnlocked: purchase.isUnlocked) { store.present(.paywall) } }
+                    .buttonStyle(.bordered).frame(minHeight: 44).accessibilityIdentifier("archive.others.\(group.id)")
+                Menu {
+                    Button("Protect Group") { store.protect(group) }
+                } label: { Label("Group Actions", systemImage: "ellipsis.circle").frame(minHeight: 44) }
+            }.font(.footnote)
+        }.disabled(store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
     }
 
     private var selectionBar: some View {
@@ -407,17 +390,26 @@ struct MobileLibraryView: View {
                     if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
                 }
                 Spacer()
-                Button { undoSelection = store.selectedLibraryIDs; store.selectedLibraryIDs.removeAll() } label: { Image(systemName: "xmark.circle").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Clear Selection")
-                Button("Review Selection") { reviewSelection = true }.buttonStyle(.borderedProminent)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file)).font(.subheadline.weight(.semibold))
+                    Text("Media size, not freed space").font(.caption2).foregroundStyle(.secondary)
+                    if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption2).foregroundStyle(.secondary) }
+                }
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack { selectionButtons }
+                VStack { selectionButtons }
             }
         }.padding(14).background(.bar).disabled(store.isCleaningUp)
     }
-}
-
-private struct ArchiveFrameKey: PreferenceKey {
-    static var defaultValue: [String: CGRect] = [:]
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
+    @ViewBuilder private var selectionButtons: some View {
+        if store.canUndoLibrarySelection {
+            Button("Undo Selection") { store.undoLibrarySelection() }.frame(minHeight: 44).accessibilityIdentifier("archive.undoSelection")
+        }
+        Button { store.replaceLibrarySelection([]) } label: { Image(systemName: "xmark.circle").frame(width: 44, height: 44) }
+            .accessibilityLabel("Clear Selection").disabled(store.selectedLibraryIDs.isEmpty)
+        Button("Review Selection") { reviewSelection = true }.buttonStyle(.borderedProminent).frame(minHeight: 44).disabled(store.selectedLibraryIDs.isEmpty).accessibilityIdentifier("archive.reviewSelection")
+    }
 }
 
 struct MobileSelectionReviewSheet: View {
@@ -477,7 +469,7 @@ struct MobileSelectionReviewSheet: View {
             }
             .disabled(store.isCleaningUp)
             .navigationTitle("Review Selection").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() }.disabled(store.isCleaningUp) } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() }.disabled(store.isCleaningUp).accessibilityIdentifier("archive.review.close") } }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 8) {
                     if store.isCleaningUp { ProgressView(store.cleanupStatus ?? L10n.tr("Removing selected items…")) }
@@ -515,7 +507,7 @@ struct MobileCleanupHubView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Make space for your next moment.").font(.title.bold())
-                Text("Browse collections, compare suggestions, and choose what to remove.").foregroundStyle(.secondary)
+                Text("Browse collections, select photos, and choose what to remove.").foregroundStyle(.secondary)
                 if store.connectedSources.isEmpty {
                     NavigationLink { MobileSourceLibraryView() } label: {
                         Label("Connect your library", systemImage: "folder.badge.plus")
@@ -528,10 +520,6 @@ struct MobileCleanupHubView: View {
                 if store.scopedAssets.contains(where: { $0.mediaKind == .video && $0.byteCount == nil }) { Text("Items with unknown size appear after measured items.").font(.footnote).foregroundStyle(.secondary) }
                 collection("Live Photos", icon: "livephoto", items: store.scopedAssets.filter { $0.context?.isLivePhoto == true })
                 collection("Duplicates & Similar Photos", icon: "square.on.square", items: UnifiedLibraryAdapter.uniqueReferences(store.reviewGroups.flatMap { $0.assets }))
-                DisclosureGroup("More Review Tools") {
-                    NavigationLink { MobileReviewView() } label: { Label("Detailed Comparison", systemImage: "rectangle.split.2x1") }
-                        .accessibilityIdentifier("cleanup.comparisons").frame(minHeight: 44)
-                }
                 collection("Worth Reviewing", icon: "camera.metering.center.weighted", items: store.scopedAssets.filter { store.qualityAssessments[$0.id]?.needsReview == true })
                 if store.scanState.isScanning || store.isAnalyzing {
                     ProgressView("Analyzing your library…")
@@ -558,6 +546,6 @@ struct MobileCleanupHubView: View {
                 VStack(alignment: .leading, spacing: 4) { Text(LocalizedStringKey(title)).font(.headline); Text(items.count.formatted()).font(.subheadline).foregroundStyle(.secondary) }
                 Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }.padding(18).frame(maxWidth: .infinity).background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
-        }.buttonStyle(.plain).disabled(store.isCleaningUp)
+        }.buttonStyle(.plain).disabled(store.isCleaningUp).accessibilityIdentifier("cleanup.collection." + title)
     }
 }

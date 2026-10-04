@@ -461,6 +461,8 @@ final class MobileKeptoraStore: ObservableObject {
     @Published var pendingSelection: [UniversalMediaAsset] = []
     @Published var unresolvedSelectionIDs: Set<String> = []
     @Published var decisions = (UserDefaults.standard.data(forKey: "Keptora.ReviewDecisions.iOS").flatMap { try? JSONDecoder().decode(LibraryReviewDecisions.self, from: $0) }) ?? LibraryReviewDecisions()
+    @Published private(set) var canUndoLibrarySelection = false
+    private var selectionUndo: (ids: Set<String>, decisions: LibraryReviewDecisions)?
     private let selectionArchive = LibrarySelectionArchive(name: "selection-ios-v3")
     private var selectionSequence = 0
     private var archivedSelectionLoaded = false
@@ -468,19 +470,27 @@ final class MobileKeptoraStore: ObservableObject {
     private var checkpointSequence = 0
 
     func keep(_ asset: UniversalMediaAsset, in group: LibraryReviewGroup) {
+        keep(asset, in: [group])
+    }
+    func keep(_ asset: UniversalMediaAsset, in groups: [LibraryReviewGroup]) {
         guard !isCleaningUp else { return }
-        decisions.keep(asset.id, in: group)
-        selectedLibraryIDs.remove(asset.id); selectedAssetIDs.remove(asset.id); selectedSimilarVideoAssetIDs.remove(asset.id)
+        let related = groups.filter { $0.assets.contains { $0.id == asset.id } }
+        guard !related.isEmpty else { return }
+        rememberLibrarySelection()
+        for group in related { decisions.keep(asset.id, in: group) }
+        selectedLibraryIDs.remove(asset.id)
         persistDecisions(); saveLibrarySelection()
     }
     func toggleProtection(_ asset: UniversalMediaAsset) {
         guard !isCleaningUp else { return }
+        rememberLibrarySelection()
         decisions.toggleProtection(asset.id)
         if decisions.protectedIDs.contains(asset.id) { selectedLibraryIDs.remove(asset.id) }
         persistDecisions(); saveLibrarySelection()
     }
     func protect(_ group: LibraryReviewGroup) {
         guard !isCleaningUp else { return }
+        rememberLibrarySelection()
         decisions.protect(group)
         let ids = Set(group.assets.map(\.id))
         selectedLibraryIDs.subtract(ids); selectedAssetIDs.subtract(ids); selectedSimilarVideoAssetIDs.subtract(ids)
@@ -489,16 +499,16 @@ final class MobileKeptoraStore: ObservableObject {
     @discardableResult
     func selectOthers(in group: LibraryReviewGroup, isUnlocked: Bool) -> Bool {
         guard !isCleaningUp else { return false }
-        let candidates = decisions.candidates(in: group)
+        let candidates = decisions.candidates(in: group, respecting: reviewGroups)
         guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
-        selectedLibraryIDs.formUnion(candidates.map(\.id)); saveLibrarySelection(); return true
+        selectLibraryItems(candidates); return true
     }
     @discardableResult
     func selectExactSuggestions(isUnlocked: Bool) -> Bool {
         guard !isCleaningUp else { return false }
         let candidates = decisions.exactSuggestions(reviewGroups)
         guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
-        selectedLibraryIDs.formUnion(candidates.map(\.id)); saveLibrarySelection(); return true
+        selectLibraryItems(candidates); return true
     }
     private func persistDecisions() { UserDefaults.standard.set(try? JSONEncoder().encode(decisions), forKey: "Keptora.ReviewDecisions.iOS") }
     func discardPendingSelection() {
@@ -532,8 +542,30 @@ final class MobileKeptoraStore: ObservableObject {
 
     func toggleLibrarySelection(_ asset: UniversalMediaAsset) {
         guard !isCleaningUp else { return }
-        if !selectedLibraryIDs.insert(asset.id).inserted { selectedLibraryIDs.remove(asset.id) }
+        var ids = selectedLibraryIDs
+        if !ids.insert(asset.id).inserted { ids.remove(asset.id) }
+        replaceLibrarySelection(ids)
+    }
+    func selectLibraryItems(_ items: [UniversalMediaAsset]) {
+        replaceLibrarySelection(selectedLibraryIDs.union(items.map(\.id)))
+    }
+    func replaceLibrarySelection(_ ids: Set<String>) {
+        guard !isCleaningUp, ids != selectedLibraryIDs else { return }
+        rememberLibrarySelection()
+        selectedLibraryIDs = ids
         saveLibrarySelection()
+    }
+    private func rememberLibrarySelection() {
+        selectionUndo = (selectedLibraryIDs, decisions); canUndoLibrarySelection = true
+    }
+    func undoLibrarySelection() {
+        guard !isCleaningUp, let previous = selectionUndo else { return }
+        // Do not resurrect items removed by cleanup or a successful catalogue refresh.
+        let available = Set((assets + pendingSelection).map(\.id)).union(unresolvedSelectionIDs)
+        selectedLibraryIDs = previous.ids.intersection(available)
+        decisions = previous.decisions
+        selectionUndo = nil; canUndoLibrarySelection = false
+        persistDecisions(); saveLibrarySelection()
     }
 
     func openCollection(_ items: [UniversalMediaAsset], title: String, sortBySize: Bool = false, kind: String? = nil) {

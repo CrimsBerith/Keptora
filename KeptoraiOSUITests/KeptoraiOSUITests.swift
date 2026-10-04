@@ -23,15 +23,13 @@ final class KeptoraiOSUITests: XCTestCase {
         return app
     }
 
-    private func openComparisons(_ app: XCUIApplication) {
-        app.tabBars.buttons.element(boundBy: 1).tap()
-        let tools = app.buttons["More Review Tools"]
-        for _ in 0..<6 where !tools.isHittable { app.swipeUp() }
-        if tools.exists { tools.tap() }
-        let comparisons = app.buttons["cleanup.comparisons"]
-        for _ in 0..<6 where !comparisons.isHittable { app.swipeUp() }
-        XCTAssertTrue(comparisons.waitForExistence(timeout: 5))
-        comparisons.tap()
+
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication, scrollDown: Bool = false) {
+        for _ in 0..<10 where !element.isHittable {
+            if scrollDown { app.swipeDown() } else { app.swipeUp() }
+        }
+        XCTAssertTrue(element.waitForExistence(timeout: 5))
+        XCTAssertTrue(element.isHittable)
     }
 
     func testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles() {
@@ -63,7 +61,6 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testManualArchiveSelectionRetainsItemsWhenFiltering() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        app.buttons["archive.selectMode"].tap()
         let item = app.buttons["archive.asset.ui-photo-keeper"]
         for _ in 0..<8 where !item.isHittable { app.swipeUp() }
         XCTAssertTrue(item.isHittable); item.tap()
@@ -78,7 +75,6 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testSourceCheckboxesPreserveManualSelectionAndPersist() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        app.buttons["archive.selectMode"].tap()
         let item = app.buttons["archive.asset.ui-photo-keeper"]
         for _ in 0..<8 where !item.isHittable { app.swipeUp() }
         XCTAssertTrue(item.isHittable); item.tap()
@@ -113,28 +109,43 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.buttons["archive.scanAll"].isEnabled)
     }
 
-    func testVerySimilarComparisonCanChangeKeeperAndSelectOthers() {
+
+    func testVerySimilarKeeperAndSelectOthersWorkInsideGallery() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         let filter = app.buttons["archive.finding.verySimilar"]
-        for _ in 0..<6 where !filter.isHittable { app.swipeDown() }
-        XCTAssertTrue(filter.waitForExistence(timeout: 5))
-        for _ in 0..<3 where !filter.isHittable { app.descendants(matching: .any)["archive.resultMode"].swipeLeft() }
-        filter.tap()
-        let compare = app.buttons["Compare Group"].firstMatch
-        for _ in 0..<8 where !compare.isHittable { app.swipeUp() }
-        XCTAssertTrue(compare.isHittable); compare.tap()
-        XCTAssertTrue(app.buttons["Next Item"].waitForExistence(timeout: 5))
-        app.buttons["Next Item"].tap()
-        app.buttons["Keep This Photo"].tap()
-        XCTAssertTrue(app.staticTexts["Kept in This Group"].exists)
-        app.buttons["Select Others"].tap()
-        app.buttons["Close Preview"].tap()
+        reveal(filter, in: app, scrollDown: true); filter.tap()
+        let keep = app.buttons["archive.keep.ui-similar-photo-b"]
+        reveal(keep, in: app); keep.tap()
+        reveal(app.staticTexts["Chosen by You"].firstMatch, in: app)
+        let others = app.buttons["Select Others"].firstMatch
+        reveal(others, in: app); others.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["archive.asset.ui-similar-photo-b"].value as? String, "Not selected")
+        XCTAssertFalse(app.buttons["Compare Group"].exists)
+        app.buttons["archive.undoSelection"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+    }
+
+    func testPhotoTapSelectsAndMagnifierOpensOnlyOnePhoto() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        let item = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(item, in: app); item.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["Close Preview"].exists)
+        let preview = app.buttons["archive.preview.ui-photo-copy"]
+        reveal(preview, in: app); preview.tap()
+        XCTAssertTrue(app.buttons["Close Preview"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Next Item"].exists)
+        app.buttons["Close Preview"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+        reveal(item, in: app); item.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        app.buttons["archive.undoSelection"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
     }
 
     func testCombinedGroupsPreserveSelectionWhenReturningToAllItems() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        app.buttons["archive.selectMode"].tap()
         app.buttons["archive.finding.copies"].tap()
         let item = app.buttons["archive.asset.ui-photo-keeper"]
         for _ in 0..<8 where !item.isHittable { app.swipeUp() }
@@ -160,14 +171,14 @@ final class KeptoraiOSUITests: XCTestCase {
         attachment.lifetime = .keepAlways; add(attachment)
     }
 
+
     func testCaptureCurrentPhotoLibraryScreens() {
         let app = launch()
         if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
-        XCTAssertTrue(app.buttons["archive.selectMode"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["archive.selectMode"].isEnabled, "Imported simulator photos must be visible")
-        app.buttons["archive.selectMode"].tap()
+        XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["archive.selectAll"].isEnabled, "Imported simulator photos must be visible")
         let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = "Current Library — real simulator media"
+        attachment.name = "Current Library — tap selection and visible group actions"
         attachment.lifetime = .keepAlways; add(attachment)
         app.tabBars.buttons.element(boundBy: 1).tap()
         let hub = XCTAttachment(screenshot: app.screenshot())
@@ -184,45 +195,20 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons.element(boundBy: 2).isHittable)
     }
 
-    func testVideoReviewSupportsCardCheckboxAndMediaFilters() {
+
+    func testVideoSelectionUsesSameGalleryAndBasket() {
         let app = launch(arguments: ["-keptoraVideoReviewUITesting"])
-
-        openComparisons(app)
-        XCTAssertTrue(app.segmentedControls.buttons["Exact copies"].waitForExistence(timeout: 8))
         app.segmentedControls.buttons["Videos"].tap()
-
-        let selectAllExact = app.buttons["review.exact.selectAll"]
-        XCTAssertTrue(selectAllExact.waitForExistence(timeout: 5))
-        selectAllExact.tap()
-        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 3))
-        let clearExact = app.buttons["review.exact.clearSelection"]
-        XCTAssertTrue(clearExact.waitForExistence(timeout: 3))
-        clearExact.tap()
-        XCTAssertFalse(app.staticTexts["1 selected"].exists)
-
-        let exactCard = app.buttons["review.exact.asset.ui-exact-copy"]
-        XCTAssertTrue(exactCard.waitForExistence(timeout: 5))
-        exactCard.tap()
-        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 3))
-
-        let exactCheckbox = app.buttons["review.exact.checkbox.ui-exact-copy"]
-        XCTAssertTrue(exactCheckbox.isHittable)
-        exactCheckbox.tap()
-        XCTAssertFalse(app.staticTexts["1 selected"].exists)
-
-        app.segmentedControls.buttons["Similar"].tap()
-        let selectAllSimilarVideos = app.buttons["review.similarVideo.selectAll"]
-        XCTAssertTrue(selectAllSimilarVideos.waitForExistence(timeout: 5))
-        XCTAssertTrue(selectAllSimilarVideos.isHittable)
-        let similarCheckbox = app.buttons["review.similarVideo.checkbox.ui-similar-candidate"]
-        XCTAssertTrue(similarCheckbox.waitForExistence(timeout: 5))
-        similarCheckbox.tap()
-        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["Review Cleanup"].isHittable)
-        let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "Keptora Similar Video Review"
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
+        let copy = app.buttons["archive.asset.ui-exact-copy"]
+        reveal(copy, in: app); copy.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
+        app.buttons["Clear Selection"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        app.buttons["archive.undoSelection"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+        app.buttons["Review Selection"].tap()
+        XCTAssertTrue(app.buttons["Remove Selected Items"].waitForExistence(timeout: 5))
+        app.buttons["Close"].tap()
     }
 
     func testSettingsReplacesItselfWithPaywallAndBothCanClose() {
@@ -276,47 +262,28 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.buttons["library.source.files"].waitForExistence(timeout: 5))
     }
 
-    func testExactPhotoCardDetailsAndCleanupConfirmation() {
+
+    func testExactPhotoSelectionAndFinalReviewCanBeCancelled() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        openComparisons(app)
-
-        let card = app.buttons["review.exact.asset.ui-photo-copy"]
-        XCTAssertTrue(card.waitForExistence(timeout: 8))
-        card.tap()
-        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["ios.cleanup.review"].isHittable)
-        app.buttons["ios.cleanup.review"].tap()
-        XCTAssertTrue(app.buttons["ios.cleanup.confirm"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["ios.cleanup.cancel"].firstMatch.waitForExistence(timeout: 3))
-        app.buttons["ios.cleanup.cancel"].firstMatch.tap()
-
-        card.press(forDuration: 1.0)
-        XCTAssertTrue(app.buttons["Why this is safe"].waitForExistence(timeout: 5))
-        app.buttons["Why this is safe"].tap()
-        XCTAssertTrue(app.buttons["ios.assetDetails.close"].waitForExistence(timeout: 5))
-        app.buttons["ios.assetDetails.close"].tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
-    }
-
-    func testSimilarPhotoComparisonOpensResetsAndCloses() {
-        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
-        openComparisons(app)
-        app.segmentedControls.buttons["Similar"].tap()
-
-        XCTAssertTrue(app.buttons["ios.similarityComparison.open"].waitForExistence(timeout: 8))
-        app.buttons["ios.similarityComparison.open"].tap()
-        XCTAssertTrue(app.buttons["ios.similarityComparison.reset"].waitForExistence(timeout: 5))
-        app.buttons["ios.similarityComparison.reset"].tap()
-        app.buttons["ios.similarityComparison.close"].tap()
-        XCTAssertTrue(app.buttons["ios.similarityComparison.open"].waitForExistence(timeout: 5))
+        let copy = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(copy, in: app); copy.tap()
+        app.buttons["Review Selection"].tap()
+        XCTAssertTrue(app.staticTexts["Portrait Copy.heic"].waitForExistence(timeout: 5))
+        app.buttons["Remove Selected Items"].tap()
+        XCTAssertTrue(app.alerts["Remove selected items?"].waitForExistence(timeout: 5))
+        app.alerts.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Portrait Copy.heic"].exists)
+        app.buttons["Close"].tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
     }
 
     func testLibraryReviewAndHistoryTabsShowFixtureContent() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].exists)
 
-        openComparisons(app)
-        XCTAssertTrue(app.segmentedControls.buttons["Exact copies"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.buttons["cleanup.collection.Duplicates & Similar Photos"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["cleanup.comparisons"].exists)
 
         app.tabBars.buttons.element(boundBy: 2).tap()
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.history"].waitForExistence(timeout: 5))
@@ -342,229 +309,61 @@ final class KeptoraiOSUITests: XCTestCase {
         }
     }
 
+
     func testThousandsOfMediaStressLiveScan() {
         let app = launch(arguments: ["-keptoraThousandsStressUITesting"])
-        
-        let readyToReview = app.staticTexts["Ready to review"]
-        XCTAssertTrue(readyToReview.waitForExistence(timeout: 10))
-        
-        let screenshotLibrary = XCTAttachment(screenshot: app.screenshot())
-        screenshotLibrary.name = "Keptora Library After 1000+ Items Scan"
-        screenshotLibrary.lifetime = .keepAlways
-        add(screenshotLibrary)
-        
-        let reviewTab = app.tabBars.buttons.element(boundBy: 1)
-        reviewTab.tap()
-        XCTAssertTrue(app.segmentedControls.buttons["Exact copies"].waitForExistence(timeout: 10))
-        
-        let screenshotReviewPhotos = XCTAttachment(screenshot: app.screenshot())
-        screenshotReviewPhotos.name = "Keptora Review Photos Exact Duplicates"
-        screenshotReviewPhotos.lifetime = .keepAlways
-        add(screenshotReviewPhotos)
-        
+        XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 10))
+        let copies = app.buttons["archive.finding.copies"]
+        reveal(copies, in: app, scrollDown: true); copies.tap()
+        saveScreenshot(app, name: "Stress — copies together in one gallery")
         app.segmentedControls.buttons["Videos"].tap()
-        let screenshotReviewVideos = XCTAttachment(screenshot: app.screenshot())
-        screenshotReviewVideos.name = "Keptora Review Videos Exact Duplicates"
-        screenshotReviewVideos.lifetime = .keepAlways
-        add(screenshotReviewVideos)
-
-        app.segmentedControls.buttons["Similar"].tap()
-        let screenshotSimilarVideos = XCTAttachment(screenshot: app.screenshot())
-        screenshotSimilarVideos.name = "Keptora Review Similar Videos"
-        screenshotSimilarVideos.lifetime = .keepAlways
-        add(screenshotSimilarVideos)
-
+        saveScreenshot(app, name: "Stress — video copies in shared gallery")
         app.segmentedControls.buttons["Photos"].tap()
-        let screenshotSimilarPhotos = XCTAttachment(screenshot: app.screenshot())
-        screenshotSimilarPhotos.name = "Keptora Review Similar Photos"
-        screenshotSimilarPhotos.lifetime = .keepAlways
-        add(screenshotSimilarPhotos)
+        saveScreenshot(app, name: "Stress — photo copies in shared gallery")
     }
+
 
     private func saveScreenshot(_ app: XCUIApplication, name: String) {
-        let screenshot = app.screenshot()
-        let outDir = URL(fileURLWithPath: "/Users/khankartal/.gemini/antigravity-ide/brain/b4499e60-25cb-43bc-8b98-15b02b18bd8d/live_ui_screenshots")
-        try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let fileURL = outDir.appendingPathComponent("\(name).png")
-        try? screenshot.pngRepresentation.write(to: fileURL)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 
+
     func testCaptureLiveUIScreenshotsForVisualAnalysis() {
-        let interruptionMonitor = addUIInterruptionMonitor(withDescription: "Permission Dialog") { alert in
-            if alert.buttons["İzin Verme"].exists {
-                alert.buttons["İzin Verme"].tap()
-                return true
-            } else if alert.buttons["Don’t Allow"].exists {
-                alert.buttons["Don’t Allow"].tap()
-                return true
-            } else if alert.buttons.firstMatch.exists {
-                alert.buttons.firstMatch.tap()
-                return true
-            }
-            return false
-        }
-
-        // 1. Launch in Turkish
-        let app = launch(arguments: ["-keptoraThousandsStressUITesting"], language: "tr", locale: "tr_TR")
-        _ = app.tabBars.buttons.firstMatch.waitForExistence(timeout: 10)
-        app.tap()
-        saveScreenshot(app, name: "01_library_permission_alert")
-
-        if app.buttons["ios.photosPermission.notNow"].waitForExistence(timeout: 3) {
-            app.buttons["ios.photosPermission.notNow"].firstMatch.tap()
-        } else if app.buttons["Şimdi Değil"].firstMatch.waitForExistence(timeout: 2) {
-            app.buttons["Şimdi Değil"].firstMatch.tap()
-        } else if app.buttons["Not Now"].firstMatch.waitForExistence(timeout: 2) {
-            app.buttons["Not Now"].firstMatch.tap()
-        }
-        saveScreenshot(app, name: "01_library_dashboard_turkish")
-
-        // 2. Open Settings
-        if app.buttons["ios.library.settings"].waitForExistence(timeout: 5) {
-            app.buttons["ios.library.settings"].tap()
-            _ = app.buttons["ios.settings.close"].waitForExistence(timeout: 5)
-            saveScreenshot(app, name: "02_settings_turkish")
-
-            if app.buttons["ios.settings.showPaywall"].waitForExistence(timeout: 3) {
-                app.buttons["ios.settings.showPaywall"].tap()
-                _ = app.buttons["ios.paywall.close"].waitForExistence(timeout: 5)
-                saveScreenshot(app, name: "03_paywall_turkish")
-                app.buttons["ios.paywall.close"].tap()
-            } else {
-                app.buttons["ios.settings.close"].tap()
-            }
-        }
-
-        // 3. Review Tab
-        let reviewTab = app.tabBars.buttons.element(boundBy: 1)
-        if reviewTab.waitForExistence(timeout: 5) {
-            reviewTab.tap()
-            _ = app.segmentedControls.firstMatch.waitForExistence(timeout: 8)
-            saveScreenshot(app, name: "04_exact_review_turkish")
-
-            // Switch to Videos
-            if app.segmentedControls.buttons.element(boundBy: 3).waitForExistence(timeout: 3) {
-                app.segmentedControls.buttons.element(boundBy: 3).tap()
-                saveScreenshot(app, name: "05_exact_videos_turkish")
-            }
-
-            // Switch to Similar
-            if app.segmentedControls.buttons.element(boundBy: 1).waitForExistence(timeout: 3) {
-                app.segmentedControls.buttons.element(boundBy: 1).tap()
-
-                // Switch to Photos
-                if app.segmentedControls.buttons.element(boundBy: 2).waitForExistence(timeout: 3) {
-                    app.segmentedControls.buttons.element(boundBy: 2).tap()
-                    saveScreenshot(app, name: "06_similar_photos_turkish")
-
-                    // Open Side by Side comparison if available
-                    if app.buttons["ios.similarityComparison.open"].waitForExistence(timeout: 4) {
-                        app.buttons["ios.similarityComparison.open"].tap()
-                        _ = app.buttons["ios.similarityComparison.close"].waitForExistence(timeout: 5)
-                        saveScreenshot(app, name: "07_side_by_side_comparison")
-                        app.buttons["ios.similarityComparison.close"].tap()
-                    }
-
-                    // Open Split Loupe comparison if available
-                    if app.buttons["ios.similaritySplitComparison.open"].waitForExistence(timeout: 4) {
-                        app.buttons["ios.similaritySplitComparison.open"].tap()
-                        _ = app.buttons["ios.splitComparison.close"].waitForExistence(timeout: 5)
-                        saveScreenshot(app, name: "08_split_loupe_comparison")
-                        app.buttons["ios.splitComparison.close"].tap()
-                    }
-                }
-            }
-        }
-
-        // 4. History Tab
-        let historyTab = app.tabBars.buttons.element(boundBy: 2)
-        if historyTab.waitForExistence(timeout: 5) {
-            historyTab.tap()
-            saveScreenshot(app, name: "09_history_turkish")
-        }
-
-        removeUIInterruptionMonitor(interruptionMonitor)
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"], language: "tr", locale: "tr_TR")
+        saveScreenshot(app, name: "01_library_turkish")
+        let copies = app.buttons["archive.finding.copies"]
+        reveal(copies, in: app, scrollDown: true); copies.tap()
+        saveScreenshot(app, name: "02_copies_grid_turkish")
+        let item = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(item, in: app); item.tap()
+        saveScreenshot(app, name: "03_selection_bar_turkish")
+        app.buttons["archive.reviewSelection"].tap()
+        saveScreenshot(app, name: "04_final_review_turkish")
+        app.buttons["archive.review.close"].tap()
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        saveScreenshot(app, name: "05_cleanup_collections_turkish")
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        saveScreenshot(app, name: "06_history_turkish")
     }
 
     func testGenerateAppStoreScreenshots() {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"], language: "tr", locale: "tr_TR")
-        let outDir = URL(fileURLWithPath: "/Users/khankartal/Desktop/MAC APPS NEARLY FINISHED/Cullora_Phase_5O_Calisan_Xcode_Projesi/AppStore/Generated/Screenshots/iOS")
-        try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-
-        func save(_ name: String) {
-            let screenshot = app.screenshot()
-            let fileURL = outDir.appendingPathComponent("\(name).png")
-            try? screenshot.pngRepresentation.write(to: fileURL)
-            print("✓ Saved App Store screenshot: \(name).png")
-        }
-
-        // Screen 1: Library Overview
-        XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 8))
-        usleep(800_000)
-        save("01_iPhone_Library")
-
-        // Screen 2: Exact Copies Review
-        let reviewTab = app.tabBars.buttons.element(boundBy: 1)
-        if reviewTab.waitForExistence(timeout: 5) {
-            reviewTab.tap()
-            _ = app.segmentedControls["ios.review.mode"].waitForExistence(timeout: 5)
-            let card = app.buttons["review.exact.asset.ui-photo-copy"]
-            if card.waitForExistence(timeout: 5) {
-                card.tap()
-            }
-            usleep(800_000)
-            save("02_iPhone_Exact_Review")
-
-            // Screen 4: Cleanup Confirmation Sheet (open while 1 copy is selected)
-            if app.buttons["ios.cleanup.review"].waitForExistence(timeout: 4) {
-                app.buttons["ios.cleanup.review"].tap()
-                _ = app.buttons["ios.cleanup.confirm"].waitForExistence(timeout: 5)
-                usleep(800_000)
-                save("04_iPhone_Cleanup_Confirm")
-                if app.buttons["ios.cleanup.cancel"].firstMatch.waitForExistence(timeout: 3) {
-                    app.buttons["ios.cleanup.cancel"].firstMatch.tap()
-                    usleep(400_000)
-                }
-            }
-
-            // Screen 3: Similar Comparison
-            let similarSegment = app.segmentedControls["ios.review.mode"].buttons.element(boundBy: 1)
-            if similarSegment.waitForExistence(timeout: 4) {
-                similarSegment.tap()
-                usleep(500_000)
-                if app.buttons["ios.similarityComparison.open"].waitForExistence(timeout: 4) {
-                    app.buttons["ios.similarityComparison.open"].tap()
-                    _ = app.buttons["ios.similarityComparison.close"].waitForExistence(timeout: 5)
-                    usleep(800_000)
-                    save("03_iPhone_Similar_Comparison")
-                    app.buttons["ios.similarityComparison.close"].tap()
-                    usleep(400_000)
-                }
-            }
-        }
-
-        // Screen 5: History / Quarantine
-        let historyTab = app.tabBars.buttons.element(boundBy: 2)
-        if historyTab.waitForExistence(timeout: 5) {
-            historyTab.tap()
-            usleep(800_000)
-            save("05_iPhone_History")
-        }
-
-        // Screen 6: Keptora Pro Paywall
-        let libraryTab = app.tabBars.buttons.element(boundBy: 0)
-        if libraryTab.waitForExistence(timeout: 5) {
-            libraryTab.tap()
-            if app.buttons["ios.library.settings"].waitForExistence(timeout: 5) {
-                app.buttons["ios.library.settings"].tap()
-                if app.buttons["ios.settings.showPaywall"].waitForExistence(timeout: 4) {
-                    app.buttons["ios.settings.showPaywall"].tap()
-                    _ = app.buttons["ios.paywall.close"].waitForExistence(timeout: 5)
-                    usleep(800_000)
-                    save("06_iPhone_Paywall")
-                    app.buttons["ios.paywall.close"].tap()
-                }
-            }
-        }
+        saveScreenshot(app, name: "01_iPhone_Library")
+        let copies = app.buttons["archive.finding.copies"]
+        reveal(copies, in: app, scrollDown: true); copies.tap()
+        let card = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(card, in: app); card.tap()
+        saveScreenshot(app, name: "02_iPhone_Copies_Selection")
+        app.buttons["archive.reviewSelection"].tap()
+        saveScreenshot(app, name: "03_iPhone_Selection_Review")
+        app.buttons["archive.review.close"].tap()
+        let similar = app.buttons["archive.finding.verySimilar"]
+        reveal(similar, in: app, scrollDown: true); similar.tap()
+        let keep = app.buttons["archive.keep.ui-similar-photo-b"]
+        reveal(keep, in: app)
+        saveScreenshot(app, name: "04_iPhone_Related_Photos")
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        saveScreenshot(app, name: "05_iPhone_History")
     }
 }

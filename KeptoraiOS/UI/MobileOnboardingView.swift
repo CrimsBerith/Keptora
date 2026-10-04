@@ -26,7 +26,7 @@ struct MobileOnboardingView: View {
         OnboardingStep(
             id: 1,
             title: "Every Photo. Your Choice.",
-            subtitle: "Browse your entire library or compare similar shots using images, capture time and location. Only remove items you choose.",
+            subtitle: "See related photos together. Tap to select, choose what to keep, and review before removing anything.",
             icon: "checkmark.seal.fill",
             tint: MobileKeptoraDesign.accent
         ),

@@ -18,12 +18,6 @@ private enum ReviewStudioMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-private enum SimilarityReviewLayout: String, CaseIterable, Identifiable {
-    case compare = "Compare"
-    case cards = "Cards"
-    var id: String { rawValue }
-}
-
 private enum ExactGroupFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case unreviewed = "Unreviewed"
@@ -52,7 +46,6 @@ struct ReviewStudioView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
     @State private var mode: ReviewStudioMode = .exact
-    @State private var similarityLayout: SimilarityReviewLayout = .compare
     @State private var comparisonMemberID: String?
     @State private var comparisonScale: CGFloat = 1
     @State private var comparisonOffset: CGSize = .zero
@@ -64,7 +57,6 @@ struct ReviewStudioView: View {
     @State private var isEvidencePresented = false
     @State private var showDecisionReconciliation = false
     @State private var showGlobalSelectConfirmation = false
-    @State private var isShowingSwipeCulling = false
     @State private var activeViewerContext: StudioViewerContext? = nil
     @State private var toastMessage: String? = nil
     @State private var decisionHistory: [(AssetID, ReviewDecision?)] = []
@@ -177,33 +169,6 @@ struct ReviewStudioView: View {
             DecisionEvidenceSheet(
                 asset: model.selectedReviewAsset,
                 evidence: model.selectedDecisionEvidence
-            )
-        }
-        .sheet(isPresented: $isShowingSwipeCulling) {
-            // Only extra copies are swipeable; the canonical keeper is never offered for cleanup.
-            let cards: [SwipeCardItem] = model.duplicateGroups.flatMap { group in
-                group.assets.filter { $0.id != group.canonicalAssetID }.map { asset in
-                    SwipeCardItem(
-                        id: asset.id.rawValue,
-                        fileURL: asset.fileURL,
-                        displayName: asset.displayName,
-                        byteCount: asset.byteCount,
-                        badgeLabel: "Copy",
-                        badgeColor: .orange
-                    )
-                }
-            }
-            SwipeCullingStudioView(
-                items: cards,
-                onCommitPlan: { cleanupItems in
-                    model.applySwipeDecisions(
-                        cleanupAssetIDs: cleanupItems.map { AssetID(rawValue: $0.id) },
-                        access: store
-                    )
-                    isShowingSwipeCulling = false
-                    model.isShowingSafetyPlan = true
-                },
-                onClose: { isShowingSwipeCulling = false }
             )
         }
         .alert("Select all safe copies?", isPresented: $showGlobalSelectConfirmation) {
@@ -378,14 +343,6 @@ struct ReviewStudioView: View {
                     .padding(.vertical, 3)
                     .background(KeptoraDesign.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
-
-                Button {
-                    isShowingSwipeCulling = true
-                } label: {
-                    Label("Swipe & Cull", systemImage: "hand.draw.fill")
-                }
-                .buttonStyle(.bordered)
-                .help("Fast card swipe review: Swipe Right to Keep, Swipe Left to Clean")
 
                 Button {
                     showGlobalSelectConfirmation = true
@@ -1038,32 +995,9 @@ struct ReviewStudioView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
 
-                    HStack(spacing: 12) {
-                        Picker("Similarity layout", selection: $similarityLayout) {
-                            ForEach(SimilarityReviewLayout.allCases) { layout in Text(LocalizedStringKey(layout.rawValue)).tag(layout) }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 260)
-                        Spacer()
-                        if similarityLayout == .compare {
-                            Button {
-                                resetComparisonViewport()
-                            } label: {
-                                Image(systemName: "arrow.counterclockwise")
-                            }
-                            .buttonStyle(.borderless)
-                            .keyboardShortcut("0", modifiers: [.command])
-                            .help("Reset synchronized zoom and pan (⌘0)")
-                            .accessibilityLabel("Reset View")
-                        }
-                    }
-                    if similarityLayout == .compare {
-                        similarityComparison(group)
-                    } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16)], spacing: 16) {
-                            ForEach(group.members) { member in
-                                similarityAssetCard(member: member, in: group)
-                            }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16)], spacing: 16) {
+                        ForEach(group.members) { member in
+                            similarityAssetCard(member: member, in: group)
                         }
                     }
                 }
@@ -1282,7 +1216,7 @@ struct ReviewStudioView: View {
 
                     if let anchor = group.anchor {
                         Divider()
-                        Text("Comparison anchor")
+                        Text("Suggested Keep")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                         Text(anchor.asset.displayName)

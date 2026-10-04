@@ -222,6 +222,8 @@ final class MacArchiveModel: ObservableObject {
     @Published var pendingSelection: [UniversalMediaAsset] = []
     @Published var unresolvedSelectionIDs: Set<String> = []
     @Published var decisions = (UserDefaults.standard.data(forKey: "Keptora.ReviewDecisions.Mac").flatMap { try? JSONDecoder().decode(LibraryReviewDecisions.self, from: $0) }) ?? LibraryReviewDecisions()
+    @Published private(set) var canUndoSelection = false
+    private var selectionUndo: (ids: Set<String>, decisions: LibraryReviewDecisions)?
     private let selectionArchive = LibrarySelectionArchive(name: "selection-mac-v3")
     private var selectionSequence = 0
     private var archivedSelectionLoaded = false
@@ -235,17 +237,44 @@ final class MacArchiveModel: ObservableObject {
         selection.subtract(pendingSelection.map(\.id)); selection.subtract(unresolvedSelectionIDs); unresolvedSelectionIDs = []; pendingSelection = []
     }
     func keep(_ item: UniversalMediaAsset, in group: LibraryReviewGroup) {
-        guard !busy else { return }; decisions.keep(item.id, in: group); selection.remove(item.id); persistDecisions()
+        keep(item, in: [group])
+    }
+    func keep(_ item: UniversalMediaAsset, in groups: [LibraryReviewGroup]) {
+        guard !busy else { return }
+        let related = groups.filter { $0.assets.contains { $0.id == item.id } }
+        guard !related.isEmpty else { return }
+        rememberSelection()
+        for group in related { decisions.keep(item.id, in: group) }
+        selection.remove(item.id); persistDecisions()
     }
     func toggleProtection(_ item: UniversalMediaAsset) {
-        guard !busy else { return }; decisions.toggleProtection(item.id)
+        guard !busy else { return }; rememberSelection(); decisions.toggleProtection(item.id)
         if decisions.protectedIDs.contains(item.id) { selection.remove(item.id) }; persistDecisions()
     }
     func protect(_ group: LibraryReviewGroup) {
-        guard !busy else { return }; decisions.protect(group); selection.subtract(group.assets.map(\.id)); persistDecisions()
+        guard !busy else { return }; rememberSelection(); decisions.protect(group); selection.subtract(group.assets.map(\.id)); persistDecisions()
     }
-    func selectOthers(in group: LibraryReviewGroup) { guard !busy else { return }; selection.formUnion(decisions.candidates(in: group).map(\.id)) }
-    func selectExactSuggestions() { guard !busy else { return }; selection.formUnion(decisions.exactSuggestions(reviewGroups).map(\.id)) }
+    func selectOthers(in group: LibraryReviewGroup) { selectItems(decisions.candidates(in: group, respecting: reviewGroups)) }
+    func selectExactSuggestions() { selectItems(decisions.exactSuggestions(reviewGroups)) }
+    func selectItems(_ items: [UniversalMediaAsset]) { setSelection(selection.union(items.map(\.id))) }
+    func toggleSelection(_ item: UniversalMediaAsset) {
+        var ids = selection
+        if !ids.insert(item.id).inserted { ids.remove(item.id) }
+        setSelection(ids)
+    }
+    func setSelection(_ ids: Set<String>) {
+        guard !busy, ids != selection else { return }
+        rememberSelection(); selection = ids
+    }
+    private func rememberSelection() {
+        selectionUndo = (selection, decisions); canUndoSelection = true
+    }
+    func undoSelection() {
+        guard !busy, let previous = selectionUndo else { return }
+        let available = Set((assets + pendingSelection).map(\.id)).union(unresolvedSelectionIDs)
+        selection = previous.ids.intersection(available); decisions = previous.decisions
+        selectionUndo = nil; canUndoSelection = false; persistDecisions()
+    }
     private func persistDecisions() { UserDefaults.standard.set(try? JSONEncoder().encode(decisions), forKey: "Keptora.ReviewDecisions.Mac") }
     private func reconcileSelection(previousSelection: [UniversalMediaAsset] = []) {
         var saved = Set(UserDefaults.standard.stringArray(forKey: selectionKey) ?? [])
@@ -545,23 +574,22 @@ struct MacArchiveView: View {
     @State private var search = ""
     @State private var finding: LibraryFindingFilter = .all
     @State private var smartOrder = true
-    @State private var comparing: LibraryReviewGroup?
     @State private var cloudScan = false
     @State private var media = 0
     @State private var albumID = ""
-    @State private var comparisonGroup: UniversalSimilarityGroup?
     @State private var showPlan = false
     @State private var inspected: UniversalMediaAsset?
     @State private var previewNetwork = false
-    @State private var undoIDs: Set<String>?
     @State private var showAccessGuide = false
+    init(initialFinding: LibraryFindingFilter = .all) {
+        _finding = State(initialValue: initialFinding)
+    }
     private var visible: [UniversalMediaAsset] {
         let findingIDs = finding.ids(groups: archive.reviewGroups, quality: archive.qualityAssessments)
         return archive.scopedAssets.filter { item in
             (findingIDs == nil || findingIDs!.contains(item.id)) &&
             (media == 0 || (media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (albumID.isEmpty || item.context?.albums.contains { $0.id == albumID } == true) &&
-            (comparisonGroup == nil || comparisonGroup!.assets.contains { $0.id == item.id }) &&
             (search.isEmpty || item.displayName.localizedCaseInsensitiveContains(search))
         }.sorted { ($0.context?.captureDate ?? $0.creationDate ?? .distantPast) > ($1.context?.captureDate ?? $1.creationDate ?? .distantPast) }
     }
@@ -642,23 +670,23 @@ struct MacArchiveView: View {
                     }.padding(.horizontal, 20)
                 }
                 ScrollView {
+                    Text("Click a photo to select it. Use the magnifier to enlarge it.").font(.caption).foregroundStyle(.secondary).padding(.top, 12)
                     if smartOrder {
                         let blocks = LibraryReviewBlock.make(assets: visible, groups: archive.reviewGroups, quality: archive.qualityAssessments, smart: true)
                         LazyVStack(alignment: .leading, spacing: 16) {
                             ForEach(blocks) { block in
-                                let keepers = Set(block.groups.map { archive.decisions.keeper(in: $0) })
+                                let membership = block.groupsByAsset
                                 Text(LocalizedStringKey(block.titleKey)).font(.headline)
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
-                                    ForEach(block.assets) { item in archiveCell(item, suggestedKeeper: keepers.contains(item.id)) }
+                                    ForEach(block.assets) { item in archiveCell(item, groups: membership[item.id] ?? []) }
                                 }
                                 ForEach(block.groups) { group in
                                     Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
                                     HStack {
                                         Text(LocalizedStringKey(group.titleKey)).font(.caption)
-                                        Button("Compare Group") { comparing = group }
-                                        Button("Select Others") { undoIDs = archive.selection; archive.selectOthers(in: group) }
-                                        Button("Protect Group") { undoIDs = archive.selection; archive.protect(group) }
-                                    }
+                                        Button("Select Others") { archive.selectOthers(in: group) }.accessibilityIdentifier("mac.archive.others.\(group.id)")
+                                        Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
+                                    }.disabled(archive.analyzing)
                                 }
                             }
                         }.padding(20)
@@ -676,22 +704,24 @@ struct MacArchiveView: View {
             HStack(spacing: 12) {
                 let summary = MediaSelectionSummary(archive.selected)
                 VStack(alignment: .leading) {
+                    Text(String(format: L10n.tr("Selected items: %lld"), archive.selection.count)).font(.headline)
                     Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
+                    Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file) + " · " + L10n.tr("Media size, not freed space")).font(.caption).foregroundStyle(.secondary)
+                    if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
                     let hidden = archive.selection.subtracting(visible.map(\.id)).count
                     if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
                 }
                 Spacer()
                 if let status = archive.status { ProgressView().controlSize(.small); Text(status).font(.caption) }
-                Button("Select All in This View") { undoIDs = archive.selection; archive.selection.formUnion(visible.map(\.id)) }.keyboardShortcut("a", modifiers: [.command])
-                if let undoIDs { Button("Undo") { archive.selection = undoIDs; self.undoIDs = nil }.keyboardShortcut("z", modifiers: [.command]) }
-                Button("Clear Selection") { undoIDs = archive.selection; archive.selection.removeAll() }
-                Button("Review Selection") { showPlan = true }.buttonStyle(.borderedProminent).disabled(archive.selection.isEmpty)
+                ViewThatFits(in: .horizontal) {
+                    HStack { selectionButtons }
+                    VStack(alignment: .trailing) { selectionButtons }
+                }
             }.padding(16).disabled(archive.busy || archive.loading || archive.analyzing)
         }
         .background(KeptoraDesign.canvas)
         .accessibilityIdentifier("mac.page.archive")
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
-        .sheet(item: $comparing) { group in MacArchiveGroupReview(group: group).environmentObject(archive) }
         .sheet(item: $inspected) { item in
             VStack(spacing: 14) {
                 MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork).frame(minWidth: 600, minHeight: 420)
@@ -701,7 +731,7 @@ struct MacArchiveView: View {
                 if let date = item.captureDateDescription { Text(date) }
                 if let context = item.context, let camera = context.camera { Text(camera) }
                 if let location = item.context?.location { Text(String(format: "%.5f, %.5f", location.latitude, location.longitude)) }
-                HStack { Button("Close") { inspected = nil }; Button("Select") { archive.selection.insert(item.id); inspected = nil } }
+                HStack { Button("Close") { inspected = nil }; Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) } }
             }.padding(20)
         }
         .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
@@ -712,36 +742,63 @@ struct MacArchiveView: View {
         .confirmationDialog("Download iCloud originals?", isPresented: $cloudScan) {
             Button("Download and Scan") { archive.analyze(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
-        .onChange(of: archive.connectedFolders) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = "" }
-        .onChange(of: archive.scanSourceSelection) { _ in comparisonGroup = nil; finding = .all; albumID = ""; media = 0; search = "" }
-        .onChange(of: archive.sourceName) { _ in comparisonGroup = nil; albumID = ""; media = 0; search = ""; undoIDs = nil }
+        .onChange(of: archive.connectedFolders) { _ in albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.scanSourceSelection) { _ in finding = .all; albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.sourceName) { _ in albumID = ""; media = 0; search = "" }
     }
-    private func archiveCell(_ item: UniversalMediaAsset, suggestedKeeper: Bool = false) -> some View {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Button { inspected = item } label: {
+    @ViewBuilder private var selectionButtons: some View {
+        Button("Select All in This View") { archive.selectItems(visible) }.keyboardShortcut("a", modifiers: [.command]).disabled(visible.isEmpty)
+        if archive.canUndoSelection {
+            Button("Undo Selection") { archive.undoSelection() }.keyboardShortcut("z", modifiers: [.command]).accessibilityIdentifier("mac.archive.undoSelection")
+        }
+        Button("Clear Selection") { archive.setSelection([]) }.disabled(archive.selection.isEmpty)
+        Button("Review Selection") { showPlan = true }.buttonStyle(.borderedProminent).disabled(archive.selection.isEmpty)
+    }
+    private func archiveCell(_ item: UniversalMediaAsset, groups: [LibraryReviewGroup] = []) -> some View {
+        let selected = archive.selection.contains(item.id)
+        let kept = !selected && groups.contains { archive.decisions.keeper(in: $0) == item.id }
+        return VStack(alignment: .leading, spacing: 8) {
+                            ZStack(alignment: .topTrailing) {
+                                Button { archive.toggleSelection(item) } label: {
                                     MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .allowsHitTesting(false).accessibilityHidden(true)
+                                        .overlay(selected ? Color.black.opacity(0.28) : .clear, in: RoundedRectangle(cornerRadius: 12))
                                         .overlay(alignment: .topLeading) {
                                             Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources)).font(.caption.weight(.semibold)).lineLimit(1)
-                                                .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6)
+                                                .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6).padding(.trailing, 44)
+                                        }.overlay(alignment: .bottomTrailing) {
+                                            Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
+                                                .foregroundStyle(selected ? KeptoraDesign.accent : .white).padding(8)
                                         }
-                                }.buttonStyle(.plain)
+                                }.buttonStyle(.plain).accessibilityLabel(item.displayName + ", " + archive.sourceLabel(item))
+                                    .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
+                                    .accessibilityHint("Tap to change selection").accessibilityAddTraits(selected ? .isSelected : [])
+                                    .accessibilityIdentifier("mac.archive.asset.\(item.id)")
+                                Button { inspected = item } label: {
+                                    Image(systemName: "magnifyingglass").foregroundStyle(.white).frame(width: 44, height: 44)
+                                        .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
+                                }.buttonStyle(.plain).accessibilityLabel("Open Preview").accessibilityIdentifier("mac.archive.preview.\(item.id)")
+                            }
                                 HStack {
                                     Text(item.displayName).lineLimit(1)
                                     Spacer()
                                     Toggle("Select", isOn: Binding(get: { archive.selection.contains(item.id) }, set: { enabled in
-                                        undoIDs = archive.selection
-                                        if enabled { archive.selection.insert(item.id) } else { archive.selection.remove(item.id) }
+                                        if enabled != archive.selection.contains(item.id) { archive.toggleSelection(item) }
                                     })).toggleStyle(.checkbox).labelsHidden().accessibilityLabel("Select \(item.displayName)")
                                 }
                                 if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
                                 if let value = archive.qualityAssessments[item.id]?.findings.first { Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(.secondary) }
                                 if archive.decisions.protectedIDs.contains(item.id) { Label("Protected", systemImage: "lock.fill").font(.caption) }
-                                if suggestedKeeper { Label("Suggested Keep", systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
+                                if kept { Label("Kept in This Group", systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
                                 if item.isFavorite { Label("Favorite", systemImage: "heart.fill").font(.caption) }
+                                if !groups.isEmpty {
+                                    Button("Keep This") { archive.keep(item, in: groups) }.disabled(archive.analyzing)
+                                        .accessibilityIdentifier("mac.archive.keep.\(item.id)")
+                                }
                             }
                             .padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(archive.selection.contains(item.id) ? KeptoraDesign.accent : .clear, lineWidth: 2))
-                            .contextMenu { Button("Select") { archive.selection.insert(item.id) }; Button("Preview") { inspected = item }; Button(archive.decisions.protectedIDs.contains(item.id) ? "Unprotect Photo" : "Protect Photo") { archive.toggleProtection(item) } }
+                            .contextMenu { Button(selected ? "Deselect" : "Select") { archive.toggleSelection(item) }; Button("Preview") { inspected = item }; Button(archive.decisions.protectedIDs.contains(item.id) ? "Unprotect Photo" : "Protect Photo") { archive.toggleProtection(item) } }
     }
     private var filters: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -751,9 +808,9 @@ struct MacArchiveView: View {
                 TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
             }
             HStack {
-                Button("Reset Filters") { media = 0; albumID = ""; search = ""; comparisonGroup = nil; finding = .all }
+                Button("Reset Filters") { media = 0; albumID = ""; search = ""; finding = .all }
                 Toggle("Keep Related Shots Together", isOn: $smartOrder).toggleStyle(.checkbox)
-                Button("Select Exact Copy Suggestions") { undoIDs = archive.selection; archive.selectExactSuggestions() }.disabled(archive.analyzing)
+                Button("Select Exact Copy Suggestions") { archive.selectExactSuggestions() }.disabled(archive.analyzing)
                 Spacer()
                 if archive.analyzing {
                     ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1))).frame(maxWidth: 200)
@@ -809,7 +866,7 @@ struct MacManualSelectionSheet: View {
             List(reviewedItems) { item in
                 HStack {
                     VStack(alignment: .leading) { Text(item.displayName); Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary) }; Spacer()
-                    Button { archive.selection.remove(item.id); reviewedItems.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).accessibilityLabel("Remove from selection")
+                    Button { archive.setSelection(archive.selection.subtracting([item.id])); reviewedItems.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).accessibilityLabel("Remove from selection")
                 }
             }.disabled(archive.busy)
             HStack {
@@ -876,51 +933,4 @@ private final class MacArchivePhotoObserver: NSObject, PHPhotoLibraryChangeObser
     }
     deinit { PHPhotoLibrary.shared().unregisterChangeObserver(self) }
     func photoLibraryDidChange(_ changeInstance: PHChange) { changed() }
-}
-
-private struct MacArchiveGroupReview: View {
-    @EnvironmentObject private var archive: MacArchiveModel
-    @Environment(\.dismiss) private var dismiss
-    let group: LibraryReviewGroup
-    @State private var allowNetwork = false
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack { Text(LocalizedStringKey(group.titleKey)).font(.title2.bold()); Spacer(); Button("Close") { dismiss() } }
-            Text("Compare details before choosing what to keep.").foregroundStyle(.secondary)
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 440), spacing: 16)], spacing: 16) {
-                    ForEach(group.assets) { item in MacArchiveComparisonTile(item: item, group: group, allowNetwork: allowNetwork).environmentObject(archive) }
-                }
-            }
-            HStack {
-                Toggle("Download Preview from iCloud", isOn: $allowNetwork)
-                Spacer()
-                Button("Protect Group") { archive.protect(group) }
-                Button("Select Others") { archive.selectOthers(in: group) }.buttonStyle(.borderedProminent)
-            }
-            Text("Quality hints require your review.").font(.caption).foregroundStyle(.secondary)
-        }.padding(24).frame(minWidth: 650, minHeight: 550)
-    }
-}
-private struct MacArchiveComparisonTile: View {
-    @EnvironmentObject private var archive: MacArchiveModel
-    let item: UniversalMediaAsset
-    let group: LibraryReviewGroup
-    let allowNetwork: Bool
-    @State private var scale: CGFloat = 1
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: allowNetwork)
-                .scaleEffect(scale).frame(height: 260).clipped()
-                .gesture(MagnificationGesture().onChanged { scale = min(4, max(1, $0)) })
-                .onTapGesture(count: 2) { scale = scale > 1 ? 1 : 2 }
-            Text(item.displayName).lineLimit(1)
-            Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
-            if let date = item.captureDateDescription { Text(date).font(.caption) }
-            Text("\(item.pixelWidth) × \(item.pixelHeight)").font(.caption)
-            ForEach(archive.qualityAssessments[item.id]?.findings ?? [], id: \.rawValue) { value in Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption) }
-            if archive.decisions.keeper(in: group) == item.id { Label("Kept in This Group", systemImage: "bookmark.fill") }
-            Button("Keep This Photo") { archive.keep(item, in: group) }
-        }.padding(12).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
-    }
 }

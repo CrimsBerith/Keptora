@@ -20871,15 +20871,33 @@
       "extractionState": "manual"
     },
     "Review Selection": {
+      "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review Selection"
+          }
+        },
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Seçimi İncele"
           }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifier la sélection"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswahl prüfen"
+          }
         }
-      },
-      "extractionState": "manual"
+      }
     },
     "Review your selection before removing it. Photos uses Recently Deleted for up to 30 days unless deleted sooner. Folder files stay in a recovery area until restored.": {
       "localizations": {
@@ -21450,15 +21468,33 @@
       }
     },
     "Tap to change selection": {
+      "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to change selection"
+          }
+        },
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Seçimi değiştirmek için dokunun"
           }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez pour modifier la sélection"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antippen, um die Auswahl zu ändern"
+          }
         }
-      },
-      "extractionState": "manual"
+      }
     },
     "Tap to preview. Hold and drag to select multiple items.": {
       "localizations": {
@@ -24690,25 +24726,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kept in This Group"
+            "value": "To Keep"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu Grupta Saklanıyor"
+            "value": "Saklanacak"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conservée dans ce groupe"
+            "value": "À conserver"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird in dieser Gruppe behalten"
+            "value": "Zum Behalten"
           }
         }
       }
@@ -25260,6 +25296,238 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld von %2$lld"
+          }
+        }
+      }
+    },
+    "Open Preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Preview"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önizlemeyi Aç"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir l’aperçu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau öffnen"
+          }
+        }
+      }
+    },
+    "Keep This": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep This"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bunu Sakla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserver"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behalten"
+          }
+        }
+      }
+    },
+    "Undo Selection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo Selection"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son Seçimi Geri Al"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler la dernière sélection"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Auswahl rückgängig"
+          }
+        }
+      }
+    },
+    "Tap a photo to select it. Use the magnifier to enlarge it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a photo to select it. Use the magnifier to enlarge it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçmek için fotoğrafa dokunun. Büyütmek için büyütece dokunun."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez une photo pour la sélectionner. Utilisez la loupe pour l’agrandir."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto zum Auswählen antippen. Zum Vergrößern die Lupe verwenden."
+          }
+        }
+      }
+    },
+    "Browse collections, select photos, and choose what to remove.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse collections, select photos, and choose what to remove."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koleksiyonları gezin, fotoğrafları seçin ve hangilerini kaldıracağınıza karar verin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcourez les collections, sélectionnez des photos et choisissez celles à supprimer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sammlungen durchsuchen, Fotos auswählen und entscheiden, welche entfernt werden."
+          }
+        }
+      }
+    },
+    "See related photos together. Tap to select, choose what to keep, and review before removing anything.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See related photos together. Tap to select, choose what to keep, and review before removing anything."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İlgili fotoğrafları yan yana görün. Dokunarak seçin, saklayacaklarınızı belirleyin ve kaldırmadan önce inceleyin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retrouvez les photos liées côte à côte. Touchez pour sélectionner, choisissez celles à conserver et vérifiez avant de supprimer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammengehörige Fotos nebeneinander sehen. Zum Auswählen antippen, Fotos zum Behalten bestimmen und vor dem Entfernen prüfen."
+          }
+        }
+      }
+    },
+    "Click a photo to select it. Use the magnifier to enlarge it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click a photo to select it. Use the magnifier to enlarge it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçmek için fotoğrafa tıklayın. Büyütmek için büyütece tıklayın."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez sur une photo pour la sélectionner. Utilisez la loupe pour l’agrandir."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto zum Auswählen anklicken. Zum Vergrößern die Lupe verwenden."
+          }
+        }
+      }
+    },
+    "See related photos together. Click to select, choose what to keep, and review before removing anything.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See related photos together. Click to select, choose what to keep, and review before removing anything."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İlgili fotoğrafları yan yana görün. Tıklayarak seçin, saklayacaklarınızı belirleyin ve kaldırmadan önce inceleyin."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retrouvez les photos liées côte à côte. Cliquez pour sélectionner, choisissez celles à conserver et vérifiez avant de supprimer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zusammengehörige Fotos nebeneinander sehen. Zum Auswählen anklicken, Fotos zum Behalten bestimmen und vor dem Entfernen prüfen."
           }
         }
       }

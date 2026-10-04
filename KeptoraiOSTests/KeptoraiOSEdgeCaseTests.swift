@@ -5,6 +5,62 @@ import KeptoraCore
 @MainActor
 final class KeptoraiOSEdgeCaseTests: XCTestCase {
 
+    func testUndoWorksAfterLastItemIsDeselectedAndClearIsNoOp() {
+        let store = MobileKeptoraStore(), id = UUID().uuidString
+        let asset = UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: "photo.jpg", mediaKind: .image)
+        store.assets = [asset]; store.selectedLibraryIDs = []
+        store.toggleLibrarySelection(asset); store.toggleLibrarySelection(asset)
+        XCTAssertTrue(store.selectedLibraryIDs.isEmpty)
+        XCTAssertTrue(store.canUndoLibrarySelection)
+        store.replaceLibrarySelection([]) // A disabled/no-op clear must not overwrite the last edit.
+        store.undoLibrarySelection()
+        XCTAssertEqual(store.selectedLibraryIDs, [id])
+        XCTAssertFalse(store.canUndoLibrarySelection)
+    }
+
+    func testUndoGroupProtectionRestoresSelectionAndKeeperDecisionTogether() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        store.assets = [a, b]; store.exactGroups = [UniversalExactGroup(digest: namespace, assets: [a, b], keeperID: a.id)]
+        let group = store.reviewGroups[0]
+        store.selectedLibraryIDs = [a.id, b.id]
+        store.keep(b, in: group)
+        let keptDecision = store.decisions
+        store.protect(group); store.undoLibrarySelection()
+        XCTAssertEqual(store.selectedLibraryIDs, [a.id])
+        XCTAssertEqual(store.decisions, keptDecision)
+        XCTAssertEqual(store.decisions.keeper(in: group), b.id)
+        XCTAssertFalse(store.decisions.protectedIDs.contains(a.id))
+    }
+
+    func testKeepFromGridAppliesToEveryOverlappingGroupAndCanBeUndone() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let items = (0..<3).map { n in UniversalMediaAsset(id: namespace + "\(n)", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "\(n)"), displayName: "\(n).jpg", mediaKind: .image) }
+        store.assets = items
+        store.exactGroups = [UniversalExactGroup(digest: namespace + "1", assets: [items[0], items[1]], keeperID: items[0].id), UniversalExactGroup(digest: namespace + "2", assets: [items[1], items[2]], keeperID: items[2].id)]
+        let groups = store.reviewGroups, originalDecisions = store.decisions
+        store.selectedLibraryIDs = Set(items.map(\.id))
+        store.keep(items[1], in: groups)
+        XCTAssertTrue(groups.allSatisfy { store.decisions.keeper(in: $0) == items[1].id })
+        XCTAssertFalse(store.selectedLibraryIDs.contains(items[1].id))
+        store.undoLibrarySelection()
+        XCTAssertEqual(store.selectedLibraryIDs, Set(items.map(\.id)))
+        XCTAssertEqual(store.decisions, originalDecisions)
+    }
+
+    func testSelectionUndoPreservesPendingIDsWithoutResurrectingRemovedItems() {
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let removed = UniversalMediaAsset(id: namespace + "removed", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "removed"), displayName: "removed.jpg", mediaKind: .image)
+        let pending = UniversalMediaAsset(id: namespace + "pending", sourceID: "offline", reference: .photoLibrary(localIdentifier: namespace + "pending"), displayName: "pending.jpg", mediaKind: .image)
+        let legacyID = namespace + "legacy"
+        store.assets = [removed]; store.pendingSelection = [pending]; store.unresolvedSelectionIDs = [legacyID]
+        store.selectedLibraryIDs = [removed.id, pending.id, legacyID]
+        store.replaceLibrarySelection([]); store.assets = []
+        store.undoLibrarySelection()
+        XCTAssertEqual(store.selectedLibraryIDs, [pending.id, legacyID])
+    }
+
     func testDetailedReviewAndLibraryShareOneSelectionBasket() {
         let store = MobileKeptoraStore(), namespace = UUID().uuidString
         let keeper = UniversalMediaAsset(id: namespace + "-keep", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "-keep"), displayName: "keep.jpg", mediaKind: .image)

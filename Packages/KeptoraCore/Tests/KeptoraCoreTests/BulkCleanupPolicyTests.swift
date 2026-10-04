@@ -98,6 +98,18 @@ final class BulkCleanupPolicyTests: XCTestCase {
             similar: [UniversalSimilarityGroup(id: "similar", assets: [b,c], maximumDistance: 0.1, strength: .verySimilar, keeperID: "b")])
         XCTAssertTrue(LibraryReviewDecisions().exactSuggestions(groups).isEmpty)
     }
+    func testGroupSelectionRespectsKeepersInOtherVisibleRelations() {
+        let a = item("a"), b = item("b"), c = item("c")
+        let groups = LibraryReviewGroup.combined(exact: [UniversalExactGroup(digest: "same", assets: [a, b], keeperID: "a")],
+            similar: [UniversalSimilarityGroup(id: "similar", assets: [b, c], maximumDistance: 0.1, strength: .verySimilar, keeperID: "b")])
+        var decisions = LibraryReviewDecisions()
+        XCTAssertTrue(decisions.candidates(in: groups[0], respecting: groups).isEmpty,
+            "Select Others must not select a photo shown as kept in an overlapping group")
+        decisions.keep(c.id, in: groups[1])
+        XCTAssertEqual(decisions.candidates(in: groups[0], respecting: groups).map(\.id), [b.id])
+        decisions.protect(groups[1])
+        XCTAssertTrue(decisions.candidates(in: groups[0], respecting: groups).isEmpty)
+    }
     func testThreeThousandItemSmartGridShowsEachItemOnceWithOverlappingRelations() {
         let assets = (0..<3000).map { item(String($0)) }
         let exact = (0..<750).map { UniversalExactGroup(digest: String($0), assets: [assets[$0*2], assets[$0*2+1]]) }

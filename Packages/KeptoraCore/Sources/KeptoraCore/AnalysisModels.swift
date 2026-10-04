@@ -187,10 +187,11 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
     public mutating func toggleProtection(_ id: String) {
         if !protectedIDs.insert(id).inserted { protectedIDs.remove(id) }
     }
-    public func candidates(in group: LibraryReviewGroup) -> [UniversalMediaAsset] {
+    public func candidates(in group: LibraryReviewGroup, respecting groups: [LibraryReviewGroup] = []) -> [UniversalMediaAsset] {
         let keeperID = keeper(in: group)
         let chosenKeepers = Set(choices.values.map(\.keeperID))
-        return group.assets.filter { $0.id != keeperID && !chosenKeepers.contains($0.id) && !$0.isProtectedFromGlobalSelection && !protectedIDs.contains($0.id) }
+        let relatedKeepers = Set(groups.map { keeper(in: $0) })
+        return group.assets.filter { $0.id != keeperID && !chosenKeepers.contains($0.id) && !relatedKeepers.contains($0.id) && !$0.isProtectedFromGlobalSelection && !protectedIDs.contains($0.id) }
     }
     public func exactSuggestions(_ groups: [LibraryReviewGroup]) -> [UniversalMediaAsset] {
         let exact = groups.filter { $0.kind == .exact }
@@ -204,6 +205,12 @@ public struct LibraryReviewBlock: Identifiable, Sendable {
     public let id: String
     public let assets: [UniversalMediaAsset]
     public let groups: [LibraryReviewGroup]
+    /// Build once per block rather than searching every group for every grid cell.
+    public var groupsByAsset: [String: [LibraryReviewGroup]] {
+        var membership: [String: [LibraryReviewGroup]] = [:]
+        for group in groups { for asset in group.assets { membership[asset.id, default: []].append(group) } }
+        return membership
+    }
     public var titleKey: String {
         if id == "quality" { return "Worth Reviewing" }
         if id == "other" || id == "timeline" { return "All Items" }

@@ -1,8 +1,33 @@
 import XCTest
+import KeptoraCore
 @testable import Keptora
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    func testArchiveSelectionUndoRestoresProtectionAndKeeperTogether() {
+        let model = MacArchiveModel(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        model.assets = [a, b]; model.exact = [UniversalExactGroup(digest: namespace, assets: [a, b], keeperID: a.id)]
+        let group = model.reviewGroups[0]
+        model.selection = [a.id, b.id]; model.keep(b, in: [group])
+        let keptDecision = model.decisions
+        model.protect(group); model.undoSelection()
+        XCTAssertEqual(model.selection, [a.id]); XCTAssertEqual(model.decisions, keptDecision)
+        XCTAssertFalse(model.canUndoSelection)
+    }
+
+    func testArchiveSelectionUndoSurvivesEmptySelectionButExcludesRemovedItems() {
+        let model = MacArchiveModel(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        model.assets = [a, b]; model.selection = [a.id, b.id]
+        model.setSelection([]); model.setSelection([])
+        XCTAssertTrue(model.canUndoSelection)
+        model.assets = [b]; model.undoSelection()
+        XCTAssertEqual(model.selection, [b.id])
+    }
+
     func testKeeperCanNeverBeQueuedForQuarantine() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
