@@ -206,7 +206,8 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         } else {
                             singleShot.resume(throwing: error)
                         }
-                    } else if let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool, isInCloud, !allowNetwork {
+                    } else if let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool, isInCloud, !allowNetwork,
+                           image == nil || (info?[PHImageResultIsDegradedKey] as? Bool) == true {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(displayName))
                     } else if let data {
                         var hasher = SHA256()
@@ -364,8 +365,8 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
         return try await Self.withTimeout(seconds: 10) {
             let options = PHImageRequestOptions()
-            options.deliveryMode = .fastFormat
-            options.resizeMode = .fast
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .exact
             options.isNetworkAccessAllowed = allowNetwork
             options.isSynchronous = false
             let targetSize = CGSize(width: maximumPixelSize, height: maximumPixelSize)
@@ -399,8 +400,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 #if os(macOS)
                         let cgImage = image?.cgImage(forProposedRect: nil, context: nil, hints: nil)
 #else
-                        let cgImage = image?.cgImage
+                        let cgImage = Self.orientedPreview(image)
 #endif
+                        if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
                         if let cgImage {
                             singleShot.resume(returning: cgImage)
                         } else {
@@ -585,3 +587,28 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 #endif
     }
 }
+
+#if os(iOS)
+import CoreImage
+import UIKit
+private extension PhotoLibrarySourceAdapter {
+    static func orientedPreview(_ image: UIImage?) -> CGImage? {
+        guard let image, let cg = image.cgImage else { return nil }
+        guard image.imageOrientation != .up else { return cg }
+        let orientation: Int32
+        switch image.imageOrientation {
+        case .up: orientation = 1
+        case .upMirrored: orientation = 2
+        case .down: orientation = 3
+        case .downMirrored: orientation = 4
+        case .leftMirrored: orientation = 5
+        case .right: orientation = 6
+        case .rightMirrored: orientation = 7
+        case .left: orientation = 8
+        @unknown default: orientation = 1
+        }
+        let oriented = CIImage(cgImage: cg).oriented(forExifOrientation: orientation)
+        return CIContext().createCGImage(oriented, from: oriented.extent)
+    }
+}
+#endif

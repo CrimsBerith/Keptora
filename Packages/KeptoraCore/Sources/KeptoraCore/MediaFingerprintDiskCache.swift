@@ -1,7 +1,6 @@
 import Foundation
 
-/// Fast persistent cache for media fingerprints, vision hashes, and visual quality scores.
-/// Enables sub-second instant rescans for large photo libraries.
+/// Revision- and algorithm-scoped cache. Unknown revisions are never reused.
 public actor MediaFingerprintDiskCache {
     public static let shared = MediaFingerprintDiskCache()
     
@@ -14,6 +13,7 @@ public actor MediaFingerprintDiskCache {
         public let sharpnessScore: Float?
         public let exposureScore: Float?
         public let compositeScore: Float?
+        public var quality: QualityAssessment? = nil
         public let timestamp: TimeInterval
         
         public init(
@@ -40,12 +40,16 @@ public actor MediaFingerprintDiskCache {
     }
     
     private var entries: [String: CacheEntry] = [:]
+    private var currentCost = 0
     private var isDirty = false
     private var hasLoaded = false
     private let cacheURL: URL
-    private let maxEntries = 50_000
+    private let maxEntries: Int
+    private let maximumBytes: Int
     
-    public init(customCacheURL: URL? = nil) {
+    public init(customCacheURL: URL? = nil, maximumEntries: Int = 10_000, maximumBytes: Int = 64 * 1_048_576) {
+        self.maxEntries = max(1, maximumEntries)
+        self.maximumBytes = max(1, maximumBytes)
         if let custom = customCacheURL {
             self.cacheURL = custom
         } else {
@@ -53,30 +57,29 @@ public actor MediaFingerprintDiskCache {
                 ?? FileManager.default.temporaryDirectory
             let folder = base.appendingPathComponent("KeptoraCache", isDirectory: true)
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            self.cacheURL = folder.appendingPathComponent("media_fingerprints_v1.json")
+            self.cacheURL = folder.appendingPathComponent("media_fingerprints_v3.json")
         }
     }
     
-    public func get(assetID: String, modificationDate: Date?, byteCount: Int64?) -> CacheEntry? {
+    public func get(asset: UniversalMediaAsset, algorithm: String) -> CacheEntry? {
         ensureLoaded()
-        let key = cacheKey(assetID: assetID, modificationDate: modificationDate, byteCount: byteCount)
+        guard let key = MediaRevisionPolicy.key(for: asset, algorithm: algorithm) else { return nil }
         return entries[key]
     }
     
     public func store(
-        assetID: String,
-        modificationDate: Date?,
-        byteCount: Int64?,
+        asset: UniversalMediaAsset,
+        algorithm: String,
         entry: CacheEntry
     ) {
         ensureLoaded()
-        let key = cacheKey(assetID: assetID, modificationDate: modificationDate, byteCount: byteCount)
+        guard let key = MediaRevisionPolicy.key(for: asset, algorithm: algorithm) else { return }
+        if let previous = entries[key] { currentCost -= cost(key: key, entry: previous) }
         entries[key] = entry
+        currentCost += cost(key: key, entry: entry)
         isDirty = true
         
-        if entries.count > maxEntries {
-            evictOldest()
-        }
+        evictOldest()
     }
     
     public func persistToDisk() {
@@ -84,6 +87,7 @@ public actor MediaFingerprintDiskCache {
         guard isDirty else { return }
         do {
             let data = try JSONEncoder().encode(entries)
+            try FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try data.write(to: cacheURL, options: .atomic)
             isDirty = false
         } catch {
@@ -94,14 +98,9 @@ public actor MediaFingerprintDiskCache {
     public func clear() {
         hasLoaded = true
         entries.removeAll()
+        currentCost = 0
         isDirty = true
         persistToDisk()
-    }
-    
-    private func cacheKey(assetID: String, modificationDate: Date?, byteCount: Int64?) -> String {
-        let modTime = modificationDate?.timeIntervalSince1970 ?? 0
-        let bytes = byteCount ?? 0
-        return "\(assetID):\(Int64(modTime)):\(bytes)"
     }
     
     private func ensureLoaded() {
@@ -109,23 +108,33 @@ public actor MediaFingerprintDiskCache {
         hasLoaded = true
         guard FileManager.default.fileExists(atPath: cacheURL.path) else { return }
         do {
+            let size = (try? cacheURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            guard size <= maximumBytes * 2 else { return }
             let data = try Data(contentsOf: cacheURL)
             let loaded = try JSONDecoder().decode([String: CacheEntry].self, from: data)
             for (k, v) in loaded {
                 if entries[k] == nil {
                     entries[k] = v
+                    currentCost += cost(key: k, entry: v)
                 }
             }
+            evictOldest()
         } catch {
             // Non-fatal cache decode error
         }
     }
     
     private func evictOldest() {
+        guard entries.count > maxEntries || currentCost > maximumBytes else { return }
         let sortedKeys = entries.sorted { $0.value.timestamp < $1.value.timestamp }
-        let removeCount = max(0, entries.count - (maxEntries - 5_000))
-        for item in sortedKeys.prefix(removeCount) {
+        for item in sortedKeys {
+            guard entries.count > maxEntries || currentCost > maximumBytes else { break }
+            currentCost -= cost(key: item.key, entry: item.value)
             entries.removeValue(forKey: item.key)
+            isDirty = true
         }
+    }
+    private func cost(key: String, entry: CacheEntry) -> Int {
+        key.utf8.count + entry.assetID.utf8.count + entry.digest.utf8.count + 1024 + (entry.featurePrintData?.count ?? 0) * 4 / 3
     }
 }

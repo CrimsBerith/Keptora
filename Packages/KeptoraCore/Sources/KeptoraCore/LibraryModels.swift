@@ -139,7 +139,7 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
     }
 
     public var isProtectedFromGlobalSelection: Bool {
-        isFavorite || isHidden || hasAdjustments || isSharedLibraryAsset || hasAlbumMembership
+        isFavorite || isHidden || hasAdjustments || isSharedLibraryAsset
     }
 
     public func with(
@@ -241,14 +241,9 @@ public enum UniversalKeeperPolicy: Sendable {
         var score = 0
         if asset.isFavorite { score += 10_000 }
         if asset.hasAdjustments { score += 5_000 }
-        if asset.hasAlbumMembership { score += 3_000 }
         if asset.isSharedLibraryAsset { score += 2_000 }
         if asset.isHidden { score += 1_000 }
         
-        let ext = (asset.displayName as NSString).pathExtension.lowercased()
-        if ["cr2", "cr3", "nef", "arw", "dng", "raw", "raf", "orf", "rw2"].contains(ext) {
-            score += 800
-        }
         return score
     }
 }
@@ -277,6 +272,9 @@ public struct UniversalExactGroup: Identifiable, Hashable, Codable, Sendable {
 }
 
 public struct UniversalSimilarityGroup: Identifiable, Hashable, Codable, Sendable {
+    public enum Strength: String, Codable, Sendable { case verySimilar, similar }
+    public let strength: Strength?
+
     public let id: String
     public let assets: [UniversalMediaAsset]
     public let maximumDistance: Float
@@ -287,12 +285,14 @@ public struct UniversalSimilarityGroup: Identifiable, Hashable, Codable, Sendabl
         id: String,
         assets: [UniversalMediaAsset],
         maximumDistance: Float,
+        strength: Strength? = nil,
         mediaKind: UniversalMediaKind? = nil,
         keeperID: String? = nil
     ) {
         let ordered = assets.sorted(by: UniversalKeeperPolicy.prefersAsKeeper)
         self.id = id
         self.assets = ordered
+        self.strength = strength
         self.maximumDistance = maximumDistance
         self.mediaKind = mediaKind ?? ordered.first?.mediaKind ?? .image
         self.keeperID = keeperID ?? ordered.first?.id ?? ""

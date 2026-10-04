@@ -23,6 +23,24 @@ public enum UniversalScanError: LocalizedError, Sendable {
     }
 }
 
+public extension AnalysisIssue {
+    init(asset: UniversalMediaAsset, stage: AnalysisStage, error: Error) {
+        let reason: AnalysisIssueReason
+        switch error {
+        case UniversalScanError.networkRequired: reason = .downloadRequired
+        case UniversalScanError.sourcePermissionDenied: reason = .accessDenied
+        case UniversalScanError.resourceUnavailable: reason = .missing
+        case UniversalScanError.inaccessibleAsset: reason = .unreadable
+        case UniversalScanError.unsupportedReference: reason = .unsupported
+        case is CancellationError, UniversalScanError.downloadCancelled: reason = .cancelled
+        case let value as CocoaError where value.code == .fileReadNoPermission: reason = .accessDenied
+        case let value as CocoaError where value.code == .fileReadNoSuchFile: reason = .missing
+        default: reason = .other
+        }
+        self.init(assetID: asset.id, sourceID: asset.sourceID, stage: stage, reason: reason)
+    }
+}
+
 public struct UniversalScanCheckpoint: Hashable, Codable, Sendable {
     public struct Entry: Hashable, Codable, Sendable {
         public let sourceAsset: UniversalMediaAsset
@@ -39,31 +57,67 @@ public struct UniversalScanCheckpoint: Hashable, Codable, Sendable {
     public let sourceID: String
     public let allowNetwork: Bool
     public let entries: [Entry]
+    public let algorithmVersion: String?
 
     public init(sourceID: String, allowNetwork: Bool, entries: [Entry]) {
         self.sourceID = sourceID
         self.allowNetwork = allowNetwork
         self.entries = entries
+        self.algorithmVersion = MediaAnalysisVersion.exact
+    }
+}
+
+/// File I/O stays off the UI actor. A later ticket prevents stale saves after
+/// completion, cancellation, or a source-scope change.
+public actor LibraryCheckpointArchive {
+    private var ticket = -1
+    private var active = false
+    public init() {}
+    public func load(url: URL?, ticket: Int, sourceID: String, allowNetwork: Bool) -> UniversalScanCheckpoint? {
+        guard ticket >= self.ticket else { return nil }
+        self.ticket = ticket; active = true
+        guard let url, let data = try? Data(contentsOf: url),
+              let value = try? JSONDecoder().decode(UniversalScanCheckpoint.self, from: data),
+              value.algorithmVersion == MediaAnalysisVersion.exact,
+              value.sourceID == sourceID, value.allowNetwork == allowNetwork else { return nil }
+        return value
+    }
+    public func save(_ value: UniversalScanCheckpoint, url: URL?, ticket: Int) throws {
+        guard active, ticket == self.ticket, let url else { return }
+        let data = try JSONEncoder().encode(value)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: url, options: .atomic)
+    }
+    public func stop(url: URL?, ticket: Int, preserve: Bool) {
+        guard ticket >= self.ticket else { return }
+        self.ticket = ticket; active = false
+        if !preserve, let url { try? FileManager.default.removeItem(at: url) }
     }
 }
 
 public actor UniversalExactScanner {
+    public private(set) var metrics = AnalysisWorkMetrics()
     public init() {}
 
     public func scan(
         adapter: any SourceAdapter,
         allowNetwork: Bool,
         fingerprintAllAssets: Bool = false,
+        preloadedAssets: [UniversalMediaAsset]? = nil,
         resuming checkpoint: UniversalScanCheckpoint? = nil,
         checkpointUpdate: @escaping @Sendable (UniversalScanCheckpoint) -> Void = { _ in },
+        groupsUpdate: @escaping @Sendable ([UniversalExactGroup]) -> Void = { _ in },
         progress: @escaping @Sendable (_ processed: Int, _ total: Int, _ current: String) -> Void
-    ) async throws -> (assets: [UniversalMediaAsset], groups: [UniversalExactGroup], skippedNetwork: Int, fingerprintsByAssetID: [String: UniversalExactFingerprint]) {
-        let assets = try await adapter.enumerateAssets()
+    ) async throws -> (assets: [UniversalMediaAsset], groups: [UniversalExactGroup], skippedNetwork: Int, fingerprintsByAssetID: [String: UniversalExactFingerprint], issues: [AnalysisIssue]) {
+        let assets: [UniversalMediaAsset]
+        metrics = .init()
+        if let preloadedAssets { assets = preloadedAssets } else { assets = try await adapter.enumerateAssets() }
         var groupsByFingerprint: [UniversalExactFingerprint: [UniversalMediaAsset]] = [:]
         var completedEntries: [UniversalScanCheckpoint.Entry] = []
         var skippedNetwork = 0
+        var issues: [AnalysisIssue] = []
         let resumableEntries: [String: UniversalScanCheckpoint.Entry]
-        if let checkpoint, checkpoint.sourceID == adapter.source.id, checkpoint.allowNetwork == allowNetwork {
+        if let checkpoint, checkpoint.algorithmVersion == MediaAnalysisVersion.exact, checkpoint.sourceID == adapter.source.id, checkpoint.allowNetwork == allowNetwork {
             resumableEntries = Dictionary(checkpoint.entries.map { ($0.sourceAsset.id, $0) }, uniquingKeysWith: { _, latest in latest })
         } else {
             resumableEntries = [:]
@@ -78,6 +132,9 @@ public actor UniversalExactScanner {
             let now = Date()
             if force || pendingEntriesCount >= 50 || now.timeIntervalSince(lastCheckpointEmission) >= 2.0 {
                 checkpointUpdate(.init(sourceID: adapter.source.id, allowNetwork: allowNetwork, entries: completedEntries))
+                groupsUpdate(groupsByFingerprint.compactMap { fingerprint, members in
+                    members.count > 1 && !fingerprint.digest.hasPrefix("unique:") ? UniversalExactGroup(digest: fingerprint.digest, assets: members) : nil
+                }.sorted { $0.id < $1.id })
                 lastCheckpointEmission = now
                 pendingEntriesCount = 0
             }
@@ -92,6 +149,7 @@ public actor UniversalExactScanner {
         let kindCounts = Dictionary(grouping: assets, by: \.mediaKind).mapValues(\.count)
 
         for asset in assets {
+            try Task.checkCancellation()
             let sig: String
             if let byteCount = asset.byteCount, byteCount > 0 {
                 sig = "s:\(byteCount)"
@@ -129,9 +187,21 @@ public actor UniversalExactScanner {
                 // Singletons can keep their unique fingerprint; candidates require real SHA256 (not "unique:")
                 if !isCandidate || !prior.fingerprint.digest.hasPrefix("unique:") {
                     groupsByFingerprint[prior.fingerprint, default: []].append(prior.fingerprintedAsset)
+                    metrics.cacheHits += 1
                     completedEntries.append(prior)
                     continue
                 }
+            }
+
+            if let cached = await MediaFingerprintDiskCache.shared.get(asset: asset, algorithm: MediaAnalysisVersion.exact), !cached.digest.hasPrefix("unique:") {
+                metrics.cacheHits += 1
+                let fingerprint = UniversalExactFingerprint(digest: cached.digest, byteCount: cached.byteCount)
+                let updated = asset.with(byteCount: cached.byteCount, requiresNetwork: false)
+                groupsByFingerprint[fingerprint, default: []].append(updated)
+                completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: updated, fingerprint: fingerprint))
+                pendingEntriesCount += 1
+                emitCheckpointIfNeeded()
+                continue
             }
 
             // Singleton fast-path: prune hashing
@@ -154,6 +224,7 @@ public actor UniversalExactScanner {
 
             // Candidate duplicate: two or more assets share the exact signature. Full SHA-256 fingerprint required.
             do {
+                metrics.hashedOriginals += 1
                 let fingerprint = try await adapter.exactFingerprint(
                     for: asset,
                     allowNetwork: allowNetwork,
@@ -165,18 +236,16 @@ public actor UniversalExactScanner {
                 )
                 groupsByFingerprint[fingerprint, default: []].append(fingerprintedAsset)
                 completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
+                await MediaFingerprintDiskCache.shared.store(asset: asset, algorithm: MediaAnalysisVersion.exact,
+                    entry: .init(assetID: asset.id, digest: fingerprint.digest, byteCount: fingerprint.byteCount))
                 pendingEntriesCount += 1
                 emitCheckpointIfNeeded()
-            } catch UniversalScanError.networkRequired {
-                skippedNetwork += 1
-            } catch UniversalScanError.resourceUnavailable {
-                skippedNetwork += 1
-            } catch UniversalScanError.inaccessibleAsset {
-                skippedNetwork += 1
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                skippedNetwork += 1
+                let issue = AnalysisIssue(asset: asset, stage: .exact, error: error)
+                issues.append(issue)
+                if issue.reason == .downloadRequired { skippedNetwork += 1 }
             }
         }
         emitCheckpointIfNeeded(force: true)
@@ -193,19 +262,13 @@ public actor UniversalExactScanner {
             finalizedAssets,
             groups,
             skippedNetwork,
-            Dictionary(completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) }, uniquingKeysWith: { _, latest in latest })
+            Dictionary(completedEntries.map { ($0.fingerprintedAsset.id, $0.fingerprint) }, uniquingKeysWith: { _, latest in latest }),
+            issues
         )
     }
 
     private static func sameRevision(_ current: UniversalMediaAsset, _ prior: UniversalMediaAsset) -> Bool {
-        guard current.reference == prior.reference,
-              current.modificationDate == prior.modificationDate else {
-            return false
-        }
-        if let cb = current.byteCount, let pb = prior.byteCount {
-            return cb == pb
-        }
-        return true
+        MediaRevisionPolicy.same(current, prior, algorithm: MediaAnalysisVersion.exact)
     }
 }
 

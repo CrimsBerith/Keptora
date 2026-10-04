@@ -59,6 +59,14 @@ public struct LibrarySourceCoverage: Equatable, Sendable, Identifiable {
 
 public extension LibrarySource {
     var scanTitle: String { kind == .photos ? "Photos / iCloud Photos" : displayName }
+    var localizedScanTitle: String {
+        guard kind == .photos else { return displayName }
+        #if os(Linux)
+        return NSLocalizedString("Photos / iCloud Photos", comment: "Photos source")
+        #else
+        return L10n.tr("Photos / iCloud Photos")
+        #endif
+    }
     var scanSymbol: String {
         switch kind {
         case .photos: return "photo.on.rectangle.angled"
@@ -153,6 +161,9 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
     public func authorizationStatus() async -> SourceAuthorization { adapters.isEmpty ? .unavailable : .authorized }
     public func requestAuthorization() async -> SourceAuthorization { await authorizationStatus() }
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
+        try await enumerateAssets(onSourceBatch: nil)
+    }
+    public func enumerateAssets(onSourceBatch: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async throws -> [UniversalMediaAsset] {
         var items: [UniversalMediaAsset] = [], reports: [LibrarySourceCoverage] = []
         var batches: [String: [UniversalMediaAsset]] = [:]
         for adapter in adapters {
@@ -160,7 +171,10 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
             batches[adapter.source.id] = []
             let auth = await adapter.authorizationStatus()
             guard auth == .authorized || auth == .limited else {
-                reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: "Source access is unavailable")); continue
+                reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: "Source access is unavailable"))
+                coverage = reports; catalogue = LibrarySourceCatalogue(batches: batches)
+                await onSourceBatch?(Self.uniqueReferences(items), reports, catalogue)
+                continue
             }
             do {
                 let batch = try await adapter.enumerateAssets()
@@ -170,6 +184,8 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
                 reports.append(.init(source: adapter.source, authorization: auth, itemCount: batches[adapter.source.id]?.count ?? 0, error: warnings.isEmpty ? nil : warnings.joined(separator: "\n")))
             } catch is CancellationError { throw CancellationError() }
             catch { reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: error.localizedDescription)) }
+            coverage = reports; catalogue = LibrarySourceCatalogue(batches: batches)
+            await onSourceBatch?(Self.uniqueReferences(items), reports, catalogue)
         }
         coverage = reports
         catalogue = LibrarySourceCatalogue(batches: batches)
@@ -204,32 +220,48 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
 #if canImport(CoreGraphics)
 extension UnifiedLibraryAdapter: SimilarityImageProviding, SimilarityVideoProviding {
     public func similarityImage(for asset: UniversalMediaAsset, maximumPixelSize: Int, allowNetwork: Bool) async throws -> CGImage {
-        guard let provider = try owner(asset) as? any SimilarityImageProviding else { throw UnifiedLibraryError.sourceUnavailable(asset.sourceID) }
+        guard let provider = try owner(asset) as? any SimilarityImageProviding else { throw UniversalScanError.unsupportedReference }
         return try await provider.similarityImage(for: asset, maximumPixelSize: maximumPixelSize, allowNetwork: allowNetwork)
     }
     public func similarityVideoSample(for asset: UniversalMediaAsset, maximumPixelSize: Int, allowNetwork: Bool) async throws -> UniversalVideoSimilaritySample {
-        guard let provider = try owner(asset) as? any SimilarityVideoProviding else { throw UnifiedLibraryError.sourceUnavailable(asset.sourceID) }
+        guard let provider = try owner(asset) as? any SimilarityVideoProviding else { throw UniversalScanError.unsupportedReference }
         return try await provider.similarityVideoSample(for: asset, maximumPixelSize: maximumPixelSize, allowNetwork: allowNetwork)
     }
 }
 #endif
 
 public struct LibraryReviewGroup: Identifiable, Sendable {
-    public enum Kind: Sendable { case exact, similar }
+    public enum Kind: Sendable { case exact, verySimilar, similar }
     public let id: String
     public let kind: Kind
     public let assets: [UniversalMediaAsset]
     public let keeperID: String
+    public var titleKey: String { kind == .exact ? "Exact Copies" : kind == .verySimilar ? "Very Similar" : "Similar Photos" }
+    public var priority: Int { kind == .exact ? 0 : kind == .verySimilar ? 1 : 2 }
     public static func combined(exact: [UniversalExactGroup], similar: [UniversalSimilarityGroup]) -> [Self] {
         let exactSets = exact.map { Set($0.assets.map(\.id)) }
+        var exactMembership: [String: [Int]] = [:]
+        for (index, ids) in exactSets.enumerated() { for id in ids { exactMembership[id, default: []].append(index) } }
         return exact.map { Self(id: $0.id, kind: .exact, assets: $0.assets, keeperID: $0.keeperID) } + similar.filter { group in
             let ids = Set(group.assets.map(\.id))
-            return !exactSets.contains { ids.isSubset(of: $0) }
-        }.map { Self(id: $0.id, kind: .similar, assets: $0.assets, keeperID: $0.keeperID) }
+            guard let first = ids.first else { return false }
+            return !(exactMembership[first] ?? []).contains { ids.isSubset(of: exactSets[$0]) }
+        }.map { Self(id: $0.id, kind: $0.strength == .verySimilar ? .verySimilar : .similar, assets: $0.assets, keeperID: $0.keeperID) }
     }
 }
 
 extension UniversalMediaAsset {
+    public func sourceBadgeKey(in sources: [LibrarySource]) -> String {
+        if case .photoLibrary = reference { return "Photos" }
+        return sources.first(where: { $0.id == sourceID })?.kind == .fileProvider || requiresNetwork ? "Cloud Files" : "Files"
+    }
+    public func sourceBadgeSymbol(in sources: [LibrarySource]) -> String {
+        switch sourceBadgeKey(in: sources) {
+        case "Photos": return "photo"
+        case "Cloud Files": return "icloud"
+        default: return "folder"
+        }
+    }
     public func sourceLabel(in sources: [LibrarySource]) -> String {
         let source = sources.first { $0.id == sourceID }
         switch reference {
@@ -356,9 +388,15 @@ public extension UniversalMediaAsset {
     /// Offset-free EXIF is shown verbatim rather than shifted to the device zone.
     var captureDateDescription: String? {
         guard let context, let date = context.captureDate else { return nil }
-        if context.captureTimeIsReliable { return date.formatted(date: .abbreviated, time: .shortened) }
+        #if os(Linux)
+        let locale = Locale.current
+        #else
+        let locale = L10n.currentLocale
+        #endif
+        if context.captureTimeIsReliable { return date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: locale)) }
         if let recorded = context.captureDateText { return recorded }
         let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
+        formatter.locale = locale
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter.string(from: date)
     }

@@ -92,9 +92,11 @@ final class KeptoraCoreTests: XCTestCase {
         
         let report = VisualQualityEngine.evaluateQuality(for: image, asset: testAsset)
         XCTAssertGreaterThan(report.sharpnessScore, 10.0)
-        XCTAssertTrue(report.badges.contains(VisualQualityBadge.proRawOriginal))
-        XCTAssertTrue(report.badges.contains(VisualQualityBadge.highResolution))
-        XCTAssertGreaterThanOrEqual(report.compositeScore, 20.0)
+        XCTAssertFalse(report.badges.contains(.eyesOpen))
+        XCTAssertFalse(report.badges.contains(.proRawOriginal))
+        XCTAssertEqual(report.formatBonus, 0)
+        XCTAssertEqual(report.faceScore, 0)
+        XCTAssertNotNil(report.assessment)
     }
 
     func testFolderQuarantineRehashesMovesAndRestoresWithoutOverwrite() async throws {
@@ -201,7 +203,7 @@ final class KeptoraCoreTests: XCTestCase {
     }
 
     func testResumedScanReusesOnlySameRevisionCheckpointEntries() async throws {
-        let first = asset(id: "copy-1")
+        let first = asset(id: "copy-1").with(modificationDate: .some(Date(timeIntervalSince1970: 100)))
         let second = asset(id: "copy-2")
         let unique = asset(id: "unique")
         let fingerprinted = UniversalMediaAsset(
@@ -266,15 +268,16 @@ final class KeptoraCoreTests: XCTestCase {
             sharpnessScore: 0.85
         )
         
-        await cache.store(assetID: "asset-123", modificationDate: now, byteCount: 2048, entry: entry)
+        let revision = asset(id: "asset-123").with(byteCount: .some(2048), modificationDate: .some(now))
+        await cache.store(asset: revision, algorithm: MediaAnalysisVersion.exact, entry: entry)
         await cache.persistToDisk()
         
-        let fetched = await cache.get(assetID: "asset-123", modificationDate: now, byteCount: 2048)
+        let fetched = await cache.get(asset: revision, algorithm: MediaAnalysisVersion.exact)
         XCTAssertEqual(fetched?.digest, "sha256-abc")
         XCTAssertEqual(fetched?.sharpnessScore, 0.85)
         
         // Non-existent key should return nil
-        let missing = await cache.get(assetID: "asset-999", modificationDate: now, byteCount: 2048)
+        let missing = await cache.get(asset: asset(id: "asset-999").with(modificationDate: .some(now)), algorithm: MediaAnalysisVersion.exact)
         XCTAssertNil(missing)
     }
 
@@ -584,4 +587,44 @@ private actor CountingSourceAdapter: SourceAdapter {
         return UniversalExactFingerprint(digest: asset.id == "unique" ? "unique" : "same", byteCount: 100)
     }
     func hashCount() -> Int { calls }
+}
+
+
+extension KeptoraCoreTests {
+    func testCoordinatorCompletesAccessibleStagesAndReportsUnsupportedPreviews() async throws {
+        let recorder = AnalysisUpdatesRecorder()
+        let coordinator = LibraryAnalysisCoordinator { await recorder.record($0) }
+        let video = UniversalMediaAsset(id: "video", sourceID: "test", reference: .photoLibrary(localIdentifier: "video"), displayName: "video.mov", mediaKind: .video)
+        let adapter = UnifiedLibraryAdapter(adapters: [CountingSourceAdapter(assets: [asset(id: "image"), video])])
+        try await coordinator.run(adapter: adapter, allowNetwork: false)
+        let events = await recorder.events
+        let completions = events.compactMap { event -> AnalysisSessionProgress? in if case .finished(let result) = event { return result }; return nil }
+        XCTAssertEqual(completions.count, 1); XCTAssertTrue(completions[0].isFinished); XCTAssertFalse(completions[0].isComplete)
+        XCTAssertEqual(completions[0].stages[.exact]?.status, .completed)
+        XCTAssertEqual(completions[0].stages[.photos]?.status, .partial)
+        XCTAssertEqual(completions[0].stages[.videos]?.status, .partial)
+    }
+    func testCheckpointTicketRejectsLateWriteAfterCompletion() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let archive = LibraryCheckpointArchive()
+        _ = await archive.load(url: url, ticket: 1, sourceID: "test", allowNetwork: false)
+        let checkpoint = UniversalScanCheckpoint(sourceID: "test", allowNetwork: false, entries: [])
+        try await archive.save(checkpoint, url: url, ticket: 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        await archive.stop(url: url, ticket: 2, preserve: false)
+        try await archive.save(checkpoint, url: url, ticket: 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
+    func testIssueReasonsDoNotCallUnreadableFilesCloudDownloads() {
+        let item = asset(id: "image")
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .exact, error: UniversalScanError.networkRequired("image")).reason, .downloadRequired)
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .exact, error: UniversalScanError.inaccessibleAsset("image")).reason, .unreadable)
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .photos, error: UniversalScanError.sourcePermissionDenied).reason, .accessDenied)
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .videos, error: CancellationError()).reason, .cancelled)
+    }
+}
+private actor AnalysisUpdatesRecorder {
+    private(set) var events: [LibraryAnalysisUpdate] = []
+    func record(_ update: LibraryAnalysisUpdate) { events.append(update) }
 }
