@@ -69,6 +69,7 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testExactPhotoSelectionAndFinalReviewCanBeCancelled \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testFinalReviewRemovalCanBeUndoneEvenWhenEmpty \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testRemovingOneFilterPreservesOtherFiltersAndSelection \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCombinedGroupsPreserveSelectionWhenReturningToAllItems \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testScanAllSourcesFindsCopiesInRealSimulatorPhotos \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSourceCheckboxesPreserveManualSelectionAndPersist \

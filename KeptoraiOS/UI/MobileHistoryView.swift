@@ -1,3 +1,4 @@
+import KeptoraCore
 import SwiftUI
 
 struct MobileHistoryView: View {
@@ -51,7 +52,7 @@ struct MobileHistoryView: View {
                                             Text("Photos Recently Deleted")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         } else {
-                                            Text("Keptora Safe Bin")
+                                            Text("Recovery Folder")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         }
                                         Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
@@ -65,7 +66,7 @@ struct MobileHistoryView: View {
                                     HStack(spacing: 5) {
                                         Image(systemName: "doc.on.doc")
                                             .font(.system(.caption2, design: .rounded).weight(.semibold))
-                                        Text("^[\(entry.itemCount) item](inflect: true)")
+                                        Text(L10n.format("%lld items", entry.itemCount))
                                             .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)
@@ -100,6 +101,7 @@ struct MobileHistoryView: View {
                                         }
                                         .buttonStyle(.bordered)
                                         .controlSize(.small)
+                                        .frame(minHeight: 44)
                                     }
                                 } else if entry.restoredAt != nil {
                                     HStack(spacing: 6) {
@@ -120,6 +122,7 @@ struct MobileHistoryView: View {
                                     .buttonStyle(.borderedProminent)
                                     .tint(MobileKeptoraDesign.accent)
                                     .controlSize(.regular)
+                                    .frame(minHeight: 44)
                                     .accessibilityIdentifier("ios.history.restore.\(entry.id.uuidString)")
                                 }
                             }

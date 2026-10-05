@@ -898,6 +898,7 @@ final class MobileKeptoraStore: ObservableObject {
         isCleaningUp = true
         cleanupStatus = L10n.tr("Reviewing selected items…")
         defer { isCleaningUp = false; cleanupStatus = nil }
+        var completedIDs: Set<String> = []
         do {
             try LibraryRevisionValidator.validate(selection)
             if case .suggestedCopies = intent { try await verifyUnchanged(selection) }
@@ -914,7 +915,6 @@ final class MobileKeptoraStore: ObservableObject {
                     throw UniversalScanError.cleanupNotPermitted("Review the selection again before cleanup.")
                 }
             }
-            var completedIDs: Set<String> = []
             defer { reconcileRemoved(completedIDs); persistHistory() }
             if let photosBatch = batches[LibrarySource.photos.id] {
                 let ids = photosBatch.compactMap { item -> String? in if case .photoLibrary(let id) = item.reference { return id }; return nil }
@@ -935,8 +935,9 @@ final class MobileKeptoraStore: ObservableObject {
             onSuccess()
             return true
         } catch {
-            guard !Self.isUserCancellation(error) else { return false }
-            errorMessage = error.localizedDescription
+            guard !Self.isUserCancellation(error) || !completedIDs.isEmpty else { return false }
+            errorMessage = completedIDs.isEmpty ? error.localizedDescription :
+                L10n.format("Moved: %lld items. Not moved: %lld items. See History for recovery.", completedIDs.count, selection.count - completedIDs.count) + "\n\n" + error.localizedDescription
             Task { await loadCatalogue() }
             return false
         }

@@ -126,12 +126,26 @@ final class BulkCleanupPolicyTests: XCTestCase {
         XCTAssertEqual(Set(decisions.candidates(in: group).map(\.id)), ["a", "c"])
         decisions.protect(group); XCTAssertTrue(decisions.candidates(in: group).isEmpty)
     }
+    func testUserKeeperBadgeWinsAcrossOverlappingGroupsAndExpiresWithRevision() {
+        let a = item("a"), b = item("b"), c = item("c")
+        let groups = LibraryReviewGroup.combined(exact: [UniversalExactGroup(digest: "same", assets: [b, c], keeperID: "b")],
+            similar: [UniversalSimilarityGroup(id: "related", assets: [a, b], maximumDistance: 0.1, strength: .verySimilar, keeperID: "a")])
+        var decisions = LibraryReviewDecisions()
+        let similar = groups.first { $0.kind == .verySimilar }!
+        decisions.keep("b", in: similar)
+        XCTAssertEqual(decisions.keeperBadgeKeys(in: groups), ["b": "Your Keep Choice"])
+        XCTAssertEqual(decisions.keeperBadgeKeys(in: Array(groups.reversed())), ["b": "Your Keep Choice"])
+        let changed = LibraryReviewGroup.combined(exact: [], similar: [UniversalSimilarityGroup(id: "related", assets: [a, b.with(byteCount: .some(999))], maximumDistance: 0.1, strength: .verySimilar, keeperID: "a")])
+        XCTAssertEqual(decisions.keeperBadgeKeys(in: changed), ["a": "Suggested Keep"])
+    }
     func testKeeperOverrideInvalidatesWhenGroupRevisionChanges() {
         let assets = [item("a"), item("b")]
         let old = LibraryReviewGroup.combined(exact: [UniversalExactGroup(digest: "same", assets: assets, keeperID: "a")], similar: [])[0]
         var decisions = LibraryReviewDecisions(); decisions.keep("b", in: old)
+        XCTAssertTrue(decisions.hasUserKeeper(in: old))
         let changed = LibraryReviewGroup.combined(exact: [UniversalExactGroup(digest: "same", assets: [assets[0], assets[1].with(byteCount: .some(999))], keeperID: "a")], similar: [])[0]
         XCTAssertEqual(decisions.keeper(in: changed), "a")
+        XCTAssertFalse(decisions.hasUserKeeper(in: changed), "An old choice must not be labelled as the user's current decision")
     }
     func testExactSuggestionsNeverIncludeKeeperFromRelatedGroup() {
         let a = item("a"), b = item("b"), c = item("c")

@@ -170,12 +170,26 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
         guard let choice = choices[group.id], choice.revision == revision(group), group.assets.contains(where: { $0.id == choice.keeperID }) else { return group.keeperID }
         return choice.keeperID
     }
+    public func hasUserKeeper(in group: LibraryReviewGroup) -> Bool {
+        guard let choice = choices[group.id] else { return false }
+        return choice.revision == revision(group) && group.assets.contains { $0.id == choice.keeperID }
+    }
+    /// Resolve group revisions once per rendered block rather than per thumbnail.
+    public func keeperBadgeKeys(in groups: [LibraryReviewGroup]) -> [String: String] {
+        var result: [String: String] = [:]
+        for group in groups {
+            let id = keeper(in: group)
+            if hasUserKeeper(in: group) { result[id] = "Your Keep Choice" }
+            else if result[id] == nil { result[id] = "Suggested Keep" }
+        }
+        return result
+    }
     public mutating func keep(_ id: String, in group: LibraryReviewGroup) {
         guard group.assets.contains(where: { $0.id == id }) else { return }
         choices[group.id] = .init(keeperID: id, revision: revision(group))
     }
     public func keeperReason(in group: LibraryReviewGroup, quality: [String: QualityAssessment]) -> String {
-        if let choice = choices[group.id], choice.revision == revision(group) { return "Chosen by You" }
+        if hasUserKeeper(in: group) { return "Chosen by You" }
         guard let item = group.assets.first(where: { $0.id == keeper(in: group) }) else { return "Suggested Keep" }
         if item.isFavorite { return "Favorite Kept" }
         if item.hasAdjustments { return "Edited Version Kept" }

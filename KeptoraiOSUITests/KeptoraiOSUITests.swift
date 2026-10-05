@@ -67,8 +67,8 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
         app.segmentedControls.buttons["Videos"].tap()
         XCTAssertTrue(app.staticTexts["1 selected outside this view"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["Review Selection"].isHittable)
-        app.buttons["Review Selection"].tap()
+        XCTAssertTrue(app.buttons["archive.reviewSelection"].isHittable)
+        app.buttons["archive.reviewSelection"].tap()
         XCTAssertTrue(app.staticTexts["Portrait Original.heic"].waitForExistence(timeout: 3))
         app.buttons["Close"].tap()
     }
@@ -91,7 +91,7 @@ final class KeptoraiOSUITests: XCTestCase {
         app.buttons["Done"].firstMatch.tap()
         XCTAssertFalse(app.buttons["archive.scanAll"].isEnabled)
         XCTAssertTrue(app.staticTexts["1 selected outside this view"].exists)
-        app.buttons["Review Selection"].tap()
+        app.buttons["archive.reviewSelection"].tap()
         XCTAssertTrue(app.staticTexts["Portrait Original.heic"].waitForExistence(timeout: 3))
         app.buttons["Close"].tap()
         app.terminate()
@@ -215,12 +215,12 @@ final class KeptoraiOSUITests: XCTestCase {
         let copy = app.buttons["archive.asset.ui-exact-copy"]
         reveal(copy, in: app); copy.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
-        app.buttons["Clear Selection"].tap()
+        app.buttons["archive.clearSelection"].tap()
         XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
         app.buttons["archive.undoSelection"].tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
-        app.buttons["Review Selection"].tap()
-        XCTAssertTrue(app.buttons["Remove Selected Items"].waitForExistence(timeout: 5))
+        app.buttons["archive.reviewSelection"].tap()
+        XCTAssertTrue(app.buttons["archive.review.remove"].waitForExistence(timeout: 5))
         app.buttons["Close"].tap()
     }
 
@@ -280,9 +280,9 @@ final class KeptoraiOSUITests: XCTestCase {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         let copy = app.buttons["archive.asset.ui-photo-copy"]
         reveal(copy, in: app); copy.tap()
-        app.buttons["Review Selection"].tap()
+        app.buttons["archive.reviewSelection"].tap()
         XCTAssertTrue(app.staticTexts["Portrait Copy.heic"].waitForExistence(timeout: 5))
-        app.buttons["Remove Selected Items"].tap()
+        app.buttons["archive.review.remove"].tap()
         XCTAssertTrue(app.alerts["Remove selected items?"].waitForExistence(timeout: 5))
         app.alerts.buttons["Cancel"].tap()
         XCTAssertTrue(app.staticTexts["Portrait Copy.heic"].exists)
@@ -296,13 +296,13 @@ final class KeptoraiOSUITests: XCTestCase {
         reveal(copy, in: app); copy.tap()
         app.buttons["archive.reviewSelection"].tap()
         let exclude = app.buttons["archive.review.exclude.ui-photo-copy"]
-        reveal(exclude, in: app, scrollDown: true); exclude.tap()
+        reveal(exclude, in: app); exclude.tap()
         XCTAssertTrue(app.staticTexts["No items selected."].exists)
-        XCTAssertFalse(app.buttons["Remove Selected Items"].isEnabled)
+        XCTAssertFalse(app.buttons["archive.review.remove"].isEnabled)
         XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
         app.buttons["archive.review.undo"].tap()
         XCTAssertTrue(app.staticTexts["Portrait Copy.heic"].exists)
-        XCTAssertTrue(app.buttons["Remove Selected Items"].isEnabled)
+        XCTAssertTrue(app.buttons["archive.review.remove"].isEnabled)
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
         XCTAssertFalse(app.buttons["archive.review.undo"].exists)
         app.buttons["archive.review.close"].tap()
@@ -321,15 +321,35 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.history"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["ios.history.entry.00000000-0000-0000-0000-000000000101"].exists)
         XCTAssertTrue(app.staticTexts["Photos Recently Deleted"].exists)
-        XCTAssertTrue(app.staticTexts["Keptora Safe Bin"].waitForExistence(timeout: 3) || app.staticTexts["Keptora Quarantine"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Recovery Folder"].waitForExistence(timeout: 3))
+    }
+
+    func testRemovingOneFilterPreservesOtherFiltersAndSelection() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        let copy = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(copy, in: app); copy.tap()
+        let copies = app.buttons["archive.finding.copies"]
+        reveal(copies, in: app, scrollDown: true); copies.tap()
+        app.segmentedControls.buttons["Photos"].tap()
+        XCTAssertTrue(app.buttons["archive.filter.remove.finding"].exists)
+        XCTAssertTrue(app.buttons["archive.filter.remove.media"].exists)
+        app.buttons["archive.filter.remove.finding"].tap()
+        XCTAssertFalse(app.buttons["archive.filter.remove.finding"].exists)
+        XCTAssertTrue(app.buttons["archive.filter.remove.media"].exists)
+        XCTAssertTrue(app.segmentedControls.buttons["Photos"].isSelected)
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
+        let similar = app.buttons["archive.asset.ui-similar-photo-a"]
+        reveal(similar, in: app)
+        XCTAssertTrue(similar.exists, "Removing the finding filter restores other photos")
+        XCTAssertFalse(app.buttons["archive.asset.ui-exact-copy"].exists, "The Photos filter is preserved")
     }
 
     func testPrimaryTabLabelsAreLocalizedInFourLanguages() {
         let expectations: [(String, String, String, String, String)] = [
-            ("en", "en_US", "Library", "Cleanup", "History"),
-            ("tr", "tr_TR", "Arşiv", "Temizlik", "Geçmiş"),
-            ("de", "de_DE", "Mediathek", "Bereinigen", "Verlauf"),
-            ("fr", "fr_FR", "Photothèque", "Nettoyage", "Historique")
+            ("en", "en_US", "Photo Library", "Suggestions", "History"),
+            ("tr", "tr_TR", "Fotoğraflar", "Öneriler", "Geçmiş"),
+            ("de", "de_DE", "Fotos", "Vorschläge", "Verlauf"),
+            ("fr", "fr_FR", "Photothèque", "Suggestions", "Historique")
         ]
 
         for (language, locale, library, review, history) in expectations {

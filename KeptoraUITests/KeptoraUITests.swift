@@ -222,14 +222,14 @@ final class KeptoraUITests: XCTestCase {
         let app = launchSelectionFixture()
         let actual = [
             app.buttons["mac.sidebar.archive"].label,
-            app.buttons["mac.sidebar.review"].label,
+            app.buttons["mac.sidebar.smartBuckets"].label,
             app.buttons["mac.sidebar.history"].label
         ]
         let supportedSets = [
-            ["Library", "Review", "History"],
-            ["Arşiv", "İnceleme", "Geçmiş"],
-            ["Mediathek", "Prüfen", "Verlauf"],
-            ["Photothèque", "Examen", "Historique"]
+            ["Photo Library", "Suggestions", "History"],
+            ["Fotoğraflar", "Öneriler", "Geçmiş"],
+            ["Fotos", "Vorschläge", "Verlauf"],
+            ["Photothèque", "Suggestions", "Historique"]
         ]
         XCTAssertTrue(supportedSets.contains(actual), "Mixed or unsupported navigation language: \(actual)")
     }
@@ -245,17 +245,17 @@ final class KeptoraUITests: XCTestCase {
 
     func testAllSupportedLanguagesNavigationCompleteness() throws {
         let testCases: [(lang: String, loc: String, expected: [String])] = [
-            ("en", "en_US", ["Library", "Review", "History"]),
-            ("tr", "tr_TR", ["Arşiv", "İnceleme", "Geçmiş"]),
-            ("de", "de_DE", ["Mediathek", "Prüfen", "Verlauf"]),
-            ("fr", "fr_FR", ["Photothèque", "Examen", "Historique"])
+            ("en", "en_US", ["Photo Library", "Suggestions", "History"]),
+            ("tr", "tr_TR", ["Fotoğraflar", "Öneriler", "Geçmiş"]),
+            ("de", "de_DE", ["Fotos", "Vorschläge", "Verlauf"]),
+            ("fr", "fr_FR", ["Photothèque", "Suggestions", "Historique"])
         ]
 
         for item in testCases {
             let app = launchSelectionFixture(language: item.lang, locale: item.loc)
             let actual = [
                 app.buttons["mac.sidebar.archive"].label,
-                app.buttons["mac.sidebar.review"].label,
+                app.buttons["mac.sidebar.smartBuckets"].label,
                 app.buttons["mac.sidebar.history"].label
             ]
             XCTAssertEqual(actual, item.expected, "Navigation localization mismatch for \(item.lang)")

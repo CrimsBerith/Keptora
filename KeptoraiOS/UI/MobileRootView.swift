@@ -10,11 +10,11 @@ struct MobileRootView: View {
     var body: some View {
         TabView(selection: $store.selectedTab) {
             NavigationStack { MobileLibraryView() }
-                .tabItem { Label("Library", systemImage: "photo.stack") }
+                .tabItem { Label("Photo Library", systemImage: "photo.stack") }
                 .tag(MobileTab.library)
                 .accessibilityIdentifier("tab.library")
             NavigationStack { MobileCleanupHubView() }
-                .tabItem { Label("Cleanup", systemImage: "sparkles.rectangle.stack") }
+                .tabItem { Label("Suggestions", systemImage: "sparkles.rectangle.stack") }
                 .tag(MobileTab.review)
                 .accessibilityIdentifier("tab.review")
             NavigationStack { MobileHistoryView() }

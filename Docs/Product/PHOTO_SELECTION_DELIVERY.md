@@ -2,6 +2,8 @@
 
 **Tarih:** 4 Ekim 2026. **Dal:** `feat/photo-cleaner-library`.
 
+**5 Ekim güncellemesi:** Başlıklar, dil, açık düğmeler, etkin filtreler, kaynak/tarama ve son inceleme düzeni için [UI/UX anlaşılabilirlik teslimi](UI_UX_CLARITY_DELIVERY.md) güncel davranışı açıklar. Ortak test sayısı 54'tür; aşağıdaki sayılar önceki seçim tesliminin sonuçlarıdır.
+
 Kullanıcının son tercihi bu belgedeki seçim akışıdır. Önceki plandaki ayrı karşılaştırma ekranı ve swipe/sürükleyerek karar verme önerileri yerine doğrudan galeri etkileşimi uygulanmıştır.
 
 ## Kullanıcının akışı

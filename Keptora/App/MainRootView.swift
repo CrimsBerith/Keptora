@@ -13,9 +13,10 @@ struct MainRootView: View {
     @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
     @State private var startupSourcesPrepared = false
     @State private var showSourceSetup = false
+    @State private var advancedToolsExpanded = false
 
-    private let primaryRoutes: [SidebarRoute] = [.archive, .history]
-    private let toolRoutes:    [SidebarRoute] = [.home, .review, .smartBuckets, .insights]
+    private let primaryRoutes: [SidebarRoute] = [.archive, .smartBuckets, .history]
+    private let toolRoutes:    [SidebarRoute] = [.home, .review, .insights]
 
     var body: some View {
         NavigationSplitView {
@@ -25,7 +26,9 @@ struct MainRootView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     sidebarSection("Workspace", routes: primaryRoutes)
 
-                    sidebarSection("Tools", routes: toolRoutes)
+                    DisclosureGroup("Advanced Tools", isExpanded: $advancedToolsExpanded) {
+                        ForEach(toolRoutes) { route in sidebarButton(route) }
+                    }.padding(.top, 12).accessibilityIdentifier("mac.sidebar.advancedTools")
 
                     Spacer(minLength: 0)
                 }
@@ -88,6 +91,9 @@ struct MainRootView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .onChange(of: model.selectedRoute) { route in
+            if toolRoutes.contains(route) { advancedToolsExpanded = true }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("keptora.root")
         .sheet(isPresented: $store.isShowingPaywall) {
