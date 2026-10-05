@@ -24,34 +24,34 @@ struct MacScanSourcesSection: View {
             VStack(alignment: .leading, spacing: 10) {
                 Button { archive.toggleAllScanSources() } label: {
                     Label("All Connected Sources", systemImage: masterSymbol).font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityValue(Text(masterValue)).accessibilityIdentifier("sources.selectAll")
                     .disabled(archive.sourceControlsDisabled || LibrarySourceSelection().selectedIDs(in: archive.connectedSources, coverage: archive.coverage).isEmpty)
                 Divider()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(archive.connectedSources) { source in
-                            let report = archive.coverage.first { $0.id == source.id }
-                            let available = report == nil || report?.authorization == .authorized || report?.authorization == .limited
-                            let selected = archive.selectedSourceIDs.contains(source.id)
-                            Button { archive.toggleScanSource(source.id) } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: selected ? "checkmark.square.fill" : "square").foregroundStyle(selected ? KeptoraDesign.accent : Color.secondary)
-                                    Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(archive.connectedSources) { source in
+                        let report = archive.coverage.first { $0.id == source.id }
+                        let available = report == nil || report?.authorization == .authorized || report?.authorization == .limited
+                        let selected = archive.selectedSourceIDs.contains(source.id)
+                        Button { archive.toggleScanSource(source.id) } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: selected ? "checkmark.square.fill" : "square").foregroundStyle(selected ? KeptoraDesign.accent : Color.secondary)
+                                Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
+                                VStack(alignment: .leading, spacing: 4) {
                                     Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName)
-                                    Spacer()
                                     if let report {
                                         (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete")).monospacedDigit().foregroundStyle(.secondary)
                                         Text(LocalizedStringKey(report.statusKey)).font(.caption)
                                             .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
                                     } else { Text("Loading item count…").foregroundStyle(.secondary) }
-                                }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
-                            }.buttonStyle(.plain).disabled(archive.sourceControlsDisabled || !available)
-                                .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
-                                .accessibilityIdentifier("sources.source." + source.id)
-                        }
+                                }
+                                Spacer(minLength: 0)
+                            }.padding(.vertical, 6).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                        }.buttonStyle(.plain).disabled(archive.sourceControlsDisabled || !available)
+                            .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
+                            .accessibilityIdentifier("sources.source." + source.id)
                     }
-                }.frame(height: min(CGFloat(archive.connectedSources.count) * 38, 160))
+                }
                 Divider()
                 if archive.selectedSourceIDs.isEmpty {
                     Text("Select at least one source").foregroundStyle(.secondary).accessibilityIdentifier("sources.emptySelection")
@@ -92,7 +92,10 @@ struct MacSourceSetupView: View {
                                 Button("Connect Photos") { archive.connectPhotos() }
                             } else {
                                 Text(archive.authorization == .unavailable ? LocalizedStringKey("Photos is not available on this device.") : (archive.authorization == .restricted ? LocalizedStringKey("Access is restricted on this device.") : LocalizedStringKey("Photos access disabled")))
-                                if archive.authorization == .denied { Button("Open Settings") { archive.openPhotosSettings() }.accessibilityIdentifier("mac.sourceSetup.openSettings") }
+                                if archive.authorization == .denied {
+                                    Button { archive.openPhotosSettings() } label: { Text("Open Settings").frame(minHeight: 32) }
+                                        .accessibilityIdentifier("mac.sourceSetup.openSettings")
+                                }
                             }
                             if archive.authorization == .limited {
                                 Text("Limited Photos access").foregroundStyle(.orange)
@@ -106,7 +109,8 @@ struct MacSourceSetupView: View {
                             Text("Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable.")
                             Text("Cloud providers may download files according to their own settings.").font(.callout).foregroundStyle(.secondary)
                             ForEach(archive.connectedFolders) { folder in Label(folder.displayName, systemImage: "checkmark.circle") }
-                            Button("Add Folders…") { archive.chooseFolder() }.accessibilityIdentifier("mac.sourceSetup.folders")
+                            Button { archive.chooseFolder() } label: { Text("Add Folders…").frame(minHeight: 32) }
+                                .accessibilityIdentifier("mac.sourceSetup.folders")
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                     Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.callout).foregroundStyle(.secondary)
@@ -117,14 +121,16 @@ struct MacSourceSetupView: View {
             Divider()
             HStack {
                 Spacer()
-                Button(isStartupSetup ? LocalizedStringKey("Continue to Library") : LocalizedStringKey("Done")) {
+                Button {
                     if isStartupSetup { sourceSetupCompleted = true }
                     dismiss()
-                }.buttonStyle(.borderedProminent).disabled(archive.isRequestingPhotosAccess)
+                } label: { Text(isStartupSetup ? LocalizedStringKey("Continue to Library") : LocalizedStringKey("Done")).frame(minHeight: 32) }
+                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(archive.isRequestingPhotosAccess)
                     .accessibilityIdentifier("mac.sourceSetup.continue")
             }.padding(18)
         }
-        .frame(width: 650, height: 600)
+        .controlSize(.large)
+        .frame(minWidth: 480, idealWidth: 650, maxWidth: 800, minHeight: 480, idealHeight: 600, maxHeight: 800)
         .accessibilityIdentifier("mac.sourceSetup")
         .interactiveDismissDisabled(isStartupSetup)
         .task {
@@ -615,15 +621,57 @@ struct MacArchiveView: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading) {
-                    Text("Photo Library").font(.title2.bold())
-                    Text(archive.sourceSelectionState == .all ? LocalizedStringKey("All Connected Sources") : LocalizedStringKey("Selected Sources")).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button(archive.photosConnected ? LocalizedStringKey("Photos Connected") : LocalizedStringKey("Connect Photos")) { archive.connectPhotos() }
-                Button("Add Folders…") { archive.chooseFolder() }
-                Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise") }.help("Refresh Library")
+            ScrollView { catalogueContent }
+            if !archive.selection.isEmpty || archive.canUndoSelection {
+                Divider()
+                VStack(alignment: .leading, spacing: 12) {
+                    let summary = MediaSelectionSummary(archive.selected)
+                    VStack(alignment: .leading) {
+                        Text(String(format: L10n.tr("Selected items: %lld"), archive.selection.count)).font(.headline)
+                        Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
+                        Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file) + " · " + L10n.tr("Media size, not freed space")).font(.caption).foregroundStyle(.secondary)
+                        if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
+                        let hidden = archive.selection.subtracting(visible.map(\.id)).count
+                        if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
+                    }
+                    if let status = archive.status { HStack { ProgressView().controlSize(.small); Text(status).font(.caption) } }
+                    selectionActions
+                }.padding(16).disabled(archive.busy || archive.loading)
+            }
+        }
+        .controlSize(.large)
+        .background(KeptoraDesign.canvas)
+        .accessibilityIdentifier("mac.page.archive")
+        .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
+        .sheet(item: $inspected) { item in
+            VStack(spacing: 14) {
+                MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork).frame(minWidth: 600, minHeight: 420)
+                Text(item.displayName).font(.headline)
+                Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
+                if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
+                if let date = item.captureDateDescription { Text(date) }
+                if let context = item.context, let camera = context.camera { Text(camera) }
+                if let location = item.context?.location { Text(String(format: "%.5f, %.5f", location.latitude, location.longitude)) }
+                HStack { Button("Close") { inspected = nil }; Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) } }
+            }.padding(20)
+        }
+        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
+            Button("OK") { archive.error = nil }
+        } message: { Text(archive.error ?? "") }
+        .onChange(of: inspected?.id) { _ in previewNetwork = false }
+        .sheet(isPresented: $showAccessGuide) { MacSourceSetupView().environmentObject(archive) }
+        .confirmationDialog("Download cloud originals?", isPresented: $cloudScan) {
+            Button("Download and Scan") { archive.analyze(allowNetwork: true) }
+        } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
+        .onChange(of: archive.connectedFolders) { _ in albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.scanSourceSelection) { _ in finding = .all; albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.sourceName) { _ in albumID = ""; media = 0; search = "" }
+    }
+    private var catalogueContent: some View {
+        VStack(spacing: 0) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
+                VStack(alignment: .leading, spacing: 12) { headerSummary; headerActions }
             }.padding(20).disabled(archive.busy || archive.analyzing)
             if !archive.connectedSources.isEmpty {
                 Button { showAccessGuide = true } label: {
@@ -634,7 +682,7 @@ struct MacArchiveView: View {
                                 .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                         }
                         Spacer(); Text(L10n.format("%lld selected", archive.selectedSourceIDs.count)); Image(systemName: "chevron.right")
-                    }
+                    }.frame(minHeight: 44).contentShape(Rectangle())
                 }.padding(.horizontal, 20).padding(.bottom, 12).accessibilityIdentifier("mac.archive.sourcesSummary")
             }
             DisclosureGroup("Source Access") {
@@ -650,7 +698,10 @@ struct MacArchiveView: View {
                         if report.error != nil { Text("Some items in this source are unavailable. Reconnect or check access.").font(.caption).foregroundStyle(.orange) }
                     }
                     ForEach(archive.connectedFolders) { folder in
-                        HStack { Text(folder.displayName); Spacer(); Button("Disconnect") { archive.disconnectFolder(folder.id) } }
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 12) { folderControls(folder) }
+                            VStack(alignment: .leading, spacing: 8) { folderControls(folder) }
+                        }
                     }
                     ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).font(.caption).foregroundStyle(.orange) }
                 }
@@ -684,9 +735,10 @@ struct MacArchiveView: View {
                 if archive.skippedCloudItems > 0 {
                     Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
-                Picker("Library view", selection: $finding) {
-                    ForEach(LibraryFindingFilter.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
-                }.pickerStyle(.segmented).frame(maxWidth: 640).padding(12)
+                ViewThatFits(in: .horizontal) {
+                    findingPicker.pickerStyle(.segmented)
+                    findingPicker.pickerStyle(.menu)
+                }.frame(maxWidth: 640).padding(12)
                 if finding == .copies { exactBatchSelection.padding(.horizontal, 20) }
                 if archive.sessionProgress.isFinished && !archive.sessionProgress.isComplete && !archive.sessionProgress.stages.values.contains(where: { $0.status == .cancelled }) {
                     Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption).padding(.horizontal, 20)
@@ -699,7 +751,7 @@ struct MacArchiveView: View {
                         }
                     }.padding(.horizontal, 20)
                 }
-                ScrollView {
+                VStack(spacing: 0) {
                     Text("Click a photo to select or deselect it.").font(.caption).foregroundStyle(.secondary).padding(.top, 12)
                     if visible.isEmpty && !archive.loading && !archive.selectedSourceIDs.isEmpty {
                         if archive.analyzing { Text("Results appear as they become available.").foregroundStyle(.secondary).padding(30) }
@@ -738,59 +790,55 @@ struct MacArchiveView: View {
                 }.disabled(archive.busy)
 
             }
-            if !archive.selection.isEmpty || archive.canUndoSelection {
-            Divider()
-            VStack(alignment: .leading, spacing: 12) {
-                let summary = MediaSelectionSummary(archive.selected)
-                VStack(alignment: .leading) {
-                    Text(String(format: L10n.tr("Selected items: %lld"), archive.selection.count)).font(.headline)
-                    Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
-                    Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file) + " · " + L10n.tr("Media size, not freed space")).font(.caption).foregroundStyle(.secondary)
-                    if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
-                    let hidden = archive.selection.subtracting(visible.map(\.id)).count
-                    if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
-                }
-                if let status = archive.status { HStack { ProgressView().controlSize(.small); Text(status).font(.caption) } }
-                ViewThatFits(in: .horizontal) {
-                    HStack { selectionButtons }
-                    VStack(alignment: .leading) { selectionButtons }
-                }
-            }.padding(16).disabled(archive.busy || archive.loading)
-            }
-        }
-        .background(KeptoraDesign.canvas)
-        .accessibilityIdentifier("mac.page.archive")
-        .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
-        .sheet(item: $inspected) { item in
-            VStack(spacing: 14) {
-                MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork).frame(minWidth: 600, minHeight: 420)
-                Text(item.displayName).font(.headline)
-                Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
-                if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
-                if let date = item.captureDateDescription { Text(date) }
-                if let context = item.context, let camera = context.camera { Text(camera) }
-                if let location = item.context?.location { Text(String(format: "%.5f, %.5f", location.latitude, location.longitude)) }
-                HStack { Button("Close") { inspected = nil }; Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) } }
-            }.padding(20)
-        }
-        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
-            Button("OK") { archive.error = nil }
-        } message: { Text(archive.error ?? "") }
-        .onChange(of: inspected?.id) { _ in previewNetwork = false }
-        .sheet(isPresented: $showAccessGuide) { MacSourceSetupView().environmentObject(archive) }
-        .confirmationDialog("Download cloud originals?", isPresented: $cloudScan) {
-            Button("Download and Scan") { archive.analyze(allowNetwork: true) }
-        } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
-        .onChange(of: archive.connectedFolders) { _ in albumID = ""; media = 0; search = "" }
-        .onChange(of: archive.scanSourceSelection) { _ in finding = .all; albumID = ""; media = 0; search = "" }
-        .onChange(of: archive.sourceName) { _ in albumID = ""; media = 0; search = "" }
+        }.frame(maxWidth: .infinity)
     }
-    @ViewBuilder private var selectionButtons: some View {
+    private var headerSummary: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Photo Library").font(.title2.bold())
+            Text(archive.sourceSelectionState == .all ? LocalizedStringKey("All Connected Sources") : LocalizedStringKey("Selected Sources")).foregroundStyle(.secondary)
+        }
+    }
+    @ViewBuilder private func folderControls(_ folder: LibrarySource) -> some View {
+        Text(folder.displayName)
+        Button("Disconnect") { archive.disconnectFolder(folder.id) }
+    }
+    private var findingPicker: some View {
+        Picker("Library view", selection: $finding) {
+            ForEach(LibraryFindingFilter.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
+        }
+    }
+    private var headerActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { headerButtons }
+            VStack(alignment: .leading, spacing: 8) { headerButtons }
+        }
+    }
+    @ViewBuilder private var headerButtons: some View {
+        Button { archive.connectPhotos() } label: { Text(archive.photosConnected ? LocalizedStringKey("Photos Connected") : LocalizedStringKey("Connect Photos")) }
+        Button("Add Folders…") { archive.chooseFolder() }
+        Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise").frame(width: 32, height: 32).contentShape(Rectangle()) }
+            .help("Refresh Library").accessibilityLabel("Refresh Library")
+    }
+    private var selectionActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { secondarySelectionActions; Spacer(minLength: 12); reviewSelectionButton }
+            VStack(alignment: .leading, spacing: 8) { secondarySelectionActions; reviewSelectionButton }
+        }
+    }
+    private var secondarySelectionActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { secondarySelectionButtons }
+            VStack(alignment: .leading, spacing: 8) { secondarySelectionButtons }
+        }
+    }
+    @ViewBuilder private var secondarySelectionButtons: some View {
         if archive.canUndoSelection {
             Button("Undo Selection") { archive.undoSelection() }.keyboardShortcut("z", modifiers: [.command]).accessibilityIdentifier("mac.archive.undoSelection")
         }
         Button("Clear All Selections") { archive.setSelection([]) }.disabled(archive.selection.isEmpty)
-        Button { showPlan = true } label: { Text(L10n.format("Review Selection (%lld)", archive.selection.count)) }
+    }
+    private var reviewSelectionButton: some View {
+        Button { showPlan = true } label: { Text(L10n.format("Review Selection (%lld)", archive.selection.count)).frame(minHeight: 32) }
             .buttonStyle(.borderedProminent).disabled(archive.selection.isEmpty).accessibilityIdentifier("mac.archive.reviewSelection")
     }
     private var exactBatchSelection: some View {
@@ -814,15 +862,19 @@ struct MacArchiveView: View {
         return VStack(alignment: .leading, spacing: 4) {
             Text(L10n.format("%@ · %lld items", L10n.tr(String.LocalizationValue(group.titleKey)), itemCount)).font(.caption.weight(.semibold))
             Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
-            HStack {
-                Button { archive.selectOthers(in: group, visibleIDs: Set(candidates.map(\.id))) } label: {
-                    if candidates.isEmpty { Text("No Other Items to Select") }
-                    else if remaining == 0 { Text("Others Selected") }
-                    else { Text(L10n.format("Select Others (%lld)", remaining)) }
-                }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.others.\(group.id)")
-                Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { groupButtons(group, candidates: candidates, remaining: remaining) }
+                VStack(alignment: .leading, spacing: 8) { groupButtons(group, candidates: candidates, remaining: remaining) }
             }
         }.disabled(archive.busy || archive.analyzing)
+    }
+    @ViewBuilder private func groupButtons(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset], remaining: Int) -> some View {
+        Button { archive.selectOthers(in: group, visibleIDs: Set(candidates.map(\.id))) } label: {
+            if candidates.isEmpty { Text("No Other Items to Select") }
+            else if remaining == 0 { Text("Others Selected") }
+            else { Text(L10n.format("Select Others (%lld)", remaining)) }
+        }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.others.\(group.id)")
+        Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
     }
     private func resetFilters() { media = 0; albumID = ""; search = ""; finding = .all; smartOrder = true }
     private func archiveCell(_ item: UniversalMediaAsset, groups: [LibraryReviewGroup] = [], keeperBadge: String? = nil) -> some View {
@@ -874,8 +926,8 @@ struct MacArchiveView: View {
     private var filters: some View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
-                HStack { filterControls }
-                VStack(alignment: .leading) { filterControls }
+                HStack(spacing: 12) { filterControls }
+                VStack(alignment: .leading, spacing: 8) { filterControls }
             }
             if finding != .all || media != 0 || !albumID.isEmpty || !search.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
@@ -895,8 +947,12 @@ struct MacArchiveView: View {
                 Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle").font(.caption).foregroundStyle(.secondary)
             }
             ViewThatFits(in: .horizontal) {
-                HStack { scanControls }
-                VStack(alignment: .leading) { scanControls }
+                HStack(spacing: 12) { browsingControls }
+                VStack(alignment: .leading, spacing: 8) { browsingControls }
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { scanControls }
+                VStack(alignment: .leading, spacing: 8) { scanControls }
             }
         }.padding(16).disabled(archive.busy)
     }
@@ -905,11 +961,13 @@ struct MacArchiveView: View {
         Picker("Album", selection: $albumID) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }.frame(maxWidth: 220)
         TextField("Search filenames", text: $search).textFieldStyle(.roundedBorder)
     }
-    @ViewBuilder private var scanControls: some View {
+    @ViewBuilder private var browsingControls: some View {
         Button { archive.selectItems(visible) } label: { Text(L10n.format("Select This List (%lld)", visible.count)) }
             .keyboardShortcut("a", modifiers: [.command]).disabled(visible.isEmpty || archive.loading).accessibilityIdentifier("mac.archive.selectAll")
         if finding != .all || media != 0 || !albumID.isEmpty || !search.isEmpty { Button("Reset Filters") { resetFilters() } }
         Toggle("Keep Related Shots Together", isOn: $smartOrder).toggleStyle(.checkbox)
+    }
+    @ViewBuilder private var scanControls: some View {
         if archive.analyzing {
             Button("Pause Scan") { archive.pauseAnalysis() }
             Menu("Scan Options") { Button("Cancel Scan") { archive.cancelAnalysis() } }
@@ -923,7 +981,8 @@ struct MacArchiveView: View {
     private func filterChip(_ title: String, id: String, remove: @escaping () -> Void) -> some View {
         Button(action: remove) {
             HStack { Text(title).multilineTextAlignment(.leading); Spacer(minLength: 4); Image(systemName: "xmark.circle.fill") }
-                .font(.caption.weight(.semibold)).padding(8).background(KeptoraDesign.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .font(.caption.weight(.semibold)).padding(8).frame(minWidth: 32, minHeight: 32)
+                .background(KeptoraDesign.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8)).contentShape(RoundedRectangle(cornerRadius: 8))
         }.buttonStyle(.plain).accessibilityLabel(Text(L10n.format("Remove Filter: %@", title)))
             .accessibilityIdentifier("mac.archive.filter.remove." + id)
     }
@@ -978,11 +1037,12 @@ struct MacManualSelectionSheet: View {
             }.disabled(archive.busy)
             Text(L10n.format("Selected items: %lld", reviewedItems.count)).font(.headline)
             if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
+            if archive.loading || archive.analyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.caption).foregroundStyle(.secondary) }
             ViewThatFits(in: .horizontal) {
-                HStack { reviewButtons }
-                VStack(alignment: .leading) { reviewButtons }
+                HStack(spacing: 12) { secondaryReviewActions; Spacer(minLength: 12); removeButton }
+                VStack(alignment: .leading, spacing: 8) { secondaryReviewActions; removeButton }
             }
-        }.padding(24).frame(minWidth: 500, minHeight: 500).interactiveDismissDisabled(archive.busy)
+        }.controlSize(.large).padding(24).frame(minWidth: 480, idealWidth: 650, minHeight: 480, idealHeight: 650).interactiveDismissDisabled(archive.busy)
         .onAppear { if !captured { review = FrozenSelectionReview(archive.selected); captured = true } }
         .alert("Remove selected items?", isPresented: $confirm) {
             Button(role: .destructive) { Task { if await archive.removeSelection(expectedIDs: expectedIDs, reviewedAssets: reviewedItems) { dismiss() } } }
@@ -1012,34 +1072,48 @@ struct MacManualSelectionSheet: View {
         }
     }
     private func reviewRow(_ item: UniversalMediaAsset) -> some View {
-        HStack(spacing: 12) {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { reviewDetails(item); excludeButton(item) }
+            VStack(alignment: .leading, spacing: 12) { reviewDetails(item); excludeButton(item) }
+        }.padding(.vertical, 4)
+    }
+    private func reviewDetails(_ item: UniversalMediaAsset) -> some View {
+        HStack(alignment: .top, spacing: 12) {
             MacPhotosThumbnail(asset: item, pixelSize: 160).frame(width: 76, height: 76).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.displayName).lineLimit(2)
                 Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(.secondary)
                 if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
             }
-            Spacer()
-            Button {
-                if review.remove(item.id) { archive.setSelection(archive.selection.subtracting([item.id])) }
-            } label: { Label("Remove from selection", systemImage: "minus.circle").font(.caption).frame(minHeight: 32) }
-                .buttonStyle(.borderless).accessibilityLabel("Remove from selection")
-                .accessibilityHint("This item will stay in your library.")
-                .accessibilityIdentifier("mac.archive.review.exclude." + item.id)
-        }.padding(.vertical, 4)
+        }
     }
-    @ViewBuilder private var reviewButtons: some View {
+    private func excludeButton(_ item: UniversalMediaAsset) -> some View {
+        Button {
+            if review.remove(item.id) { archive.setSelection(archive.selection.subtracting([item.id])) }
+        } label: { Label("Remove from selection", systemImage: "minus.circle").padding(.horizontal, 8).frame(minWidth: 32, minHeight: 32).contentShape(Rectangle()) }
+            .buttonStyle(.borderless).accessibilityLabel("Remove from selection")
+            .accessibilityHint("This item will stay in your library.")
+            .accessibilityIdentifier("mac.archive.review.exclude." + item.id)
+    }
+    private var secondaryReviewActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { secondaryReviewButtons }
+            VStack(alignment: .leading, spacing: 8) { secondaryReviewButtons }
+        }
+    }
+    @ViewBuilder private var secondaryReviewButtons: some View {
         Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(archive.busy)
         if review.canUndoRemoval {
             Button("Undo Review Change") {
                 if let item = review.undoRemoval() { archive.setSelection(archive.selection.union([item.id])) }
             }.keyboardShortcut("z", modifiers: [.command]).disabled(archive.busy).accessibilityIdentifier("mac.archive.review.undo")
         }
+    }
+    private var removeButton: some View {
         Button(role: .destructive) { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
-            label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)) }
+            label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)).frame(minHeight: 32) }
             .buttonStyle(.borderedProminent).tint(.red).accessibilityIdentifier("mac.archive.review.remove")
             .disabled(archive.busy || archive.loading || archive.analyzing || reviewedItems.isEmpty || hasUnavailableSelection)
-        if archive.loading || archive.analyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.caption).foregroundStyle(.secondary) }
     }
 }
 
@@ -1050,21 +1124,26 @@ struct MacManualHistoryView: View {
             Text("Completed Actions").font(.title2.bold())
             if archive.history.isEmpty { Text("No manual cleanup history yet.").foregroundStyle(.secondary) }
             ForEach(archive.history) { entry in
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(entry.date.formatted()).font(.headline)
-                        Text(String(format: L10n.tr("%lld items"), entry.count))
-                        Label(entry.isPhotos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder"), systemImage: entry.isPhotos ? "photo" : "folder")
-                        Text(entry.isPhotos ? "Recover items in Apple Photos → Recently Deleted for up to 30 days unless permanently deleted sooner." : "Files remain in the recovery folder on the same storage.").font(.callout).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if entry.isPhotos {
-                        Button("Open Apple Photos") { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app")) }
-                    } else if entry.folderRecord?.restoredAt != nil { Label("Restored", systemImage: "checkmark.circle") }
-                    else { Button("Restore Files") { Task { await archive.restore(entry) } }.disabled(archive.busy) }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { historyDetails(entry); Spacer(minLength: 12); recoveryAction(entry) }
+                    VStack(alignment: .leading, spacing: 12) { historyDetails(entry); recoveryAction(entry) }
                 }.padding(16).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
             }
-        }.padding(20)
+        }.controlSize(.large).padding(20)
+    }
+    private func historyDetails(_ entry: MacRecoveryEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(entry.date.formatted()).font(.headline)
+            Text(String(format: L10n.tr("%lld items"), entry.count))
+            Label(entry.isPhotos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder"), systemImage: entry.isPhotos ? "photo" : "folder")
+            Text(entry.isPhotos ? "Recover items in Apple Photos → Recently Deleted for up to 30 days unless permanently deleted sooner." : "Files remain in the recovery folder on the same storage.").font(.callout).foregroundStyle(.secondary)
+        }
+    }
+    @ViewBuilder private func recoveryAction(_ entry: MacRecoveryEntry) -> some View {
+        if entry.isPhotos {
+            Button("Open Apple Photos") { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Photos.app")) }
+        } else if entry.folderRecord?.restoredAt != nil { Label("Restored", systemImage: "checkmark.circle") }
+        else { Button("Restore Files") { Task { await archive.restore(entry) } }.disabled(archive.busy) }
     }
 }
 

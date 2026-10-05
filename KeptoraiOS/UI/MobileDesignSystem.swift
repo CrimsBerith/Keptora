@@ -5,6 +5,10 @@ enum MobileKeptoraDesign {
     static let pagePadding: CGFloat = 18
     static let cardRadius: CGFloat = 22
     static let compactRadius: CGFloat = 14
+    static let actionSpacing: CGFloat = 12
+    static let stackedActionSpacing: CGFloat = 8
+    static let minimumTouchTarget: CGFloat = 44
+    static let primaryButtonHeight: CGFloat = 52
 
     // MARK: – Semantic Palette (Matching macOS Cullora Aurora)
     static let ink = Color(uiColor: .label)
@@ -284,18 +288,50 @@ struct MobileMetricTile: View {
     }
 }
 
-// MARK: – Primary Gradient Button Style
+// MARK: – Action Buttons
+
+/// Size the label itself so padding belongs to the interactive area, including in List rows.
+struct MobileActionButtonStyle: ButtonStyle {
+    var fillsWidth = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        let tint = configuration.role == .destructive ? MobileKeptoraDesign.danger : MobileKeptoraDesign.accent
+        return configuration.label
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
+                   maxWidth: fillsWidth ? .infinity : nil,
+                   minHeight: MobileKeptoraDesign.minimumTouchTarget)
+            .background(tint.opacity(configuration.isPressed ? 0.18 : 0.09), in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+            .opacity(isEnabled ? 1 : 0.45)
+            .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
+    }
+}
 
 struct MobilePrimaryButtonStyle: ButtonStyle {
+    var fillsWidth = false
+    var tint = MobileKeptoraDesign.accent
+    @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.headline, design: .rounded).weight(.semibold))
+            .multilineTextAlignment(.center)
             .foregroundStyle(.white)
             .padding(.horizontal, 20)
-            .frame(minHeight: 52)
-            .background(MobileKeptoraDesign.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.vertical, 10)
+            .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
+                   maxWidth: fillsWidth ? .infinity : nil,
+                   minHeight: MobileKeptoraDesign.primaryButtonHeight)
+            .background(tint, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
@@ -307,9 +343,9 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
                         lineWidth: 1
                     )
             }
-            .shadow(color: MobileKeptoraDesign.violet.opacity(configuration.isPressed ? 0.15 : 0.32), radius: 8, y: 3)
+            .shadow(color: tint.opacity(isEnabled ? (configuration.isPressed ? 0.15 : 0.24) : 0), radius: 8, y: 3)
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.98 : 1.0))
-            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.92 : 1.0) : 0.45)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
     }
 }

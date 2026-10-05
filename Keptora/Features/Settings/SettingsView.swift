@@ -109,14 +109,10 @@ struct SettingsView: View {
                         .font(.caption)
                 }
 #endif
-                HStack {
-                    Button("View Keptora Pro") { store.presentPaywall(.settings) }
-                        .buttonStyle(.borderedProminent)
-                        .tint(KeptoraDesign.accent)
-                        .accessibilityIdentifier("mac.settings.showPaywall")
-                    Button("Restore Purchases") { Task { await store.restorePurchases() } }
-                        .disabled(store.isWorking)
-                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { purchaseActions }
+                    VStack(alignment: .leading, spacing: 8) { purchaseActions }
+                }.controlSize(.large)
                 if let message = store.statusMessage {
                     Text(message).font(.caption).foregroundStyle(.secondary)
                 }
@@ -124,11 +120,10 @@ struct SettingsView: View {
 
             Section("Privacy") {
                 Toggle("Show full file paths", isOn: $showFilePaths)
-                HStack {
-                    Button("Show Welcome Tour") { model.showOnboarding() }
-                        .accessibilityIdentifier("mac.settings.showOnboarding")
-                    Button("Export Diagnostics…") { model.exportDiagnostics() }
-                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { privacyActions }
+                    VStack(alignment: .leading, spacing: 8) { privacyActions }
+                }.controlSize(.large)
                 LabeledContent("Image upload", value: "Never")
                 LabeledContent("Account", value: "Not required")
             }
@@ -138,6 +133,15 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .accessibilityIdentifier("mac.page.settings")
         .task { await store.refresh() }
+    }
+    @ViewBuilder private var purchaseActions: some View {
+        Button("View Keptora Pro") { store.presentPaywall(.settings) }
+            .buttonStyle(.borderedProminent).tint(KeptoraDesign.accent).accessibilityIdentifier("mac.settings.showPaywall")
+        Button("Restore Purchases") { Task { await store.restorePurchases() } }.disabled(store.isWorking)
+    }
+    @ViewBuilder private var privacyActions: some View {
+        Button("Show Welcome Tour") { model.showOnboarding() }.accessibilityIdentifier("mac.settings.showOnboarding")
+        Button("Export Diagnostics…") { model.exportDiagnostics() }
     }
 }
 

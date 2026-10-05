@@ -32,6 +32,51 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(element.isHittable)
     }
 
+    private func assertTouchTarget(_ button: XCUIElement, in app: XCUIApplication, minimumHeight: CGFloat = 44,
+                                   file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(button.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertTrue(button.isHittable, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(button.frame.width, 44, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(button.frame.height, minimumHeight, file: file, line: line)
+        XCTAssertTrue(app.frame.contains(button.frame), "Action must remain inside the screen", file: file, line: line)
+    }
+
+    func testSelectionActionsHaveAccessibleTargetsAndDoNotOverlap() {
+        for accessibleText in [false, true] {
+            var arguments = ["-keptoraComprehensiveUITesting"]
+            if accessibleText { arguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"] }
+            let app = launch(arguments: arguments, language: accessibleText ? "tr" : "en", locale: accessibleText ? "tr_TR" : "en_US")
+            let scan = app.buttons["archive.scanAll"]
+            reveal(scan, in: app, scrollDown: true)
+            assertTouchTarget(scan, in: app, minimumHeight: 52)
+
+            let photo = app.buttons["archive.asset.ui-photo-copy"]
+            reveal(photo, in: app); photo.tap()
+            let undo = app.buttons["archive.undoSelection"]
+            let clear = app.buttons["archive.clearSelection"]
+            let review = app.buttons["archive.reviewSelection"]
+            assertTouchTarget(undo, in: app)
+            assertTouchTarget(clear, in: app)
+            assertTouchTarget(review, in: app, minimumHeight: 52)
+            XCTAssertTrue(undo.frame.intersection(clear.frame).isEmpty)
+            XCTAssertGreaterThanOrEqual(review.frame.minY - max(undo.frame.maxY, clear.frame.maxY), 7)
+            if accessibleText { XCTAssertGreaterThanOrEqual(clear.frame.minY - undo.frame.maxY, 7) }
+            let galleryAttachment = XCTAttachment(screenshot: app.screenshot())
+            galleryAttachment.name = accessibleText ? "Selection actions — Turkish accessibility text" : "Selection actions — standard text"
+            galleryAttachment.lifetime = .keepAlways; add(galleryAttachment)
+
+            review.tap()
+            let exclude = app.buttons["archive.review.exclude.ui-photo-copy"]
+            reveal(exclude, in: app)
+            assertTouchTarget(exclude, in: app)
+            assertTouchTarget(app.buttons["archive.review.remove"], in: app, minimumHeight: 52)
+            let reviewAttachment = XCTAttachment(screenshot: app.screenshot())
+            reviewAttachment.name = accessibleText ? "Final review — Turkish accessibility text" : "Final review — standard text"
+            reviewAttachment.lifetime = .keepAlways; add(reviewAttachment)
+            app.terminate()
+        }
+    }
+
     func testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles() {
         let app = XCUIApplication()
         app.launchArguments = ["-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-hasSeenMobileOnboarding", "YES",

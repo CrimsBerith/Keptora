@@ -49,8 +49,7 @@ struct MobileOnboardingView: View {
                     Button("Skip") {
                         finishOnboarding()
                     }
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(MobileActionButtonStyle())
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
                     .accessibilityIdentifier("ios.onboarding.skip")
@@ -99,7 +98,7 @@ struct MobileOnboardingView: View {
                     } label: {
                         Text(currentPage == steps.count - 1 ? "Get Started" : "Continue")
                             .font(.system(.headline, design: .rounded).weight(.bold))
-                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(MobilePrimaryButtonStyle())
                     .accessibilityIdentifier("ios.onboarding.continue")

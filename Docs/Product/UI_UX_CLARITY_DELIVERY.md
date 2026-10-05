@@ -2,6 +2,8 @@
 
 **Tarih:** 5 Ekim 2026. **Dal:** `feat/photo-cleaner-library`.
 
+Sonraki çalışma: [iPhone/Mac düğme yerleşimi denetimi ve düzeltmeleri](BUTTON_LAYOUT_AUDIT.md). Gerçek dokunma alanları, ana/ikincil eylem sıraları ve dar ekran yerleşimleri bu ek teslimde ele alındı.
+
 Bu çalışma, kullanıcının kaynak → tarama → galeri → seçim → son inceleme → geçmiş akışını sadeleştirme planını uygular. Önceki [fotoğraf seçimi teslimi](PHOTO_SELECTION_DELIVERY.md) üzerine kuruludur. Doğrudan dokunarak seçim, ortak galeri/sepet, kaynak rozetleri ve tek adımlık geri alma korunur; karşılaştırma, swipe ile seçim ve büyüteç akışı eklenmez.
 
 ## Kullanıcının göreceği değişiklikler

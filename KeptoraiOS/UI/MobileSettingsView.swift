@@ -54,7 +54,7 @@ struct MobileSettingsView: View {
                                 Image(systemName: "sparkles")
                                 Text("View Keptora Pro")
                             }
-                            .frame(maxWidth: .infinity, minHeight: 38)
+                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(MobilePrimaryButtonStyle())
                         .accessibilityIdentifier("ios.settings.showPaywall")

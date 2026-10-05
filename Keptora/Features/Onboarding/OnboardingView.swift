@@ -89,7 +89,9 @@ struct OnboardingView: View {
 
             // Navigation
             HStack {
-                Button("Not Now") { model.completeOnboarding() }
+                Button { model.completeOnboarding() } label: {
+                    Text("Not Now").padding(.horizontal, 8).frame(minWidth: 32, minHeight: 32).contentShape(Rectangle())
+                }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                     .keyboardShortcut(.cancelAction)
@@ -116,6 +118,7 @@ struct OnboardingView: View {
                 .accessibilityIdentifier("mac.onboarding.continue")
             }
             .padding(20)
+            .controlSize(.large)
         }
         .frame(minWidth: 720, idealWidth: 760, minHeight: 620, idealHeight: 660)
         .interactiveDismissDisabled()

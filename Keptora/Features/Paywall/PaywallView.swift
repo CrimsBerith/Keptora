@@ -78,46 +78,16 @@ struct PaywallView: View {
 
                 Divider()
 
-                HStack(spacing: 16) {
-                    Button("Maybe Later") { dismiss() }
-                        .keyboardShortcut(.cancelAction)
-                        .accessibilityIdentifier("mac.paywall.close")
-                    Spacer()
-                    Link("Privacy Policy", destination: AppStoreConfiguration.privacyPolicyURL)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("•")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    Link("Terms of Use", destination: AppStoreConfiguration.termsOfUseURL)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if store.lifetimeProduct == nil && !store.isLifetimeUnlocked {
-                        Button("Retry Loading") {
-                            Task { await store.refresh() }
-                        }
-                        .disabled(store.isWorking)
-                        .accessibilityIdentifier("mac.paywall.retry")
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 12) {
+                        Link(destination: AppStoreConfiguration.privacyPolicyURL) { Text("Privacy Policy").font(.caption).frame(minHeight: 32).contentShape(Rectangle()) }
+                        Link(destination: AppStoreConfiguration.termsOfUseURL) { Text("Terms of Use").font(.caption).frame(minHeight: 32).contentShape(Rectangle()) }
                     }
-                    Button("Restore Purchases") { Task { await store.restorePurchases() } }
-                        .disabled(store.isWorking)
-                    Button {
-                        Task { await store.purchaseLifetime() }
-                    } label: {
-                        if store.isWorking {
-                            ProgressView().controlSize(.small).frame(minWidth: 150)
-                        } else if let product = store.lifetimeProduct {
-                            Text("Unlock for \(product.displayPrice)").frame(minWidth: 150)
-                        } else if store.isLifetimeUnlocked {
-                            Text("Purchased").frame(minWidth: 150)
-                        } else {
-                            Text("Lifetime Product Unavailable").frame(minWidth: 150)
-                        }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) { secondaryActions; Spacer(minLength: 12); purchaseButton }
+                        VStack(alignment: .leading, spacing: 8) { secondaryActions; purchaseButton }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(KeptoraDesign.accent)
-                    .disabled(store.isWorking || store.isLifetimeUnlocked || store.lifetimeProduct == nil)
-                }
+                }.controlSize(.large)
                 .padding(18)
             }
 
@@ -127,6 +97,7 @@ struct PaywallView: View {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
                     .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(14)
@@ -135,6 +106,30 @@ struct PaywallView: View {
         }
         .frame(minWidth: 540, idealWidth: 640, minHeight: 480, idealHeight: 580)
         .task { if store.lifetimeProduct == nil { await store.refresh() } }
+    }
+    private var secondaryActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { secondaryButtons }
+            VStack(alignment: .leading, spacing: 8) { secondaryButtons }
+        }
+    }
+    @ViewBuilder private var secondaryButtons: some View {
+        Button("Maybe Later") { dismiss() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("mac.paywall.close")
+        if store.lifetimeProduct == nil && !store.isLifetimeUnlocked {
+            Button("Retry Loading") { Task { await store.refresh() } }.disabled(store.isWorking).accessibilityIdentifier("mac.paywall.retry")
+        }
+        Button("Restore Purchases") { Task { await store.restorePurchases() } }.disabled(store.isWorking)
+    }
+    private var purchaseButton: some View {
+        Button { Task { await store.purchaseLifetime() } } label: {
+            Group {
+                if store.isWorking { ProgressView().controlSize(.small) }
+                else if let product = store.lifetimeProduct { Text("Unlock for \(product.displayPrice)") }
+                else if store.isLifetimeUnlocked { Text("Purchased") }
+                else { Text("Lifetime Product Unavailable") }
+            }.frame(minWidth: 150, minHeight: 32)
+        }.buttonStyle(.borderedProminent).tint(KeptoraDesign.accent)
+            .disabled(store.isWorking || store.isLifetimeUnlocked || store.lifetimeProduct == nil)
     }
 
     private func feature(_ text: LocalizedStringKey, image: String) -> some View {

@@ -110,9 +110,9 @@ struct MobileSourceLibraryView: View {
                     sourceSetupCompleted = true
                     store.dismissModal()
                 } label: {
-                    Text("Continue to Library").frame(maxWidth: .infinity, minHeight: 44)
+                    Text("Continue to Library")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
                 .padding().background(.regularMaterial).disabled(store.isRequestingPhotosAccess)
                 .accessibilityIdentifier("ios.sourceSetup.continue")
             }
@@ -185,7 +185,7 @@ struct MobileSourceLibraryView: View {
                         Button("Manage Access") { store.manageLimitedPhotosAccess() }
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(MobileKeptoraDesign.accent)
-                            .frame(minHeight: 44)
+                            .buttonStyle(MobileActionButtonStyle())
                             .accessibilityIdentifier("ios.library.managePhotosAccess")
                     }
                     VStack(alignment: .leading, spacing: 8) {
@@ -199,7 +199,7 @@ struct MobileSourceLibraryView: View {
                         Button("Manage Access") { store.manageLimitedPhotosAccess() }
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(MobileKeptoraDesign.accent)
-                            .frame(minHeight: 44)
+                            .buttonStyle(MobileActionButtonStyle())
                             .accessibilityIdentifier("ios.library.managePhotosAccess")
                     }
                 }
@@ -238,7 +238,7 @@ struct MobileSourceLibraryView: View {
                             Button("Open Settings") { store.openPhotosSettings() }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
-                                .frame(minHeight: 44)
+                                .buttonStyle(MobileActionButtonStyle())
                                 .accessibilityIdentifier("ios.library.openSettings")
                         }
                     }
@@ -258,7 +258,7 @@ struct MobileSourceLibraryView: View {
                             Button("Open Settings") { store.openPhotosSettings() }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
-                                .frame(minHeight: 44)
+                                .buttonStyle(MobileActionButtonStyle())
                                 .accessibilityIdentifier("ios.library.openSettings")
                         }
                     }
@@ -279,10 +279,9 @@ struct MobileSourceLibraryView: View {
                 .font(.footnote).foregroundStyle(.secondary)
             Text("Cloud providers may download files according to their own settings.").font(.footnote).foregroundStyle(.secondary)
             ForEach(store.connectedFolders) { folder in
-                HStack {
-                    Label(folder.displayName, systemImage: "folder")
-                    Spacer()
-                    Button("Disconnect") { store.disconnectFolder(folder.id) }.font(.footnote).frame(minHeight: 44)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { connectedFolderControls(folder) }
+                    VStack(alignment: .leading, spacing: 8) { connectedFolderControls(folder) }
                 }
             }
             Button(action: chooseFolder) {
@@ -297,6 +296,10 @@ struct MobileSourceLibraryView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("library.source.files")
         }
+    }
+    @ViewBuilder private func connectedFolderControls(_ folder: LibrarySource) -> some View {
+        Label(folder.displayName, systemImage: "folder")
+        Button("Disconnect") { store.disconnectFolder(folder.id) }.buttonStyle(MobileActionButtonStyle())
     }
 
     private func chooseFolder() {

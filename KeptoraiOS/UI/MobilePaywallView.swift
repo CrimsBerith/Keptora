@@ -64,6 +64,7 @@ struct MobilePaywallView: View {
                                 }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
+                                .buttonStyle(MobileActionButtonStyle(fillsWidth: true))
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.retry")
                             }
@@ -71,7 +72,7 @@ struct MobilePaywallView: View {
                             Button("Restore Purchases") { Task { await purchase.restore() } }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
-                                .frame(minHeight: 44)
+                                .buttonStyle(MobileActionButtonStyle(fillsWidth: true))
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.restorePurchases")
 
@@ -84,18 +85,9 @@ struct MobilePaywallView: View {
                                     .accessibilityIdentifier("ios.paywall.status")
                             }
 
-                            HStack(spacing: 12) {
-                                Link(String(localized: "Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
-                                    .font(.system(.caption, design: .rounded))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.vertical, 8)
-                                Text("•")
-                                    .font(.system(.caption, design: .rounded))
-                                    .foregroundStyle(.tertiary)
-                                Link(String(localized: "Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
-                                    .font(.system(.caption, design: .rounded))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.vertical, 8)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 12) { legalLinks }
+                                VStack(spacing: 8) { legalLinks }
                             }
                             .padding(.top, 4)
                         }
@@ -121,6 +113,16 @@ struct MobilePaywallView: View {
                     await purchase.refresh()
                 }
             }
+        }
+    }
+    @ViewBuilder private var legalLinks: some View {
+        Link(destination: AppStoreConfiguration.privacyPolicyURL) {
+            Text("Privacy Policy").font(.caption).padding(.horizontal, 8).padding(.vertical, 8)
+                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+        }
+        Link(destination: AppStoreConfiguration.termsOfUseURL) {
+            Text("Terms of Use").font(.caption).padding(.horizontal, 8).padding(.vertical, 8)
+                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
         }
     }
 

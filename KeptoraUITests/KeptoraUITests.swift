@@ -35,7 +35,11 @@ final class KeptoraUITests: XCTestCase {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Mac startup source access — denied Photos"
         attachment.lifetime = .keepAlways; add(attachment)
-        app.buttons["mac.sourceSetup.continue"].tap()
+        let continueButton = app.buttons["mac.sourceSetup.continue"]
+        XCTAssertTrue(continueButton.isHittable)
+        XCTAssertGreaterThanOrEqual(continueButton.frame.height, 32)
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(continueButton.frame))
+        continueButton.tap()
         XCTAssertFalse(app.buttons["mac.sourceSetup.continue"].waitForExistence(timeout: 1))
         XCTAssertTrue(app.windows.firstMatch.exists)
         app.terminate()

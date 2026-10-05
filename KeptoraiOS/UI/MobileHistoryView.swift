@@ -99,9 +99,7 @@ struct MobileHistoryView: View {
                                             Label("Open Apple Photos", systemImage: "arrow.up.forward.app")
                                                 .font(.system(.caption, design: .rounded).weight(.semibold))
                                         }
-                                        .buttonStyle(.bordered)
-                                        .controlSize(.small)
-                                        .frame(minHeight: 44)
+                                        .buttonStyle(MobileActionButtonStyle())
                                     }
                                 } else if entry.restoredAt != nil {
                                     HStack(spacing: 6) {
@@ -119,10 +117,7 @@ struct MobileHistoryView: View {
                                     Button("Restore Files") {
                                         entryToRestore = entry
                                     }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(MobileKeptoraDesign.accent)
-                                    .controlSize(.regular)
-                                    .frame(minHeight: 44)
+                                    .buttonStyle(MobilePrimaryButtonStyle())
                                     .accessibilityIdentifier("ios.history.restore.\(entry.id.uuidString)")
                                 }
                             }
