@@ -4,6 +4,8 @@
 
 Sonraki çalışma: [iPhone/Mac düğme yerleşimi denetimi ve düzeltmeleri](BUTTON_LAYOUT_AUDIT.md). Gerçek dokunma alanları, ana/ikincil eylem sıraları ve dar ekran yerleşimleri bu ek teslimde ele alındı.
 
+Derin sistem/Mac incelemesi: [Profesyonel Mac uygulaması mimari denetimi](MAC_ARCHITECTURE_AUDIT.md). Bu rapor iki ürün akışının bağlantı boşluklarını, Apple derleme engelini ve henüz tamamlanmamış Mac kabul gereksinimlerini kanıtlarıyla listeler.
+
 Bu çalışma, kullanıcının kaynak → tarama → galeri → seçim → son inceleme → geçmiş akışını sadeleştirme planını uygular. Önceki [fotoğraf seçimi teslimi](PHOTO_SELECTION_DELIVERY.md) üzerine kuruludur. Doğrudan dokunarak seçim, ortak galeri/sepet, kaynak rozetleri ve tek adımlık geri alma korunur; karşılaştırma, swipe ile seçim ve büyüteç akışı eklenmez.
 
 ## Kullanıcının göreceği değişiklikler
