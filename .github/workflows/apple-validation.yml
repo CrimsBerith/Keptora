@@ -4,6 +4,14 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      benchmark_items:
+        description: 'Native JPEG benchmark corpus (0 skips)'
+        type: choice
+        options: ['0', '2000', '3000']
+        default: '0'
+  schedule:
+    - cron: '0 3 * * 1'
 
 permissions:
   contents: read
@@ -35,6 +43,7 @@ jobs:
         run: |
           python3 Scripts/validate_photo_cleaner_assets.py
           python3 Scripts/validate_regenerated_visuals.py
+          python3 Scripts/validate_mac_localization.py
   native:
     runs-on: macos-15
     timeout-minutes: 45
@@ -52,7 +61,16 @@ jobs:
             -destination 'platform=macOS' -derivedDataPath Build/CI \
             -resultBundlePath Build/MacTests.xcresult \
             CODE_SIGNING_ALLOWED=NO -only-testing:KeptoraTests \
-            -only-testing:KeptoraUITests/KeptoraUITests/testStartupSetupCanContinueWithDeniedPhotos test
+            -only-testing:KeptoraUITests/KeptoraUITests/testStartupSetupCanContinueWithDeniedPhotos \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacScanSelectionReviewUndoAndRestore \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacRestoreFailureIsVisibleAndDoesNotOverwriteOriginal \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacSearchDoesNotLoseSelectionOrHijackTextUndo test
+      - name: Native 2000 / 3000 item measurement
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_items != '0')
+        env:
+          KEPTORA_BENCHMARK_ITEMS: ${{ github.event_name == 'schedule' && '3000' || inputs.benchmark_items }}
+          KEPTORA_BENCHMARK_OUTPUT: ${{ github.workspace }}/Build/native-analysis-benchmark.json
+        run: swift test --package-path Packages/KeptoraCore --filter NativeAnalysisBenchmarkTests
       - name: Prepare iPhone simulator with actual media
         run: bash Scripts/prepare_photo_cleaner_simulator.sh
       - name: iPhone unit and product UI tests
@@ -82,5 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: apple-test-evidence
-          path: Build/*.xcresult
+          path: |
+            Build/*.xcresult
+            Build/native-analysis-benchmark.json
           retention-days: 14

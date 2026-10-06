@@ -6,7 +6,8 @@ struct MainRootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
-    @StateObject private var archive = MacArchiveModel()
+    @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.undoManager) private var undoManager
     @State private var hoveredRoute: SidebarRoute?
     @State private var isDropTargeted: Bool = false
     @AppStorage(AppStorageKeys.onboardingCompleted) private var introductionCompleted = false
@@ -56,7 +57,7 @@ struct MainRootView: View {
                             Image(systemName: "arrow.down.doc.fill")
                                 .font(.system(size: 46))
                                 .foregroundStyle(Color.accentColor)
-                            Text("Drop Folder to Connect & Scan")
+                            Text("Drop Folder to Connect")
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(.primary)
                         }
@@ -72,12 +73,12 @@ struct MainRootView: View {
                     var isDir: ObjCBool = false
                     if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
                         Task { @MainActor in
-                            model.connectFolderURL(url)
-                            model.selectedRoute = .home
+                            archive.connectFolder(url)
+                            model.selectedRoute = .archive
                         }
                     } else {
                         Task { @MainActor in
-                            model.presentError("Please drop a folder to scan, not an individual file.")
+                            archive.error = L10n.tr("Please drop a folder to scan, not an individual file.")
                         }
                     }
                 }
@@ -116,17 +117,24 @@ struct MainRootView: View {
         }
         .keptoraOnChange(of: sourceSetupCompleted) { _ in presentStartupIfNeeded() }
         .onAppear {
+            archive.undoManager = undoManager
             if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
                 model.selectedRoute = .review
             }
         }
         .keptoraOnChange(of: scenePhase) { phase in
-            if phase != .active { model.checkpointReviewSession() }
+            if phase != .active { model.checkpointReviewSession(); Task { await archive.flushState() } }
             else if startupSourcesPrepared { Task { await archive.refreshPhotosAccess() } }
         }
+        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
+            if archive.canRepairPersistence {
+                Button("Save Current Session") { Task { await archive.repairPersistence() } }
+            }
+            Button("OK", role: .cancel) { archive.error = nil }
+        } message: { Text(archive.error ?? "") }
         .alert("Something went wrong", isPresented: $model.isShowingError) {
-            Button("Copy Diagnostics") { model.copyDiagnostics() }
-            Button("Export Diagnostics…") { model.exportDiagnostics() }
+            Button("Copy Diagnostics") { archive.copyDiagnostics() }
+            Button("Export Diagnostics…") { archive.exportDiagnostics() }
             Button("OK", role: .cancel) { }
         } message: {
             Text(model.errorMessage ?? "An unknown error occurred.")
@@ -290,7 +298,7 @@ struct MainRootView: View {
         case .archive:      MacArchiveView()
         case .home:         HomeView()
         case .review:       ReviewStudioView()
-        case .smartBuckets: MacArchiveView(initialFinding: .review)
+        case .smartBuckets: MacSuggestionsView()
         case .insights:     ReviewInsightsView()
         case .history:      CombinedCleanupHistoryView()
         case .diagnostics:  DiagnosticsView()

@@ -635,6 +635,8 @@ final class MobileKeptoraStore: ObservableObject {
                     if case .file(let url) = item.reference {
                         let legacyID = "file:" + StableDigest.fnv1a64(item.sourceID + "|" + url.standardizedFileURL.path)
                         if selectedLibraryIDs.remove(legacyID) != nil { selectedLibraryIDs.insert(item.id) }
+                        let pathID = "file:" + StableDigest.fnv1a64(url.standardizedFileURL.resolvingSymlinksInPath().path)
+                        if selectedLibraryIDs.remove(pathID) != nil { selectedLibraryIDs.insert(item.id) }
                     }
                 }
                 manualSelectionIsLoaded = true
@@ -645,11 +647,11 @@ final class MobileKeptoraStore: ObservableObject {
                     guard !Task.isCancelled, catalogueGeneration == generation else { return }
                     for record in records {
                         if let index = history.firstIndex(where: { $0.id == record.id }) {
-                            history[index].folderRecord = record; history[index].restoredAt = record.restoredAt
+                            history[index].folderRecord = record; history[index].restoredAt = record.restoredAt; history[index].sourceBookmark = folderBookmarks[connected.id]
                             continue
                         }
                         history.insert(CleanupHistoryEntry(id: record.id, kind: .folderQuarantine, createdAt: record.createdAt,
-                            itemCount: record.operations.count, byteCount: 0, folderRecord: record, restoredAt: record.restoredAt,
+                            itemCount: record.movedCount, byteCount: record.recoveryBytes, folderRecord: record, restoredAt: record.restoredAt,
                             sourceBookmark: folderBookmarks[connected.id]), at: 0)
                     }
                     persistHistory()
@@ -666,7 +668,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     @discardableResult
-    func cleanupLibrarySelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil) async -> Bool {
+    func cleanupLibrarySelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false) async -> Bool {
         guard selectedLibraryIDs == expectedIDs else {
             errorMessage = L10n.tr("Your selection changed. Review it again before removing items.")
             return false
@@ -680,16 +682,11 @@ final class MobileKeptoraStore: ObservableObject {
             errorMessage = L10n.tr("Your selection changed. Review it again before removing items."); return false
         }
         return await executeCleanup(selection: snapshot,
-            intent: .manualSelection,
+            intent: .manualSelection, allowPartialFamilies: allowPartialFamilies,
             resolveFolderCandidates: { [weak self] in
                 guard let self else { return [] }
                 let adapter = unifiedAdapter
-                var result: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
-                for item in snapshot.filter({ if case .file = $0.reference { return true }; return false }) {
-                    let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false, progress: { _ in })
-                    result.append((item, fingerprint.digest))
-                }
-                return result
+                return try await LibraryCleanupPreflight().prepare(snapshot.filter { if case .file = $0.reference { return true }; return false }, adapter: adapter)
             }, onSuccess: { [weak self] in self?.selectedLibraryIDs.removeAll(); self?.saveLibrarySelection() })
     }
 
@@ -698,13 +695,20 @@ final class MobileKeptoraStore: ObservableObject {
         if saved.isEmpty, let legacy = UserDefaults.standard.data(forKey: bookmarkKey) { saved["legacy"] = legacy }
         folderBookmarks = saved
         connectionErrors.removeAll()
-        for bookmark in saved.values {
+        for (previousID, bookmark) in saved {
             do {
                 var stale = false
                 let url = try URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
                 connectFolder(url)
+                let newID = "folder:" + LibraryFileIdentity.key(for: url)
+                if previousID != newID {
+                    if scanSourceSelection.excludedIDs.contains(previousID) { scanSourceSelection.setSelected(false, id: newID) }
+                    folderBookmarks.removeValue(forKey: previousID)
+                }
             } catch { connectionErrors.append(L10n.tr("Reconnect an unavailable folder in Sources.")) }
         }
+        UserDefaults.standard.set(folderBookmarks, forKey: "Keptora.UnifiedFolderBookmarks.iOS")
+        UserDefaults.standard.set(Array(scanSourceSelection.excludedIDs).sorted(), forKey: AppStorageKeys.iOSExcludedScanSources)
     }
 
     func startScan(allowNetwork: Bool = false) {
@@ -890,6 +894,7 @@ final class MobileKeptoraStore: ObservableObject {
     private func executeCleanup(
         selection: [UniversalMediaAsset],
         intent: PhotosRemovalIntent = .suggestedCopies,
+        allowPartialFamilies: Bool = false,
         resolveFolderCandidates: () async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)],
         onSuccess: () -> Void
     ) async -> Bool {
@@ -919,14 +924,14 @@ final class MobileKeptoraStore: ObservableObject {
             if let photosBatch = batches[LibrarySource.photos.id] {
                 let ids = photosBatch.compactMap { item -> String? in if case .photoLibrary(let id) = item.reference { return id }; return nil }
                 guard ids.count == photosBatch.count else { throw UniversalScanError.unsupportedReference }
-                try await photosAdapter.deleteSelectedAssets(localIdentifiers: ids, intent: intent)
+                try await photosAdapter.deleteSelectedAssets(localIdentifiers: ids, intent: intent, reviewedAssets: photosBatch)
                 history.insert(CleanupHistoryEntry(id: UUID(), kind: .photosRecentlyDeleted, createdAt: Date(), itemCount: photosBatch.count,
                     byteCount: MediaSelectionSummary(photosBatch).knownBytes, folderRecord: nil, restoredAt: nil), at: 0)
                 completedIDs.formUnion(photosBatch.map(\.id))
             }
             for connected in connectedFolders {
                 guard let batch = batches[connected.id], let root = folderScopes[connected.id] else { continue }
-                let record = try await folderCleanup.quarantine(root: root, selections: candidates.filter { $0.asset.sourceID == connected.id })
+                let record = try await folderCleanup.quarantine(root: root, selections: candidates.filter { $0.asset.sourceID == connected.id }, allowPartialFamilies: allowPartialFamilies)
                 history.insert(CleanupHistoryEntry(id: record.id, kind: .folderQuarantine, createdAt: record.createdAt,
                     itemCount: record.operations.count, byteCount: MediaSelectionSummary(batch).knownBytes, folderRecord: record,
                     restoredAt: nil, sourceBookmark: folderBookmarks[connected.id]), at: 0)
@@ -1038,7 +1043,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     func restore(_ entry: CleanupHistoryEntry) async {
         guard !isCleaningUp, !isLoadingCatalogue, !scanState.isScanning, !isAnalyzing else { return }
-        guard let record = entry.folderRecord else { return }
+        guard var record = entry.folderRecord else { return }
         isCleaningUp = true; cleanupStatus = L10n.tr("Restoring files…")
         defer { isCleaningUp = false; cleanupStatus = nil; Task { await loadCatalogue() } }
         do {
@@ -1046,7 +1051,8 @@ final class MobileKeptoraStore: ObservableObject {
             if let bookmark = entry.sourceBookmark {
                 var stale = false
                 let url = try URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
-                if url.startAccessingSecurityScopedResource() { recoveryScope = url }
+                guard url.startAccessingSecurityScopedResource() else { throw UniversalScanError.sourcePermissionDenied }
+                recoveryScope = url; record = try record.rebased(to: url)
             }
             defer { recoveryScope?.stopAccessingSecurityScopedResource() }
             let restored = try await folderCleanup.restore(record)

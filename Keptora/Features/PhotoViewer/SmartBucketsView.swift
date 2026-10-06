@@ -223,7 +223,7 @@ struct SmartBucketsDashboardView: View {
                             .font(.title2.bold())
                     }
                     
-                    Text("100% on-device AI clusters your photos into actionable cleanups and beautiful highlights without sharing any data.")
+                    Text("Your photos are analyzed on this device. You choose what to remove.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -312,7 +312,7 @@ struct SmartBucketsDashboardView: View {
             VStack(spacing: 6) {
                 Text("Ready to Analyze & Group Your Library")
                     .font(.title3.bold())
-                Text("Scan Apple Photos or any folder from Home. Keptora will instantly classify exact duplicates, screenshots, receipts, large videos, and bursts into fast, actionable swipe buckets.")
+                Text("Scan your selected sources. Review copies, very similar photos and quality findings together in your gallery.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

@@ -51,8 +51,8 @@ public struct AnalysisIssue: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
-public struct AnalysisStageProgress: Equatable, Sendable {
-    public enum Status: Sendable { case waiting, running, completed, partial, failed, cancelled }
+public struct AnalysisStageProgress: Equatable, Codable, Sendable {
+    public enum Status: String, Codable, Sendable { case waiting, running, completed, partial, failed, cancelled }
     public var status: Status = .waiting
     public var processed = 0
     public var total = 0
@@ -62,7 +62,7 @@ public struct AnalysisStageProgress: Equatable, Sendable {
     public var isTerminal: Bool { [.completed, .partial, .failed, .cancelled].contains(status) }
 }
 
-public struct AnalysisSessionProgress: Sendable {
+public struct AnalysisSessionProgress: Codable, Sendable {
     public private(set) var stages: [AnalysisStage: AnalysisStageProgress] = [:]
     public init() { for stage in AnalysisStage.allCases { stages[stage] = .init() } }
     public mutating func update(_ stage: AnalysisStage, _ progress: AnalysisStageProgress) {
@@ -132,6 +132,10 @@ public actor LibrarySelectionArchive {
         guard let data = try? Data(contentsOf: url) else { return [] }
         return (try? JSONDecoder().decode([UniversalMediaAsset].self, from: data)) ?? []
     }
+    public func loadStrict() throws -> [UniversalMediaAsset] {
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        return try JSONDecoder().decode([UniversalMediaAsset].self, from: Data(contentsOf: url))
+    }
     public func save(_ assets: [UniversalMediaAsset], sequence: Int) throws {
         guard sequence > lastSequence else { return }
         let data = try JSONEncoder().encode(assets)
@@ -141,7 +145,7 @@ public actor LibrarySelectionArchive {
     }
 }
 
-public enum LibraryFindingFilter: String, CaseIterable, Sendable, Identifiable {
+public enum LibraryFindingFilter: String, Codable, CaseIterable, Sendable, Identifiable {
     case all, copies, verySimilar, review
     public var id: String { rawValue }
     public var titleKey: String {
@@ -164,15 +168,31 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
     public init() {}
     private func revision(_ group: LibraryReviewGroup) -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-        return StableDigest.fnv1a64((try? encoder.encode(group.assets.sorted { $0.id < $1.id }).base64EncodedString()) ?? "")
+        let assets = group.assets.map { asset -> UniversalMediaAsset in
+            if case .file = asset.reference {
+                return asset.with(sourceID: "", reference: .file(URL(fileURLWithPath: "/identity/" + asset.id)), displayName: "")
+            }
+            return asset
+        }.sorted { $0.id < $1.id }
+        return StableDigest.fnv1a64((try? encoder.encode(assets).base64EncodedString()) ?? "")
+    }
+    private func matches(_ choice: Choice, group: LibraryReviewGroup) -> Bool {
+        if choice.revision == revision(group) { return true }
+        // Read pre-migration decisions only against their exact original snapshot.
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let legacy = StableDigest.fnv1a64((try? encoder.encode(group.assets.sorted { $0.id < $1.id }).base64EncodedString()) ?? "")
+        return choice.revision == legacy
+    }
+    public mutating func migrateProtectedIDs(_ mapping: [String: String]) {
+        protectedIDs = Set(protectedIDs.map { mapping[$0] ?? $0 })
     }
     public func keeper(in group: LibraryReviewGroup) -> String {
-        guard let choice = choices[group.id], choice.revision == revision(group), group.assets.contains(where: { $0.id == choice.keeperID }) else { return group.keeperID }
+        guard let choice = choices[group.id], matches(choice, group: group), group.assets.contains(where: { $0.id == choice.keeperID }) else { return group.keeperID }
         return choice.keeperID
     }
     public func hasUserKeeper(in group: LibraryReviewGroup) -> Bool {
         guard let choice = choices[group.id] else { return false }
-        return choice.revision == revision(group) && group.assets.contains { $0.id == choice.keeperID }
+        return matches(choice, group: group) && group.assets.contains { $0.id == choice.keeperID }
     }
     /// Resolve group revisions once per rendered block rather than per thumbnail.
     public func keeperBadgeKeys(in groups: [LibraryReviewGroup]) -> [String: String] {

@@ -1,9 +1,10 @@
+import KeptoraCore
 import SwiftUI
 
 struct DiagnosticsView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
-    @AppStorage("Keptora.ShowFilePaths") private var showFilePaths = false
+    @EnvironmentObject private var archive: MacArchiveModel
 
     var body: some View {
         ScrollView {
@@ -26,7 +27,7 @@ struct DiagnosticsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Useful diagnostics without exposing your library.")
                 .font(KeptoraDesign.titleFont)
-            Text("Keptora exports app state, counters, and bounded local performance samples. Full local paths are excluded unless you explicitly enable them below.")
+            Text("Current library diagnostics include scan progress, skipped items and recovery status. Filenames and paths are always redacted.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
         }
@@ -34,9 +35,9 @@ struct DiagnosticsView: View {
 
     private var statusGrid: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
-            MetricTile(title: "Scan state", value: model.scanProgress.label, systemImage: "magnifyingglass")
-            MetricTile(title: "Source", value: model.sourceAvailability.label, systemImage: "externaldrive")
-            MetricTile(title: "Recovery issues", value: model.recoveryIssues.count.formatted(), systemImage: "arrow.triangle.2.circlepath")
+            MetricTile(title: "Scan state", value: archive.analysisPaused ? L10n.tr("Scan paused.") : archive.status ?? L10n.tr(archive.sessionProgress.isComplete ? "Scan complete. Choose what to keep." : "Ready"), systemImage: "magnifyingglass")
+            MetricTile(title: "Sources", value: archive.selectedSourceIDs.count.formatted(), systemImage: "externaldrive")
+            MetricTile(title: "Recovery issues", value: archive.history.reduce(0) { $0 + ($1.folderRecord?.unresolvedCount ?? ($1.operationState == .planned ? 1 : 0)) }.formatted(), systemImage: "arrow.triangle.2.circlepath")
             MetricTile(title: "Access", value: store.isLifetimeUnlocked ? "Pro" : "Free", systemImage: "checkmark.seal")
         }
     }
@@ -45,42 +46,32 @@ struct DiagnosticsView: View {
         PremiumCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Local performance history", systemImage: "speedometer")
+                    Label("Current library analysis", systemImage: "speedometer")
                         .font(.headline)
                     Spacer()
                     Button {
-                        model.exportPerformanceHistory()
+                        archive.exportDiagnostics()
                     } label: {
-                        Label("Export History…", systemImage: "square.and.arrow.up")
+                        Label("Export Diagnostics…", systemImage: "square.and.arrow.up")
                     }
-                    .disabled(model.performanceSamples.isEmpty)
+                    .disabled(archive.workMetrics.isEmpty)
                 }
-                Text("Keptora stores at most 200 timing samples on this Mac. No filenames, paths, hashes, image bytes, or account data are recorded.")
+                Text("These counters describe your current library scan. Exported diagnostics contain no filenames, paths, image bytes or account data.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                if model.performanceSamples.isEmpty {
-                    Text("Run a scan, similarity analysis, cleanup, or restore to create a local sample.")
+                if archive.workMetrics.isEmpty {
+                    Text("Start a library scan to see its analysis counters.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(Array(model.performanceSamples.suffix(5).reversed())) { sample in
+                    ForEach(AnalysisStage.allCases, id: \.self) { stage in
+                        if let sample = archive.workMetrics[stage] {
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(sample.label).font(.callout.weight(.medium))
-                                Text(sample.recordedAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text(LocalizedStringKey(stage.titleKey)).font(.callout.weight(.medium))
                             Spacer()
-                            Text("\(sample.itemCount.formatted()) items")
-                                .font(.caption.monospacedDigit())
-                            Text(sample.elapsedSeconds.formatted(.number.precision(.fractionLength(2))) + " s")
-                                .font(.caption.monospacedDigit())
-                            Text(sample.result.capitalized)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(sample.result == "completed" ? .green : .orange)
+                            Text(L10n.format("Cache hits: %lld · Decoded previews: %lld · Hashed originals: %lld", sample.cacheHits, sample.decodedPreviews, sample.hashedOriginals)).font(.caption.monospacedDigit())
                         }
-                        if sample.id != model.performanceSamples.last?.id { Divider() }
+                        }
                     }
                 }
             }
@@ -92,12 +83,7 @@ struct DiagnosticsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Diagnostic privacy", systemImage: "lock.doc.fill")
                     .font(.headline)
-                Toggle("Include full local paths in exported diagnostics", isOn: $showFilePaths)
-                Text(showFilePaths
-                     ? "Exported JSON can include the selected source path and current filename. Review it before sharing."
-                     : "Paths and current filenames are redacted. This is the recommended support setting.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("Library diagnostics always redact filenames and paths. No image data is exported.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -111,12 +97,12 @@ struct DiagnosticsView: View {
                     .foregroundStyle(.secondary)
                 HStack {
                     Button {
-                        model.copyDiagnostics()
+                        archive.copyDiagnostics()
                     } label: {
-                        Label(showFilePaths ? "Copy Diagnostics" : "Copy Redacted Diagnostics", systemImage: "doc.on.doc")
+                        Label("Copy Redacted Diagnostics", systemImage: "doc.on.doc")
                     }
                     Button {
-                        model.exportDiagnostics()
+                        archive.exportDiagnostics()
                     } label: {
                         Label("Export Diagnostics…", systemImage: "square.and.arrow.up")
                     }
@@ -125,10 +111,10 @@ struct DiagnosticsView: View {
                 Divider()
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow { Text("Version").foregroundStyle(.secondary); Text(model.displayVersion) }
-                    GridRow { Text("Database").foregroundStyle(.secondary); Text("Schema 4") }
+                    GridRow { Text("Session format").foregroundStyle(.secondary); Text("1") }
                     GridRow { Text("Privacy manifest").foregroundStyle(.secondary); Text("Bundled") }
                     GridRow { Text("Permanent delete API").foregroundStyle(.secondary); Text("Not present") }
-                    GridRow { Text("Performance retention").foregroundStyle(.secondary); Text("200 local samples") }
+                    GridRow { Text("Analysis counters").foregroundStyle(.secondary); Text("Current session") }
                 }
                 .font(.callout)
             }

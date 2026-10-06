@@ -18,7 +18,7 @@ public enum UniversalScanError: LocalizedError, Sendable {
         case .downloadCancelled(let name): return L10n.format("Download of %@ was cancelled.", name)
         case .sourcePermissionDenied: return L10n.tr("Keptora does not have permission to access this source.")
         case .unsupportedReference: return L10n.tr("This source reference is not supported.")
-        case .cleanupNotPermitted(let reason): return reason
+        case .cleanupNotPermitted(let reason): return L10n.tr(String.LocalizationValue(reason))
         }
     }
 }
@@ -105,6 +105,8 @@ public actor UniversalExactScanner {
         fingerprintAllAssets: Bool = false,
         preloadedAssets: [UniversalMediaAsset]? = nil,
         resuming checkpoint: UniversalScanCheckpoint? = nil,
+        control: LibraryAnalysisControl? = nil,
+        checkpointInterval: Int = 100,
         checkpointUpdate: @escaping @Sendable (UniversalScanCheckpoint) -> Void = { _ in },
         groupsUpdate: @escaping @Sendable ([UniversalExactGroup]) -> Void = { _ in },
         progress: @escaping @Sendable (_ processed: Int, _ total: Int, _ current: String) -> Void
@@ -130,7 +132,7 @@ public actor UniversalExactScanner {
         func emitCheckpointIfNeeded(force: Bool = false) {
             guard !completedEntries.isEmpty else { return }
             let now = Date()
-            if force || pendingEntriesCount >= 50 || now.timeIntervalSince(lastCheckpointEmission) >= 2.0 {
+            if force || pendingEntriesCount >= checkpointInterval || now.timeIntervalSince(lastCheckpointEmission) >= 2.0 {
                 checkpointUpdate(.init(sourceID: adapter.source.id, allowNetwork: allowNetwork, entries: completedEntries))
                 groupsUpdate(groupsByFingerprint.compactMap { fingerprint, members in
                     members.count > 1 && !fingerprint.digest.hasPrefix("unique:") ? UniversalExactGroup(digest: fingerprint.digest, assets: members) : nil
@@ -139,6 +141,8 @@ public actor UniversalExactScanner {
                 pendingEntriesCount = 0
             }
         }
+        // Quit/cancellation saves the tail that did not reach the configured interval.
+        defer { emitCheckpointIfNeeded(force: true) }
 
         // Phase 1: Candidate signature bucketing.
         // Exact duplicates must have identical byte count (or matching media metadata if size is unknown).
@@ -149,6 +153,7 @@ public actor UniversalExactScanner {
         let kindCounts = Dictionary(grouping: assets, by: \.mediaKind).mapValues(\.count)
 
         for asset in assets {
+            try await control?.waitIfPaused()
             try Task.checkCancellation()
             let sig: String
             if let byteCount = asset.byteCount, byteCount > 0 {
@@ -169,6 +174,7 @@ public actor UniversalExactScanner {
 
         // Phase 2: Processing and hashing candidate assets.
         for (index, asset) in assets.enumerated() {
+            try await control?.waitIfPaused()
             try Task.checkCancellation()
             let now = Date()
             if index == 0 || index == assets.count - 1 || now.timeIntervalSince(lastProgressEmission) >= 0.05 {

@@ -1,35 +1,5 @@
 import Foundation
 
-public struct FolderQuarantineOperation: Identifiable, Hashable, Codable, Sendable {
-    public let id: UUID
-    public let originalURL: URL
-    public let quarantineURL: URL
-    public let expectedDigest: String
-
-    public init(originalURL: URL, quarantineURL: URL, expectedDigest: String) {
-        self.id = UUID()
-        self.originalURL = originalURL
-        self.quarantineURL = quarantineURL
-        self.expectedDigest = expectedDigest
-    }
-}
-
-public struct FolderQuarantineRecord: Identifiable, Hashable, Codable, Sendable {
-    public let id: UUID
-    public let createdAt: Date
-    public let sourceRoot: URL
-    public let operations: [FolderQuarantineOperation]
-    public var restoredAt: Date?
-
-    public init(id: UUID = UUID(), createdAt: Date = Date(), sourceRoot: URL, operations: [FolderQuarantineOperation], restoredAt: Date? = nil) {
-        self.id = id
-        self.createdAt = createdAt
-        self.sourceRoot = sourceRoot
-        self.operations = operations
-        self.restoredAt = restoredAt
-    }
-}
-
 public actor FolderQuarantineExecutor {
     public init() {}
 
@@ -40,12 +10,16 @@ public actor FolderQuarantineExecutor {
 
     public func quarantine(
         root: URL,
-        selections: [(asset: UniversalMediaAsset, expectedDigest: String)]
+        selections: [(asset: UniversalMediaAsset, expectedDigest: String)],
+        allowPartialFamilies: Bool = false
     ) async throws -> FolderQuarantineRecord {
         guard preflight(root: root) else {
             throw UniversalScanError.cleanupNotPermitted("This Files provider does not currently allow safe coordinated moves. Review is still available.")
         }
         guard !selections.isEmpty else { throw UniversalScanError.cleanupNotPermitted("No files were selected.") }
+        if !allowPartialFamilies, !LibraryFileFamilies.omittedCompanions(for: selections.map(\.asset)).isEmpty {
+            throw UniversalScanError.cleanupNotPermitted(L10n.tr("Linked files remain outside your selection. Review them before removing this photo."))
+        }
         let planID = UUID()
         let quarantineRoot = root.appendingPathComponent(".Keptora Quarantine", isDirectory: true)
             .appendingPathComponent(planID.uuidString, isDirectory: true)
@@ -58,7 +32,9 @@ public actor FolderQuarantineExecutor {
                   paths.insert(originalURL.standardizedFileURL.path).inserted else {
                 throw UniversalScanError.cleanupNotPermitted("Keptora blocked an item outside the selected source.")
             }
+            try validateReviewed([selection.asset])
             let fresh = try await StreamingSHA256.file(at: originalURL, progress: { _ in })
+            try validateReviewed([selection.asset])
             guard fresh.digest == selection.expectedDigest else {
                 throw UniversalScanError.cleanupNotPermitted("A selected file changed after review. Scan again before cleanup.")
             }
@@ -76,19 +52,20 @@ public actor FolderQuarantineExecutor {
             )
         }
 
-        let record = FolderQuarantineRecord(id: planID, sourceRoot: root, operations: operations)
+        var record = FolderQuarantineRecord(id: planID, sourceRoot: root, operations: operations)
         // Persist before moving the first byte. Recovery survives an interrupted app
         // or lost preferences, and never relies solely on an in-memory history entry.
         try saveManifest(record)
         var completed: [FolderQuarantineOperation] = []
         do {
-            for operation in operations {
+            for (index, operation) in operations.enumerated() {
                 try Task.checkCancellation()
                 try FileManager.default.createDirectory(
                     at: operation.quarantineURL.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
                 let beforeMove = try await StreamingSHA256.file(at: operation.originalURL, progress: { _ in })
+                try validateReviewed([selections[index].asset])
                 guard beforeMove.digest == operation.expectedDigest else {
                     throw UniversalScanError.cleanupNotPermitted("A selected file changed after review. Scan again before cleanup.")
                 }
@@ -98,6 +75,9 @@ public actor FolderQuarantineExecutor {
                 guard afterMove.digest == operation.expectedDigest else {
                     throw UniversalScanError.cleanupNotPermitted("A selected file changed while moving. The operation was rolled back.")
                 }
+                record.operations[index].state = .moved
+                record.operations[index].byteCount = afterMove.byteCount
+                try saveManifest(record)
             }
         } catch {
             var rollbackFailed = false
@@ -115,19 +95,37 @@ public actor FolderQuarantineExecutor {
     }
 
     /// Reload disk manifests so interrupted operations can be recovered after relaunch.
-    public func recoveryRecords(root: URL) throws -> [FolderQuarantineRecord] {
+    public func recoveryRecords(root: URL) async throws -> [FolderQuarantineRecord] {
         let directory = root.appendingPathComponent(".Keptora Quarantine", isDirectory: true)
         guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
-        return try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .compactMap { url in
+        var records: [FolderQuarantineRecord] = []
+        for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
                 guard let data = try? Data(contentsOf: url.appendingPathComponent("recovery.json")),
                       let record = try? JSONDecoder().decode(FolderQuarantineRecord.self, from: data),
-                      record.sourceRoot.standardizedFileURL == root.standardizedFileURL else { return nil }
-                return record
+                      url.lastPathComponent == record.id.uuidString else { continue }
+                var rebased = try record.rebased(to: root)
+                for i in rebased.operations.indices {
+                    let op = rebased.operations[i]
+                    let inRecovery = FileManager.default.fileExists(atPath: op.quarantineURL.path)
+                    let atOriginal = FileManager.default.fileExists(atPath: op.originalURL.path)
+                    let location = inRecovery ? op.quarantineURL : op.originalURL
+                    if (inRecovery || atOriginal), let hash = try? await StreamingSHA256.file(at: location, progress: { _ in }), hash.digest == op.expectedDigest {
+                        rebased.operations[i].state = inRecovery ? .moved : .restored
+                        rebased.operations[i].byteCount = hash.byteCount
+                        rebased.operations[i].needsAttention = inRecovery && atOriginal
+                    } else { rebased.operations[i].state = .interrupted }
+                }
+                if rebased.operations.allSatisfy({ $0.state == .restored }) { rebased.restoredAt = rebased.restoredAt ?? Date() }
+                try saveManifest(rebased)
+                records.append(rebased)
             }
+        return records
     }
 
     public func restore(_ record: FolderQuarantineRecord) async throws -> FolderQuarantineRecord {
+        guard record.sourceIdentity == nil || record.sourceIdentity == LibraryFileIdentity.key(for: record.sourceRoot) else {
+            throw UniversalScanError.cleanupNotPermitted(L10n.tr("Reconnect the original source before restoring these files."))
+        }
         var pending: [FolderQuarantineOperation] = []
         let root = record.sourceRoot.resolvingSymlinksInPath().path + "/"
         let quarantineRoot = record.sourceRoot.appendingPathComponent(".Keptora Quarantine")
@@ -159,7 +157,13 @@ public actor FolderQuarantineExecutor {
                 try FileManager.default.createDirectory(at: operation.originalURL.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try coordinatedMove(from: operation.quarantineURL, to: operation.originalURL)
                 completed.append(operation)
+                if let index = restored.operations.firstIndex(where: { $0.id == operation.id }) { restored.operations[index].state = .restored }
+                // A durable partial restore must not claim every operation is complete.
+                restored.restoredAt = nil
+                try saveManifest(restored)
             }
+            for i in restored.operations.indices { restored.operations[i].state = .restored; restored.operations[i].needsAttention = false }
+            restored.restoredAt = Date()
             try saveManifest(restored)
         } catch {
             var rollbackFailed = false
@@ -181,6 +185,12 @@ public actor FolderQuarantineExecutor {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try JSONEncoder().encode(record).write(to: directory.appendingPathComponent("recovery.json"), options: .atomic)
     }
+    private func validateReviewed(_ assets: [UniversalMediaAsset]) throws {
+        do { try LibraryRevisionValidator.validate(assets) }
+        catch UnifiedLibraryError.selectionChanged {
+            throw UniversalScanError.cleanupNotPermitted("A selected file changed after review. Scan again before cleanup.")
+        }
+    }
 
     private func coordinatedMove(from source: URL, to destination: URL) throws {
         let coordinator = NSFileCoordinator(filePresenter: nil)
@@ -200,4 +210,3 @@ public actor FolderQuarantineExecutor {
         if let operationError { throw operationError }
     }
 }
-

@@ -16,14 +16,16 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
 
     private let supportedExtensions: Set<String> = SupportedMediaExtensions.allMedia
     private var warnings: [String] = []
+    private let configuration: LibraryConfiguration
     public func enumerationWarnings() async -> [String] { warnings }
 
-    public init(rootURL: URL, cleanupAvailable: Bool) {
+    public init(rootURL: URL, cleanupAvailable: Bool, configuration: LibraryConfiguration = .init()) {
         self.rootURL = rootURL
+        self.configuration = configuration
         let cloudRoot = rootURL.path.contains("CloudStorage") || rootURL.path.contains("Mobile Documents") || (try? rootURL.resourceValues(forKeys: [.isUbiquitousItemKey]))?.isUbiquitousItem == true
         let kind: LibrarySource.Kind = cloudRoot ? .fileProvider : .folder
         self.source = LibrarySource(
-            id: "folder:\(StableDigest.fnv1a64(rootURL.standardizedFileURL.path))",
+            id: "folder:\(LibraryFileIdentity.key(for: rootURL))",
             kind: kind,
             displayName: rootURL.lastPathComponent
         )
@@ -42,7 +44,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
 
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
         let keys: Set<URLResourceKey> = [
-            .isRegularFileKey, .isHiddenKey, .fileSizeKey,
+            .isRegularFileKey, .isDirectoryKey, .isHiddenKey, .fileSizeKey,
             .creationDateKey, .contentModificationDateKey,
             .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey
         ]
@@ -57,9 +59,12 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
         var assets: [UniversalMediaAsset] = []
         for case let url as URL in enumerator {
             try Task.checkCancellation()
-            if url.pathComponents.contains(".Keptora Quarantine") { continue }
+            if configuration.excludesDirectory(url.lastPathComponent),
+               (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+                enumerator.skipDescendants(); continue
+            }
             let ext = url.pathExtension.lowercased()
-            guard supportedExtensions.contains(ext) else { continue }
+            guard supportedExtensions.contains(ext), !configuration.excludesExtension(ext) else { continue }
             let values: URLResourceValues?
             do { values = try url.resourceValues(forKeys: keys) }
             catch { issues.append(url.lastPathComponent + ": " + error.localizedDescription); continue }
@@ -69,7 +74,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
             let metadata = kind == .image && !cloudOnly ? PhotoMetadataExtractor.extract(from: url) : nil
             assets.append(
                 UniversalMediaAsset(
-                    id: "file:\(StableDigest.fnv1a64(url.standardizedFileURL.resolvingSymlinksInPath().path))",
+                    id: "file:\(LibraryFileIdentity.key(for: url))",
                     sourceID: source.id,
                     reference: .file(url),
                     displayName: url.lastPathComponent,

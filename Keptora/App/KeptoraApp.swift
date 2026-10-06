@@ -6,9 +6,18 @@ import SwiftUI
 private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     let store = StoreEntitlementController()
+    let archive = MacArchiveModel()
+    private var terminating = false
     private var fallbackWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        archive.authorizeSuggestions = { [weak self] identifiers in
+            guard let self else { return false }
+            let ids = identifiers.map { AssetID(rawValue: $0) }
+            guard self.store.authorizeReviews(ids) else { return false }
+            self.store.recordReviews(ids)
+            return true
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.showMainWindowIfNeeded()
         }
@@ -19,6 +28,18 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
             showMainWindowIfNeeded()
         }
         return true
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !terminating else { return .terminateLater }
+        terminating = true
+        model.checkpointReviewSession()
+        Task {
+            let saved = await archive.prepareForTermination()
+            if !saved { terminating = false }
+            sender.reply(toApplicationShouldTerminate: saved)
+        }
+        return .terminateLater
     }
 
     private func showMainWindowIfNeeded() {
@@ -34,6 +55,7 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
         let root = MainRootView()
             .environmentObject(model)
             .environmentObject(store)
+            .environmentObject(archive)
             .environment(\.locale, activeLocale)
             .task { [model, store] in
                 async let appPreparation: Void = model.prepare()
@@ -71,6 +93,7 @@ struct KeptoraApp: App {
             MainRootView()
                 .environmentObject(appDelegate.model)
                 .environmentObject(appDelegate.store)
+                .environmentObject(appDelegate.archive)
                 .environment(\.locale, activeLocale)
                 .task {
                     async let appPreparation: Void = appDelegate.model.prepare()
@@ -80,76 +103,76 @@ struct KeptoraApp: App {
         }
         .defaultSize(width: 1240, height: 800)
         .windowStyle(.titleBar)
-        .commands {
-            CommandGroup(after: .newItem) {
-                Button("Choose Photo Folder…") { appDelegate.model.chooseFolder() }
-                    .keyboardShortcut("o", modifiers: [.command])
-                Button("Connect Cloud Folder…") { appDelegate.model.chooseCloudFolder() }
-                    .keyboardShortcut("o", modifiers: [.command, .shift])
-                Button("Start Read-Only Scan") { appDelegate.model.startScan() }
-                    .keyboardShortcut("r", modifiers: [.command])
-                    .disabled(!appDelegate.model.canStartScan)
-                Button("Analyze Similar Photos") { appDelegate.model.startSimilarityAnalysis() }
-                    .keyboardShortcut("i", modifiers: [.command, .shift])
-                    .disabled(appDelegate.model.similarityProgress.isRunning)
-            }
-            CommandMenu("Review") {
-                Button("Previous Exact Group") { appDelegate.model.selectPreviousExactGroup() }
-                    .keyboardShortcut("[", modifiers: [.command])
-                    .disabled(!appDelegate.model.canNavigateExactGroups)
-                Button("Next Exact Group") { appDelegate.model.selectNextExactGroup() }
-                    .keyboardShortcut("]", modifiers: [.command])
-                    .disabled(!appDelegate.model.canNavigateExactGroups)
-                Divider()
-                Button("Previous Photo") { appDelegate.model.focusPreviousReviewAsset() }
-                    .keyboardShortcut(.leftArrow, modifiers: [.option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Button("Next Photo") { appDelegate.model.focusNextReviewAsset() }
-                    .keyboardShortcut(.rightArrow, modifiers: [.option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Divider()
-                Button("Keep Focused Photo") { appDelegate.model.applyFocusedDecision(.keep, access: appDelegate.store) }
-                    .keyboardShortcut("1", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Button("Add Focused Photo to Safety Plan") { appDelegate.model.applyFocusedDecision(.quarantinePlan, access: appDelegate.store) }
-                    .keyboardShortcut("2", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Button("Skip Focused Photo") { appDelegate.model.applyFocusedDecision(.skip, access: appDelegate.store) }
-                    .keyboardShortcut("3", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Divider()
-                Button("Select All Safe Copies") { appDelegate.model.applyBatchActionToAllExactGroups(.planSafeExtras, access: appDelegate.store) }
-                    .keyboardShortcut("p", modifiers: [.command, .shift])
-                    .disabled(!appDelegate.model.canApplyAllExactGroups)
-                Button("Skip This Group") { appDelegate.model.applyBatchActionToSelected(.skipExtras, access: appDelegate.store) }
-                    .keyboardShortcut("s", modifiers: [.command, .shift])
-                    .disabled(!appDelegate.model.canApplySelectedGroupBatch)
-                Divider()
-                Button("Resume Last Review Session") { appDelegate.model.resumeReviewSession() }
-                    .keyboardShortcut("r", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.hasResumableReviewSession)
-            }
-            CommandMenu("Go") {
-                Button("Library") { appDelegate.model.selectedRoute = .archive }
-                    .keyboardShortcut("1", modifiers: [.command])
-                Button("Review Studio") { appDelegate.model.selectedRoute = .review }
-                    .keyboardShortcut("2", modifiers: [.command])
-                Button("Worth Reviewing") { appDelegate.model.selectedRoute = .smartBuckets }
-                    .keyboardShortcut("3", modifiers: [.command])
-                Button("History & Restore") { appDelegate.model.selectedRoute = .history }
-                    .keyboardShortcut("4", modifiers: [.command])
-                Button("Insights") { appDelegate.model.selectedRoute = .insights }
-                    .keyboardShortcut("5", modifiers: [.command])
-                Divider()
-                Button("Review Safety Plan…") { appDelegate.model.isShowingSafetyPlan = true }
-                    .keyboardShortcut("s", modifiers: [.command, .option])
-                Button("Restore From Quarantine…") { appDelegate.model.isShowingRestorePreview = true }
-                    .keyboardShortcut("z", modifiers: [.command, .option])
-            }
-            CommandGroup(after: .help) {
-                Button("Export Diagnostics…") { appDelegate.model.exportDiagnostics() }
-                Button("Show Welcome Tour") { appDelegate.model.showOnboarding() }
-            }
+        .commands { MacLibraryCommands(archive: appDelegate.archive, model: appDelegate.model, store: appDelegate.store) }
+        Settings {
+            SettingsView().environmentObject(appDelegate.model).environmentObject(appDelegate.store)
+                .environmentObject(appDelegate.archive).environment(\.locale, activeLocale)
+                .frame(minWidth: 560, idealWidth: 650, minHeight: 580)
         }
     }
+}
+
+@MainActor
+private struct MacLibraryCommands: Commands {
+    @ObservedObject var archive: MacArchiveModel
+    @ObservedObject var model: AppModel
+    @ObservedObject var store: StoreEntitlementController
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Add Folder…") { model.selectedRoute = .archive; archive.chooseFolder() }
+                .keyboardShortcut("o", modifiers: [.command]).disabled(archive.sourceControlsDisabled)
+            Button("Start Scan") { model.selectedRoute = .archive; archive.analyze() }
+                .keyboardShortcut("r", modifiers: [.command]).disabled(!archive.canScanSelectedSources)
+            Button("Pause Scan") { archive.pauseAnalysis() }
+                .disabled(!archive.analyzing || archive.analysisPaused)
+            Button("Resume Scan") { archive.resumeAnalysis() }.disabled(!archive.analysisPaused)
+        }
+        CommandMenu("Advanced Review") {
+            Button("Previous Exact Group") { model.selectPreviousExactGroup() }
+                .keyboardShortcut("[", modifiers: [.command])
+                .disabled(!model.canNavigateExactGroups)
+            Button("Next Exact Group") { model.selectNextExactGroup() }
+                .keyboardShortcut("]", modifiers: [.command])
+                .disabled(!model.canNavigateExactGroups)
+            Divider()
+            Button("Previous Photo") { model.focusPreviousReviewAsset() }
+                .keyboardShortcut(.leftArrow, modifiers: [.option])
+                .disabled(!model.canApplyFocusedReviewDecision)
+            Button("Next Photo") { model.focusNextReviewAsset() }
+                .keyboardShortcut(.rightArrow, modifiers: [.option])
+                .disabled(!model.canApplyFocusedReviewDecision)
+            Divider()
+            Button("Keep Focused Photo") { model.applyFocusedDecision(.keep, access: store) }
+                .keyboardShortcut("1", modifiers: [.command, .option])
+                .disabled(!model.canApplyFocusedReviewDecision)
+            Button("Add Focused Photo to Safety Plan") { model.applyFocusedDecision(.quarantinePlan, access: store) }
+                .keyboardShortcut("2", modifiers: [.command, .option])
+                .disabled(!model.canApplyFocusedReviewDecision)
+            Button("Skip Focused Photo") { model.applyFocusedDecision(.skip, access: store) }
+                .keyboardShortcut("3", modifiers: [.command, .option])
+                .disabled(!model.canApplyFocusedReviewDecision)
+            Divider()
+            Button("Select All Safe Copies") { model.applyBatchActionToAllExactGroups(.planSafeExtras, access: store) }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+                .disabled(!model.canApplyAllExactGroups)
+            Button("Skip This Group") { model.applyBatchActionToSelected(.skipExtras, access: store) }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(!model.canApplySelectedGroupBatch)
+            Divider()
+            Button("Resume Last Review Session") { model.resumeReviewSession() }
+                .keyboardShortcut("r", modifiers: [.command, .option])
+                .disabled(!model.hasResumableReviewSession)
+        }
+        CommandMenu("Go") {
+            Button("Photos") { model.selectedRoute = .archive }.keyboardShortcut("1", modifiers: [.command])
+            Button("Suggestions") { model.selectedRoute = .smartBuckets }.keyboardShortcut("2", modifiers: [.command])
+            Button("History") { model.selectedRoute = .history }.keyboardShortcut("3", modifiers: [.command])
+            Divider()
+            Button("Support & Diagnostics") { model.selectedRoute = .diagnostics }
+        }
+        CommandGroup(after: .help) {
+            Button("Export Diagnostics…") { archive.exportDiagnostics() }
+            Button("Show Welcome Tour") { model.showOnboarding() }
+        }
+        }
 }

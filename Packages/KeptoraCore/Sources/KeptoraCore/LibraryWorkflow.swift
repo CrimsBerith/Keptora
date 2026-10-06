@@ -31,6 +31,9 @@ public enum LibraryRevisionValidator {
                 #if canImport(Photos)
                 guard let current = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject,
                       current.modificationDate == asset.modificationDate,
+                      current.creationDate == asset.creationDate,
+                      current.pixelWidth == asset.pixelWidth, current.pixelHeight == asset.pixelHeight,
+                      (asset.duration == nil || current.duration == asset.duration),
                       current.isFavorite == asset.isFavorite,
                       current.isHidden == asset.isHidden else { throw UnifiedLibraryError.selectionChanged }
                 #else

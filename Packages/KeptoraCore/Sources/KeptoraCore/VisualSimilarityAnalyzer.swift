@@ -16,6 +16,8 @@ public actor VisualSimilarityAnalyzer {
         allowNetwork: Bool = false,
         threshold: Float = 0.30,
         maximumAssets: Int = .max,
+        control: LibraryAnalysisControl? = nil,
+        similarityEnabled: Bool = true,
         groupsUpdate: @escaping @Sendable ([UniversalSimilarityGroup]) -> Void = { _ in },
         findings: @escaping @Sendable ([String: QualityAssessment], [AnalysisIssue]) -> Void = { _, _ in },
         progress: @escaping @Sendable (_ processed: Int, _ total: Int) -> Void
@@ -33,10 +35,11 @@ public actor VisualSimilarityAnalyzer {
         var qualityByAssetID: [String: VisualQualityReport] = [:]
 
         for (index, asset) in candidates.enumerated() {
+            try await control?.waitIfPaused()
             try Task.checkCancellation()
             progress(index, candidates.count)
             let value: (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment)
-            do { value = try await descriptor(for: asset, provider: provider, allowNetwork: allowNetwork) }
+            do { value = try await descriptor(for: asset, provider: provider, allowNetwork: allowNetwork, similarityEnabled: similarityEnabled) }
             catch is CancellationError { throw CancellationError() }
             catch {
                 skippedPreviewCount += 1
@@ -52,6 +55,7 @@ public actor VisualSimilarityAnalyzer {
                 faceScore: 0, formatBonus: 0, compositeScore: Float(value.quality.score ?? 0), badges: [], assessment: value.quality)
             qualityAssessments[asset.id] = value.quality
             if index % 50 == 0 { findings(qualityAssessments, issues) }
+            if !similarityEnabled { continue }
             
             var bestIndex: Int?
             var bestDistance = Float.greatestFiniteMagnitude
@@ -177,7 +181,11 @@ public actor VisualSimilarityAnalyzer {
     }
 
     private func descriptor(for asset: UniversalMediaAsset, provider: any SimilarityImageProviding,
-                            allowNetwork: Bool) async throws -> (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment) {
+                            allowNetwork: Bool, similarityEnabled: Bool) async throws -> (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment) {
+        let algorithm = similarityEnabled ? MediaAnalysisVersion.visual : MediaAnalysisVersion.quality
+        if !similarityEnabled, let cached = await MediaFingerprintDiskCache.shared.get(asset: asset, algorithm: algorithm), let quality = cached.quality {
+            metrics.cacheHits += 1; return (nil, 0, quality)
+        }
         if let cached = await MediaFingerprintDiskCache.shared.get(asset: asset, algorithm: MediaAnalysisVersion.visual),
            let hash = cached.coarseHash, let quality = cached.quality,
            let data = cached.featurePrintData,
@@ -188,15 +196,15 @@ public actor VisualSimilarityAnalyzer {
         metrics.decodedPreviews += 1
         let image = try await provider.similarityImage(for: asset, maximumPixelSize: 384, allowNetwork: allowNetwork)
         try Task.checkCancellation()
-        metrics.featurePrintRequests += 1
+        if similarityEnabled { metrics.featurePrintRequests += 1 }
         let value = try autoreleasepool { () throws -> (VNFeaturePrintObservation?, UInt64, QualityAssessment) in
-            (featurePrint(for: image), try coarseHash(for: image), VisualQualityEngine.evaluateQuality(for: image, asset: asset).assessment ?? .unavailable)
+            (similarityEnabled ? featurePrint(for: image) : nil, similarityEnabled ? try coarseHash(for: image) : 0, VisualQualityEngine.evaluateQuality(for: image, asset: asset).assessment ?? .unavailable)
         }
         let data = value.0.flatMap { try? NSKeyedArchiver.archivedData(withRootObject: $0, requiringSecureCoding: true) }
         var entry = MediaFingerprintDiskCache.CacheEntry(assetID: asset.id, digest: "", byteCount: asset.byteCount ?? 0,
                                                         coarseHash: value.1, featurePrintData: data)
         entry.quality = value.2
-        await MediaFingerprintDiskCache.shared.store(asset: asset, algorithm: MediaAnalysisVersion.visual, entry: entry)
+        await MediaFingerprintDiskCache.shared.store(asset: asset, algorithm: algorithm, entry: entry)
         return (value.0, value.1, value.2)
     }
 

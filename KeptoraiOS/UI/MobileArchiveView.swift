@@ -527,6 +527,7 @@ struct MobileSelectionReviewSheet: View {
     @State private var completed = false
     @State private var review = FrozenSelectionReview()
     @State private var captured = false
+    @State private var leaveLinkedFiles = false
     private var reviewedItems: [UniversalMediaAsset] { review.items }
     private var summary: MediaSelectionSummary { MediaSelectionSummary(reviewedItems) }
     var body: some View {
@@ -570,6 +571,13 @@ struct MobileSelectionReviewSheet: View {
                         }.buttonStyle(MobileActionButtonStyle())
                     }
                 }
+                if !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty {
+                    Section("Linked Files") {
+                        Text("Linked files remain outside your selection. Review them before removing this photo.")
+                        ForEach(LibraryFileFamilies.omittedCompanions(for: reviewedItems), id: \.self) { url in Text(url.lastPathComponent).font(.caption) }
+                        Toggle("Remove only my selected items and leave linked files in place", isOn: $leaveLinkedFiles)
+                    }
+                }
                 Section("Selected Items") {
                     Text("Removing an item from this list keeps it in your library.").font(.footnote).foregroundStyle(.secondary)
                     if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(.secondary) }
@@ -594,10 +602,11 @@ struct MobileSelectionReviewSheet: View {
                         capturedIDs = Set(reviewedItems.map(\.id)); confirm = true
                     } label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)) }
                         .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.danger)).accessibilityIdentifier("archive.review.remove")
-                        .disabled(reviewedItems.isEmpty || (!store.unresolvedSelectionIDs.intersection(store.selectedLibraryIDs).isEmpty || !store.pendingSelection.filter({ store.selectedLibraryIDs.contains($0.id) }).isEmpty) || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
+                        .disabled((!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty) || reviewedItems.isEmpty || (!store.unresolvedSelectionIDs.intersection(store.selectedLibraryIDs).isEmpty || !store.pendingSelection.filter({ store.selectedLibraryIDs.contains($0.id) }).isEmpty) || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
                     if store.scanState.isScanning || store.isAnalyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.footnote) }
                 }.padding(16).background(.bar)
             }
+            .onChange(of: reviewedItems) { _, _ in leaveLinkedFiles = false }
             .onAppear { if !captured { review = FrozenSelectionReview(store.librarySelection); captured = true } }
             .interactiveDismissDisabled(store.isCleaningUp)
             .alert("Something went wrong", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
@@ -605,7 +614,7 @@ struct MobileSelectionReviewSheet: View {
             } message: { Text(store.errorMessage ?? "") }
             .alert("Remove selected items?", isPresented: $confirm) {
                 Button(role: .destructive) {
-                    Task { completed = await store.cleanupLibrarySelection(expectedIDs: capturedIDs, reviewedAssets: reviewedItems) }
+                    Task { completed = await store.cleanupLibrarySelection(expectedIDs: capturedIDs, reviewedAssets: reviewedItems, allowPartialFamilies: leaveLinkedFiles) }
                 } label: { Text(L10n.format("Remove %lld Items", capturedIDs.count)) }
                 Button("Cancel", role: .cancel) { }
             } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }

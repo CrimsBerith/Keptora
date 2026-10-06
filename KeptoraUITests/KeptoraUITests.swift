@@ -49,6 +49,82 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertFalse(app.buttons["mac.sourceSetup.continue"].waitForExistence(timeout: 2))
     }
 
+    private func launchUnifiedMacFixture(conflict: Bool = false) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["-portfolioUITesting", "-keptoraUnifiedMacUITesting", "-keptoraPhotosDeniedUITesting", "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
+        if conflict { app.launchArguments.append("-keptoraRestoreConflictUITesting") }
+        app.launchEnvironment["KEPTORA_MAC_FIXTURE_ID"] = UUID().uuidString
+        app.launch(); app.activate()
+        XCTAssertTrue(app.buttons["mac.archive.scanAll"].waitForExistence(timeout: 15))
+        waitForEnabled(app.buttons["mac.archive.scanAll"])
+        return app
+    }
+    private func waitForEnabled(_ element: XCUIElement) {
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+    }
+    private func openUnifiedCopies(_ app: XCUIApplication) -> XCUIElement {
+        app.typeKey("2", modifierFlags: .command)
+        let category = app.buttons["mac.suggestions.copies"]
+        XCTAssertTrue(category.waitForExistence(timeout: 10)); waitForEnabled(category); category.click()
+        let copies = app.buttons["mac.archive.selectExtraCopies"]
+        XCTAssertTrue(copies.waitForExistence(timeout: 10)); waitForEnabled(copies)
+        return copies
+    }
+    private func confirmUnifiedRemoval(_ app: XCUIApplication) {
+        let button = app.buttons.matching(NSPredicate(format: "label == %@", "Remove 1 Items")).allElementsBoundByIndex.first { $0.isHittable }
+        XCTAssertNotNil(button); button?.click()
+    }
+
+    func testUnifiedMacScanSelectionReviewUndoAndRestore() {
+        let app = launchUnifiedMacFixture()
+        // Command-R and the gallery button share the production session and actual JPEG adapters.
+        app.typeKey("r", modifierFlags: .command)
+        let copies = openUnifiedCopies(app)
+        copies.click()
+        let review = app.buttons["mac.archive.reviewSelection"]
+        XCTAssertTrue(review.waitForExistence(timeout: 5)); review.click()
+        let exclude = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.review.exclude.")).firstMatch
+        XCTAssertTrue(exclude.waitForExistence(timeout: 5)); exclude.click()
+        let undo = app.buttons["mac.archive.review.undo"]
+        XCTAssertTrue(undo.isEnabled); undo.click()
+        app.buttons["mac.archive.review.remove"].click()
+        confirmUnifiedRemoval(app)
+        app.typeKey("3", modifierFlags: .command)
+        let restore = app.buttons["Restore Files"]
+        XCTAssertTrue(restore.waitForExistence(timeout: 10)); restore.click()
+        XCTAssertTrue(app.staticTexts["Restored"].waitForExistence(timeout: 10))
+        app.typeKey("1", modifierFlags: .command)
+        XCTAssertTrue(app.buttons["mac.archive.scanAll"].waitForExistence(timeout: 5))
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Unified Mac gallery after actual restore"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    func testUnifiedMacRestoreFailureIsVisibleAndDoesNotOverwriteOriginal() {
+        let app = launchUnifiedMacFixture(conflict: true)
+        app.buttons["mac.archive.scanAll"].click()
+        let copies = openUnifiedCopies(app); copies.click()
+        app.buttons["mac.archive.reviewSelection"].click(); app.buttons["mac.archive.review.remove"].click()
+        confirmUnifiedRemoval(app); app.typeKey("3", modifierFlags: .command)
+        let restore = app.buttons["Restore Files"]
+        XCTAssertTrue(restore.waitForExistence(timeout: 10)); restore.click()
+        XCTAssertTrue(app.staticTexts["Restore stopped because an original path is occupied or quarantine content is missing."].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Restored"].exists)
+    }
+
+    func testUnifiedMacSearchDoesNotLoseSelectionOrHijackTextUndo() {
+        let app = launchUnifiedMacFixture()
+        let asset = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.asset.")).firstMatch
+        XCTAssertTrue(asset.waitForExistence(timeout: 10)); asset.click()
+        let search = app.textFields["Search filenames"]
+        search.click(); search.typeText("missing")
+        XCTAssertTrue(app.buttons["mac.archive.reviewSelection"].exists)
+        app.typeKey("a", modifierFlags: .command); search.typeText("holiday")
+        app.typeKey("3", modifierFlags: .command); app.typeKey("1", modifierFlags: .command)
+        XCTAssertEqual(search.value as? String, "holiday")
+        app.buttons["mac.archive.reviewSelection"].click()
+        XCTAssertTrue(app.staticTexts["Review Selection"].waitForExistence(timeout: 5))
+    }
+
     private func element(withIdentifier identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
     }

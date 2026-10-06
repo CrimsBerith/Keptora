@@ -1,5 +1,7 @@
 # Profesyonel Mac uygulaması — sistem ve UI/UX mimarisi denetimi
 
+> 6 Ekim güncellemesi: 21 bulgunun uygulanan düzeltmeleri, testleri ve bekleyen Apple kabulü [teslim raporunda](MAC_ARCHITECTURE_DELIVERY.md). Bu denetimdeki kaynak referansları aşağıda belirtilen başlangıç sürümüne aittir.
+
 **Tarih:** 5 Ekim 2026. **İncelenen uygulama kodu:** `a34683df8c5237b7c50a6124835ec983c250cf40`, `feat/photo-cleaner-library`.
 
 ## Değerlendirme

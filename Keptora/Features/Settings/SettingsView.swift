@@ -10,6 +10,8 @@ private enum SettingsStorageKeys {
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
+    @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.openWindow) private var openWindow
     @AppStorage(SettingsStorageKeys.checkpointInterval) private var checkpointInterval = 100
     @AppStorage(SettingsStorageKeys.showFilePaths) private var showFilePaths = false
     @AppStorage(SettingsStorageKeys.similarityEnabled) private var similarityEnabled = true
@@ -32,18 +34,12 @@ struct SettingsView: View {
         )
     }
 
-    private var effectiveBootstrap: SimilarityCalibrationProfile {
-        SimilarityCalibrationProfile
-            .conservativeBootstrap(visionRevision: SimilarityEngine.pinnedRevision)
-            .applying(sensitivity.wrappedValue)
-    }
-
     var body: some View {
         Form {
             KeptoraReleaseLinks()
             Section("Scanning") {
                 Stepper("Checkpoint every \(checkpointInterval) assets", value: $checkpointInterval, in: 25...500, step: 25)
-                Text("Smaller checkpoints improve interruption recovery but add a small amount of database work.")
+                Text("Smaller checkpoints save scan progress more often. Changes apply to your next scan.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -64,7 +60,7 @@ struct SettingsView: View {
                         Text(policy.title).tag(policy)
                     }
                 }
-                Text(keeperPolicy.wrappedValue.detail)
+                Text(keeperPolicy.wrappedValue == .preserve ? L10n.tr("Prefer favorites, edited versions and better detail. Your choices always take priority.") : keeperPolicy.wrappedValue.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Label("Your manual keeper choice always takes priority. This preference applies to new scan results.", systemImage: "checkmark.shield")
@@ -72,29 +68,23 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Similarity Calibration") {
-                Picker("Review sensitivity", selection: sensitivity) {
-                    ForEach(SimilaritySensitivityPreset.allCases) { Text($0.label).tag($0) }
-                }
-                Text(sensitivity.wrappedValue.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 7) {
-                    GridRow { Text("Very strong"); Text(effectiveBootstrap.veryStrongMaximum, format: .number.precision(.fractionLength(3))).monospacedDigit() }
-                    GridRow { Text("Strong"); Text(effectiveBootstrap.strongMaximum, format: .number.precision(.fractionLength(3))).monospacedDigit() }
-                    GridRow { Text("Review maximum"); Text(effectiveBootstrap.reviewMaximum, format: .number.precision(.fractionLength(3))).monospacedDigit() }
-                }
-                .font(.callout)
-                Button("Apply to Current Review Groups") { model.refreshSimilarityGroupsForCurrentSensitivity() }
-                    .disabled(model.similarityProgress.isRunning)
-                Label("Sensitivity can only narrow the calibrated envelope. Similar groups never authorize cleanup.", systemImage: "lock.shield")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Analysis") {
+            Section("Similar photo suggestions") {
                 Toggle("Similar photo suggestions", isOn: $similarityEnabled)
-                Text("Similar photos are suggestions only. They never enter a cleanup plan.")
+                Picker("Review sensitivity", selection: sensitivity) {
+                    Text("Fewer Suggestions").tag(SimilaritySensitivityPreset.precisionFirst)
+                    Text("Balanced").tag(SimilaritySensitivityPreset.balanced)
+                    Text("More Suggestions").tag(SimilaritySensitivityPreset.discovery)
+                }
+                .disabled(!similarityEnabled)
+                Text("Choose how closely photos must match. Start with fewer suggestions to reduce uncertain matches.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Scan with These Settings") { archive.analyze() }
+                    .disabled(!archive.canScanSelectedSources)
+                Label("Changes apply to the next scan. Similar photos always require your review.", systemImage: "lock.shield")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Turn off similar photo suggestions to scan exact copies and photo quality only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -119,7 +109,10 @@ struct SettingsView: View {
             }
 
             Section("Privacy") {
-                Toggle("Show full file paths", isOn: $showFilePaths)
+                DisclosureGroup("Advanced Tools") {
+                    Toggle("Show full file paths", isOn: $showFilePaths)
+                    Text("This display setting applies to Advanced Tools. Library diagnostics always redact paths.").font(.caption).foregroundStyle(.secondary)
+                }
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) { privacyActions }
                     VStack(alignment: .leading, spacing: 8) { privacyActions }
@@ -140,8 +133,8 @@ struct SettingsView: View {
         Button("Restore Purchases") { Task { await store.restorePurchases() } }.disabled(store.isWorking)
     }
     @ViewBuilder private var privacyActions: some View {
-        Button("Show Welcome Tour") { model.showOnboarding() }.accessibilityIdentifier("mac.settings.showOnboarding")
-        Button("Export Diagnostics…") { model.exportDiagnostics() }
+        Button("Show Welcome Tour") { openWindow(id: "main"); model.showOnboarding() }.accessibilityIdentifier("mac.settings.showOnboarding")
+        Button("Export Diagnostics…") { archive.exportDiagnostics() }
     }
 }
 

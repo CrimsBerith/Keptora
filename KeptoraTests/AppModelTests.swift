@@ -4,6 +4,40 @@ import KeptoraCore
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    func testUnifiedRecommendationAllowanceDoesNotLimitManualSelection() {
+        let model = MacArchiveModel(), namespace = UUID().uuidString
+        let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: namespace + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "b"), displayName: "b.jpg", mediaKind: .image)
+        model.assets = [a, b]; model.exact = [.init(digest: namespace, assets: [a, b], keeperID: a.id)]
+        model.authorizeSuggestions = { _ in false }
+        model.selectExactSuggestions(); XCTAssertTrue(model.selection.isEmpty)
+        model.toggleSelection(b); XCTAssertEqual(model.selection, [b.id])
+    }
+    func testUnifiedSelectionUsesNativeUndoManager() {
+        let model = MacArchiveModel(), manager = UndoManager()
+        manager.groupsByEvent = false; model.undoManager = manager
+        let item = UniversalMediaAsset(id: UUID().uuidString, sourceID: "test", reference: .photoLibrary(localIdentifier: "a"), displayName: "a.jpg", mediaKind: .image)
+        model.assets = [item]
+        manager.beginUndoGrouping(); model.toggleSelection(item); manager.endUndoGrouping()
+        XCTAssertTrue(manager.canUndo); manager.undo()
+        XCTAssertTrue(model.selection.isEmpty); XCTAssertFalse(model.canUndoSelection)
+    }
+    func testUnifiedDiagnosticsRedactPathsNamesAndRawErrors() throws {
+        let model = MacArchiveModel(), secret = "private-photo-" + UUID().uuidString
+        model.assets = [.init(id: secret, sourceID: secret, reference: .file(URL(fileURLWithPath: "/private/" + secret)), displayName: secret, mediaKind: .image)]
+        model.error = "Cannot open /private/" + secret
+        let json = String(decoding: try model.diagnosticData(), as: UTF8.self)
+        XCTAssertFalse(json.contains(secret)); XCTAssertFalse(json.contains("/private/")); XCTAssertTrue(json.contains("hasError"))
+    }
+    func testUnifiedRemovalAndRestoreCannotStartDuringAnalysis() async {
+        let model = MacArchiveModel(); model.analyzing = true
+        let result = await model.removeSelection(expectedIDs: [])
+        XCTAssertFalse(result); XCTAssertFalse(model.busy)
+        let entry = MacRecoveryEntry(id: UUID(), date: Date(), count: 1, bytes: 1,
+            folderRecord: .init(sourceRoot: URL(fileURLWithPath: "/unavailable"), operations: []), bookmark: nil, isPhotos: false)
+        await model.restore(entry)
+        XCTAssertFalse(model.busy); XCTAssertNil(model.error)
+    }
     func testFinalReviewRejectsChangedSelectionAndRestoredStaleRevision() async {
         let model = MacArchiveModel(), id = UUID().uuidString
         let original = UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: "a.jpg", mediaKind: .image, byteCount: 100)

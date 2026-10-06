@@ -58,6 +58,7 @@ public actor VideoSimilarityAnalyzer {
         averageThreshold: Float = 0.31,
         maximumFrameDistance: Float = 0.48,
         maximumAssets: Int = .max,
+        control: LibraryAnalysisControl? = nil,
         progress: @escaping @Sendable (_ processed: Int, _ total: Int) -> Void
     ) async throws -> [UniversalSimilarityGroup] {
         let candidates = Array(assets.lazy.filter { $0.mediaKind == .video }.prefix(maximumAssets))
@@ -66,6 +67,7 @@ public actor VideoSimilarityAnalyzer {
         var durationIndex: [Int: Set<Int>] = [:]
 
         for (offset, asset) in candidates.enumerated() {
+            try await control?.waitIfPaused()
             try Task.checkCancellation()
             progress(offset, candidates.count)
             let sample: UniversalVideoSimilaritySample

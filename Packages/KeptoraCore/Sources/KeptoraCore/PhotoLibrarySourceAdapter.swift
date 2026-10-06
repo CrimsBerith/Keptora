@@ -207,7 +207,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                             singleShot.resume(throwing: error)
                         }
                     } else if let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool, isInCloud, !allowNetwork,
-                           image == nil || (info?[PHImageResultIsDegradedKey] as? Bool) == true {
+                           data == nil || (info?[PHImageResultIsDegradedKey] as? Bool) == true {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(displayName))
                     } else if let data {
                         var hasher = SHA256()
@@ -423,7 +423,8 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         try await deleteSelectedAssets(localIdentifiers: localIdentifiers)
     }
 
-    public func deleteSelectedAssets(localIdentifiers: [String], intent: PhotosRemovalIntent = .suggestedCopies) async throws {
+    public func deleteSelectedAssets(localIdentifiers: [String], intent: PhotosRemovalIntent = .suggestedCopies,
+                                     reviewedAssets: [UniversalMediaAsset]? = nil) async throws {
         let identifiers = Array(Set(localIdentifiers))
         guard !identifiers.isEmpty else { return }
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
@@ -442,6 +443,13 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         guard protectedNames.isEmpty else {
             throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
         }
+        }
+        if let reviewedAssets {
+            let reviewedIDs = Set(reviewedAssets.compactMap { item -> String? in
+                if case .photoLibrary(let id) = item.reference { return id }; return nil
+            })
+            guard reviewedIDs == Set(identifiers), reviewedAssets.count == identifiers.count else { throw UnifiedLibraryError.selectionChanged }
+            try LibraryRevisionValidator.validate(reviewedAssets)
         }
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(fetched)
@@ -524,13 +532,23 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         dataReceived: @escaping @Sendable (Data) -> Void
     ) async throws {
         final class RequestBox: @unchecked Sendable {
-            var requestID: PHAssetResourceDataRequestID?
+            private let lock = NSLock()
+            private var requestID: PHAssetResourceDataRequestID?
+            private var cancelled = false
+            func install(_ id: PHAssetResourceDataRequestID) {
+                lock.lock(); requestID = id; let pending = cancelled; lock.unlock()
+                if pending { PHAssetResourceManager.default().cancelDataRequest(id) }
+            }
+            func cancel() {
+                lock.lock(); cancelled = true; let id = requestID; lock.unlock()
+                if let id { PHAssetResourceManager.default().cancelDataRequest(id) }
+            }
         }
         let box = RequestBox()
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 let singleShot = SingleShotContinuation(continuation)
-                box.requestID = PHAssetResourceManager.default().requestData(
+                let requestID = PHAssetResourceManager.default().requestData(
                     for: resource,
                     options: options,
                     dataReceivedHandler: dataReceived,
@@ -539,11 +557,10 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         else { singleShot.resume(returning: ()) }
                     }
                 )
+                box.install(requestID)
             }
         } onCancel: {
-            if let id = box.requestID {
-                PHAssetResourceManager.default().cancelDataRequest(id)
-            }
+            box.cancel()
         }
     }
 

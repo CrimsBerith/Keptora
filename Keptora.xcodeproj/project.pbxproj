@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BDB41E44654F477C91929501 /* MacLibraryServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB41E44654F477C91929502 /* MacLibraryServices.swift */; };
+		BDB41E44654F477C91929401 /* MacArchiveModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB41E44654F477C91929402 /* MacArchiveModel.swift */; };
 		9490E585F79F412A9D79B787 /* MacArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */; };
 		088D4FA225BE4000810CF63B /* MobileArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247968AEA26B410B9CC6A740 /* MobileArchiveView.swift */; };
 		005D72074E110279171AD67F /* SQLiteDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 866CEFC30164C3AC7062B41A /* SQLiteDatabase.swift */; };
@@ -151,6 +153,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BDB41E44654F477C91929502 /* MacLibraryServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLibraryServices.swift; sourceTree = "<group>"; };
+		BDB41E44654F477C91929402 /* MacArchiveModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveModel.swift; sourceTree = "<group>"; };
 		2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveView.swift; sourceTree = "<group>"; };
 		247968AEA26B410B9CC6A740 /* MobileArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileArchiveView.swift; sourceTree = "<group>"; };
 		0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -718,6 +722,8 @@
 				0B2F1ABB3C2D822ADB36E913 /* HomeView.swift */,
 				AB3B580F106A42DF1476F8F4 /* MacPhotosLibraryView.swift */,
 				2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */,
+				BDB41E44654F477C91929402 /* MacArchiveModel.swift */,
+				BDB41E44654F477C91929502 /* MacLibraryServices.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -1024,6 +1030,8 @@
 				9493785F5F7D9FEA90BFAB22 /* KeptoraWindowStressContract.swift in Sources */,
 				5FE3A8443B5C5C39D6EEF09C /* MacPhotosLibraryView.swift in Sources */,
 				9490E585F79F412A9D79B787 /* MacArchiveView.swift in Sources */,
+				BDB41E44654F477C91929401 /* MacArchiveModel.swift in Sources */,
+				BDB41E44654F477C91929501 /* MacLibraryServices.swift in Sources */,
 				988A8BF44853C471CA5BEE6F /* MainRootView.swift in Sources */,
 				C02864EACDF705F063943BE7 /* ManifestSigner.swift in Sources */,
 				2D2758F0540D33F2D8F31B6D /* MetadataToolsCore.swift in Sources */,
