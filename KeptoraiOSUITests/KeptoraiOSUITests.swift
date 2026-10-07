@@ -61,9 +61,21 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(element.isHittable)
     }
     private func connectRealPhotos(_ app: XCUIApplication) {
+        // PhotoKit's permission sheet can be hosted outside SpringBoard's
+        // accessibility tree. Let XCTest handle the actual system interruption.
+        let permissionMonitor = addUIInterruptionMonitor(withDescription: "Photos full-access permission") { alert in
+            let allow = alert.buttons["Allow Full Access"]
+            guard allow.exists else { return false }
+            allow.tap()
+            return true
+        }
+        defer { removeUIInterruptionMonitor(permissionMonitor) }
         if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
-        let fullAccess = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow Full Access"]
-        if fullAccess.waitForExistence(timeout: 3) { fullAccess.tap() }
+        if !app.buttons["archive.selectAll"].waitForExistence(timeout: 3) {
+            // A user interaction is required to invoke registered interruption
+            // monitors; querying an unrelated application's buttons is not.
+            app.tap()
+        }
         XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 20))
     }
     func testGrantPhotosAccessForRealMedia() {
