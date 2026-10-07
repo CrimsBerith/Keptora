@@ -457,6 +457,7 @@ struct MacArchiveView: View {
         Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
     }
     private func selectByClick(_ item: UniversalMediaAsset) {
+        searchFocused = false
         if NSEvent.modifierFlags.contains(.shift), let anchor = rangeAnchor {
             archive.selectItems(LibraryRangeSelection.items(from: anchor, through: item.id, in: orderedVisible))
         } else { archive.toggleSelection(item); rangeAnchor = item.id }
@@ -496,6 +497,7 @@ struct MacArchiveView: View {
                                     .accessibilityValue(Text(verbatim: ([L10n.tr(selected ? "Selected" : "Not selected")] + groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) } + (archive.qualityAssessments[item.id]?.findings.map { L10n.tr(String.LocalizationValue($0.titleKey)) } ?? [])).joined(separator: ", ")))
                                     .accessibilityHint("Click or press Space to change selection. Shift selects a range.").accessibilityAddTraits(selected ? .isSelected : [])
                                     .accessibilityIdentifier("mac.archive.asset.\(item.id)")
+                                    .focusable()
                                     .focused($keyboardFocus, equals: item.id)
                                     .onMoveCommand { moveFocus($0) }
                                 HStack {
