@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F1846C96AA7041A6A59FF202 /* Keptora.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F1846C96AA7041A6A59FF201 /* Keptora.storekit */; };
 		BDB41E44654F477C91929501 /* MacLibraryServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB41E44654F477C91929502 /* MacLibraryServices.swift */; };
 		BDB41E44654F477C91929401 /* MacArchiveModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB41E44654F477C91929402 /* MacArchiveModel.swift */; };
 		9490E585F79F412A9D79B787 /* MacArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */; };
@@ -153,6 +154,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F1846C96AA7041A6A59FF201 /* Keptora.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Keptora.storekit; sourceTree = "<group>"; };
 		BDB41E44654F477C91929502 /* MacLibraryServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLibraryServices.swift; sourceTree = "<group>"; };
 		BDB41E44654F477C91929402 /* MacArchiveModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveModel.swift; sourceTree = "<group>"; };
 		2B28777752FE4DAEAD831CF6 /* MacArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveView.swift; sourceTree = "<group>"; };
@@ -360,6 +362,7 @@
 		3C3B9A32672717CDE084699E /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				F1846C96AA7041A6A59FF201 /* Keptora.storekit */,
 				A644FBE542DB8CB11EDBA79E /* Assets.xcassets */,
 				016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */,
 				91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */,
@@ -838,6 +841,7 @@
 			buildConfigurationList = 6273C78A75BE48EA4D02D418 /* Build configuration list for PBXNativeTarget "KeptoraTests" */;
 			buildPhases = (
 				7BC1A6C1F30959196BD8C937 /* Sources */,
+				F1846C96AA7041A6A59FF203 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -939,6 +943,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		F1846C96AA7041A6A59FF203 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1846C96AA7041A6A59FF202 /* Keptora.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		56EE822C0FF44DF0413052CC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;

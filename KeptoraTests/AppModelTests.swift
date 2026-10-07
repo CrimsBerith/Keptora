@@ -10,9 +10,13 @@ final class AppModelTests: XCTestCase {
         let evidence = ReviewDecisionEvidence(groupID: "g", assetID: .init(rawValue: "a"), decision: .keep, actor: "user",
             reasonCode: "user-selected-keeper", decidedAt: Date(), exactDigest: "digest", canonicalAssetID: .init(rawValue: "a"),
             proofState: .selectedKeeper, familyID: nil, familyKind: nil, familyRole: nil)
-        for (language, expected) in [("en", "Photo to keep chosen by you"), ("tr", "Saklanacak fotoğrafı siz seçtiniz"),
-                                     ("fr", "Photo à conserver choisie par vous"), ("de", "Von Ihnen zum Behalten ausgewähltes Foto")] {
+        for (language, expected, groupTitle) in [("en", "Photo to keep chosen by you", "Group 4 of 8"),
+                                               ("tr", "Saklanacak fotoğrafı siz seçtiniz", "Grup 4 / 8"),
+                                               ("fr", "Photo à conserver choisie par vous", "Groupe 4 sur 8"),
+                                               ("de", "Von Ihnen zum Behalten ausgewähltes Foto", "Gruppe 4 von 8")] {
             defaults.set(language, forKey: key); XCTAssertEqual(evidence.reasonLabel, expected)
+            XCTAssertEqual(ReviewText.format("Group %1$lld of %2$lld", Int64(4), Int64(8)), groupTitle)
+            XCTAssertEqual(L10n.format("Group %1$lld of %2$lld", Int64(4), Int64(8)), groupTitle)
         }
     }
     func testProtectedPhotosRequireExplicitUnprotectForManualAndBulkSelection() {

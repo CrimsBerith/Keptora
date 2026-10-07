@@ -4,7 +4,7 @@ import KeptoraCore
 
 final class AccessPolicyTests: XCTestCase {
     @MainActor
-    func testArchiveSourceChoicesScopeTheGridAndKeepHiddenManualSelection() {
+    func testArchiveSourceChoicesScopeTheGridAndKeepHiddenManualSelection() async throws {
         let key = AppStorageKeys.macExcludedScanSources
         let saved = UserDefaults.standard.object(forKey: key)
         UserDefaults.standard.removeObject(forKey: key)
@@ -12,7 +12,12 @@ final class AccessPolicyTests: XCTestCase {
             if let saved { UserDefaults.standard.set(saved, forKey: key) }
             else { UserDefaults.standard.removeObject(forKey: key) }
         }
-        let archive = MacArchiveModel(persistentSession: false)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repositoryURL = root.appendingPathComponent("session.json")
+        let archive = MacArchiveModel(repositoryURL: repositoryURL)
+        await archive.restoreConnections(loadSources: false)
         let first = LibrarySource(id: "first", kind: .folder, displayName: "Pictures")
         let second = LibrarySource(id: "second", kind: .fileProvider, displayName: "Cloud")
         archive.connectedFolders = [first, second]
@@ -24,7 +29,10 @@ final class AccessPolicyTests: XCTestCase {
         XCTAssertEqual(archive.sourceSelectionState, .some)
         XCTAssertEqual(archive.scopedAssets.map(\.id), [second.id])
         XCTAssertEqual(archive.selected.map(\.id), [first.id])
-        XCTAssertEqual(MacArchiveModel(persistentSession: false).scanSourceSelection.excludedIDs, [first.id])
+        let savedState = await archive.flushState(includeAnalysis: false); XCTAssertTrue(savedState)
+        let reopened = MacArchiveModel(repositoryURL: repositoryURL)
+        await reopened.restoreConnections(loadSources: false)
+        XCTAssertEqual(reopened.scanSourceSelection.excludedIDs, [first.id])
         archive.toggleAllScanSources()
         XCTAssertEqual(archive.sourceSelectionState, .all)
         archive.toggleAllScanSources()

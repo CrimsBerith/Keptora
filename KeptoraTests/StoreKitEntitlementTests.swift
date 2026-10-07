@@ -12,13 +12,10 @@ final class StoreKitEntitlementTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        let thisFile = URL(fileURLWithPath: #filePath)
-        let repoRoot = thisFile.deletingLastPathComponent().deletingLastPathComponent()
-        let storekitURL = repoRoot.appendingPathComponent("Keptora/Resources/Keptora.storekit")
-        guard FileManager.default.fileExists(atPath: storekitURL.path) else {
-            XCTFail("StoreKit configuration file not found at \(storekitURL.path)")
-            return
-        }
+        // A signed sandboxed host can read its test resources; #filePath points
+        // outside the app's container and is not a portable test configuration.
+        let storekitURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "Keptora", withExtension: "storekit"),
+                                       "StoreKit configuration must be bundled with KeptoraTests")
 
         session = try SKTestSession(contentsOf: storekitURL)
         cleanSessionTransactions()

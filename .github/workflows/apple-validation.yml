@@ -44,7 +44,7 @@ jobs:
           python3 Scripts/validate_photo_cleaner_assets.py
           python3 Scripts/validate_regenerated_visuals.py
           python3 Scripts/validate_mac_localization.py
-  native:
+  native-mac:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -56,11 +56,24 @@ jobs:
           python3 Scripts/validate_project_references.py
           python3 Scripts/validate_photo_cleaner_assets.py
       - name: macOS build and unit tests
+        timeout-minutes: 10
         run: |
           xcodebuild -project Keptora.xcodeproj -scheme Keptora \
             -destination 'platform=macOS' -derivedDataPath Build/CI \
             -resultBundlePath Build/MacTests.xcresult \
-            CODE_SIGNING_ALLOWED=NO -only-testing:KeptoraTests \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 60 \
+            -maximum-test-execution-time-allowance 120 -parallel-testing-enabled NO \
+            -only-testing:KeptoraTests -skip-testing:KeptoraTests/StoreKitEntitlementTests test
+      - name: macOS product UI tests
+        timeout-minutes: 15
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme Keptora \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/MacUITests.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -maximum-test-execution-time-allowance 180 -parallel-testing-enabled NO \
             -only-testing:KeptoraUITests/KeptoraUITests/testStartupSetupCanContinueWithDeniedPhotos \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacScanSelectionReviewUndoAndRestore \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacRestoreFailureIsVisibleAndDoesNotOverwriteOriginal \
@@ -73,6 +86,21 @@ jobs:
           KEPTORA_BENCHMARK_ITEMS: ${{ github.event_name == 'schedule' && '3000' || inputs.benchmark_items }}
           KEPTORA_BENCHMARK_OUTPUT: ${{ github.workspace }}/Build/native-analysis-benchmark.json
         run: swift test --package-path Packages/KeptoraCore --filter NativeAnalysisBenchmarkTests
+      - name: Keep Mac test evidence and current screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-test-evidence
+          path: |
+            Build/*.xcresult
+            Build/native-analysis-benchmark.json
+          retention-days: 14
+
+  native-ios:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
       - name: Prepare iPhone simulator with actual media
         run: bash Scripts/prepare_photo_cleaner_simulator.sh
       - name: iPhone unit and product UI tests
@@ -80,7 +108,9 @@ jobs:
           xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
             -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
             -derivedDataPath Build/CI -resultBundlePath Build/iPhoneTests.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_ALLOWED=NO -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -maximum-test-execution-time-allowance 180 \
             -only-testing:KeptoraiOSTests \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
@@ -97,12 +127,33 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
             test
-      - name: Keep native test evidence and current screenshots
+      - name: Keep iPhone test evidence and current screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: apple-test-evidence
-          path: |
-            Build/*.xcresult
-            Build/native-analysis-benchmark.json
+          name: iphone-test-evidence
+          path: Build/*.xcresult
+          retention-days: 14
+
+  native-storekit:
+    runs-on: macos-15
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Signed local StoreKit purchase and restore integration
+        timeout-minutes: 10
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme Keptora \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/StoreKitTests.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 60 \
+            -maximum-test-execution-time-allowance 120 -parallel-testing-enabled NO \
+            -only-testing:KeptoraTests/StoreKitEntitlementTests test
+      - name: Keep StoreKit integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storekit-test-evidence
+          path: Build/*.xcresult
           retention-days: 14
