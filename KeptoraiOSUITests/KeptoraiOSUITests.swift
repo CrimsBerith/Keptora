@@ -298,6 +298,21 @@ final class KeptoraiOSUITests: XCTestCase {
         connectRealPhotos(app)
         XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["archive.selectAll"].isEnabled, "Imported simulator photos must be visible")
+        let photos = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "archive.asset."))
+        let firstPhoto = photos.firstMatch
+        reveal(firstPhoto, in: app)
+        assertTouchTarget(firstPhoto, in: app)
+        XCTAssertEqual(firstPhoto.frame.width, firstPhoto.frame.height, accuracy: 1,
+                       "Landscape originals must not expand square gallery cells")
+        let firstRow = photos.allElementsBoundByIndex.filter {
+            $0.exists && abs($0.frame.minY - firstPhoto.frame.minY) < 1
+        }
+        for (index, photo) in firstRow.enumerated() {
+            XCTAssertTrue(app.frame.contains(photo.frame), "Photo controls must stay inside the screen")
+            for other in firstRow.dropFirst(index + 1) {
+                XCTAssertTrue(photo.frame.intersection(other.frame).isEmpty, "Neighboring photo controls must not overlap")
+            }
+        }
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Current Library — tap selection and visible group actions"
         attachment.lifetime = .keepAlways; add(attachment)
