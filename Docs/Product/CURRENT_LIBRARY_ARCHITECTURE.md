@@ -39,6 +39,8 @@ flowchart TD
 - **Lifecycle:** both Mac workflows share resource leases: concurrent reads are allowed; overlapping volume/Photos writers are exclusive. Parent/subfolder selections share a volume resource. Source/permission events queue during work. Deactivation saves without cancelling scans; sleep pauses. Quit prevents new work, awaits both workflows' tracked tasks and confirmed writers, captures the analysis tail and flushes. Failed critical saving cancels quit and exposes repair. Cancellation waits for worker completion before idle.
 - **Diagnostics:** current-session aggregates only. No filenames, paths, source ID hashes, media bytes, raw errors or account identifiers. Cache counters are observed values, not performance promises.
 
+File source boundaries use canonical relative paths, resolving existing ancestors before appending absent components. This handles macOS `/var` aliases and missing restore originals, permits identity-verified root rebasing, and rejects escaped symlink parents. Quarantine/restore use the same boundary rule.
+
 ## Injection and verification
 
 The model accepts a repository URL, source access coordinator, cleanup preflight, folder executor, shared operation owner and explicit in-memory test mode. Portable tests inject real file replacement, mutation and hard links. Restore tests inject changes before/after moves and cancellation via executor hooks. The Mac fixture uses temporary folders and production APIs on JPEGs. Apple-only results cannot be inferred from portable execution. PhotoKit permission and iCloud behavior remain native acceptance.

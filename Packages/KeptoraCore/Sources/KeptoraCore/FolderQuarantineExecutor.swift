@@ -34,7 +34,7 @@ public actor FolderQuarantineExecutor {
 
         for selection in selections {
             guard case .file(let originalURL) = selection.asset.reference,
-                  originalURL.resolvingSymlinksInPath().path.hasPrefix(root.resolvingSymlinksInPath().path + "/"),
+                  let relative = LibraryFileIdentity.relativePath(originalURL, root: root),
                   paths.insert(originalURL.standardizedFileURL.path).inserted else {
                 throw UniversalScanError.cleanupNotPermitted("Keptora blocked an item outside the selected source.")
             }
@@ -44,9 +44,9 @@ public actor FolderQuarantineExecutor {
             guard fresh.digest == selection.expectedDigest else {
                 throw UniversalScanError.cleanupNotPermitted("A selected file changed after review. Scan again before cleanup.")
             }
-            let relative = String(originalURL.standardizedFileURL.path.dropFirst(root.standardizedFileURL.path.count + 1))
             let destination = quarantineRoot.appendingPathComponent(relative)
-            guard !FileManager.default.fileExists(atPath: destination.path) else {
+            guard LibraryFileIdentity.relativePath(destination, root: root) != nil,
+                  !FileManager.default.fileExists(atPath: destination.path) else {
                 throw UniversalScanError.cleanupNotPermitted("Keptora blocked a quarantine name collision.")
             }
             operations.append(
@@ -162,13 +162,12 @@ public actor FolderQuarantineExecutor {
             throw UniversalScanError.cleanupNotPermitted(L10n.tr("Reconnect the original source before restoring these files."))
         }
         var pending: [FolderQuarantineOperation] = []
-        let root = record.sourceRoot.resolvingSymlinksInPath().path + "/"
         let quarantineRoot = record.sourceRoot.appendingPathComponent(".Keptora Quarantine")
-            .appendingPathComponent(record.id.uuidString).resolvingSymlinksInPath().path + "/"
+            .appendingPathComponent(record.id.uuidString)
         for operation in record.operations {
             try Task.checkCancellation()
-            guard operation.originalURL.resolvingSymlinksInPath().path.hasPrefix(root),
-                  operation.quarantineURL.resolvingSymlinksInPath().path.hasPrefix(quarantineRoot) else {
+            guard LibraryFileIdentity.relativePath(operation.originalURL, root: record.sourceRoot) != nil,
+                  LibraryFileIdentity.relativePath(operation.quarantineURL, root: quarantineRoot) != nil else {
                 throw UniversalScanError.cleanupNotPermitted("A recovery path is outside its original source.")
             }
             let inRecovery = FileManager.default.fileExists(atPath: operation.quarantineURL.path)

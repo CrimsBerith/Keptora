@@ -31,7 +31,7 @@
 
 ## Bu ortamda geçen kontroller
 
-- `swift test --package-path Packages/KeptoraCore`: **81 test, 0 hata**; önceki 69 teste 12 regresyon testi eklendi. Apple-only recovery/PhotoKit/AVFoundation/Vision testleri bu sayıya dahil değildir.
+- `swift test --package-path Packages/KeptoraCore`: **82 test, 0 hata**; önceki 69 teste 13 regresyon testi eklendi. Apple-only recovery/PhotoKit/AVFoundation/Vision testleri bu sayıya dahil değildir.
 - **141 Swift dosyası** parse kontrolü: 0 sözdizimi hatası. Parse, Apple SDK tip kontrolü yerine geçmez.
 - `Scripts/validate_mac_localization.py`: **661** sabit/haritalı anahtar EN/TR/FR/DE.
 - `Scripts/validate_project_references.py`: Swift kaynakları Xcode projesinde mevcut.
@@ -47,6 +47,8 @@ Toplam **40 katalog girdisi** eklendi/tamamlandı. Önceki katalog sırası ve d
 [Apple workflow](../../.github/workflows/apple-validation.yml), ortak Apple paketini, Mac/iPhone birim testlerini ve ürün UI testlerini çalıştıracak şekilde güncellendi. Bu turda 6 Apple recovery testi, 8 Mac model testi ve 2 Mac UI testi eklendi; mevcut Undo/Redo ve metin-editör testleri genişletildi. Linux'ta native testler çalıştırılmadı.
 
 Önceki [Actions çalışması](https://github.com/CrimsBerith/Keptora/actions/runs/37395882608) hesap ödeme/harcama limiti nedeniyle job başlamadan engellendi. Güncel push sonrası durum teslim mesajında ayrıca belirtilir; workflow hazırlığı başarılı native sonuç yerine gösterilmez.
+
+7 Ekim'de Apple runner başladı. İlk [çalışma](https://github.com/CrimsBerith/Keptora/actions/runs/37611135154) ortak Apple kodunu derledi; recovery testleri Mac yol alias'larının (`/var` / `/private/var`) ve artık mevcut olmayan özgün dosya yolunun tutarsız ele alındığını gösterdi. Kaynak sınırı/relative path kontrolü mevcut üst dizini çözerek eksik yol bileşenlerini ekler; taşınmış kökün dangling alias'ını da ele alır ve kaynak dışına giden symlink'i reddeder. Quarantine hedefi de aynı kaynak sınırına bağlandı. Gerçek dizin/symlink/eksik dosya/rebase regresyon testi 82 ortak teste dahildir. Native düzeltme sonrası sonuç teslimde ayrıca güncellenir.
 
 ## Kullanıcının Xcode/Mac/iPhone kabul sırası
 

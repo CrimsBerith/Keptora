@@ -114,11 +114,33 @@ public enum LibraryFileIdentity {
         return StableDigest.fnv1a64(canonical.path)
     }
     public static func relativePath(_ url: URL, root: URL) -> String? {
-        let prefix = root.standardizedFileURL.path + "/"
-        guard url.standardizedFileURL.path.hasPrefix(prefix) else { return nil }
-        let relative = String(url.standardizedFileURL.path.dropFirst(prefix.count))
+        guard let location = resolvedLocation(url), let source = resolvedLocation(root) else { return nil }
+        let prefix = source.path == "/" ? "/" : source.path + "/"
+        guard location.path.hasPrefix(prefix) else { return nil }
+        let relative = String(location.path.dropFirst(prefix.count))
         guard !relative.split(separator: "/").contains("..") else { return nil }
         return relative
+    }
+    /// Foundation may leave a missing leaf unresolved on macOS. Resolve the
+    /// nearest existing ancestor, then append absent components; also follow
+    /// dangling aliases so a recorded root can be rebased after its move.
+    private static func resolvedLocation(_ url: URL) -> URL? {
+        let files = FileManager.default
+        var cursor = url.standardizedFileURL
+        var suffix: [String] = []
+        var visited: Set<String> = []
+        while !files.fileExists(atPath: cursor.path) && cursor.path != "/" {
+            guard visited.insert(cursor.path).inserted else { return nil }
+            if let target = try? files.destinationOfSymbolicLink(atPath: cursor.path) {
+                cursor = (target.hasPrefix("/") ? URL(fileURLWithPath: target) :
+                    cursor.deletingLastPathComponent().appendingPathComponent(target)).standardizedFileURL
+            } else {
+                suffix.append(cursor.lastPathComponent); cursor = cursor.deletingLastPathComponent()
+            }
+        }
+        var result = cursor.resolvingSymlinksInPath()
+        for component in suffix.reversed() { result.appendPathComponent(component) }
+        return result.standardizedFileURL
     }
 }
 

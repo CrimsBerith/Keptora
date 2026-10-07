@@ -11,6 +11,31 @@ final class LibrarySessionInfrastructureTests: XCTestCase {
         .init(id: id, sourceID: "fixture", reference: .photoLibrary(localIdentifier: id), displayName: id,
               mediaKind: .image, byteCount: bytes, creationDate: date, isFavorite: favorite)
     }
+    func testCanonicalRelativePathsHandleAliasesMissingLeavesAndRejectEscapedParents() throws {
+        let base = try root(), files = FileManager.default
+        defer { try? files.removeItem(at: base) }
+        let originalRoot = base.appendingPathComponent("Before"), alias = base.appendingPathComponent("Alias")
+        let renamed = base.appendingPathComponent("After"), outside = base.appendingPathComponent("Outside")
+        try files.createDirectory(at: originalRoot.appendingPathComponent("nested"), withIntermediateDirectories: true)
+        try files.createDirectory(at: outside, withIntermediateDirectories: true)
+        try files.createSymbolicLink(at: alias, withDestinationURL: originalRoot)
+        let photo = originalRoot.appendingPathComponent("nested/photo.jpg")
+        XCTAssertEqual(LibraryFileIdentity.relativePath(photo, root: alias), "nested/photo.jpg")
+        try Data("photo".utf8).write(to: photo)
+        XCTAssertEqual(LibraryFileIdentity.relativePath(photo, root: alias), "nested/photo.jpg")
+        try files.removeItem(at: photo)
+        XCTAssertEqual(LibraryFileIdentity.relativePath(photo, root: alias), "nested/photo.jpg")
+        let id = UUID()
+        let record = FolderQuarantineRecord(id: id, sourceRoot: alias, operations: [.init(
+            originalURL: photo, quarantineURL: originalRoot.appendingPathComponent(".Keptora Quarantine/\(id.uuidString)/nested/photo.jpg"), expectedDigest: "hash")])
+        try files.moveItem(at: originalRoot, to: renamed)
+        let rebased = try record.rebased(to: renamed)
+        XCTAssertEqual(rebased.operations[0].originalURL, renamed.appendingPathComponent("nested/photo.jpg"))
+        let escape = renamed.appendingPathComponent("escape")
+        try files.createSymbolicLink(at: escape, withDestinationURL: outside)
+        XCTAssertNil(LibraryFileIdentity.relativePath(escape.appendingPathComponent("missing/photo.jpg"), root: renamed))
+        XCTAssertNil(LibraryFileIdentity.relativePath(outside.appendingPathComponent("photo.jpg"), root: renamed))
+    }
     func testSettingsSnapshotReadsExistingKeysAndNormalizesExclusions() throws {
         let name = UUID().uuidString, defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
