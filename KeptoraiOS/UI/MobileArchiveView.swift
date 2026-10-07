@@ -438,13 +438,19 @@ struct MobileLibraryView: View {
     }
 
     private func selectionThumbnail(_ asset: UniversalMediaAsset, selected: Bool, keeperLabel: String?) -> some View {
-        ZStack(alignment: .bottomTrailing) {
-            MobileAssetThumbnail(asset: asset, showsRetryButton: false).aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
-                .overlay(selected ? Color.black.opacity(0.28) : .clear)
-                .allowsHitTesting(false)
-            thumbnailBadges(asset, keeperLabel: keeperLabel).allowsHitTesting(false)
-            thumbnailSelectionIndicator(asset, selected: selected).allowsHitTesting(false)
+        GeometryReader { geometry in
+            ZStack(alignment: .bottomTrailing) {
+                MobileAssetThumbnail(asset: asset, showsRetryButton: false)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .accessibilityHidden(true)
+                    .overlay(selected ? Color.black.opacity(0.28) : .clear)
+                    .allowsHitTesting(false)
+                thumbnailBadges(asset, keeperLabel: keeperLabel).allowsHitTesting(false)
+                thumbnailSelectionIndicator(asset, selected: selected).allowsHitTesting(false)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .aspectRatio(1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? MobileKeptoraDesign.accent : .clear, lineWidth: 3))
     }
