@@ -36,6 +36,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            MacSessionHealthBanner()
             KeptoraReleaseLinks()
             Section("Scanning") {
                 Stepper("Checkpoint every \(checkpointInterval) assets", value: $checkpointInterval, in: 25...500, step: 25)
@@ -126,15 +127,20 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .accessibilityIdentifier("mac.page.settings")
         .task { await store.refresh() }
+        .onDisappear { if archive.presentationOwner == .settings { archive.closePresentation() } }
+        .sheet(isPresented: store.paywallBinding(for: .settings)) { PaywallView().environmentObject(store) }
+        .alert("Something went wrong", isPresented: archive.errorBinding(for: .settings)) {
+            Button("OK", role: .cancel) { archive.error = nil; archive.closePresentation() }
+        } message: { Text(archive.error ?? "") }
     }
     @ViewBuilder private var purchaseActions: some View {
-        Button("View Keptora Pro") { store.presentPaywall(.settings) }
+        Button("View Keptora Pro") { store.presentPaywall(.settings, host: .settings) }
             .buttonStyle(.borderedProminent).tint(KeptoraDesign.accent).accessibilityIdentifier("mac.settings.showPaywall")
         Button("Restore Purchases") { Task { await store.restorePurchases() } }.disabled(store.isWorking)
     }
     @ViewBuilder private var privacyActions: some View {
         Button("Show Welcome Tour") { openWindow(id: "main"); model.showOnboarding() }.accessibilityIdentifier("mac.settings.showOnboarding")
-        Button("Export Diagnostics…") { archive.exportDiagnostics() }
+        Button("Export Diagnostics…") { archive.presentationOwner = .settings; archive.exportDiagnostics(); if archive.error == nil { archive.closePresentation() } }
     }
 }
 

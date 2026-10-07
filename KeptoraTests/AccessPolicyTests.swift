@@ -12,7 +12,7 @@ final class AccessPolicyTests: XCTestCase {
             if let saved { UserDefaults.standard.set(saved, forKey: key) }
             else { UserDefaults.standard.removeObject(forKey: key) }
         }
-        let archive = MacArchiveModel()
+        let archive = MacArchiveModel(persistentSession: false)
         let first = LibrarySource(id: "first", kind: .folder, displayName: "Pictures")
         let second = LibrarySource(id: "second", kind: .fileProvider, displayName: "Cloud")
         archive.connectedFolders = [first, second]
@@ -24,7 +24,7 @@ final class AccessPolicyTests: XCTestCase {
         XCTAssertEqual(archive.sourceSelectionState, .some)
         XCTAssertEqual(archive.scopedAssets.map(\.id), [second.id])
         XCTAssertEqual(archive.selected.map(\.id), [first.id])
-        XCTAssertEqual(MacArchiveModel().scanSourceSelection.excludedIDs, [first.id])
+        XCTAssertEqual(MacArchiveModel(persistentSession: false).scanSourceSelection.excludedIDs, [first.id])
         archive.toggleAllScanSources()
         XCTAssertEqual(archive.sourceSelectionState, .all)
         archive.toggleAllScanSources()

@@ -90,6 +90,7 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
     public let duration: TimeInterval?
     public let creationDate: Date?
     public let modificationDate: Date?
+    public let fileRevision: LibraryFileRevision?
     public let isFavorite: Bool
     public let isHidden: Bool
     public let hasAdjustments: Bool
@@ -116,7 +117,8 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         isSharedLibraryAsset: Bool = false,
         hasAlbumMembership: Bool = false,
         requiresNetwork: Bool = false,
-        context: MediaContext? = nil
+        context: MediaContext? = nil,
+        fileRevision: LibraryFileRevision? = nil
     ) {
         self.id = id
         self.sourceID = sourceID
@@ -136,6 +138,7 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         self.hasAlbumMembership = hasAlbumMembership
         self.requiresNetwork = requiresNetwork
         self.context = context
+        self.fileRevision = fileRevision
     }
 
     public var isProtectedFromGlobalSelection: Bool {
@@ -143,6 +146,7 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
     }
 
     public func with(
+        id: String? = nil,
         sourceID: String? = nil,
         reference: MediaAssetReference? = nil,
         displayName: String? = nil,
@@ -159,10 +163,11 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         isSharedLibraryAsset: Bool? = nil,
         hasAlbumMembership: Bool? = nil,
         requiresNetwork: Bool? = nil,
-        context: MediaContext?? = nil
+        context: MediaContext?? = nil,
+        fileRevision: LibraryFileRevision?? = nil
     ) -> UniversalMediaAsset {
         UniversalMediaAsset(
-            id: self.id,
+            id: id ?? self.id,
             sourceID: sourceID ?? self.sourceID,
             reference: reference ?? self.reference,
             displayName: displayName ?? self.displayName,
@@ -179,7 +184,8 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
             isSharedLibraryAsset: isSharedLibraryAsset ?? self.isSharedLibraryAsset,
             hasAlbumMembership: hasAlbumMembership ?? self.hasAlbumMembership,
             requiresNetwork: requiresNetwork ?? self.requiresNetwork,
-            context: context != nil ? context! : self.context
+            context: context != nil ? context! : self.context,
+            fileRevision: fileRevision != nil ? fileRevision! : self.fileRevision
         )
     }
 }
@@ -339,6 +345,7 @@ public protocol SourceAdapter: Sendable {
     func authorizationStatus() async -> SourceAuthorization
     func requestAuthorization() async -> SourceAuthorization
     func enumerateAssets() async throws -> [UniversalMediaAsset]
+    func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset]
     func exactFingerprint(
         for asset: UniversalMediaAsset,
         allowNetwork: Bool,
@@ -349,6 +356,10 @@ public protocol SourceAdapter: Sendable {
 }
 
 extension SourceAdapter {
+    public func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset] {
+        try await control?.waitIfPaused()
+        let items = try await enumerateAssets(); await onBatch(items); return items
+    }
     public func enumerationWarnings() async -> [String] { [] }
     public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
         asset.byteCount

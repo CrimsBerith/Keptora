@@ -1,5 +1,8 @@
 import Foundation
 import CryptoKit
+#if !os(Linux)
+import KeptoraCore
+#endif
 
 enum CleanupPlanState: String, Codable, Sendable {
     case draft
@@ -12,13 +15,13 @@ enum CleanupPlanState: String, Codable, Sendable {
 
     var label: String {
         switch self {
-        case .draft: return String(localized: "Draft")
-        case .committing: return String(localized: "Committing")
-        case .committed: return String(localized: "Quarantined")
-        case .partiallyCommitted: return String(localized: "Partially quarantined")
-        case .restored: return String(localized: "Restored")
-        case .partiallyRestored: return String(localized: "Partially restored")
-        case .failed: return String(localized: "Needs attention")
+        case .draft: return ReviewText.tr("Draft")
+        case .committing: return ReviewText.tr("Committing")
+        case .committed: return ReviewText.tr("Quarantined")
+        case .partiallyCommitted: return ReviewText.tr("Partially quarantined")
+        case .restored: return ReviewText.tr("Restored")
+        case .partiallyRestored: return ReviewText.tr("Partially restored")
+        case .failed: return ReviewText.tr("Needs attention")
         }
     }
 }
@@ -127,9 +130,9 @@ struct CleanupOperationPreview: Identifiable, Hashable, Codable, Sendable {
     var decisionReasonLabel: String? {
         guard let decisionReasonCode else { return nil }
         switch decisionReasonCode {
-        case "user-added-to-plan": return "Added by user"
-        case "user-batch-added-exact-extras": return "Batch-added exact extra"
-        default: return decisionReasonCode.replacingOccurrences(of: "-", with: " ").capitalized
+        case "user-added-to-plan": return ReviewText.tr("Added to the Safety Plan by you")
+        case "user-batch-added-exact-extras": return ReviewText.tr("Extra copies added together")
+        default: return ReviewText.tr("Review decision recorded")
         }
     }
 }
@@ -144,9 +147,9 @@ enum SafetyPlanFreshnessState: String, Codable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        case .current: return String(localized: "Current")
-        case .stale: return String(localized: "Stale — regenerate")
-        case .legacy: return String(localized: "Legacy — regenerate")
+        case .current: return ReviewText.tr("Current")
+        case .stale: return ReviewText.tr("Stale — regenerate")
+        case .legacy: return ReviewText.tr("Legacy — regenerate")
         }
     }
 }
@@ -481,12 +484,12 @@ enum RestoreOperationReadiness: String, Codable, Sendable {
 
     var label: String {
         switch self {
-        case .ready: return String(localized: "Ready to restore")
-        case .originalOccupied: return String(localized: "Original path occupied")
-        case .quarantineMissing: return String(localized: "Quarantine file missing")
-        case .contentChanged: return String(localized: "Quarantine content changed")
-        case .alreadyRestored: return String(localized: "Already restored")
-        case .notQuarantined: return String(localized: "Not eligible")
+        case .ready: return ReviewText.tr("Ready to restore")
+        case .originalOccupied: return ReviewText.tr("Original path occupied")
+        case .quarantineMissing: return ReviewText.tr("Quarantine file missing")
+        case .contentChanged: return ReviewText.tr("Quarantine content changed")
+        case .alreadyRestored: return ReviewText.tr("Already restored")
+        case .notQuarantined: return ReviewText.tr("Not eligible")
         }
     }
 
@@ -528,9 +531,9 @@ enum QuarantineVerificationPhase: String, Codable, Hashable, Sendable {
 
     var localizedLabel: String {
         switch self {
-        case .postCommit: return String(localized: "Post-commit")
-        case .manualReview: return String(localized: "Manual review")
-        case .postRestore: return String(localized: "Post-restore")
+        case .postCommit: return ReviewText.tr("Post-commit")
+        case .manualReview: return ReviewText.tr("Manual review")
+        case .postRestore: return ReviewText.tr("Post-restore")
         }
     }
 }
@@ -541,8 +544,8 @@ enum QuarantineVerificationState: String, Codable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        case .verified: return String(localized: "Verified against manifest")
-        case .reviewRequired: return String(localized: "Review required")
+        case .verified: return ReviewText.tr("Verified against manifest")
+        case .reviewRequired: return ReviewText.tr("Review required")
         }
     }
 }
@@ -748,10 +751,10 @@ enum QuarantineDecisionReconciliationState: String, Codable, CaseIterable, Hasha
 
     var localizedLabel: String {
         switch self {
-        case .current: return String(localized: "Current")
-        case .reverifyRequired: return String(localized: "Reverification required")
-        case .stale: return String(localized: "Stale")
-        case .superseded: return String(localized: "Superseded")
+        case .current: return ReviewText.tr("Current")
+        case .reverifyRequired: return ReviewText.tr("Reverification required")
+        case .stale: return ReviewText.tr("Stale")
+        case .superseded: return ReviewText.tr("Superseded")
         }
     }
 }

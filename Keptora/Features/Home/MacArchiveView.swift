@@ -71,12 +71,14 @@ struct MacSourceSetupView: View {
     @EnvironmentObject private var archive: MacArchiveModel
     @Environment(\.dismiss) private var dismiss
     @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
-    private var controlsDisabled: Bool { archive.busy || archive.analyzing || archive.loading || archive.isRequestingPhotosAccess }
+    private var controlsDisabled: Bool { archive.sourceControlsDisabled }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    MacSessionHealthBanner()
+                    Group {
                     Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
                         .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
                     Text("Connect your library").font(.title.bold())
@@ -108,7 +110,9 @@ struct MacSourceSetupView: View {
                             Label("Files & cloud folders", systemImage: "folder.badge.plus").font(.headline)
                             Text("Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable.")
                             Text("Cloud providers may download files according to their own settings.").font(.callout).foregroundStyle(.secondary)
-                            ForEach(archive.connectedFolders) { folder in Label(folder.displayName, systemImage: "checkmark.circle") }
+                            ForEach(archive.connectedFolders) { folder in
+                                HStack { Label(folder.displayName, systemImage: "checkmark.circle"); Spacer(); Button("Disconnect") { archive.disconnectFolder(folder.id) } }
+                            }
                             Button { archive.chooseFolder() } label: { Text("Add Folders…").frame(minHeight: 32) }
                                 .accessibilityIdentifier("mac.sourceSetup.folders")
                         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -116,7 +120,8 @@ struct MacSourceSetupView: View {
                     Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.callout).foregroundStyle(.secondary)
                     Text("You can continue without access and add sources later.").font(.callout).foregroundStyle(.secondary)
                     ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).foregroundStyle(.orange) }
-                }.padding(24).disabled(controlsDisabled)
+                    }.disabled(controlsDisabled)
+                }.padding(24)
             }
             Divider()
             HStack {
@@ -133,12 +138,14 @@ struct MacSourceSetupView: View {
         .frame(minWidth: 480, idealWidth: 650, maxWidth: 800, minHeight: 480, idealHeight: 600, maxHeight: 800)
         .accessibilityIdentifier("mac.sourceSetup")
         .interactiveDismissDisabled(isStartupSetup)
+        .onAppear { archive.presentationOwner = .sources }
+        .onDisappear { archive.closePresentation() }
         .task {
             if isStartupSetup, LibraryAccessPolicy.shouldRequestPhotosAtStartup(archive.authorization) {
                 await archive.requestPhotosAccess(showError: false)
             }
         }
-        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
+        .alert("Something went wrong", isPresented: archive.errorBinding(for: .sources)) {
             Button("OK", role: .cancel) { archive.error = nil }
         } message: { Text(archive.error ?? "") }
     }
@@ -177,27 +184,27 @@ struct MacArchiveView: View {
     private func contextBinding<Value>(_ key: WritableKeyPath<MacGalleryContext, Value>) -> Binding<Value> {
         Binding(get: { archive.galleryContext[keyPath: key] }, set: { archive.galleryContext[keyPath: key] = $0; archive.contextChanged() })
     }
-    private var orderedVisible: [UniversalMediaAsset] {
-        smartOrder ? LibraryReviewBlock.make(assets: visible, groups: archive.reviewGroups, quality: archive.qualityAssessments, smart: true).flatMap(\.assets) : visible
+    private var orderedVisible: [UniversalMediaAsset] { archive.gallery.ordered }
+    private var visible: [UniversalMediaAsset] { archive.gallery.visible }
+    private var qualityFilter: LibraryQualityFilter { archive.galleryContext.quality ?? .all }
+    private var qualityBinding: Binding<LibraryQualityFilter> {
+        Binding(get: { qualityFilter }, set: { archive.galleryContext.quality = $0; archive.contextChanged() })
     }
-    private var visible: [UniversalMediaAsset] {
-        let findingIDs = finding.ids(groups: archive.reviewGroups, quality: archive.qualityAssessments)
-        return archive.scopedAssets.filter { item in
-            (findingIDs == nil || findingIDs!.contains(item.id)) &&
-            (media == 0 || (media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
-            (albumID.isEmpty || item.context?.albums.contains { $0.id == albumID } == true) &&
-            (search.isEmpty || item.displayName.localizedCaseInsensitiveContains(search))
-        }.sorted { ($0.context?.captureDate ?? $0.creationDate ?? .distantPast) > ($1.context?.captureDate ?? $1.creationDate ?? .distantPast) }
-    }
+    @FocusState private var searchFocused: Bool
+    @State private var restoredPosition = false
     var body: some View {
         VStack(spacing: 0) {
+            fixedControls
+            Divider()
             ScrollViewReader { proxy in
                 ScrollView { catalogueContent }.coordinateSpace(name: "mac-gallery")
                     .background(GeometryReader { geometry in
                         Color.clear.onAppear { galleryColumns = max(1, Int((geometry.size.width - 28) / 172)) }
                             .onChange(of: geometry.size.width) { width in galleryColumns = max(1, Int((width - 28) / 172)) }
                     })
-                    .onAppear { if let id = archive.scrollAnchorID { proxy.scrollTo(id, anchor: .center) }; keyboardFocus = archive.focusedAssetID }
+                    .onAppear { restorePosition(proxy) }
+                    .onChange(of: archive.loading) { loading in if !loading { restorePosition(proxy) } }
+                    .onChange(of: archive.assets.count) { _ in restorePosition(proxy) }
                     .onPreferenceChange(MacGalleryPositions.self) { positions in
                         if let first = positions.filter({ $0.value >= 0 }).min(by: { $0.value < $1.value }), archive.scrollAnchorID != first.key {
                             archive.recordScrollAnchor(first.key)
@@ -205,12 +212,12 @@ struct MacArchiveView: View {
                     }
                     .onChange(of: keyboardFocus) { id in archive.recordFocus(id); if let id { proxy.scrollTo(id, anchor: .center) } }
             }
-            if !archive.selection.isEmpty || archive.canUndoSelection {
+            if !archive.selection.isEmpty || archive.canUndoSelection || archive.canRedoSelection {
                 Divider()
                 VStack(alignment: .leading, spacing: 12) {
                     let summary = MediaSelectionSummary(archive.selected)
                     VStack(alignment: .leading) {
-                        Text(String(format: L10n.tr("Selected items: %lld"), archive.selection.count)).font(.headline)
+                        Text(String(format: L10n.tr("Selected items: %lld"), archive.selection.count)).font(.headline).accessibilityIdentifier("mac.archive.selectionCount")
                         Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.headline)
                         Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file) + " · " + L10n.tr("Media size, not freed space")).font(.caption).foregroundStyle(.secondary)
                         if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption).foregroundStyle(.secondary) }
@@ -224,7 +231,8 @@ struct MacArchiveView: View {
         }
         .controlSize(.large)
         .background(KeptoraDesign.canvas)
-        .background(MacGalleryKeyboardMonitor { archive.selectItems(visible) })
+        .background(MacGalleryKeyboardMonitor(selectAll: { archive.selectItems(visible) }, find: { searchFocused = true },
+            undo: { archive.undoSelection() }, redo: { archive.redoSelection() }))
         .accessibilityIdentifier("mac.page.archive")
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
         .sheet(item: $inspected) { item in
@@ -246,50 +254,30 @@ struct MacArchiveView: View {
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
         .onChange(of: archive.scanSourceSelection) { _ in finding = .all; albumID = ""; media = 0; search = "" }
     }
+    private var fixedControls: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
+                .padding(.horizontal, 16).padding(.top, 10)
+            filters
+            if let message = archive.filterScopeMessage {
+                HStack(alignment: .top) {
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                    Button { archive.filterScopeMessage = nil } label: { Image(systemName: "xmark.circle").frame(width: 32, height: 32) }.help("Dismiss")
+                }.padding(.horizontal, 16)
+            }
+            if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(.orange).padding(.horizontal, 16) }
+            if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
+                Button("Some sources have limited access. Manage Sources") { showAccessGuide = true }.font(.caption).padding(.bottom, 8)
+            }
+        }
+    }
+    private func restorePosition(_ proxy: ScrollViewProxy) {
+        guard !restoredPosition, !archive.loading, !archive.assets.isEmpty else { return }
+        if let id = archive.scrollAnchorID, visible.contains(where: { $0.id == id }) { proxy.scrollTo(id, anchor: .center) }
+        keyboardFocus = archive.focusedAssetID; restoredPosition = true
+    }
     private var catalogueContent: some View {
         VStack(spacing: 0) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
-                VStack(alignment: .leading, spacing: 12) { headerSummary; headerActions }
-            }.padding(20).disabled(archive.busy || archive.analyzing)
-            if !archive.connectedSources.isEmpty {
-                Button { showAccessGuide = true } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label("Sources", systemImage: "checklist")
-                            Text(archive.connectedSources.filter { archive.selectedSourceIDs.contains($0.id) }.map(\.localizedScanTitle).joined(separator: " · "))
-                                .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                        }
-                        Spacer(); Text(L10n.format("%lld selected", archive.selectedSourceIDs.count)); Image(systemName: "chevron.right")
-                    }.frame(minHeight: 44).contentShape(Rectangle())
-                }.padding(.horizontal, 20).padding(.bottom, 12).accessibilityIdentifier("mac.archive.sourcesSummary")
-            }
-            DisclosureGroup("Source Access") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Photos includes iCloud Photos. Files includes the folders you connect.").font(.callout).foregroundStyle(.secondary)
-                    Text("Cloud providers may download files according to their own settings.").font(.caption).foregroundStyle(.secondary)
-                    Button("Permissions & Sources") { showAccessGuide = true }
-                    ForEach(archive.coverage) { report in
-                        HStack {
-                            Label(report.source.localizedScanTitle, systemImage: report.error == nil ? "checkmark.circle" : "exclamationmark.triangle")
-                            Spacer(); Text(report.itemCount.formatted())
-                        }.font(.callout)
-                        if report.error != nil { Text("Some items in this source are unavailable. Reconnect or check access.").font(.caption).foregroundStyle(.orange) }
-                    }
-                    ForEach(archive.connectedFolders) { folder in
-                        ViewThatFits(in: .horizontal) {
-                            HStack(spacing: 12) { folderControls(folder) }
-                            VStack(alignment: .leading, spacing: 8) { folderControls(folder) }
-                        }
-                    }
-                    ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).font(.caption).foregroundStyle(.orange) }
-                }
-            }.padding(.horizontal, 20).padding(.bottom, 12).disabled(archive.busy || archive.loading || archive.analyzing)
-            if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
-                Label("Some sources have limited access. Check Source Access.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange).padding(12)
-                Button("Manage Source Access") { showAccessGuide = true }.buttonStyle(.bordered).padding(.bottom, 12)
-            }
-            Divider()
             if archive.assets.isEmpty && !archive.loading {
                 VStack(spacing: 16) {
                     Image("onboarding_privacy").resizable().scaledToFit().frame(maxWidth: 520).clipShape(RoundedRectangle(cornerRadius: 22)).accessibilityHidden(true)
@@ -297,7 +285,6 @@ struct MacArchiveView: View {
                     Text("Open Photos or a folder. Select any photo or video without waiting for duplicate analysis.").foregroundStyle(.secondary)
                 }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                filters
                 if archive.loading { ProgressView("Loading your library…").padding() }
                 if archive.selectedSourceIDs.isEmpty {
                     Text("Select at least one source").font(.headline).padding()
@@ -314,20 +301,27 @@ struct MacArchiveView: View {
                 if archive.skippedCloudItems > 0 {
                     Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
-                ViewThatFits(in: .horizontal) {
-                    findingPicker.pickerStyle(.segmented)
-                    findingPicker.pickerStyle(.menu)
-                }.frame(maxWidth: 640).padding(12)
                 if finding == .copies { exactBatchSelection.padding(.horizontal, 20) }
                 if archive.sessionProgress.isFinished && !archive.sessionProgress.isComplete && !archive.sessionProgress.stages.values.contains(where: { $0.status == .cancelled }) {
                     Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption).padding(.horizontal, 20)
                 }
-                if !archive.analysisIssues.isEmpty {
+                if !archive.analysisIssues.isEmpty || !archive.analysisFailures.isEmpty {
                     DisclosureGroup("Items needing attention") {
                         ForEach(AnalysisIssueReason.allCases, id: \.rawValue) { reason in
                             let count = Set(archive.analysisIssues.filter { $0.reason == reason }.map(\.assetID)).count
                             if count > 0 { HStack { Text(LocalizedStringKey(reason.titleKey)); Spacer(); Text(count.formatted()) } }
                         }
+                        ForEach(AnalysisStage.allCases, id: \.rawValue) { stage in
+                            if let failure = archive.analysisFailures[stage] {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(LocalizedStringKey(stage.titleKey)).font(.caption.bold())
+                                    Text(failure).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                                }
+                            }
+                        }
+                        Button("Show Items with Problems") { archive.openFinding(quality: .issues) }
+                        Button("Check Source Access") { showAccessGuide = true }
+                        if archive.skippedCloudItems > 0 { Button("Include Cloud Originals") { cloudScan = true } }
                     }.padding(.horizontal, 20)
                 }
                 VStack(spacing: 0) {
@@ -343,13 +337,13 @@ struct MacArchiveView: View {
                         }
                     }
                     if smartOrder {
-                        let candidatesByGroup = archive.decisions.candidatesByGroup(archive.reviewGroups)
+                        let candidatesByGroup = archive.gallery.candidates
                         let visibleIDs = Set(visible.map(\.id))
-                        let blocks = LibraryReviewBlock.make(assets: visible, groups: archive.reviewGroups, quality: archive.qualityAssessments, smart: true)
+                        let blocks = archive.gallery.blocks
                         LazyVStack(alignment: .leading, spacing: 16) {
                             ForEach(blocks) { block in
-                                let membership = block.groupsByAsset
-                                let keeperBadges = archive.decisions.keeperBadgeKeys(in: block.groups)
+                                let membership = archive.gallery.membership
+                                let keeperBadges = archive.gallery.keeperBadges
                                 Text(LocalizedStringKey(block.titleKey)).font(.headline)
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
                                     ForEach(block.assets) { item in archiveCell(item, groups: membership[item.id] ?? [], keeperBadge: keeperBadges[item.id]) }
@@ -362,7 +356,7 @@ struct MacArchiveView: View {
                     } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
                         ForEach(visible) { item in
-                            archiveCell(item)
+                            archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
                         }
                     }.padding(20)
                     }
@@ -377,10 +371,6 @@ struct MacArchiveView: View {
             Text(archive.sourceSelectionState == .all ? LocalizedStringKey("All Connected Sources") : LocalizedStringKey("Selected Sources")).foregroundStyle(.secondary)
         }
     }
-    @ViewBuilder private func folderControls(_ folder: LibrarySource) -> some View {
-        Text(folder.displayName)
-        Button("Disconnect") { archive.disconnectFolder(folder.id) }
-    }
     private var findingPicker: some View {
         Picker("Library view", selection: contextBinding(\.finding)) {
             ForEach(LibraryFindingFilter.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
@@ -393,10 +383,14 @@ struct MacArchiveView: View {
         }
     }
     @ViewBuilder private var headerButtons: some View {
-        Button { archive.connectPhotos() } label: { Text(archive.photosConnected ? LocalizedStringKey("Photos Connected") : LocalizedStringKey("Connect Photos")) }
-        Button("Add Folders…") { archive.chooseFolder() }
+        Button { showAccessGuide = true } label: {
+            HStack(spacing: 8) {
+                Label("Sources", systemImage: "checklist")
+                Text(L10n.format("%lld selected", archive.selectedSourceIDs.count)).monospacedDigit()
+            }
+        }.accessibilityIdentifier("mac.archive.sourcesSummary").disabled(archive.busy)
         Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise").frame(width: 32, height: 32).contentShape(Rectangle()) }
-            .help("Refresh Library").accessibilityLabel("Refresh Library")
+            .help("Refresh Library").accessibilityLabel("Refresh Library").disabled(archive.sourceControlsDisabled)
     }
     private var selectionActions: some View {
         ViewThatFits(in: .horizontal) {
@@ -412,9 +406,14 @@ struct MacArchiveView: View {
     }
     @ViewBuilder private var secondarySelectionButtons: some View {
         if archive.canUndoSelection {
-            Button("Undo Selection") { archive.undoSelection() }.accessibilityIdentifier("mac.archive.undoSelection")
+            Button { archive.undoSelection() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 32, height: 32) }
+                .help("Undo Selection").accessibilityLabel("Undo Selection").accessibilityIdentifier("mac.archive.undoSelection")
         }
-        Button("Clear All Selections") { archive.setSelection([]) }.disabled(archive.selection.isEmpty)
+        if archive.canRedoSelection {
+            Button { archive.redoSelection() } label: { Image(systemName: "arrow.uturn.forward").frame(width: 32, height: 32) }
+                .help("Redo Selection").accessibilityLabel("Redo Selection").accessibilityIdentifier("mac.archive.redoSelection")
+        }
+        Menu("Selection") { Button("Clear All Selections") { archive.setSelection([]) }.disabled(archive.selection.isEmpty) }
     }
     private var reviewSelectionButton: some View {
         Button { showPlan = true } label: { Text(L10n.format("Review Selection (%lld)", archive.selection.count)).frame(minHeight: 32) }
@@ -440,7 +439,7 @@ struct MacArchiveView: View {
         let remaining = candidates.filter { !archive.selection.contains($0.id) }.count
         return VStack(alignment: .leading, spacing: 4) {
             Text(L10n.format("%@ · %lld items", L10n.tr(String.LocalizationValue(group.titleKey)), itemCount)).font(.caption.weight(.semibold))
-            Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments))).font(.caption).foregroundStyle(.secondary)
+            Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments, configuration: archive.analysisConfiguration))).font(.caption).foregroundStyle(.secondary)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { groupButtons(group, candidates: candidates, remaining: remaining) }
                 VStack(alignment: .leading, spacing: 8) { groupButtons(group, candidates: candidates, remaining: remaining) }
@@ -473,7 +472,7 @@ struct MacArchiveView: View {
         }
         keyboardFocus = next.id
     }
-    private func resetFilters() { media = 0; albumID = ""; search = ""; finding = .all; smartOrder = true }
+    private func resetFilters() { media = 0; albumID = ""; search = ""; finding = .all; smartOrder = true; archive.galleryContext.quality = .all; archive.filterScopeMessage = nil }
     private func archiveCell(_ item: UniversalMediaAsset, groups: [LibraryReviewGroup] = [], keeperBadge: String? = nil) -> some View {
         let selected = archive.selection.contains(item.id)
         let kept = !selected && keeperBadge != nil
@@ -487,7 +486,7 @@ struct MacArchiveView: View {
                                             Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources)).font(.caption.weight(.semibold)).lineLimit(1)
                                                 .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6)
                                         }.overlay(alignment: .bottomTrailing) {
-                                            Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
+                                            Image(systemName: archive.decisions.protectedIDs.contains(item.id) ? "lock.fill" : (selected ? "checkmark.circle.fill" : "circle")).font(.title2)
                                                 .foregroundStyle(selected ? KeptoraDesign.accent : .white).padding(8)
                                         }
                                 }.buttonStyle(.plain).accessibilityLabel(item.displayName + ", " + archive.sourceLabel(item))
@@ -504,6 +503,10 @@ struct MacArchiveView: View {
                                 if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
                                 if let value = archive.qualityAssessments[item.id]?.findings.first { Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(.secondary) }
                                 if archive.decisions.protectedIDs.contains(item.id) { Label("Protected", systemImage: "lock.fill").font(.caption) }
+                                if let issue = archive.gallery.issuesByAsset[item.id] {
+                                    Label(LocalizedStringKey(issue.reason.titleKey), systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
+                                }
+                                if !groups.isEmpty { Text(groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }
                                 if kept { Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
                                 if let findings = archive.qualityAssessments[item.id]?.findings, findings.count > 1 {
                                     Menu {
@@ -520,58 +523,75 @@ struct MacArchiveView: View {
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(archive.selection.contains(item.id) ? KeptoraDesign.accent : .clear, lineWidth: 2))
                             .id(item.id)
                             .background(GeometryReader { geometry in Color.clear.preference(key: MacGalleryPositions.self, value: [item.id: geometry.frame(in: .named("mac-gallery")).minY]) })
-                            .contextMenu { if case .file(let url) = item.reference { Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }; Button(selected ? "Deselect" : "Select") { archive.toggleSelection(item) }; Button("Preview") { inspected = item }; Button(archive.decisions.protectedIDs.contains(item.id) ? "Unprotect Photo" : "Protect Photo") { archive.toggleProtection(item) } }
+                            .contextMenu {
+                                if case .file(let url) = item.reference { Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }
+                                if archive.decisions.protectedIDs.contains(item.id) { Button("Unprotect and Select") { archive.unprotectAndSelect(item) } }
+                                else { Button(selected ? "Deselect" : "Select") { archive.toggleSelection(item) } }
+                                Button("Preview") { inspected = item }
+                                Button(archive.decisions.protectedIDs.contains(item.id) ? "Unprotect Photo" : "Protect Photo") { archive.toggleProtection(item) }
+                                if archive.gallery.issuesByAsset[item.id] != nil {
+                                    Button("Check Source Access") { showAccessGuide = true }
+                                    if item.requiresNetwork { Button("Include Cloud Originals") { cloudScan = true } }
+                                    else { Button("Retry Scan") { archive.analyze() }.disabled(!archive.canScanSelectedSources) }
+                                }
+                            }
     }
     private var filters: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { filterControls }
-                VStack(alignment: .leading, spacing: 8) { filterControls }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                TextField("Search filenames", text: contextBinding(\.search)).textFieldStyle(.roundedBorder).focused($searchFocused).frame(minWidth: 120)
+                Menu("Filters") {
+                    Picker("Media type", selection: contextBinding(\.media)) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }
+                    Picker("Album", selection: contextBinding(\.albumID)) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }
+                    Picker("Quality", selection: qualityBinding) {
+                        ForEach(LibraryQualityFilter.allCases) { filter in
+                            Text(L10n.format("%@ (%lld)", L10n.tr(String.LocalizationValue(filter.titleKey)), archive.gallery.qualityCounts[filter] ?? 0)).tag(filter)
+                        }
+                    }
+                }.accessibilityIdentifier("mac.archive.filters")
             }
-            if finding != .all || media != 0 || !albumID.isEmpty || !search.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
-                    if finding != .all { filterChip(L10n.tr(String.LocalizationValue(finding.titleKey)), id: "finding") { finding = .all } }
-                    if media != 0 { filterChip(L10n.tr(media == 1 ? "Photos" : "Videos"), id: "media") { media = 0 } }
-                    if !albumID.isEmpty { filterChip(archive.albums.first { $0.id == albumID }?.title ?? L10n.tr("Album"), id: "album") { albumID = "" } }
-                    if !search.isEmpty { filterChip(L10n.format("Search: %@", search), id: "search") { search = "" } }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { findingPicker.pickerStyle(.segmented); scanControls }
+                HStack(spacing: 12) { findingPicker.pickerStyle(.menu); Spacer(minLength: 8); scanControls }
+            }
+            HStack(spacing: 12) {
+                Text(L10n.format("In this list: %lld items", visible.count)).font(.subheadline.weight(.semibold)).accessibilityIdentifier("mac.archive.visibleCount")
+                Spacer(minLength: 8)
+                Button { archive.selectItems(visible) } label: { Text(L10n.format("Select This List (%lld)", visible.count)) }
+                    .disabled(visible.isEmpty || archive.loading || !archive.canEditLibrary).accessibilityIdentifier("mac.archive.selectAll")
+                Menu("View Options") {
+                    Toggle("Keep Related Shots Together", isOn: contextBinding(\.smartOrder))
+                    Button("Reset Filters") { resetFilters() }
+                    let count = visible.filter { archive.decisions.protectedIDs.contains($0.id) }.count
+                    if count > 0 { Text(L10n.format("%lld protected items stay unselected", count)) }
                 }
             }
-            Text(L10n.format("In this list: %lld items", visible.count)).font(.subheadline.weight(.semibold)).accessibilityIdentifier("mac.archive.visibleCount")
-            if archive.analyzing {
+            if finding != .all || qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        if finding != .all { filterChip(L10n.tr(String.LocalizationValue(finding.titleKey)), id: "finding") { finding = .all } }
+                        if qualityFilter != .all { filterChip(L10n.tr(String.LocalizationValue(qualityFilter.titleKey)), id: "quality") { archive.galleryContext.quality = .all } }
+                        if media != 0 { filterChip(L10n.tr(media == 1 ? "Photos" : "Videos"), id: "media") { media = 0 } }
+                        if !albumID.isEmpty { filterChip(archive.albums.first { $0.id == albumID }?.title ?? L10n.tr("Album"), id: "album") { albumID = "" } }
+                        if !search.isEmpty { filterChip(L10n.format("Search: %@", search), id: "search") { search = "" } }
+                    }
+                }
+            }
+            if archive.analysisPaused { Text("Scan paused.").font(.caption).foregroundStyle(.secondary) }
+            else if archive.analyzing {
                 ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1)))
                 Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(.secondary)
-            } else if archive.analysisPaused {
-                Text("Scan paused.").font(.caption).foregroundStyle(.secondary)
             } else if archive.sessionProgress.isComplete {
                 Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle").font(.caption).foregroundStyle(.secondary)
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { browsingControls }
-                VStack(alignment: .leading, spacing: 8) { browsingControls }
-            }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { scanControls }
-                VStack(alignment: .leading, spacing: 8) { scanControls }
-            }
-        }.padding(16).disabled(archive.busy)
-    }
-    @ViewBuilder private var filterControls: some View {
-        Picker("Media type", selection: contextBinding(\.media)) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }.pickerStyle(.segmented).frame(maxWidth: 240)
-        Picker("Album", selection: contextBinding(\.albumID)) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }.frame(maxWidth: 220)
-        TextField("Search filenames", text: contextBinding(\.search)).textFieldStyle(.roundedBorder)
-    }
-    @ViewBuilder private var browsingControls: some View {
-        Button { archive.selectItems(visible) } label: { Text(L10n.format("Select This List (%lld)", visible.count)) }
-            .disabled(visible.isEmpty || archive.loading).accessibilityIdentifier("mac.archive.selectAll")
-        if finding != .all || media != 0 || !albumID.isEmpty || !search.isEmpty { Button("Reset Filters") { resetFilters() } }
-        Toggle("Keep Related Shots Together", isOn: contextBinding(\.smartOrder)).toggleStyle(.checkbox)
+        }.padding(12).disabled(archive.busy)
     }
     @ViewBuilder private var scanControls: some View {
         if archive.analyzing && !archive.analysisPaused {
             Button("Pause Scan") { archive.pauseAnalysis() }
             Menu("Scan Options") { Button("Cancel Scan") { archive.cancelAnalysis() } }
         }
-        else if archive.analysisPaused { Button("Resume Scan") { archive.resumeAnalysis() } }
+        else if archive.analysisPaused { Button("Resume Scan") { archive.resumeAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
         else {
             Button("Start Scan") { archive.analyze() }.buttonStyle(.borderedProminent).accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
             Menu("Scan Options") { Button("Include Cloud Originals") { cloudScan = true } }.disabled(!archive.canScanSelectedSources)
@@ -595,6 +615,8 @@ struct MacManualSelectionSheet: View {
     @State private var review = FrozenSelectionReview()
     @State private var captured = false
     @State private var leaveLinkedFiles = false
+    @State private var outcome: LibraryCleanupOutcome?
+    @State private var needsReReview = false
     private var reviewedItems: [UniversalMediaAsset] { review.items }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -641,10 +663,22 @@ struct MacManualSelectionSheet: View {
                     if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(.secondary) }
                     ForEach(reviewedItems) { item in reviewRow(item) }
                 }
-            }.disabled(archive.busy)
+            }.disabled(archive.busy || !archive.canEditLibrary)
             Text(L10n.format("Selected items: %lld", reviewedItems.count)).font(.headline)
             if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
+            if let outcome, !outcome.isComplete {
+                Text(L10n.format("Moved: %lld · Failed: %lld · Not attempted: %lld", outcome.completedIDs.count, outcome.failedIDs.count, outcome.notAttemptedIDs.count)).font(.callout)
+                Text("Check the remaining items before trying again. Completed items have left this review.").font(.caption).foregroundStyle(.secondary)
+                Button("Review Remaining Items Again") {
+                    review = FrozenSelectionReview(archive.selected); expectedIDs = Set(review.items.map(\.id))
+                    leaveLinkedFiles = false; needsReReview = false
+                }.disabled(!archive.canEditLibrary || archive.busy || archive.loading || archive.analyzing)
+                    .accessibilityIdentifier("mac.archive.review.remaining")
+            }
             if archive.loading || archive.analyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.caption).foregroundStyle(.secondary) }
+            if !archive.busy && !archive.loading && !archive.analyzing && archive.cleanupStorageIsBusy {
+                Text("Another operation is using this storage. Wait for it to finish or cancel its scan.").font(.caption).foregroundStyle(.secondary)
+            }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { secondaryReviewActions; Spacer(minLength: 12); removeButton }
                 VStack(alignment: .leading, spacing: 8) { secondaryReviewActions; removeButton }
@@ -652,12 +686,18 @@ struct MacManualSelectionSheet: View {
         }.controlSize(.large).padding(24).frame(minWidth: 480, idealWidth: 650, minHeight: 480, idealHeight: 650).interactiveDismissDisabled(archive.busy)
         .onChange(of: reviewedItems) { _ in leaveLinkedFiles = false }
         .onAppear { if !captured { review = FrozenSelectionReview(archive.selected); captured = true } }
-        .alert("Remove selected items?", isPresented: $confirm) {
-            Button(role: .destructive) { Task { if await archive.removeSelection(expectedIDs: expectedIDs, reviewedAssets: reviewedItems, allowPartialFamilies: leaveLinkedFiles) { dismiss() } } }
+        .onAppear { archive.presentationOwner = .review }
+        .onDisappear { archive.closePresentation() }
+        .confirmationDialog("Remove selected items?", isPresented: $confirm) {
+            Button(role: .destructive) { Task {
+                let result = await archive.removeSelectionOutcome(expectedIDs: expectedIDs, reviewedAssets: reviewedItems, allowPartialFamilies: leaveLinkedFiles)
+                outcome = result; review.discard(result.completedIDs); expectedIDs = Set(review.items.map(\.id))
+                if result.isComplete { dismiss() } else { needsReReview = true }
+            } }
                 label: { Text(L10n.format("Remove %lld Items", expectedIDs.count)) }
             Button("Cancel", role: .cancel) { }
         } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }
-        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
+        .alert("Something went wrong", isPresented: archive.errorBinding(for: .review)) {
             Button("OK") { archive.error = nil }
         } message: { Text(archive.error ?? "") }
     }
@@ -721,7 +761,7 @@ struct MacManualSelectionSheet: View {
         Button(role: .destructive) { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
             label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)).frame(minHeight: 32) }
             .buttonStyle(.borderedProminent).tint(.red).accessibilityIdentifier("mac.archive.review.remove")
-            .disabled(archive.busy || archive.loading || archive.analyzing || reviewedItems.isEmpty || hasUnavailableSelection || (!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty))
+            .disabled(!archive.canRemoveSelection || needsReReview || reviewedItems.isEmpty || hasUnavailableSelection || (!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty))
     }
 }
 
@@ -735,6 +775,13 @@ struct MacManualHistoryView: View {
             if !archive.connectionErrors.isEmpty { Button("Add Folders…") { archive.chooseFolder() }.disabled(archive.sourceControlsDisabled) }
             Text(L10n.format("Recovery storage: %@", ByteCountFormatter.string(fromByteCount: archive.history.reduce(0) { $0 + ($1.folderRecord?.recoveryBytes ?? 0) }, countStyle: .file))).font(.headline)
             Text("Recovery files stay on their original storage until you restore them. They do not free disk space.").font(.caption).foregroundStyle(.secondary)
+            ForEach(archive.recoveryCatalogueIssues) { issue in
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("A recovery record could not be read", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Text("The files were kept. Open the recovery folder to inspect this record.").font(.caption)
+                    Button("Show Recovery Folder") { NSWorkspace.shared.activateFileViewerSelecting([issue.manifestURL.deletingLastPathComponent()]) }
+                }.padding(12)
+            }
             if archive.history.isEmpty { Text("No manual cleanup history yet.").foregroundStyle(.secondary) }
             ForEach(archive.history) { entry in
                 ViewThatFits(in: .horizontal) {
@@ -742,7 +789,7 @@ struct MacManualHistoryView: View {
                     VStack(alignment: .leading, spacing: 12) { historyDetails(entry); recoveryAction(entry) }
                 }.padding(16).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
             }
-        }.controlSize(.large).padding(20)
+        }.controlSize(.large).padding(20).task { await archive.verifyRecoveryCatalogue() }
     }
     private func historyDetails(_ entry: MacRecoveryEntry) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -764,7 +811,7 @@ struct MacManualHistoryView: View {
         } else if entry.folderRecord?.restoredAt != nil { Label("Restored", systemImage: "checkmark.circle") }
         else {
             HStack(spacing: 12) {
-                Button("Restore Files") { Task { await archive.restore(entry) } }.disabled(archive.busy || archive.loading || archive.analyzing)
+                Button("Restore Files") { Task { await archive.restore(entry) } }.disabled(!archive.canRemoveSelection)
                 Button("Show Recovery Folder") { archive.revealRecovery(entry) }
             }
         }
@@ -800,9 +847,9 @@ struct MacSuggestionsView: View {
                 Text("Suggestions").font(.largeTitle.bold())
                 Text(LocalizedStringKey(archive.sessionProgress.isComplete ? "Scan complete. Choose what to keep." : "Scan your selected sources to find copies and photos worth reviewing.")).foregroundStyle(.secondary)
                 ForEach(LibraryFindingFilter.allCases.filter { $0 != .all }) { category in
-                    let count = category.ids(groups: archive.reviewGroups, quality: archive.qualityAssessments)?.count ?? 0
+                    let count = archive.gallery.findingCounts[category] ?? 0
                     Button {
-                        archive.galleryContext.finding = category; archive.contextChanged(); model.selectedRoute = .archive
+                        archive.openFinding(category); model.selectedRoute = .archive
                     } label: {
                         HStack {
                             Label(LocalizedStringKey(category.titleKey), systemImage: category == .copies ? "square.on.square" : category == .verySimilar ? "photo.on.rectangle.angled" : "sparkles")
@@ -810,7 +857,16 @@ struct MacSuggestionsView: View {
                         }.padding(20).frame(minHeight: 64)
                     }.buttonStyle(.bordered).disabled(count == 0).accessibilityIdentifier("mac.suggestions." + category.rawValue)
                 }
-                if archive.analyzing { ProgressView(archive.status ?? L10n.tr("Loading sources")) }
+                ForEach(LibraryQualityFilter.allCases.filter { $0 != .all }) { category in
+                    let count = archive.gallery.qualityCounts[category] ?? 0
+                    if count > 0 {
+                        Button { archive.openFinding(quality: category); model.selectedRoute = .archive } label: {
+                            HStack { Text(LocalizedStringKey(category.titleKey)); Spacer(); Text(count.formatted()); Image(systemName: "chevron.right") }.padding(16).frame(minHeight: 44)
+                        }.buttonStyle(.bordered).accessibilityIdentifier("mac.suggestions.quality." + category.rawValue)
+                    }
+                }
+                if archive.analysisPaused { Text("Scan paused."); Button("Resume Scan") { archive.resumeAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
+                else if archive.analyzing { ProgressView(archive.status ?? L10n.tr("Loading sources")); Button("Pause Scan") { archive.pauseAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
                 else { Button("Start Scan") { archive.analyze() }.buttonStyle(.borderedProminent).disabled(!archive.canScanSelectedSources) }
             }.padding(24).frame(maxWidth: 850, alignment: .leading)
         }.accessibilityIdentifier("mac.page.suggestions")

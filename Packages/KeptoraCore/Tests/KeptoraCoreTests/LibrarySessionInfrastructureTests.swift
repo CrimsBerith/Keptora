@@ -96,7 +96,8 @@ final class LibrarySessionInfrastructureTests: XCTestCase {
         let url = base.appendingPathComponent("photo.jpg"); try Data([1, 2, 3]).write(to: url)
         let values = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
         let asset = UniversalMediaAsset(id: "a", sourceID: "fixture", reference: .file(url), displayName: "photo.jpg",
-            mediaKind: .image, byteCount: Int64(values.fileSize ?? 0), modificationDate: values.contentModificationDate)
+            mediaKind: .image, byteCount: Int64(values.fileSize ?? 0), modificationDate: values.contentModificationDate,
+            fileRevision: LibraryFileRevision.capture(at: url))
         do { _ = try await LibraryCleanupPreflight().prepare([asset], adapter: MutatingSource(url: url)); XCTFail("Changed content must require a new review") } catch { }
         XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
     }
@@ -140,6 +141,153 @@ final class LibrarySessionInfrastructureTests: XCTestCase {
         XCTAssertEqual(restored?.ids, ["a"]); XCTAssertEqual(restored?.decisions, decisions)
         XCTAssertNil(session.undo(available: ["a"]))
     }
+
+    private func reviewedFile(_ url: URL) throws -> UniversalMediaAsset {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        return .init(id: LibraryFileIdentity.assetID(for: url), sourceID: "fixture", reference: .file(url),
+            displayName: url.lastPathComponent, mediaKind: .image, byteCount: values.fileSize.map(Int64.init),
+            modificationDate: values.contentModificationDate, fileRevision: LibraryFileRevision.capture(at: url))
+    }
+    func testReviewRejectsAtomicReplacementWithSameSizeAndModificationTime() throws {
+        let base = try root(); defer { try? FileManager.default.removeItem(at: base) }
+        let url = base.appendingPathComponent("photo.jpg"), replacement = base.appendingPathComponent("new.jpg")
+        try Data("AAAA".utf8).write(to: url)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 1_000_000)], ofItemAtPath: url.path)
+        let reviewed = try reviewedFile(url)
+        try Data("BBBB".utf8).write(to: replacement)
+        try FileManager.default.setAttributes([.modificationDate: try XCTUnwrap(reviewed.modificationDate)], ofItemAtPath: replacement.path)
+        try FileManager.default.removeItem(at: url); try FileManager.default.moveItem(at: replacement, to: url)
+        let current = try reviewedFile(url)
+        XCTAssertEqual(current.byteCount, reviewed.byteCount); XCTAssertEqual(current.modificationDate, reviewed.modificationDate)
+        XCTAssertNotEqual(current.fileRevision?.physicalIdentity, reviewed.fileRevision?.physicalIdentity)
+        XCTAssertThrowsError(try LibraryRevisionValidator.validate([reviewed]))
+        XCTAssertNoThrow(try LibraryRevisionValidator.validate([current]))
+    }
+    func testReviewRejectsInPlaceEditWithRestoredModificationTimeAndInvalidatesCache() throws {
+        let base = try root(); defer { try? FileManager.default.removeItem(at: base) }
+        let url = base.appendingPathComponent("photo.jpg"); try Data("AAAA".utf8).write(to: url)
+        let reviewed = try reviewedFile(url), handle = try FileHandle(forWritingTo: url)
+        try handle.write(contentsOf: Data("BBBB".utf8)); try handle.close()
+        try FileManager.default.setAttributes([.modificationDate: try XCTUnwrap(reviewed.modificationDate)], ofItemAtPath: url.path)
+        let current = try reviewedFile(url)
+        XCTAssertEqual(current.fileRevision?.physicalIdentity, reviewed.fileRevision?.physicalIdentity)
+        XCTAssertNotEqual(current.fileRevision?.changeToken, reviewed.fileRevision?.changeToken)
+        XCTAssertThrowsError(try LibraryRevisionValidator.validate([reviewed]))
+        XCTAssertFalse(MediaRevisionPolicy.same(current, reviewed, algorithm: "test"))
+        XCTAssertEqual(current.with(byteCount: .some(4)).fileRevision, current.fileRevision)
+    }
+    func testLegacyFileSnapshotRequiresFreshReviewAndCannotReuseCache() throws {
+        let base = try root(); defer { try? FileManager.default.removeItem(at: base) }
+        let url = base.appendingPathComponent("photo.jpg"); try Data([1]).write(to: url)
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(reviewedFile(url))) as? [String: Any])
+        json.removeValue(forKey: "fileRevision")
+        let old = try JSONDecoder().decode(UniversalMediaAsset.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertNil(old.fileRevision); XCTAssertNil(MediaRevisionPolicy.key(for: old, algorithm: "test"))
+        XCTAssertThrowsError(try LibraryRevisionValidator.validate([old]))
+    }
+    func testHardLinksHaveDistinctEntryIDsAndSharedPhysicalIdentity() throws {
+        let base = try root(); defer { try? FileManager.default.removeItem(at: base) }
+        let a = base.appendingPathComponent("a.jpg"), b = base.appendingPathComponent("b.jpg")
+        try Data([1, 2, 3]).write(to: a); try FileManager.default.linkItem(at: a, to: b)
+        let first = try reviewedFile(a), second = try reviewedFile(b)
+        XCTAssertNotEqual(first.id, second.id); XCTAssertEqual(first.fileRevision?.physicalIdentity, second.fileRevision?.physicalIdentity)
+        let catalogue = UnifiedLibraryAdapter.uniqueReferences([first, second, first.with(sourceID: "overlapping")])
+        XCTAssertEqual(catalogue.count, 2); XCTAssertEqual(Set(catalogue.map(\.id)).count, 2)
+        XCTAssertEqual(LibraryFileIdentity.volumeKey(for: a), LibraryFileIdentity.volumeKey(for: base))
+    }
+    func testCleanupBindsAlreadyMeasuredFingerprintToTheReviewedItem() async throws {
+        let asset = item("a"), source = FixedDigestSource()
+        let preflight = LibraryCleanupPreflight(validate: { _ in })
+        do {
+            _ = try await preflight.prepare([asset], adapter: source, reviewedFingerprints: [asset.id: .init(digest: "old", byteCount: 10)])
+            XCTFail("A changed digest must not become a new reviewed digest")
+        } catch UnifiedLibraryError.selectionChanged { }
+        let prepared = try await preflight.prepare([asset], adapter: source, reviewedFingerprints: [asset.id: .init(digest: "current", byteCount: 10)])
+        XCTAssertEqual(prepared.first?.expectedDigest, "current")
+    }
+    func testMeasuredQualityKeeperSurvivesDefaultPolicyButExplicitIntentWins() {
+        let sharp = item("sharp", bytes: 10), blurry = item("blurry", bytes: 1_000)
+        let quality = [sharp.id: QualityAssessment(state: .evaluated, findings: [], detailScore: 95, exposureScore: 90),
+                       blurry.id: QualityAssessment(state: .evaluated, findings: [.possibleBlur], detailScore: 5, exposureScore: 90)]
+        XCTAssertEqual(LibraryConfiguration().keeperID(in: [blurry, sharp], recommendedKeeperID: sharp.id), sharp.id)
+        XCTAssertEqual(LibraryConfiguration().keeperID(in: [blurry, sharp], quality: quality), sharp.id)
+        XCTAssertEqual(LibraryConfiguration(keeper: .largest).keeperID(in: [blurry, sharp], recommendedKeeperID: sharp.id, quality: quality), blurry.id)
+        XCTAssertEqual(LibraryConfiguration().keeperID(in: [blurry.with(isFavorite: true), sharp], recommendedKeeperID: sharp.id, quality: quality), blurry.id)
+        let group = LibraryReviewGroup(id: "pair", kind: .verySimilar, assets: [blurry, sharp], keeperID: sharp.id)
+        XCTAssertEqual(LibraryReviewDecisions().keeperReason(in: group, quality: quality), "Suggested from Measured Detail")
+        XCTAssertEqual(LibraryReviewDecisions().keeperReason(in: group, quality: quality, configuration: .init(keeper: .largest)), "Suggested from Available Media Information")
+    }
+    func testQualityFiltersSeparateHintsAndProblemItems() {
+        let quality = ["blur": QualityAssessment(state: .evaluated, findings: [.possibleBlur, .lowResolution], detailScore: 5, exposureScore: 90),
+                       "dark": QualityAssessment(state: .insufficientDetail, findings: [.dark], detailScore: 0, exposureScore: 0)]
+        let issues = [AnalysisIssue(assetID: "offline", sourceID: "fixture", stage: .exact, reason: .downloadRequired)]
+        XCTAssertEqual(LibraryQualityFilter.possibleBlur.ids(quality: quality, issues: issues), ["blur"])
+        XCTAssertEqual(LibraryQualityFilter.lowResolution.ids(quality: quality, issues: issues), ["blur"])
+        XCTAssertEqual(LibraryQualityFilter.dark.ids(quality: quality, issues: issues), ["dark"])
+        XCTAssertEqual(LibraryQualityFilter.bright.ids(quality: quality, issues: issues), [])
+        XCTAssertEqual(LibraryQualityFilter.issues.ids(quality: quality, issues: issues), ["offline"])
+        XCTAssertNil(LibraryQualityFilter.all.ids(quality: quality, issues: issues))
+    }
+    func testMultiStepUndoRedoKeepsDecisionsFiltersUnavailableAndDropsRedoBranch() {
+        var session = LibrarySelectionUndoSession(), decisions = LibraryReviewDecisions()
+        session.capture(ids: [], decisions: decisions)
+        session.capture(ids: ["a", "gone"], decisions: decisions)
+        decisions.toggleProtection("b")
+        let undo = session.undo(available: ["a", "b"], currentIDs: ["b"], decisions: decisions)
+        XCTAssertEqual(undo?.ids, ["a"]); XCTAssertEqual(undo?.decisions.protectedIDs, [])
+        let redo = session.redo(available: ["a", "b"], currentIDs: undo!.ids, decisions: undo!.decisions)
+        XCTAssertEqual(redo?.ids, ["b"]); XCTAssertEqual(redo?.decisions.protectedIDs, ["b"])
+        _ = session.undo(available: ["a", "b"], currentIDs: redo!.ids, decisions: redo!.decisions)
+        _ = session.undo(available: ["a", "b"], currentIDs: ["a"], decisions: .init())
+        XCTAssertFalse(session.canUndo); XCTAssertTrue(session.canRedo)
+        session.capture(ids: ["a"], decisions: .init()); XCTAssertFalse(session.canRedo)
+    }
+    func testUndoHistoryIsBoundedForThousandsOfSelectionChanges() {
+        var session = LibrarySelectionUndoSession(limit: 50)
+        for n in 0..<3_000 { session.capture(ids: ["\(n)"], decisions: .init()) }
+        var count = 0
+        while session.undo(available: ["2999"]) != nil { count += 1 }
+        XCTAssertEqual(count, 50)
+    }
+    func testPartialCleanupRemovesCompletedItemsFromFrozenReviewAndUndo() {
+        let a = item("a"), b = item("b"), c = item("c")
+        var review = FrozenSelectionReview([a, b, c]); review.remove(a.id)
+        let outcome = LibraryCleanupOutcome(requestedIDs: [a.id, b.id, c.id], completedIDs: [a.id], failedIDs: [b.id])
+        review.discard(outcome.completedIDs)
+        XCTAssertNil(review.undoRemoval()); XCTAssertEqual(review.items, [b, c])
+        XCTAssertEqual(outcome.notAttemptedIDs, [c.id]); XCTAssertFalse(outcome.isComplete)
+    }
+    @MainActor func testSharedOperationOwnerAllowsReadsButExcludesOverlappingWritersAndQuit() async throws {
+        let owner = LibraryOperationCoordinator(), resources: Set<String> = ["volume:one"]
+        let first = try XCTUnwrap(owner.acquire(resources, mode: .read)), second = try XCTUnwrap(owner.acquire(resources, mode: .read))
+        XCTAssertNil(owner.acquire(resources, mode: .write))
+        let independent = try XCTUnwrap(owner.acquire(["volume:two"], mode: .write))
+        XCTAssertFalse(owner.canAcquire(["volume:two"], mode: .read))
+        owner.release(first); owner.release(second)
+        let writer = try XCTUnwrap(owner.acquire(resources, mode: .write))
+        XCTAssertFalse(owner.canAcquire(resources, mode: .read)); owner.beginTermination()
+        XCTAssertNil(owner.acquire(["volume:three"], mode: .read))
+        owner.release(writer); owner.release(independent); await owner.waitForIdle()
+        owner.resumeAfterCancelledTermination(); XCTAssertTrue(owner.canAcquire(resources, mode: .write))
+    }
+    func testIncompleteCatalogueCannotDropAnExistingSelection() {
+        let old = item("not-seen-yet").with(sourceID: "fixture", reference: .file(URL(fileURLWithPath: "/fixture/a.jpg")))
+        let source = LibrarySource(id: "fixture", kind: .folder, displayName: "Fixture")
+        let partial = LibrarySourceCoverage(source: source, authorization: .authorized, itemCount: 25, enumerationComplete: false)
+        let selection = PendingLibrarySelection(ids: [old.id], current: [], previous: [old], coverage: [partial])
+        XCTAssertEqual(selection.ids, [old.id]); XCTAssertEqual(selection.pending, [old])
+        let complete = LibrarySourceCoverage(source: source, authorization: .authorized, itemCount: 25)
+        XCTAssertTrue(PendingLibrarySelection(ids: selection.ids, current: [], previous: selection.pending, coverage: [complete]).ids.isEmpty)
+    }
+}
+
+private struct FixedDigestSource: SourceAdapter {
+    var source: LibrarySource { .init(id: "fixture", kind: .folder, displayName: "Fixture") }
+    var capabilities: PlatformCapabilities { .photos }
+    func authorizationStatus() async -> SourceAuthorization { .authorized }
+    func requestAuthorization() async -> SourceAuthorization { .authorized }
+    func enumerateAssets() async throws -> [UniversalMediaAsset] { [] }
+    func exactFingerprint(for asset: UniversalMediaAsset, allowNetwork: Bool, progress: @escaping @Sendable (Int64) -> Void) async throws -> UniversalExactFingerprint { .init(digest: "current", byteCount: 10) }
 }
 
 private struct MutatingSource: SourceAdapter {

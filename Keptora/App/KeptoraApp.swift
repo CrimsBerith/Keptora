@@ -4,9 +4,10 @@ import SwiftUI
 
 @MainActor
 private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
-    let model = AppModel()
+    let operations = LibraryOperationCoordinator()
+    lazy var model = AppModel(operations: operations)
     let store = StoreEntitlementController()
-    let archive = MacArchiveModel()
+    lazy var archive = MacArchiveModel(operations: operations)
     private var terminating = false
     private var fallbackWindow: NSWindow?
 
@@ -24,26 +25,28 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
-            showMainWindowIfNeeded()
-        }
+        showMainWindowIfNeeded()
         return true
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !terminating else { return .terminateLater }
         terminating = true
+        operations.beginTermination()
         model.checkpointReviewSession()
         Task {
+            async let legacyPreparation: Void = model.prepareForTermination()
             let saved = await archive.prepareForTermination()
-            if !saved { terminating = false }
+            await legacyPreparation
+            await operations.waitForIdle()
+            if !saved { terminating = false; operations.resumeAfterCancelledTermination() }
             sender.reply(toApplicationShouldTerminate: saved)
         }
         return .terminateLater
     }
 
     private func showMainWindowIfNeeded() {
-        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
+        if let window = NSApp.windows.first(where: { $0.identifier == MacWindowIdentity.main }) {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -69,6 +72,7 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.title = "Keptora"
+        window.identifier = MacWindowIdentity.main
         window.minSize = NSSize(width: 900, height: 650)
         window.contentViewController = NSHostingController(rootView: root)
         window.center()
@@ -102,6 +106,7 @@ struct KeptoraApp: App {
                 }
         }
         .defaultSize(width: 1240, height: 800)
+        .windowResizability(.contentMinSize)
         .windowStyle(.titleBar)
         .commands { MacLibraryCommands(archive: appDelegate.archive, model: appDelegate.model, store: appDelegate.store) }
         Settings {
@@ -126,6 +131,7 @@ private struct MacLibraryCommands: Commands {
             Button("Pause Scan") { archive.pauseAnalysis() }
                 .disabled(!archive.analyzing || archive.analysisPaused)
             Button("Resume Scan") { archive.resumeAnalysis() }.disabled(!archive.analysisPaused)
+            Button("Cancel Scan") { archive.cancelAnalysis() }.disabled(!archive.analyzing && !archive.analysisPaused)
         }
         CommandMenu("Advanced Review") {
             Button("Previous Exact Group") { model.selectPreviousExactGroup() }

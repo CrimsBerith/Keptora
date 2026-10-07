@@ -1,4 +1,25 @@
 import Foundation
+#if !os(Linux)
+import KeptoraCore
+#endif
+
+enum ReviewText {
+    static func tr(_ key: String) -> String {
+        #if os(Linux)
+        return NSLocalizedString(key, comment: "Review text")
+        #else
+        return L10n.tr(String.LocalizationValue(key))
+        #endif
+    }
+    static func format(_ key: String, _ arguments: CVarArg...) -> String {
+        #if os(Linux)
+        let locale = Locale.current
+        #else
+        let locale = L10n.currentLocale
+        #endif
+        return String(format: tr(key), locale: locale, arguments: arguments)
+    }
+}
 
 enum KeeperSelectionPolicy: String, CaseIterable, Identifiable, Sendable {
     case preserve = "preserve"
@@ -11,20 +32,20 @@ enum KeeperSelectionPolicy: String, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .preserve: return String(localized: "Keptora default")
-        case .oldest: return String(localized: "Oldest file")
-        case .newest: return String(localized: "Newest file")
-        case .largest: return String(localized: "Largest file")
-        case .shortestPath: return String(localized: "Shortest path")
+        case .preserve: return ReviewText.tr("Keptora default")
+        case .oldest: return ReviewText.tr("Oldest file")
+        case .newest: return ReviewText.tr("Newest file")
+        case .largest: return ReviewText.tr("Largest file")
+        case .shortestPath: return ReviewText.tr("Shortest path")
         }
     }
     var detail: String {
         switch self {
-        case .preserve: return String(localized: "Keep the current keeper; new groups use the oldest file.")
-        case .oldest: return String(localized: "Keep the older copy.")
-        case .newest: return String(localized: "Keep the newer copy.")
-        case .largest: return String(localized: "Keep the largest file, often the highest-resolution copy.")
-        case .shortestPath: return String(localized: "Keep the copy with the shortest file path.")
+        case .preserve: return ReviewText.tr("Keep the current keeper; new groups use the oldest file.")
+        case .oldest: return ReviewText.tr("Keep the older copy.")
+        case .newest: return ReviewText.tr("Keep the newer copy.")
+        case .largest: return ReviewText.tr("Keep the largest file, often the highest-resolution copy.")
+        case .shortestPath: return ReviewText.tr("Keep the copy with the shortest file path.")
         }
     }
 }
@@ -36,9 +57,9 @@ enum ReviewDecision: String, Codable, Sendable {
 
     var label: String {
         switch self {
-        case .keep: return String(localized: "Keep")
-        case .quarantinePlan: return String(localized: "Add to Plan")
-        case .skip: return String(localized: "Skip")
+        case .keep: return ReviewText.tr("Keep")
+        case .quarantinePlan: return ReviewText.tr("Add to Plan")
+        case .skip: return ReviewText.tr("Skip")
         }
     }
 }
@@ -80,7 +101,7 @@ struct ReviewGroup: Identifiable, Hashable, Codable, Sendable {
     let canonicalAssetID: AssetID
     let assets: [ReviewAsset]
 
-    var title: String { String(localized: "Exact set · \(assets.count) files") }
+    var title: String { ReviewText.format("Exact set · %lld files", Int64(assets.count)) }
     var canonicalAsset: ReviewAsset? { assets.first { $0.id == canonicalAssetID } }
 }
 
@@ -102,11 +123,11 @@ enum ReviewDecisionProofState: String, Codable, Sendable {
 
     var label: String {
         switch self {
-        case .protectedKeeper: return String(localized: "Protected keeper")
-        case .verifiedExactPlan: return String(localized: "Verified exact copy")
-        case .reviewedSkip: return String(localized: "Reviewed · not planned")
-        case .selectedKeeper: return String(localized: "User-selected keeper")
-        case .needsReview: return String(localized: "Needs review")
+        case .protectedKeeper: return ReviewText.tr("Protected keeper")
+        case .verifiedExactPlan: return ReviewText.tr("Verified exact copy")
+        case .reviewedSkip: return ReviewText.tr("Reviewed · not planned")
+        case .selectedKeeper: return ReviewText.tr("User-selected keeper")
+        case .needsReview: return ReviewText.tr("Needs review")
         }
     }
 
@@ -140,14 +161,14 @@ struct ReviewDecisionEvidence: Identifiable, Hashable, Codable, Sendable {
 
     var reasonLabel: String {
         switch reasonCode {
-        case "protected-canonical": return "Protected canonical keeper"
-        case "user-selected-keeper": return "Keeper selected by user"
-        case "keeper-replaced": return "Previous keeper replaced"
-        case "user-added-to-plan": return "Added to Safety Plan by user"
-        case "user-skipped": return "Skipped by user"
-        case "user-batch-added-exact-extras": return "Batch-added exact extras"
-        case "user-batch-skipped-exact-extras": return "Batch-skipped exact extras"
-        default: return reasonCode.replacingOccurrences(of: "-", with: " ").capitalized
+        case "protected-canonical": return ReviewText.tr("Photo to keep is protected")
+        case "user-selected-keeper": return ReviewText.tr("Photo to keep chosen by you")
+        case "keeper-replaced": return ReviewText.tr("Your keep choice was changed")
+        case "user-added-to-plan": return ReviewText.tr("Added to the Safety Plan by you")
+        case "user-skipped": return ReviewText.tr("Skipped by you")
+        case "user-batch-added-exact-extras": return ReviewText.tr("Extra copies added together")
+        case "user-batch-skipped-exact-extras": return ReviewText.tr("Extra copies skipped together")
+        default: return ReviewText.tr("Review decision recorded")
         }
     }
 }
@@ -220,10 +241,10 @@ enum ReviewGroupState: String, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .unreviewed: return String(localized: "Unreviewed")
-        case .inProgress: return String(localized: "In progress")
-        case .planned: return String(localized: "Planned")
-        case .complete: return String(localized: "Reviewed")
+        case .unreviewed: return ReviewText.tr("Unreviewed")
+        case .inProgress: return ReviewText.tr("In progress")
+        case .planned: return ReviewText.tr("Planned")
+        case .complete: return ReviewText.tr("Reviewed")
         }
     }
 
@@ -281,8 +302,8 @@ struct ReviewSessionCheckpoint: Identifiable, Hashable, Codable, Sendable {
     }
 
     var positionLabel: String {
-        guard totalGroups > 0 else { return "No exact groups" }
-        return "Group \(min(max(groupPosition, 1), totalGroups)) of \(totalGroups)"
+        guard totalGroups > 0 else { return ReviewText.tr("No exact groups") }
+        return ReviewText.format("Group %1$lld of %2$lld", Int64(min(max(groupPosition, 1), totalGroups)), Int64(totalGroups))
     }
 }
 

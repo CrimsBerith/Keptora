@@ -748,7 +748,7 @@ struct MacPhotosThumbnail: View {
     var allowNetwork = false
     @State private var image: NSImage?
     @State private var finished = false
-    private var cacheKey: String { "\(asset.id)|\(asset.modificationDate?.timeIntervalSince1970 ?? 0)|\(pixelSize)|\(fit)|\(allowNetwork)" }
+    private var cacheKey: String { "\(asset.id)|\(asset.modificationDate?.timeIntervalSince1970 ?? 0)|\(asset.fileRevision?.changeToken ?? "")|\(pixelSize)|\(fit)|\(allowNetwork)" }
     var body: some View {
         ZStack {
             Color.secondary.opacity(0.10)

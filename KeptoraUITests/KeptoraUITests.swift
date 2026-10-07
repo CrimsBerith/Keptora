@@ -118,11 +118,38 @@ final class KeptoraUITests: XCTestCase {
         let search = app.textFields["Search filenames"]
         search.click(); search.typeText("missing")
         XCTAssertTrue(app.buttons["mac.archive.reviewSelection"].exists)
+        app.typeKey("z", modifierFlags: .command)
+        XCTAssertNotEqual(search.value as? String, "missing")
+        XCTAssertTrue(app.buttons["mac.archive.reviewSelection"].exists)
+        app.typeKey("z", modifierFlags: [.command, .shift])
+        XCTAssertEqual(search.value as? String, "missing")
         app.typeKey("a", modifierFlags: .command); search.typeText("holiday")
         app.typeKey("3", modifierFlags: .command); app.typeKey("1", modifierFlags: .command)
         XCTAssertEqual(search.value as? String, "holiday")
         app.buttons["mac.archive.reviewSelection"].click()
         XCTAssertTrue(app.staticTexts["Review Selection"].waitForExistence(timeout: 5))
+    }
+
+    func testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo() {
+        let app = launchUnifiedMacFixture()
+        let assets = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.asset."))
+        XCTAssertTrue(assets.firstMatch.waitForExistence(timeout: 10)); XCTAssertGreaterThanOrEqual(assets.count, 2)
+        assets.element(boundBy: 0).click(); assets.element(boundBy: 1).click()
+        let count = app.staticTexts["mac.archive.selectionCount"]
+        XCTAssertTrue(count.label.contains("2"))
+        app.typeKey("z", modifierFlags: .command); XCTAssertTrue(count.label.contains("1"))
+        app.typeKey("z", modifierFlags: .command); XCTAssertFalse(app.buttons["mac.archive.reviewSelection"].isEnabled)
+        app.typeKey("z", modifierFlags: [.command, .shift]); XCTAssertTrue(count.label.contains("1"))
+        app.typeKey("z", modifierFlags: [.command, .shift]); XCTAssertTrue(count.label.contains("2"))
+    }
+    func testNativeSettingsCanPresentProWithMainWindowClosed() {
+        let app = launchUnifiedMacFixture()
+        XCTAssertTrue(app.buttons["mac.toolbar.settings"].waitForExistence(timeout: 10)); app.buttons["mac.toolbar.settings"].click()
+        let settings = app.windows.containing(.any, identifier: "mac.page.settings").firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        app.windows["Keptora"].buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertTrue(settings.buttons["mac.settings.showPaywall"].isHittable); settings.buttons["mac.settings.showPaywall"].click()
+        XCTAssertTrue(app.buttons["mac.paywall.close"].waitForExistence(timeout: 10))
     }
 
     private func element(withIdentifier identifier: String, in app: XCUIApplication) -> XCUIElement {

@@ -43,9 +43,10 @@ struct MainRootView: View {
         } detail: {
             ZStack {
                 KeptoraBackdrop()
-                routeDetail
-                    .environmentObject(archive)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    MacSessionHealthBanner()
+                    routeDetail.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }.environmentObject(archive)
 
                 if isDropTargeted {
                     ZStack {
@@ -92,12 +93,14 @@ struct MainRootView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 900, minHeight: 650)
+        .background(MacMainWindowMarker())
         .onChange(of: model.selectedRoute) { route in
             if toolRoutes.contains(route) { advancedToolsExpanded = true }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("keptora.root")
-        .sheet(isPresented: $store.isShowingPaywall) {
+        .sheet(isPresented: store.paywallBinding(for: .main)) {
             PaywallView().environmentObject(store)
         }
         // Presented from the root (not a sidebar subview) so they are not tied to sidebar visibility.
@@ -126,7 +129,7 @@ struct MainRootView: View {
             if phase != .active { model.checkpointReviewSession(); Task { await archive.flushState() } }
             else if startupSourcesPrepared { Task { await archive.refreshPhotosAccess() } }
         }
-        .alert("Something went wrong", isPresented: Binding(get: { archive.error != nil }, set: { if !$0 { archive.error = nil } })) {
+        .alert("Something went wrong", isPresented: archive.errorBinding(for: .main)) {
             if archive.canRepairPersistence {
                 Button("Save Current Session") { Task { await archive.repairPersistence() } }
             }
@@ -282,13 +285,12 @@ struct MainRootView: View {
             .help("Support and diagnostics")
             .accessibilityIdentifier("mac.toolbar.support")
 
-            Button {
-                model.selectedRoute = .settings
-            } label: {
-                Label("Settings", systemImage: model.selectedRoute == .settings ? "gearshape.fill" : "gearshape")
+            if #available(macOS 14, *) {
+                SettingsLink { Label("Settings", systemImage: "gearshape") }.help("Keptora settings").accessibilityIdentifier("mac.toolbar.settings")
+            } else {
+                Button { MacWindowIdentity.openSettings() } label: { Label("Settings", systemImage: "gearshape") }
+                    .help("Keptora settings").accessibilityIdentifier("mac.toolbar.settings")
             }
-            .help("Keptora settings")
-            .accessibilityIdentifier("mac.toolbar.settings")
         }
     }
 

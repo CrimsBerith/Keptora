@@ -83,7 +83,7 @@ public enum MediaRevisionPolicy {
     public static func key(for asset: UniversalMediaAsset, algorithm: String) -> String? {
         guard let modified = asset.modificationDate, modified.timeIntervalSince1970.isFinite else { return nil }
         switch asset.reference {
-        case .file: guard let bytes = asset.byteCount, bytes >= 0 else { return nil }
+        case .file: guard let bytes = asset.byteCount, bytes >= 0, asset.fileRevision != nil else { return nil }
         case .photoLibrary: break
         }
         // JSON keeps subsecond precision; include all resource/selection-relevant metadata.
@@ -116,7 +116,7 @@ public struct PendingLibrarySelection: Sendable {
             let report = coverage.first { $0.id == item.sourceID }
             // Photos access and partial folder enumeration cannot prove deletion.
             if case .photoLibrary = item.reference { return true }
-            return report == nil || report?.authorization != .authorized || report?.error != nil
+            return report == nil || report?.authorization != .authorized || report?.error != nil || report?.enumerationComplete == false
         }
     }
 }
@@ -158,6 +158,27 @@ public enum LibraryFindingFilter: String, Codable, CaseIterable, Sendable, Ident
         case .verySimilar: return Set(groups.filter { $0.kind == .verySimilar }.flatMap { $0.assets.map(\.id) })
         case .review: return Set(quality.filter { $0.value.needsReview }.keys).union(groups.filter { $0.kind == .similar }.flatMap { $0.assets.map(\.id) })
         }
+    }
+}
+
+public enum LibraryQualityFilter: String, Codable, CaseIterable, Sendable, Identifiable {
+    case all, possibleBlur, lowResolution, dark, bright, issues
+    public var id: String { rawValue }
+    public var titleKey: String {
+        switch self {
+        case .all: return "All Quality Hints"
+        case .possibleBlur: return "Possibly Blurry"
+        case .lowResolution: return "Low Resolution"
+        case .dark: return "Very Dark"
+        case .bright: return "Very Bright"
+        case .issues: return "Items with Problems"
+        }
+    }
+    public func ids(quality: [String: QualityAssessment], issues: [AnalysisIssue]) -> Set<String>? {
+        if self == .all { return nil }
+        if self == .issues { return Set(issues.map(\.assetID)) }
+        guard let finding = QualityAssessment.Finding(rawValue: rawValue) else { return [] }
+        return Set(quality.filter { $0.value.findings.contains(finding) }.keys)
     }
 }
 
@@ -208,13 +229,16 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
         guard group.assets.contains(where: { $0.id == id }) else { return }
         choices[group.id] = .init(keeperID: id, revision: revision(group))
     }
-    public func keeperReason(in group: LibraryReviewGroup, quality: [String: QualityAssessment]) -> String {
+    public func keeperReason(in group: LibraryReviewGroup, quality: [String: QualityAssessment], configuration: LibraryConfiguration = .init()) -> String {
         if hasUserKeeper(in: group) { return "Chosen by You" }
         guard let item = group.assets.first(where: { $0.id == keeper(in: group) }) else { return "Suggested Keep" }
         if item.isFavorite { return "Favorite Kept" }
         if item.hasAdjustments { return "Edited Version Kept" }
         if group.kind == .exact { return "One Identical Copy Kept" }
-        if quality[item.id]?.state == .evaluated { return "Suggested from Detail and Resolution" }
+        if configuration.keeper == .preserve, let score = quality[item.id]?.score,
+           group.assets.contains(where: { other in other.id != item.id && UniversalKeeperPolicy.qualityScore(for: other) == UniversalKeeperPolicy.qualityScore(for: item) && (quality[other.id]?.score.map { $0 < score } ?? false) }) {
+            return "Suggested from Measured Detail"
+        }
         return "Suggested from Available Media Information"
     }
     public mutating func protect(_ group: LibraryReviewGroup) { protectedIDs.formUnion(group.assets.map(\.id)) }

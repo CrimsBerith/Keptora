@@ -7,7 +7,8 @@ final class BulkCleanupPolicyTests: XCTestCase {
                       album: Bool = false, favorite: Bool = false) -> UniversalMediaAsset {
         UniversalMediaAsset(id: id, sourceID: "source", reference: file ? .file(URL(fileURLWithPath: "/library/" + id + ".jpg")) : .photoLibrary(localIdentifier: id),
             displayName: id + ".jpg", mediaKind: .image, byteCount: bytes, pixelWidth: 2000, pixelHeight: 1500,
-            modificationDate: date, isFavorite: favorite, hasAlbumMembership: album)
+            modificationDate: date, isFavorite: favorite, hasAlbumMembership: album,
+            fileRevision: file ? .init(physicalIdentity: id, changeToken: "fixture") : nil)
     }
     func testReviewUndoRestoresLastRemovedItemAtOriginalPosition() {
         let assets = [item("a"), item("b"), item("c")]

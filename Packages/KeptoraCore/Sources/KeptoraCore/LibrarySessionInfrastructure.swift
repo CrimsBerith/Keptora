@@ -1,4 +1,35 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
+/// A review token includes filesystem identity and nanosecond change time. Size
+/// and mtime alone cannot detect replacement or an edit that restores the mtime.
+public struct LibraryFileRevision: Codable, Hashable, Sendable {
+    public let physicalIdentity: String
+    public let changeToken: String
+    public let linkCount: UInt64
+    public init(physicalIdentity: String, changeToken: String, linkCount: UInt64 = 1) {
+        self.physicalIdentity = physicalIdentity; self.changeToken = changeToken; self.linkCount = linkCount
+    }
+    public static func capture(at url: URL) -> Self? {
+        var status = stat()
+        guard url.withUnsafeFileSystemRepresentation({ path in
+            guard let path else { return false }
+            return fstatat(AT_FDCWD, path, &status, 0) == 0
+        }) else { return nil }
+        #if canImport(Darwin)
+        let changed = status.st_ctimespec
+        #else
+        let changed = status.st_ctim
+        #endif
+        return .init(physicalIdentity: LibraryFileIdentity.key(for: url),
+                     changeToken: "\(changed.tv_sec):\(changed.tv_nsec):\(status.st_size)",
+                     linkCount: UInt64(status.st_nlink))
+    }
+}
 
 /// Captured once for a scan; changing preferences never changes an in-flight review.
 public struct LibraryConfiguration: Codable, Hashable, Sendable {
@@ -32,7 +63,7 @@ public struct LibraryConfiguration: Codable, Hashable, Sendable {
         [".keptora quarantine", ".git", "node_modules", "@eadir"].contains(name.lowercased()) || excludedFolders.contains(name.lowercased())
     }
     public func excludesExtension(_ name: String) -> Bool { excludedExtensions.contains(name.lowercased()) }
-    public func keeperID(in assets: [UniversalMediaAsset]) -> String? {
+    public func keeperID(in assets: [UniversalMediaAsset], recommendedKeeperID: String? = nil, quality: [String: QualityAssessment] = [:]) -> String? {
         assets.sorted { lhs, rhs in
             let a = UniversalKeeperPolicy.qualityScore(for: lhs), b = UniversalKeeperPolicy.qualityScore(for: rhs)
             if a != b { return a > b }
@@ -45,7 +76,9 @@ public struct LibraryConfiguration: Codable, Hashable, Sendable {
             case .shortestPath:
                 func length(_ a: UniversalMediaAsset) -> Int { if case .file(let url) = a.reference { return url.path.count }; return a.displayName.count }
                 if length(lhs) != length(rhs) { return length(lhs) < length(rhs) }
-            case .preserve: break
+            case .preserve:
+                if let l = quality[lhs.id]?.score, let r = quality[rhs.id]?.score, l != r { return l > r }
+                if let recommendedKeeperID, lhs.id == recommendedKeeperID || rhs.id == recommendedKeeperID { return lhs.id == recommendedKeeperID }
             }
             return UniversalKeeperPolicy.prefersAsKeeper(lhs, rhs)
         }.first?.id
@@ -54,6 +87,18 @@ public struct LibraryConfiguration: Codable, Hashable, Sendable {
 
 /// Volume + file identity survives moves and prevents reuse of a mount path by another disk.
 public enum LibraryFileIdentity {
+    public static func volumeKey(for url: URL) -> String {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.standardizedFileURL.resolvingSymlinksInPath().path)
+        return "volume:" + ((attributes?[.systemNumber] as? NSNumber)?.stringValue ?? url.path)
+    }
+    /// Hard links are separate directory entries, but share a physical revision.
+    /// Ordinary files retain the move-stable inode identity used by older sessions.
+    public static func assetID(for url: URL) -> String {
+        let physical = key(for: url)
+        guard (LibraryFileRevision.capture(at: url)?.linkCount ?? 1) > 1 else { return "file:" + physical }
+        let entry = key(for: url.deletingLastPathComponent()) + ":" + url.lastPathComponent
+        return "file:" + physical + ":entry:" + StableDigest.fnv1a64(entry)
+    }
     public static func key(for url: URL) -> String {
         let canonical = url.standardizedFileURL.resolvingSymlinksInPath()
         let attributes = try? FileManager.default.attributesOfItem(atPath: canonical.path)
@@ -180,6 +225,62 @@ public struct FolderQuarantineRecord: Identifiable, Hashable, Codable, Sendable 
 
 public enum RecoveryOperationState: String, Codable, Sendable { case planned, moved, restored, failed, interrupted }
 
+public struct FolderRecoveryIssue: Identifiable, Hashable, Sendable {
+    public var id: String { manifestURL.path }
+    public let manifestURL: URL
+    public let message: String
+    public init(manifestURL: URL, message: String) { self.manifestURL = manifestURL; self.message = message }
+}
+public struct FolderRecoveryCatalogue: Sendable {
+    public let records: [FolderQuarantineRecord]
+    public let issues: [FolderRecoveryIssue]
+    public init(records: [FolderQuarantineRecord], issues: [FolderRecoveryIssue]) { self.records = records; self.issues = issues }
+}
+public struct FolderCleanupFailure: LocalizedError, Sendable {
+    public let record: FolderQuarantineRecord
+    public let message: String
+    public var errorDescription: String? { message }
+    public init(record: FolderQuarantineRecord, message: String) { self.record = record; self.message = message }
+}
+
+/// Both Mac workflows share this owner. Reads may overlap; a writer exclusively
+/// owns each physical volume (including parent/child folder connections).
+@MainActor public final class LibraryOperationCoordinator {
+    public enum Mode: Sendable { case read, write }
+    public struct Lease: Sendable { public let id: UUID; public let resources: Set<String>; public let mode: Mode }
+    private var leases: [UUID: Lease] = [:]
+    private var observers: [UUID: @MainActor () -> Void] = [:]
+    public private(set) var isTerminating = false
+    public init() {}
+    public func observe(_ change: @escaping @MainActor () -> Void) -> UUID { let id = UUID(); observers[id] = change; return id }
+    public func removeObserver(_ id: UUID) { observers.removeValue(forKey: id) }
+    public func canAcquire(_ resources: Set<String>, mode: Mode) -> Bool {
+        !isTerminating && !leases.values.contains { lease in
+            !lease.resources.isDisjoint(with: resources) && (mode == .write || lease.mode == .write)
+        }
+    }
+    public func acquire(_ resources: Set<String>, mode: Mode) -> Lease? {
+        guard canAcquire(resources, mode: mode) else { return nil }
+        let lease = Lease(id: UUID(), resources: resources, mode: mode); leases[lease.id] = lease; changed(); return lease
+    }
+    public func release(_ lease: Lease) { leases.removeValue(forKey: lease.id); changed() }
+    public func beginTermination() { isTerminating = true; changed() }
+    public func resumeAfterCancelledTermination() { isTerminating = false; changed() }
+    public func waitForIdle() async { while !leases.isEmpty { try? await Task.sleep(nanoseconds: 50_000_000) } }
+    private func changed() { for observer in observers.values { observer() } }
+}
+
+public struct LibraryCleanupOutcome: Sendable {
+    public let requestedIDs: Set<String>
+    public let completedIDs: Set<String>
+    public let failedIDs: Set<String>
+    public var notAttemptedIDs: Set<String> { requestedIDs.subtracting(completedIDs).subtracting(failedIDs) }
+    public var isComplete: Bool { !requestedIDs.isEmpty && completedIDs == requestedIDs }
+    public init(requestedIDs: Set<String>, completedIDs: Set<String> = [], failedIDs: Set<String> = []) {
+        self.requestedIDs = requestedIDs; self.completedIDs = completedIDs; self.failedIDs = failedIDs
+    }
+}
+
 public extension FolderQuarantineRecord {
     func rebased(to root: URL) throws -> FolderQuarantineRecord {
         guard sourceIdentity == nil || sourceIdentity == LibraryFileIdentity.key(for: root) else { throw UnifiedLibraryError.sourceUnavailable(root.lastPathComponent) }
@@ -223,14 +324,27 @@ public enum LibraryRangeSelection {
 
 public struct LibrarySelectionUndoSession: Sendable {
     public struct Snapshot: Sendable { public let ids: Set<String>; public let decisions: LibraryReviewDecisions }
-    private var previous: Snapshot?
-    public init() {}
-    public mutating func capture(ids: Set<String>, decisions: LibraryReviewDecisions) { previous = .init(ids: ids, decisions: decisions) }
-    public mutating func undo(available: Set<String>) -> Snapshot? {
-        guard let previous else { return nil }
-        self.previous = nil
+    private var past: [Snapshot] = []
+    private var future: [Snapshot] = []
+    private let limit: Int
+    public var canUndo: Bool { !past.isEmpty }
+    public var canRedo: Bool { !future.isEmpty }
+    public init(limit: Int = 50) { self.limit = max(1, limit) }
+    public mutating func capture(ids: Set<String>, decisions: LibraryReviewDecisions) {
+        past.append(.init(ids: ids, decisions: decisions)); future.removeAll()
+        if past.count > limit { past.removeFirst(past.count - limit) }
+    }
+    public mutating func undo(available: Set<String>, currentIDs: Set<String>? = nil, decisions: LibraryReviewDecisions = .init()) -> Snapshot? {
+        guard let previous = past.popLast() else { return nil }
+        if let currentIDs { future.append(.init(ids: currentIDs, decisions: decisions)) }
         return .init(ids: previous.ids.intersection(available), decisions: previous.decisions)
     }
+    public mutating func redo(available: Set<String>, currentIDs: Set<String>, decisions: LibraryReviewDecisions) -> Snapshot? {
+        guard let next = future.popLast() else { return nil }
+        past.append(.init(ids: currentIDs, decisions: decisions))
+        return .init(ids: next.ids.intersection(available), decisions: next.decisions)
+    }
+    public mutating func reset() { past.removeAll(); future.removeAll() }
 }
 
 public enum LibraryCatalogueReconciliation {
@@ -249,12 +363,13 @@ public enum LibraryCatalogueReconciliation {
 public actor LibraryCleanupPreflight {
     private let validate: @Sendable ([UniversalMediaAsset]) throws -> Void
     public init(validate: @escaping @Sendable ([UniversalMediaAsset]) throws -> Void = { try LibraryRevisionValidator.validate($0) }) { self.validate = validate }
-    public func prepare(_ assets: [UniversalMediaAsset], adapter: any SourceAdapter) async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)] {
+    public func prepare(_ assets: [UniversalMediaAsset], adapter: any SourceAdapter, reviewedFingerprints: [String: UniversalExactFingerprint] = [:]) async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)] {
         var result: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
         for asset in assets {
             try Task.checkCancellation(); try validate([asset])
             let hash = try await adapter.exactFingerprint(for: asset, allowNetwork: false, progress: { _ in })
             try validate([asset])
+            if let reviewed = reviewedFingerprints[asset.id], hash != reviewed { throw UnifiedLibraryError.selectionChanged }
             result.append((asset, hash.digest))
         }
         try validate(assets)

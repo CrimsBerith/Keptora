@@ -288,7 +288,7 @@ final class LibraryWorkflowTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: file) }
         try Data("reviewed".utf8).write(to: file)
         let values = try file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-        let item = asset("selected", bytes: Int64(try XCTUnwrap(values.fileSize))).with(reference: .file(file), modificationDate: .some(values.contentModificationDate))
+        let item = asset("selected", bytes: Int64(try XCTUnwrap(values.fileSize))).with(reference: .file(file), modificationDate: .some(values.contentModificationDate), fileRevision: .some(LibraryFileRevision.capture(at: file)))
         XCTAssertNoThrow(try LibraryRevisionValidator.validate([item]))
         try Data("new content after review".utf8).write(to: file)
         XCTAssertThrowsError(try LibraryRevisionValidator.validate([item]))

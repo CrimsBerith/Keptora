@@ -24,6 +24,12 @@ public enum LibraryRevisionValidator {
         for asset in assets {
             switch asset.reference {
             case .file(let url):
+                guard let reviewed = asset.fileRevision else { throw UnifiedLibraryError.selectionChanged }
+                do {
+                    guard let current = LibraryFileRevision.capture(at: url),
+                          current.physicalIdentity == reviewed.physicalIdentity,
+                          current.changeToken == reviewed.changeToken else { throw UnifiedLibraryError.selectionChanged }
+                }
                 let values = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
                 if let date = asset.modificationDate, values.contentModificationDate != date { throw UnifiedLibraryError.selectionChanged }
                 if let size = asset.byteCount, values.fileSize.map(Int64.init) != size { throw UnifiedLibraryError.selectionChanged }
@@ -50,10 +56,12 @@ public struct LibrarySourceCoverage: Equatable, Sendable, Identifiable {
     public let authorization: SourceAuthorization
     public let itemCount: Int
     public let error: String?
-    public init(source: LibrarySource, authorization: SourceAuthorization, itemCount: Int, error: String? = nil) {
-        self.source = source; self.authorization = authorization; self.itemCount = itemCount; self.error = error
+    public let enumerationComplete: Bool
+    public init(source: LibrarySource, authorization: SourceAuthorization, itemCount: Int, error: String? = nil, enumerationComplete: Bool = true) {
+        self.source = source; self.authorization = authorization; self.itemCount = itemCount; self.error = error; self.enumerationComplete = enumerationComplete
     }
     public var statusKey: String {
+        if !enumerationComplete { return "Loading item count…" }
         if authorization == .limited { return error == nil ? "Limited Photos access" : "Some items unavailable" }
         if authorization != .authorized { return "Access unavailable" }
         return error == nil ? "Access granted" : "Some items unavailable"
@@ -137,8 +145,18 @@ public enum UnifiedLibraryError: LocalizedError {
     case selectionChanged
     public var errorDescription: String? {
         switch self {
-        case .sourceUnavailable: return NSLocalizedString("A connected source is unavailable. Reconnect it and try again.", comment: "Unavailable library source")
-        case .selectionChanged: return NSLocalizedString("Your selection changed. Review it again before removing items.", comment: "Stale selected item")
+        case .sourceUnavailable:
+            #if os(Linux)
+            return NSLocalizedString("A connected source is unavailable. Reconnect it and try again.", comment: "Unavailable library source")
+            #else
+            return L10n.tr("A connected source is unavailable. Reconnect it and try again.")
+            #endif
+        case .selectionChanged:
+            #if os(Linux)
+            return NSLocalizedString("Your selection changed. Review it again before removing items.", comment: "Stale selected item")
+            #else
+            return L10n.tr("Your selection changed. Review it again before removing items.")
+            #endif
         }
     }
 }
@@ -166,11 +184,12 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
         try await enumerateAssets(onSourceBatch: nil)
     }
-    public func enumerateAssets(onSourceBatch: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async throws -> [UniversalMediaAsset] {
+    public func enumerateAssets(control: LibraryAnalysisControl? = nil, onSourceBatch: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async throws -> [UniversalMediaAsset] {
         var items: [UniversalMediaAsset] = [], reports: [LibrarySourceCoverage] = []
         var batches: [String: [UniversalMediaAsset]] = [:]
+        coverage = []; catalogue = .init()
         for adapter in adapters {
-            try Task.checkCancellation()
+            try Task.checkCancellation(); try await control?.waitIfPaused()
             batches[adapter.source.id] = []
             let auth = await adapter.authorizationStatus()
             guard auth == .authorized || auth == .limited else {
@@ -180,19 +199,33 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
                 continue
             }
             do {
-                let batch = try await adapter.enumerateAssets()
+                let batch = try await adapter.enumerateAssets(batchSize: 100, control: control) { partial in
+                    await self.publishPartial(partial, source: adapter.source, authorization: auth, receive: onSourceBatch)
+                }
                 items.append(contentsOf: batch)
                 batches[adapter.source.id] = Self.uniqueReferences(batch)
                 let warnings = await adapter.enumerationWarnings()
                 reports.append(.init(source: adapter.source, authorization: auth, itemCount: batches[adapter.source.id]?.count ?? 0, error: warnings.isEmpty ? nil : warnings.joined(separator: "\n")))
             } catch is CancellationError { throw CancellationError() }
-            catch { reports.append(.init(source: adapter.source, authorization: auth, itemCount: 0, error: error.localizedDescription)) }
+            catch {
+                let partial = catalogue.batches[adapter.source.id] ?? []
+                items.append(contentsOf: partial); batches[adapter.source.id] = partial
+                reports.append(.init(source: adapter.source, authorization: auth, itemCount: partial.count, error: error.localizedDescription))
+            }
             coverage = reports; catalogue = LibrarySourceCatalogue(batches: batches)
             await onSourceBatch?(Self.uniqueReferences(items), reports, catalogue)
         }
         coverage = reports
         catalogue = LibrarySourceCatalogue(batches: batches)
         return Self.uniqueReferences(items)
+    }
+    private func publishPartial(_ items: [UniversalMediaAsset], source: LibrarySource, authorization: SourceAuthorization,
+                                receive: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async {
+        catalogue.merge(.init(batches: [source.id: Self.uniqueReferences(items)]))
+        coverage.removeAll { $0.id == source.id }
+        coverage.append(.init(source: source, authorization: authorization, itemCount: items.count, enumerationComplete: false))
+        let all = adapters.flatMap { catalogue.batches[$0.source.id] ?? [] }
+        await receive?(Self.uniqueReferences(all), coverage, catalogue)
     }
     /// An album or overlapping folder is another view of the same item. Separate
     /// file copies and Photos exports remain separate so cross-source copies exist.

@@ -43,6 +43,9 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
     public func requestAuthorization() async -> SourceAuthorization { .authorized }
 
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
+        try await enumerateAssets(batchSize: 100, control: nil, onBatch: { _ in })
+    }
+    public func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset] {
         let keys: Set<URLResourceKey> = [
             .isRegularFileKey, .isDirectoryKey, .isHiddenKey, .fileSizeKey,
             .creationDateKey, .contentModificationDateKey,
@@ -58,7 +61,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
 
         var assets: [UniversalMediaAsset] = []
         for case let url as URL in enumerator {
-            try Task.checkCancellation()
+            try Task.checkCancellation(); try await control?.waitIfPaused()
             if configuration.excludesDirectory(url.lastPathComponent),
                (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
                 enumerator.skipDescendants(); continue
@@ -74,7 +77,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
             let metadata = kind == .image && !cloudOnly ? PhotoMetadataExtractor.extract(from: url) : nil
             assets.append(
                 UniversalMediaAsset(
-                    id: "file:\(LibraryFileIdentity.key(for: url))",
+                    id: LibraryFileIdentity.assetID(for: url),
                     sourceID: source.id,
                     reference: .file(url),
                     displayName: url.lastPathComponent,
@@ -87,11 +90,14 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
                     context: MediaContext(location: metadata.flatMap { m in
                         guard let lat = m.latitude, let lon = m.longitude else { return nil }
                         return MediaLocation(latitude: lat, longitude: lon)
-                    }, captureDate: metadata?.dateCaptured, captureTimeIsReliable: metadata?.captureTimeIsReliable == true, camera: metadata?.cameraModel, captureDateText: metadata?.dateCapturedText)
+                    }, captureDate: metadata?.dateCaptured, captureTimeIsReliable: metadata?.captureTimeIsReliable == true, camera: metadata?.cameraModel, captureDateText: metadata?.dateCapturedText),
+                    fileRevision: LibraryFileRevision.capture(at: url)
                 )
             )
+            if assets.count % max(25, batchSize) == 0 { await onBatch(assets) }
         }
         warnings = issues.snapshot()
+        await onBatch(assets)
         return assets.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
     }
 

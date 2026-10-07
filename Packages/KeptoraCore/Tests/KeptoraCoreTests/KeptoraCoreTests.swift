@@ -2,6 +2,98 @@ import XCTest
 @testable import KeptoraCore
 
 final class KeptoraCoreTests: XCTestCase {
+    private func recoveryFixture(count: Int = 2) async throws -> (URL, FolderQuarantineRecord) {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        for n in 0..<count { try Data("reviewed photo \(n)".utf8).write(to: root.appendingPathComponent("\(n).jpg")) }
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        var selections: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
+        for item in try await adapter.enumerateAssets() {
+            let hash = try await adapter.exactFingerprint(for: item, allowNetwork: false, progress: { _ in })
+            selections.append((item, hash.digest))
+        }
+        return (root, try await FolderQuarantineExecutor().quarantine(root: root, selections: selections))
+    }
+    func testRecoveryCatalogueKeepsHealthyRecordsBesideCorruptAndUnsafeManifests() async throws {
+        let (root, record) = try await recoveryFixture(count: 1)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let directory = root.appendingPathComponent(".Keptora Quarantine")
+        let corrupt = directory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: corrupt, withIntermediateDirectories: true)
+        try Data("unreadable".utf8).write(to: corrupt.appendingPathComponent("recovery.json"))
+        let id = UUID(), unsafe = directory.appendingPathComponent(id.uuidString)
+        try FileManager.default.createDirectory(at: unsafe, withIntermediateDirectories: true)
+        let invalid = FolderQuarantineRecord(id: id, sourceRoot: root, operations: [
+            .init(originalURL: URL(fileURLWithPath: "/outside/photo.jpg"), quarantineURL: unsafe.appendingPathComponent("photo.jpg"), expectedDigest: "x")])
+        try JSONEncoder().encode(invalid).write(to: unsafe.appendingPathComponent("recovery.json"))
+        let result = try await FolderQuarantineExecutor().recoveryCatalogue(root: root)
+        XCTAssertEqual(result.records.map(\.id), [record.id]); XCTAssertEqual(result.issues.count, 2)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.operations[0].quarantineURL.path))
+    }
+    func testCompletedRestoreReceiptSurvivesSubsequentEditAndRename() async throws {
+        let (root, record) = try await recoveryFixture(count: 1)
+        defer { try? FileManager.default.removeItem(at: root) }
+        _ = try await FolderQuarantineExecutor().restore(record)
+        let original = record.operations[0].originalURL
+        try Data("user edited this later".utf8).write(to: original)
+        try FileManager.default.moveItem(at: original, to: root.appendingPathComponent("renamed.jpg"))
+        let catalogue = try await FolderQuarantineExecutor().recoveryCatalogue(root: root)
+        let receipt = try XCTUnwrap(catalogue.records.first)
+        XCTAssertNotNil(receipt.restoredAt); XCTAssertEqual(receipt.unresolvedCount, 0); XCTAssertTrue(catalogue.issues.isEmpty)
+    }
+    func testRestoreRejectsLateContentChangeAndPersistsCompensatedLedger() async throws {
+        let (root, record) = try await recoveryFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executor = FolderQuarantineExecutor(beforeRestoreMove: { operation, index in
+            if index == 1 { try Data("changed after initial preflight".utf8).write(to: operation.quarantineURL) }
+        })
+        do { _ = try await executor.restore(record); XCTFail("Late changes must stop restore") } catch { }
+        let ledgerURL = root.appendingPathComponent(".Keptora Quarantine/\(record.id.uuidString)/recovery.json")
+        let ledger = try JSONDecoder().decode(FolderQuarantineRecord.self, from: Data(contentsOf: ledgerURL))
+        XCTAssertNil(ledger.restoredAt); XCTAssertEqual(ledger.operations[0].state, .moved)
+        XCTAssertEqual(ledger.operations[1].state, .interrupted)
+        XCTAssertTrue(ledger.operations.allSatisfy { FileManager.default.fileExists(atPath: $0.quarantineURL.path) })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: record.operations[0].originalURL.path))
+    }
+    func testRestoreVerifiesAfterMoveBeforeWritingCompletedReceipt() async throws {
+        let (root, record) = try await recoveryFixture(count: 1)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executor = FolderQuarantineExecutor(afterRestoreMove: { operation, _ in
+            try Data("changed during move".utf8).write(to: operation.originalURL)
+        })
+        do { _ = try await executor.restore(record); XCTFail("Changed target must not become a completed receipt") } catch { }
+        let catalogue = try await executor.recoveryCatalogue(root: root)
+        let remaining = try XCTUnwrap(catalogue.records.first)
+        XCTAssertNil(remaining.restoredAt); XCTAssertEqual(remaining.unresolvedCount, 1)
+        XCTAssertEqual(try Data(contentsOf: remaining.operations[0].quarantineURL), Data("changed during move".utf8))
+    }
+    func testRestoreCancellationCompensatesAndKeepsDurableRecoveryState() async throws {
+        let (root, record) = try await recoveryFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executor = FolderQuarantineExecutor(beforeRestoreMove: { _, index in
+            if index == 1 { withUnsafeCurrentTask { $0?.cancel() }; throw CancellationError() }
+        })
+        let work = Task { try await executor.restore(record) }
+        do { _ = try await work.value; XCTFail("Cancellation must interrupt the restore") } catch is CancellationError { }
+        let catalogue = try await FolderQuarantineExecutor().recoveryCatalogue(root: root)
+        let remaining = try XCTUnwrap(catalogue.records.first)
+        XCTAssertNil(remaining.restoredAt); XCTAssertEqual(remaining.movedCount, 2); XCTAssertEqual(remaining.unresolvedCount, 0)
+    }
+    func testHardLinkEntriesCanBothBeQuarantinedAndRestored() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let a = root.appendingPathComponent("a.jpg"), b = root.appendingPathComponent("b.jpg")
+        try Data("one physical image, two entries".utf8).write(to: a); try FileManager.default.linkItem(at: a, to: b)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true), executor = FolderQuarantineExecutor()
+        let items = try await adapter.enumerateAssets(); XCTAssertEqual(Set(items.map(\.id)).count, 2)
+        let prepared = try await LibraryCleanupPreflight().prepare(items, adapter: adapter)
+        let record = try await executor.quarantine(root: root, selections: prepared)
+        XCTAssertEqual(record.movedCount, 2)
+        _ = try await executor.restore(record)
+        XCTAssertEqual(LibraryFileIdentity.key(for: a), LibraryFileIdentity.key(for: b))
+        XCTAssertEqual(try Data(contentsOf: a), Data("one physical image, two entries".utf8))
+    }
     func testExactGroupNeverSelectsKeeperOrProtectedAssets() {
         let keeper = asset(id: "keeper")
         let favorite = asset(id: "favorite", favorite: true)

@@ -55,6 +55,11 @@ final class AppModel: ObservableObject {
     private var scanTask: Task<Void, Never>?
     private var similarityTask: Task<Void, Never>?
     private var activeBatchTask: Task<Void, Never>?
+    private var mutationTask: Task<Void, Never>?
+    private var retainedTasks: [UUID: Task<Void, Never>] = [:]
+    let operations: LibraryOperationCoordinator
+    private var operationObserver: UUID?
+    private var operationResources: Set<String> { sourceURL.map { [LibraryFileIdentity.volumeKey(for: $0)] } ?? [] }
     private let volumeObservers = WorkspaceObserverBag()
     private var expectedVolume: VolumeIdentity?
     private let bookmarkDefaultsKey = AppStorageKeys.sourceBookmark
@@ -66,7 +71,8 @@ final class AppModel: ObservableObject {
         SimilaritySensitivityPreset.stored()
     }
 
-    init(applicationSupportDirectory customDirectory: URL? = nil) {
+    init(applicationSupportDirectory customDirectory: URL? = nil, operations: LibraryOperationCoordinator? = nil) {
+        self.operations = operations ?? LibraryOperationCoordinator()
         let directory: URL
         if let customDirectory {
             directory = customDirectory
@@ -84,10 +90,17 @@ final class AppModel: ObservableObject {
         similarityCoordinator = SimilarityCoordinator(database: database)
         performanceSamples = PerformanceRecorder.read(in: directory)
         installVolumeObservers()
+        operationObserver = self.operations.observe { [weak self] in self?.objectWillChange.send() }
     }
 
     var canStartScan: Bool {
-        sourceURL != nil && sourceAvailability.isAvailable && !scanProgress.isRunning && !isCommittingCleanup
+        sourceURL != nil && sourceAvailability.isAvailable && !scanProgress.isRunning && !isCommittingCleanup && restoringPlanID == nil && operations.canAcquire(operationResources, mode: .read)
+    }
+
+    private func trackTask(_ operation: @escaping @MainActor () async -> Void) {
+        guard !operations.isTerminating else { return }
+        let id = UUID()
+        retainedTasks[id] = Task { await operation(); retainedTasks.removeValue(forKey: id) }
     }
 
     func latestQuarantineVerification(for planID: String) -> QuarantineVerificationLineageRecord? {
@@ -244,6 +257,7 @@ final class AppModel: ObservableObject {
     }
 
     func connectFolderURL(_ url: URL) {
+        guard !operations.isTerminating, !isCommittingCleanup, restoringPlanID == nil else { return }
         do {
             let bookmark = try bookmarkStore.makeBookmark(for: url)
             UserDefaults.standard.set(bookmark, forKey: bookmarkDefaultsKey)
@@ -257,7 +271,7 @@ final class AppModel: ObservableObject {
                 UserDefaults.standard.set(encoded, forKey: volumeDefaultsKey)
             }
             refreshSourceAvailability()
-            Task { [weak self] in
+            trackTask { [weak self] in
                 try? await self?.reloadDatabaseState()
             }
         } catch {
@@ -272,15 +286,16 @@ final class AppModel: ObservableObject {
 
     func startScan() {
         refreshSourceAvailability()
-        guard let url = sourceURL, sourceAvailability.isAvailable, !scanProgress.isRunning, !isCommittingCleanup else {
+        guard let url = sourceURL, canStartScan else {
             if sourceURL != nil { present(SimpleAppError(message: sourceAvailability.label)) }
             return
         }
+        guard let lease = operations.acquire(operationResources, mode: .read) else { return }
         scanTask?.cancel()
         selectedRoute = .home
 
-        scanTask = Task { [weak self] in
-            guard let self else { return }
+        scanTask = Task {
+            defer { operations.release(lease) }
             let startedAt = Date()
             do {
                 let coordinator = ScanCoordinator(database: database)
@@ -314,7 +329,6 @@ final class AppModel: ObservableObject {
 
     func cancelScan() {
         scanTask?.cancel()
-        scanTask = nil
     }
 
     func startSimilarityAnalysis() {
@@ -323,10 +337,11 @@ final class AppModel: ObservableObject {
             if self.sourceURL != nil { present(SimpleAppError(message: sourceAvailability.label)) }
             return
         }
+        guard let lease = operations.acquire(operationResources, mode: .read) else { return }
         similarityTask?.cancel()
         selectedRoute = .review
-        similarityTask = Task { [weak self] in
-            guard let self else { return }
+        similarityTask = Task {
+            defer { operations.release(lease) }
             let startedAt = Date()
             let sensitivity = self.currentSimilaritySensitivity
             do {
@@ -364,12 +379,11 @@ final class AppModel: ObservableObject {
 
     func cancelSimilarityAnalysis() {
         similarityTask?.cancel()
-        similarityTask = nil
     }
 
     func refreshSimilarityGroupsForCurrentSensitivity() {
         guard let sourceID = currentSourceID(), !similarityProgress.isRunning else { return }
-        Task { [weak self] in
+        trackTask { [weak self] in
             guard let self else { return }
             do {
                 similarityGroups = try await self.similarityCoordinator.fetchGroups(sourceID: sourceID, sensitivity: self.currentSimilaritySensitivity)
@@ -646,7 +660,7 @@ final class AppModel: ObservableObject {
     func loadDemoLibrary() {
         guard !isPreparingDemoLibrary && !scanProgress.isRunning else { return }
         isPreparingDemoLibrary = true
-        Task { [weak self] in
+        trackTask { [weak self] in
             guard let self else { return }
             defer { isPreparingDemoLibrary = false }
             do {
@@ -710,8 +724,10 @@ final class AppModel: ObservableObject {
 
     func refreshSafetyPlanFreshness() {
         guard let plan = pendingPlan, !isCommittingCleanup else { return }
-        Task { [weak self] in
+        guard let lease = operations.acquire([LibraryFileIdentity.volumeKey(for: plan.sourceRoot)], mode: .read) else { return }
+        trackTask { [weak self] in
             guard let self else { return }
+            defer { operations.release(lease) }
             do {
                 let assessment = try await self.bookmarkStore.withAccess(to: plan.sourceRoot) {
                     try await self.cleanupCoordinator.assessFreshness(plan)
@@ -736,10 +752,11 @@ final class AppModel: ObservableObject {
     }
 
     private func generatePlan(sourceURL: URL, discardOldPlanID: String? = nil) {
+        guard let lease = operations.acquire([LibraryFileIdentity.volumeKey(for: sourceURL)], mode: .read) else { return }
         isPreparingSafetyPlan = true
-        Task { [weak self] in
+        trackTask { [weak self] in
             guard let self else { return }
-            defer { self.isPreparingSafetyPlan = false }
+            defer { self.isPreparingSafetyPlan = false; operations.release(lease) }
             if let active = self.activeBatchTask {
                 _ = await active.value
             }
@@ -796,7 +813,7 @@ final class AppModel: ObservableObject {
         pendingPlan = nil
         safetyPlanFreshness = nil
         isShowingSafetyPlan = false
-        Task { [weak self] in
+        trackTask { [weak self] in
             guard let self else { return }
             try? await database.discardDraftCleanupPlan(plan.id)
             try? await reloadDatabaseState()
@@ -810,15 +827,17 @@ final class AppModel: ObservableObject {
             return
         }
         refreshSourceAvailability()
-        guard let sourceURL, sourceAvailability.isAvailable, !isCommittingCleanup else {
+        guard let sourceURL, sourceAvailability.isAvailable, !isCommittingCleanup, restoringPlanID == nil else {
             if pendingPlan != nil { present(SimpleAppError(message: sourceAvailability.label)) }
             return
         }
+        guard let lease = operations.acquire(operationResources, mode: .write) else {
+            present(SimpleAppError(message: L10n.tr("Another operation is using this storage. Wait for it to finish or cancel its scan."))); return
+        }
         isCommittingCleanup = true
-        Task { [weak self] in
-            guard let self else { return }
+        mutationTask = Task {
             let startedAt = Date()
-            defer { isCommittingCleanup = false }
+            defer { isCommittingCleanup = false; operations.release(lease) }
             do {
                 let freshness = try await self.bookmarkStore.withAccess(to: sourceURL) {
                     try await self.cleanupCoordinator.assessFreshness(plan)
@@ -859,11 +878,12 @@ final class AppModel: ObservableObject {
             return
         }
         guard !isPreparingRestorePreview, restoringPlanID == nil else { return }
+        guard let lease = operations.acquire(operationResources, mode: .read) else { return }
         restorePreviewItem = item
         isPreparingRestorePreview = true
-        Task { [weak self] in
+        trackTask { [weak self] in
             guard let self else { return }
-            defer { isPreparingRestorePreview = false }
+            defer { isPreparingRestorePreview = false; operations.release(lease) }
             do {
                 let preview = try await self.bookmarkStore.withAccess(to: sourceURL) {
                     try await self.cleanupCoordinator.previewRestore(planID: item.id)
@@ -903,11 +923,13 @@ final class AppModel: ObservableObject {
             return
         }
         guard restoringPlanID == nil, !isCommittingCleanup else { return }
+        guard let lease = operations.acquire(operationResources, mode: .write) else {
+            present(SimpleAppError(message: L10n.tr("Another operation is using this storage. Wait for it to finish or cancel its scan."))); return
+        }
         restoringPlanID = item.id
-        Task { [weak self] in
-            guard let self else { return }
+        mutationTask = Task {
             let startedAt = Date()
-            defer { restoringPlanID = nil }
+            defer { restoringPlanID = nil; operations.release(lease) }
             do {
                 let result = try await self.bookmarkStore.withAccess(to: sourceURL) {
                     try await self.cleanupCoordinator.restore(planID: item.id)
@@ -932,10 +954,11 @@ final class AppModel: ObservableObject {
             return
         }
         guard verifyingCleanupPlanID == nil, !isCommittingCleanup, restoringPlanID == nil else { return }
+        guard let lease = operations.acquire(operationResources, mode: .read) else { return }
         verifyingCleanupPlanID = item.id
-        Task { [weak self] in
+        trackTask { [weak self] in
             guard let self else { return }
-            defer { verifyingCleanupPlanID = nil }
+            defer { verifyingCleanupPlanID = nil; operations.release(lease) }
             do {
                 let report = try await self.bookmarkStore.withAccess(to: sourceURL) {
                     try await self.cleanupCoordinator.verifyLifecycle(planID: item.id, phase: .manualReview)
@@ -950,6 +973,15 @@ final class AppModel: ObservableObject {
     func revealManifest(_ item: CleanupHistoryItem) {
         guard let path = item.manifestPath else { return }
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    func prepareForTermination() async {
+        scanTask?.cancel(); similarityTask?.cancel(); activeBatchTask?.cancel()
+        await scanTask?.value; await similarityTask?.value; await activeBatchTask?.value
+        // Confirmed file operations finish before the application replies to quit.
+        await mutationTask?.value
+        for task in Array(retainedTasks.values) { await task.value }
+        checkpointReviewSession()
     }
 
     var displayVersion: String {

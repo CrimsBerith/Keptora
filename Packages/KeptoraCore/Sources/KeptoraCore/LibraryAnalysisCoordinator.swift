@@ -48,7 +48,7 @@ public actor LibraryAnalysisCoordinator {
         self.configuration = configuration; self.control = control
         try await control?.waitIfPaused()
         await progress(.catalogue, done: 0, total: 0)
-        let assets = try await adapter.enumerateAssets(onSourceBatch: { items, coverage, catalogue in
+        let assets = try await adapter.enumerateAssets(control: control, onSourceBatch: { items, coverage, catalogue in
             await self.receive(.catalogue(items, coverage, catalogue))
         })
         let coverage = await adapter.coverage
@@ -140,6 +140,6 @@ public actor LibraryAnalysisCoordinator {
     private func configuredSimilar(_ groups: [UniversalSimilarityGroup]) -> [UniversalSimilarityGroup] {
         guard configuration.similarityEnabled else { return [] }
         return groups.map { .init(id: $0.id, assets: $0.assets, maximumDistance: $0.maximumDistance, strength: $0.strength,
-                          mediaKind: $0.mediaKind, keeperID: configuration.keeperID(in: $0.assets)) }
+                          mediaKind: $0.mediaKind, keeperID: configuration.keeperID(in: $0.assets, recommendedKeeperID: $0.keeperID)) }
     }
 }

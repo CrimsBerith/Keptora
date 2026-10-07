@@ -68,7 +68,8 @@ final class ReviewDecisionEvidenceTests: XCTestCase {
         XCTAssertEqual(evidence.proofState, .verifiedExactPlan)
         XCTAssertTrue(evidence.isPlanVerified)
         XCTAssertEqual(evidence.canonicalAssetID, keeper.id)
-        XCTAssertEqual(evidence.reasonLabel, "Added to Safety Plan by user")
+        XCTAssertEqual(evidence.reasonCode, "user-added-to-plan")
+        XCTAssertFalse(evidence.reasonLabel.isEmpty)
     }
 
     func testDigestMismatchFailsClosed() {

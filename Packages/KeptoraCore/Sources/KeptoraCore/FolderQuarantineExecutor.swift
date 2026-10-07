@@ -1,7 +1,13 @@
 import Foundation
 
 public actor FolderQuarantineExecutor {
-    public init() {}
+    private var verified: [URL: (LibraryFileRevision, UniversalExactFingerprint)] = [:]
+    private let beforeRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
+    private let afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
+    public init(beforeRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil,
+                afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil) {
+        self.beforeRestoreMove = beforeRestoreMove; self.afterRestoreMove = afterRestoreMove
+    }
 
     public func preflight(root: URL) -> Bool {
         let values = try? root.resourceValues(forKeys: [.isWritableKey, .isDirectoryKey])
@@ -57,6 +63,7 @@ public actor FolderQuarantineExecutor {
         // or lost preferences, and never relies solely on an in-memory history entry.
         try saveManifest(record)
         var completed: [FolderQuarantineOperation] = []
+        var reviewedAssets = selections.map(\.asset)
         do {
             for (index, operation) in operations.enumerated() {
                 try Task.checkCancellation()
@@ -65,7 +72,7 @@ public actor FolderQuarantineExecutor {
                     withIntermediateDirectories: true
                 )
                 let beforeMove = try await StreamingSHA256.file(at: operation.originalURL, progress: { _ in })
-                try validateReviewed([selections[index].asset])
+                try validateReviewed([reviewedAssets[index]])
                 guard beforeMove.digest == operation.expectedDigest else {
                     throw UniversalScanError.cleanupNotPermitted("A selected file changed after review. Scan again before cleanup.")
                 }
@@ -74,6 +81,15 @@ public actor FolderQuarantineExecutor {
                 let afterMove = try await StreamingSHA256.file(at: operation.quarantineURL, progress: { _ in })
                 guard afterMove.digest == operation.expectedDigest else {
                     throw UniversalScanError.cleanupNotPermitted("A selected file changed while moving. The operation was rolled back.")
+                }
+                // Renaming one selected hard link changes the shared inode's ctime.
+                // The content remains bound to its reviewed digest for every entry.
+                if let moved = LibraryFileRevision.capture(at: operation.quarantineURL) {
+                    for i in reviewedAssets.indices where i > index && reviewedAssets[i].fileRevision?.physicalIdentity == moved.physicalIdentity {
+                        if case .file(let url) = reviewedAssets[i].reference, let revision = LibraryFileRevision.capture(at: url), revision.physicalIdentity == moved.physicalIdentity {
+                            reviewedAssets[i] = reviewedAssets[i].with(fileRevision: .some(revision))
+                        }
+                    }
                 }
                 record.operations[index].state = .moved
                 record.operations[index].byteCount = afterMove.byteCount
@@ -85,10 +101,11 @@ public actor FolderQuarantineExecutor {
                 do { try coordinatedMove(from: operation.quarantineURL, to: operation.originalURL) }
                 catch { rollbackFailed = true }
             }
+            await reconcileAfterCompensation(&record)
+            try? saveManifest(record)
             if rollbackFailed {
-                throw UniversalScanError.cleanupNotPermitted("Some files remain in the recovery folder. Reopen this source and restore its recovery record.")
+                throw FolderCleanupFailure(record: record, message: L10n.tr("Some files remain in the recovery folder. Reopen this source and restore its recovery record."))
             }
-            try? FileManager.default.removeItem(at: quarantineRoot)
             throw error
         }
         return record
@@ -96,30 +113,48 @@ public actor FolderQuarantineExecutor {
 
     /// Reload disk manifests so interrupted operations can be recovered after relaunch.
     public func recoveryRecords(root: URL) async throws -> [FolderQuarantineRecord] {
+        try await recoveryCatalogue(root: root).records
+    }
+
+    public func recoveryCatalogue(root: URL, verifyContents: Bool = true) async throws -> FolderRecoveryCatalogue {
         let directory = root.appendingPathComponent(".Keptora Quarantine", isDirectory: true)
-        guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
+        guard FileManager.default.fileExists(atPath: directory.path) else { return .init(records: [], issues: []) }
         var records: [FolderQuarantineRecord] = []
+        var issues: [FolderRecoveryIssue] = []
         for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
-                guard let data = try? Data(contentsOf: url.appendingPathComponent("recovery.json")),
-                      let record = try? JSONDecoder().decode(FolderQuarantineRecord.self, from: data),
-                      url.lastPathComponent == record.id.uuidString else { continue }
+            try Task.checkCancellation()
+            let manifest = url.appendingPathComponent("recovery.json")
+            do {
+                let record = try JSONDecoder().decode(FolderQuarantineRecord.self, from: Data(contentsOf: manifest))
+                guard url.lastPathComponent == record.id.uuidString else { throw CocoaError(.coderReadCorrupt) }
                 var rebased = try record.rebased(to: root)
+                // A completed receipt records a past restoration, not a live promise
+                // that the user will never edit, rename or move that photo afterwards.
+                if record.restoredAt != nil { records.append(rebased); continue }
                 for i in rebased.operations.indices {
                     let op = rebased.operations[i]
                     let inRecovery = FileManager.default.fileExists(atPath: op.quarantineURL.path)
                     let atOriginal = FileManager.default.fileExists(atPath: op.originalURL.path)
+                    if op.state == .restored && !inRecovery { continue }
+                    if !verifyContents {
+                        if inRecovery { rebased.operations[i].needsAttention = atOriginal }
+                        else if op.state == .moved { rebased.operations[i].needsAttention = true }
+                        continue
+                    }
                     let location = inRecovery ? op.quarantineURL : op.originalURL
-                    if (inRecovery || atOriginal), let hash = try? await StreamingSHA256.file(at: location, progress: { _ in }), hash.digest == op.expectedDigest {
+                    if (inRecovery || atOriginal), let hash = try? await verifiedFingerprint(at: location), hash.digest == op.expectedDigest {
                         rebased.operations[i].state = inRecovery ? .moved : .restored
                         rebased.operations[i].byteCount = hash.byteCount
                         rebased.operations[i].needsAttention = inRecovery && atOriginal
-                    } else { rebased.operations[i].state = .interrupted }
+                    } else { rebased.operations[i].state = .interrupted; rebased.operations[i].needsAttention = true }
                 }
                 if rebased.operations.allSatisfy({ $0.state == .restored }) { rebased.restoredAt = rebased.restoredAt ?? Date() }
-                try saveManifest(rebased)
+                if rebased != record { try saveManifest(rebased) }
                 records.append(rebased)
+            } catch is CancellationError { throw CancellationError() }
+            catch { issues.append(.init(manifestURL: manifest, message: error.localizedDescription)) }
             }
-        return records
+        return .init(records: records, issues: issues)
     }
 
     public func restore(_ record: FolderQuarantineRecord) async throws -> FolderQuarantineRecord {
@@ -138,6 +173,7 @@ public actor FolderQuarantineExecutor {
             }
             let inRecovery = FileManager.default.fileExists(atPath: operation.quarantineURL.path)
             let atOriginal = FileManager.default.fileExists(atPath: operation.originalURL.path)
+            if operation.state == .restored && !inRecovery { continue }
             guard inRecovery != atOriginal else {
                 throw UniversalScanError.cleanupNotPermitted("Restore stopped because an original path is occupied or quarantine content is missing.")
             }
@@ -152,11 +188,22 @@ public actor FolderQuarantineExecutor {
         var restored = record
         restored.restoredAt = Date()
         do {
-            for operation in pending {
+            for (position, operation) in pending.enumerated() {
                 try Task.checkCancellation()
                 try FileManager.default.createDirectory(at: operation.originalURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try await beforeRestoreMove?(operation, position)
+                let revision = LibraryFileRevision.capture(at: operation.quarantineURL)
+                let before = try await StreamingSHA256.file(at: operation.quarantineURL, progress: { _ in })
+                guard before.digest == operation.expectedDigest,
+                      revision == LibraryFileRevision.capture(at: operation.quarantineURL),
+                      !FileManager.default.fileExists(atPath: operation.originalURL.path) else {
+                    throw UnifiedLibraryError.selectionChanged
+                }
                 try coordinatedMove(from: operation.quarantineURL, to: operation.originalURL)
                 completed.append(operation)
+                try await afterRestoreMove?(operation, position)
+                let after = try await StreamingSHA256.file(at: operation.originalURL, progress: { _ in })
+                guard after.digest == operation.expectedDigest else { throw UnifiedLibraryError.selectionChanged }
                 if let index = restored.operations.firstIndex(where: { $0.id == operation.id }) { restored.operations[index].state = .restored }
                 // A durable partial restore must not claim every operation is complete.
                 restored.restoredAt = nil
@@ -171,12 +218,38 @@ public actor FolderQuarantineExecutor {
                 do { try coordinatedMove(from: operation.originalURL, to: operation.quarantineURL) }
                 catch { rollbackFailed = true }
             }
+            await reconcileAfterCompensation(&restored)
+            try? saveManifest(restored)
             if rollbackFailed {
                 throw UniversalScanError.cleanupNotPermitted("Restore was interrupted. Keep the recovery folder and retry; verified originals will be preserved.")
             }
             throw error
         }
         return restored
+    }
+
+    private func verifiedFingerprint(at url: URL) async throws -> UniversalExactFingerprint {
+        let revision = LibraryFileRevision.capture(at: url)
+        if let revision, let cached = verified[url], cached.0 == revision { return cached.1 }
+        let hash = try await StreamingSHA256.file(at: url, progress: { _ in })
+        guard revision == LibraryFileRevision.capture(at: url) else { throw UnifiedLibraryError.selectionChanged }
+        if let revision { verified[url] = (revision, hash) }
+        return hash
+    }
+
+    private func reconcileAfterCompensation(_ record: inout FolderQuarantineRecord) async {
+        record.restoredAt = nil
+        for i in record.operations.indices {
+            let op = record.operations[i]
+            let inRecovery = FileManager.default.fileExists(atPath: op.quarantineURL.path)
+            let atOriginal = FileManager.default.fileExists(atPath: op.originalURL.path)
+            let location = inRecovery ? op.quarantineURL : op.originalURL
+            let hash = try? await Task.detached { try await StreamingSHA256.file(at: location, progress: { _ in }) }.value
+            let valid = hash?.digest == op.expectedDigest
+            record.operations[i].state = valid ? (inRecovery ? .moved : .restored) : .interrupted
+            record.operations[i].needsAttention = !valid || (inRecovery && atOriginal)
+        }
+        if record.operations.allSatisfy({ $0.state == .restored && $0.needsAttention != true }) { record.restoredAt = Date() }
     }
 
     private func saveManifest(_ record: FolderQuarantineRecord) throws {

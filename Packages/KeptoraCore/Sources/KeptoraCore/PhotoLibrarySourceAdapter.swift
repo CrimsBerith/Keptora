@@ -82,6 +82,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
     }
 
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
+        try await enumerateAssets(batchSize: 100, control: nil, onBatch: { _ in })
+    }
+    public func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset] {
         let authorization = await authorizationStatus()
         guard authorization == .authorized || authorization == .limited else {
             throw UniversalScanError.sourcePermissionDenied
@@ -94,7 +97,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         var output: [UniversalMediaAsset] = []
         output.reserveCapacity(fetch.count)
         for index in 0..<fetch.count {
-            try Task.checkCancellation()
+            try Task.checkCancellation(); try await control?.waitIfPaused()
             let asset = fetch.object(at: index)
             guard asset.mediaType == .image || asset.mediaType == .video else { continue }
             let resources = PHAssetResource.assetResources(for: asset)
@@ -127,7 +130,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         isLivePhoto: asset.mediaSubtypes.contains(.photoLive), isScreenshot: asset.mediaSubtypes.contains(.photoScreenshot))
                 )
             )
+            if output.count % max(25, batchSize) == 0 { await onBatch(output) }
         }
+        await onBatch(output)
         return output
     }
 
