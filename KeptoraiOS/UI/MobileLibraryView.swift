@@ -74,7 +74,6 @@ struct MobileSourceLibraryView: View {
     var onChooseFolder: (() -> Void)? = nil
     var isStartupSetup = false
     @EnvironmentObject private var store: MobileKeptoraStore
-    @AppStorage(AppStorageKeys.iOSSourceSetupCompleted) private var sourceSetupCompleted = false
     @State private var showFolderPicker = false
 
     private var photosConnected: Bool { store.connectedSources.contains { $0.id == LibrarySource.photos.id } }
@@ -109,8 +108,7 @@ struct MobileSourceLibraryView: View {
             if isStartupSetup {
                 VStack {
                     Button {
-                        sourceSetupCompleted = true
-                        store.dismissModal()
+                        store.completeSourceSetup()
                     } label: {
                         Text("Continue to Library")
                     }

@@ -4,8 +4,6 @@ import SwiftUI
 struct MobileRootView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
-    @AppStorage("hasSeenMobileOnboarding") private var hasSeenMobileOnboarding = false
-    @AppStorage(AppStorageKeys.iOSSourceSetupCompleted) private var sourceSetupCompleted = false
 
     var body: some View {
         TabView(selection: $store.selectedTab) {
@@ -40,6 +38,10 @@ struct MobileRootView: View {
 
     private func presentStartupIfNeeded() {
         guard store.startupSourcesPrepared, store.modalRoute == nil else { return }
+        // Read the durable completion flags now. A dismissed sheet can invoke
+        // this closure before another view's AppStorage snapshot is updated.
+        let hasSeenMobileOnboarding = UserDefaults.standard.bool(forKey: "hasSeenMobileOnboarding")
+        let sourceSetupCompleted = UserDefaults.standard.bool(forKey: AppStorageKeys.iOSSourceSetupCompleted)
         if !hasSeenMobileOnboarding { store.present(.onboarding) }
         else if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: hasSeenMobileOnboarding, setupCompleted: sourceSetupCompleted) {
             store.present(.sourceSetup)

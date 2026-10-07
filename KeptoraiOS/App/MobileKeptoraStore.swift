@@ -137,6 +137,16 @@ final class MobileKeptoraStore: ObservableObject {
         modalRoute = nil
     }
 
+    func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasSeenMobileOnboarding")
+        dismissModal()
+    }
+
+    func completeSourceSetup() {
+        UserDefaults.standard.set(true, forKey: AppStorageKeys.iOSSourceSetupCompleted)
+        dismissModal()
+    }
+
     private let photosAdapter = PhotoLibrarySourceAdapter()
     private let scanner = UniversalExactScanner()
     private let folderCleanup = FolderQuarantineExecutor()

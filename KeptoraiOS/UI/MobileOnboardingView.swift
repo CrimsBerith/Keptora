@@ -2,8 +2,6 @@ import SwiftUI
 
 struct MobileOnboardingView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("hasSeenMobileOnboarding") private var hasSeenMobileOnboarding = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var currentPage = 0
 
@@ -110,8 +108,6 @@ struct MobileOnboardingView: View {
     }
 
     private func finishOnboarding() {
-        hasSeenMobileOnboarding = true
-        store.dismissModal()
-        dismiss()
+        store.completeOnboarding()
     }
 }
