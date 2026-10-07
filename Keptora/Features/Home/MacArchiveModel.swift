@@ -306,7 +306,7 @@ final class MacArchiveModel: ObservableObject {
     }
     private func rememberSelection() {
         selectionSession.capture(ids: selection, decisions: decisions); updateUndoAvailability()
-        undoManager?.registerUndo(withTarget: self) { model in model.undoSelection() }
+        undoManager?.registerUndo(withTarget: self) { model in MainActor.assumeIsolated { model.undoSelection() } }
         undoManager?.setActionName(L10n.tr("Selection"))
     }
     func undoSelection() {
@@ -314,7 +314,7 @@ final class MacArchiveModel: ObservableObject {
         if let undoManager, !undoManager.isUndoing { if undoManager.canUndo { undoManager.undo() }; return }
         let available = Set((assets + pendingSelection).map(\.id)).union(unresolvedSelectionIDs)
         guard let previous = selectionSession.undo(available: available, currentIDs: selection, decisions: decisions) else { return }
-        undoManager?.registerUndo(withTarget: self) { model in model.redoSelection() }
+        undoManager?.registerUndo(withTarget: self) { model in MainActor.assumeIsolated { model.redoSelection() } }
         undoManager?.setActionName(L10n.tr("Selection"))
         selection = previous.ids; decisions = previous.decisions
         updateUndoAvailability(); persistDecisions()
@@ -324,7 +324,7 @@ final class MacArchiveModel: ObservableObject {
         if let undoManager, !undoManager.isRedoing { if undoManager.canRedo { undoManager.redo() }; return }
         let available = Set((assets + pendingSelection).map(\.id)).union(unresolvedSelectionIDs)
         guard let next = selectionSession.redo(available: available, currentIDs: selection, decisions: decisions) else { return }
-        undoManager?.registerUndo(withTarget: self) { model in model.undoSelection() }
+        undoManager?.registerUndo(withTarget: self) { model in MainActor.assumeIsolated { model.undoSelection() } }
         undoManager?.setActionName(L10n.tr("Selection"))
         selection = next.ids; decisions = next.decisions; updateUndoAvailability(); persistDecisions()
     }

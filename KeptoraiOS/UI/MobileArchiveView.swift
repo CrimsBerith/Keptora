@@ -160,6 +160,7 @@ struct MobileLibraryView: View {
             if store.canOpenPhotosSettings { Button("Open Settings") { store.openPhotosSettings() }.accessibilityIdentifier("ios.photosPermission.openSettings") }
             Button("Not Now", role: .cancel) { store.isShowingPhotosPermissionHelp = false }.accessibilityIdentifier("ios.photosPermission.notNow")
         } message: { Text(store.photosPermissionHelpMessage) }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ios.page.archive")
     }
 
@@ -409,32 +410,7 @@ struct MobileLibraryView: View {
         if store.decisions.protectedIDs.contains(asset.id) { spoken.append(L10n.tr("Protected")) }
         return VStack(spacing: 6) {
             Button { store.toggleLibrarySelection(asset) } label: {
-            ZStack(alignment: .bottomTrailing) {
-                MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).allowsHitTesting(false).accessibilityHidden(true)
-                    .overlay(selected ? Color.black.opacity(0.28) : .clear)
-                VStack(alignment: .leading, spacing: 4) {
-                    Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources)).font(.caption2.weight(.semibold)).lineLimit(1)
-                        .padding(.horizontal, 5).padding(.vertical, 3)
-                        .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
-                    if let issue = store.qualityAssessments[asset.id]?.findings.first {
-                        Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol).font(.caption2).lineLimit(1).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
-                    }
-                    if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
-                    if kept { Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).lineLimit(1).padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4)) }
-                    Spacer()
-                }.padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                HStack {
-                    if asset.isFavorite { Image(systemName: "heart.fill") }
-                    if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
-                    Spacer()
-                    Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
-                        .foregroundStyle(selected ? MobileKeptoraDesign.accent : .white)
-                }
-                .font(.caption2.weight(.semibold)).foregroundStyle(.white)
-                .padding(8).background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? MobileKeptoraDesign.accent : .clear, lineWidth: 3))
+                selectionThumbnail(asset, selected: selected, keeperLabel: kept ? keeperLabel : nil)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(spoken.joined(separator: ", "))
@@ -457,6 +433,47 @@ struct MobileLibraryView: View {
             .contextMenu {
                 Button(store.decisions.protectedIDs.contains(asset.id) ? "Unprotect Photo" : "Protect Photo") { store.toggleProtection(asset) }
             }
+    }
+
+    private func selectionThumbnail(_ asset: UniversalMediaAsset, selected: Bool, keeperLabel: String?) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).allowsHitTesting(false).accessibilityHidden(true)
+                .overlay(selected ? Color.black.opacity(0.28) : .clear)
+            thumbnailBadges(asset, keeperLabel: keeperLabel)
+            thumbnailSelectionIndicator(asset, selected: selected)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? MobileKeptoraDesign.accent : .clear, lineWidth: 3))
+    }
+
+    private func thumbnailBadges(_ asset: UniversalMediaAsset, keeperLabel: String?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources))
+                .font(.caption2.weight(.semibold)).lineLimit(1).padding(.horizontal, 5).padding(.vertical, 3)
+                .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+            if let issue = store.qualityAssessments[asset.id]?.findings.first {
+                Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol).font(.caption2).lineLimit(1).padding(4)
+                    .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+            }
+            if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
+            if let keeperLabel {
+                Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).lineLimit(1).padding(4)
+                    .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+            }
+            Spacer()
+        }.padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func thumbnailSelectionIndicator(_ asset: UniversalMediaAsset, selected: Bool) -> some View {
+        HStack {
+            if asset.isFavorite { Image(systemName: "heart.fill") }
+            if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
+            Spacer()
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
+                .foregroundStyle(selected ? MobileKeptoraDesign.accent : .white)
+        }
+        .font(.caption2.weight(.semibold)).foregroundStyle(.white)
+        .padding(8).background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
     }
 
     private func groupActions(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset], itemCount: Int) -> some View {

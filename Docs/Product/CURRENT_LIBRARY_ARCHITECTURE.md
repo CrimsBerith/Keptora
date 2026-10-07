@@ -47,6 +47,8 @@ The model accepts a repository URL, source access coordinator, cleanup preflight
 
 `Scripts/validate_mac_localization.py` checks App/Feature controls, review/cleanup model text, mapped quality/keeper/error labels and cleanup errors in four languages. Image/format validators remain. Portable tests run on Linux; `.github/workflows/apple-validation.yml` selects Apple recovery, app and UI tests, including text/gallery Undo/Redo and Settings-only Pro. Workflow dispatch can set `benchmark_items=2000|3000`; a schedule applies once on the default branch. Benchmarks describe a generated corpus, not real-library precision, scrolling, energy or network speed. Real-library performance remains native acceptance.
 
+Mac, iPhone and StoreKit validation have independent CI jobs. Mac tests use ad-hoc signing and bounded test execution. StoreKit's configuration is a test-bundle resource; its six purchase/restore integration tests remain mandatory in a dedicated job. Explicit app languages resolve their localized bundle before Foundation string lookup, with four-language model assertions for reasons and positional formats.
+
 ## Legacy inventory
 
 | Component | Current role |

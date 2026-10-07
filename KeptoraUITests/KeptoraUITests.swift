@@ -55,6 +55,9 @@ final class KeptoraUITests: XCTestCase {
         if conflict { app.launchArguments.append("-keptoraRestoreConflictUITesting") }
         app.launchEnvironment["KEPTORA_MAC_FIXTURE_ID"] = UUID().uuidString
         app.launch(); app.activate()
+        XCTAssertTrue(app.windows["Keptora"].waitForExistence(timeout: 15))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Unified Mac fixture startup"; screenshot.lifetime = .keepAlways; add(screenshot)
         XCTAssertTrue(app.buttons["mac.archive.scanAll"].waitForExistence(timeout: 15))
         waitForEnabled(app.buttons["mac.archive.scanAll"])
         return app

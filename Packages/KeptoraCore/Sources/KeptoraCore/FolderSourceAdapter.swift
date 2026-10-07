@@ -60,7 +60,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
         ) else { throw UniversalScanError.inaccessibleAsset(rootURL.lastPathComponent) }
 
         var assets: [UniversalMediaAsset] = []
-        for case let url as URL in enumerator {
+        while let url = enumerator.nextObject() as? URL {
             try Task.checkCancellation(); try await control?.waitIfPaused()
             if configuration.excludesDirectory(url.lastPathComponent),
                (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {

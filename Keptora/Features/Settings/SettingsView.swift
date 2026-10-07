@@ -125,6 +125,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Settings")
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mac.page.settings")
         .task { await store.refresh() }
         .onDisappear { if archive.presentationOwner == .settings { archive.closePresentation() } }

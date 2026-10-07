@@ -136,6 +136,7 @@ struct MacSourceSetupView: View {
         }
         .controlSize(.large)
         .frame(minWidth: 480, idealWidth: 650, maxWidth: 800, minHeight: 480, idealHeight: 600, maxHeight: 800)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mac.sourceSetup")
         .interactiveDismissDisabled(isStartupSetup)
         .onAppear { archive.presentationOwner = .sources }
@@ -233,6 +234,7 @@ struct MacArchiveView: View {
         .background(KeptoraDesign.canvas)
         .background(MacGalleryKeyboardMonitor(selectAll: { archive.selectItems(visible) }, find: { searchFocused = true },
             undo: { archive.undoSelection() }, redo: { archive.redoSelection() }))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mac.page.archive")
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
         .sheet(item: $inspected) { item in
@@ -834,7 +836,7 @@ struct CombinedCleanupHistoryView: View {
 
 
 private struct MacGalleryPositions: PreferenceKey {
-    static var defaultValue: [String: CGFloat] = [:]
+    static let defaultValue: [String: CGFloat] = [:]
     static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
 }
 
@@ -869,6 +871,6 @@ struct MacSuggestionsView: View {
                 else if archive.analyzing { ProgressView(archive.status ?? L10n.tr("Loading sources")); Button("Pause Scan") { archive.pauseAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
                 else { Button("Start Scan") { archive.analyze() }.buttonStyle(.borderedProminent).disabled(!archive.canScanSelectedSources) }
             }.padding(24).frame(maxWidth: 850, alignment: .leading)
-        }.accessibilityIdentifier("mac.page.suggestions")
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("mac.page.suggestions")
     }
 }
