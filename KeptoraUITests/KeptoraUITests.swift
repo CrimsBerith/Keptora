@@ -66,6 +66,14 @@ final class KeptoraUITests: XCTestCase {
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
     }
+    private func waitForSelectionCount(_ expected: Int, in app: XCUIApplication) {
+        let count = app.staticTexts["mac.archive.selectionCount"]
+        let title = "Selected items: \(expected)"
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            count.exists && (count.label == title || count.value as? String == title)
+        }, object: count)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
+    }
     private func openUnifiedCopies(_ app: XCUIApplication) -> XCUIElement {
         app.typeKey("2", modifierFlags: .command)
         let category = app.buttons["mac.suggestions.copies"]
@@ -137,13 +145,15 @@ final class KeptoraUITests: XCTestCase {
         let app = launchUnifiedMacFixture()
         let assets = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.asset."))
         XCTAssertTrue(assets.firstMatch.waitForExistence(timeout: 10)); XCTAssertGreaterThanOrEqual(assets.count, 2)
-        assets.element(boundBy: 0).click(); assets.element(boundBy: 1).click()
-        let count = app.staticTexts["mac.archive.selectionCount"]
-        XCTAssertTrue(count.label.contains("2"))
-        app.typeKey("z", modifierFlags: .command); XCTAssertTrue(count.label.contains("1"))
-        app.typeKey("z", modifierFlags: .command); XCTAssertFalse(app.buttons["mac.archive.reviewSelection"].isEnabled)
-        app.typeKey("z", modifierFlags: [.command, .shift]); XCTAssertTrue(count.label.contains("1"))
-        app.typeKey("z", modifierFlags: [.command, .shift]); XCTAssertTrue(count.label.contains("2"))
+        let firstID = assets.element(boundBy: 0).identifier, secondID = assets.element(boundBy: 1).identifier
+        XCTAssertNotEqual(firstID, secondID)
+        app.buttons[firstID].click(); waitForSelectionCount(1, in: app)
+        app.buttons[secondID].click(); waitForSelectionCount(2, in: app)
+        app.typeKey("z", modifierFlags: .command); waitForSelectionCount(1, in: app)
+        app.typeKey("z", modifierFlags: .command); waitForSelectionCount(0, in: app)
+        XCTAssertFalse(app.buttons["mac.archive.reviewSelection"].isEnabled)
+        app.typeKey("z", modifierFlags: [.command, .shift]); waitForSelectionCount(1, in: app)
+        app.typeKey("z", modifierFlags: [.command, .shift]); waitForSelectionCount(2, in: app)
     }
     func testNativeSettingsCanPresentProWithMainWindowClosed() {
         let app = launchUnifiedMacFixture()
@@ -152,7 +162,9 @@ final class KeptoraUITests: XCTestCase {
         let settings = app.windows.containing(.any, identifier: "mac.page.settings").firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 10))
         app.windows["Keptora"].buttons[XCUIIdentifierCloseWindow].click()
-        XCTAssertTrue(settings.buttons["mac.settings.showPaywall"].isHittable); settings.buttons["mac.settings.showPaywall"].click()
+        let pro = settings.buttons["mac.settings.showPaywall"]
+        for _ in 0..<8 where !pro.isHittable { settings.scrollViews.firstMatch.scroll(byDeltaX: 0, deltaY: -350) }
+        XCTAssertTrue(pro.waitForExistence(timeout: 5)); XCTAssertTrue(pro.isHittable); pro.click()
         XCTAssertTrue(app.buttons["mac.paywall.close"].waitForExistence(timeout: 10))
     }
 

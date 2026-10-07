@@ -63,13 +63,12 @@ final class KeptoraiOSTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(assets.count, 5, "Simulator should contain the imported sample assets.")
         
         let scanner = UniversalExactScanner()
-        let (_, groups, _, _) = try await scanner.scan(adapter: adapter, allowNetwork: false) { _, _, _ in }
-        XCTAssertFalse(groups.isEmpty, "Scanner should identify the imported duplicate photo groups.")
+        let outcome = try await scanner.scan(adapter: adapter, allowNetwork: false) { _, _, _ in }
+        XCTAssertFalse(outcome.groups.isEmpty, "Scanner should identify the imported duplicate photo groups.")
         
-        for group in groups {
+        for group in outcome.groups {
             XCTAssertFalse(group.keeperID.isEmpty, "Every exact duplicate group must contain a protected keeper.")
             XCTAssertGreaterThanOrEqual(group.assets.count, 2, "Duplicate groups must contain at least 2 assets.")
         }
     }
 }
-

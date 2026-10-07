@@ -261,6 +261,7 @@ struct MacArchiveView: View {
             HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
                 .padding(.horizontal, 16).padding(.top, 10)
             filters
+            if finding == .copies { exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 8) }
             if let message = archive.filterScopeMessage {
                 HStack(alignment: .top) {
                     Text(message).font(.caption).foregroundStyle(.secondary)
@@ -303,7 +304,6 @@ struct MacArchiveView: View {
                 if archive.skippedCloudItems > 0 {
                     Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
                 }
-                if finding == .copies { exactBatchSelection.padding(.horizontal, 20) }
                 if archive.sessionProgress.isFinished && !archive.sessionProgress.isComplete && !archive.sessionProgress.stages.values.contains(where: { $0.status == .cancelled }) {
                     Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption).padding(.horizontal, 20)
                 }
@@ -389,7 +389,7 @@ struct MacArchiveView: View {
             HStack(spacing: 8) {
                 Label("Sources", systemImage: "checklist")
                 Text(L10n.format("%lld selected", archive.selectedSourceIDs.count)).monospacedDigit()
-            }
+            }.fixedSize(horizontal: true, vertical: false)
         }.accessibilityIdentifier("mac.archive.sourcesSummary").disabled(archive.busy)
         Button { archive.refresh() } label: { Image(systemName: "arrow.clockwise").frame(width: 32, height: 32).contentShape(Rectangle()) }
             .help("Refresh Library").accessibilityLabel("Refresh Library").disabled(archive.sourceControlsDisabled)
