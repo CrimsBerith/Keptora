@@ -700,6 +700,7 @@ struct MacManualSelectionSheet: View {
                 if result.isComplete { dismiss() } else { needsReReview = true }
             } }
                 label: { Text(L10n.format("Remove %lld Items", expectedIDs.count)) }
+                .accessibilityIdentifier("mac.archive.review.confirmRemoval")
             Button("Cancel", role: .cancel) { }
         } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }
         .alert("Something went wrong", isPresented: archive.errorBinding(for: .review)) {

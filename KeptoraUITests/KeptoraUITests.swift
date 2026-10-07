@@ -83,8 +83,13 @@ final class KeptoraUITests: XCTestCase {
         return copies
     }
     private func confirmUnifiedRemoval(_ app: XCUIApplication) {
-        let button = app.buttons.matching(NSPredicate(format: "label == %@", "Remove 1 Items")).allElementsBoundByIndex.first { $0.isHittable }
-        XCTAssertNotNil(button); button?.click()
+        let button = app.buttons["mac.archive.review.confirmRemoval"]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        XCTAssertTrue(button.isHittable); button.click()
+        let completed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !app.buttons["mac.archive.review.remove"].exists
+        }, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [completed], timeout: 15), .completed)
     }
 
     func testUnifiedMacScanSelectionReviewUndoAndRestore() {

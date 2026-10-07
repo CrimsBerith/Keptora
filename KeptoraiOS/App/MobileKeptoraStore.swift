@@ -75,6 +75,10 @@ final class MobileKeptoraStore: ObservableObject {
     @Published private(set) var authorization: SourceAuthorization = .notDetermined
     @Published var scanState: ScanState = .idle
     @Published private(set) var assets: [UniversalMediaAsset] = []
+    #if DEBUG
+    // Test fixtures use the same selection logic without exposing catalogue mutation in release builds.
+    func replaceAssetsForTesting(_ items: [UniversalMediaAsset]) { assets = items }
+    #endif
     @Published internal(set) var exactGroups: [UniversalExactGroup] = []
     @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = []
     @Published internal(set) var similarVideoGroups: [UniversalSimilarityGroup] = []

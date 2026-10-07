@@ -93,6 +93,11 @@ jobs:
             xcrun xcresulttool export attachments --path Build/MacUITests.xcresult --output-path Build/MacUIAttachments
             xcrun xcresulttool export diagnostics --path Build/MacUITests.xcresult --output-path Build/MacUIDiagnostics
           fi
+          mkdir -p Build/MacCrashReports
+          for report in "$HOME/Library/Logs/DiagnosticReports"/Keptora*.ips; do
+            [[ -f "$report" ]] && cp "$report" Build/MacCrashReports/
+          done
+          exit 0
       - name: Keep Mac test evidence and current screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -102,6 +107,7 @@ jobs:
             Build/*.xcresult
             Build/MacUIAttachments
             Build/MacUIDiagnostics
+            Build/MacCrashReports
             Build/native-analysis-benchmark.json
           retention-days: 14
 
