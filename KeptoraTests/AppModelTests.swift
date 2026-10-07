@@ -119,6 +119,26 @@ final class AppModelTests: XCTestCase {
         store.paywallBinding(for: .main).wrappedValue = false; XCTAssertTrue(store.isShowingPaywall)
         store.paywallBinding(for: .settings).wrappedValue = false; XCTAssertFalse(store.isShowingPaywall)
     }
+    func testPendingRefreshResumesOnceWhenStorageWriterReleases() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let owner = LibraryOperationCoordinator(), archive = MacArchiveModel(persistentSession: false, operations: owner)
+        archive.connectFolder(root)
+        XCTAssertEqual(archive.connectedFolders.count, 1)
+        for _ in 0..<200 where archive.loading { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(archive.loading)
+        let resources: Set<String> = [LibraryFileIdentity.volumeKey(for: root)]
+        let writer = try XCTUnwrap(owner.acquire(resources, mode: .write))
+        archive.refresh()
+        XCTAssertFalse(archive.loading, "The writer blocks enumeration while retaining a pending refresh")
+        owner.release(writer)
+        XCTAssertTrue(archive.loading, "Releasing the writer starts the pending refresh without recursive acquisition")
+        for _ in 0..<200 where archive.loading { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(archive.loading)
+        XCTAssertTrue(owner.canAcquire(resources, mode: .write), "The completed refresh releases its reader lease")
+        XCTAssertNil(archive.error)
+    }
     func testUnifiedRecommendationAllowanceDoesNotLimitManualSelection() {
         let model = MacArchiveModel(persistentSession: false), namespace = UUID().uuidString
         let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)

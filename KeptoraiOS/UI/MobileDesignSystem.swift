@@ -111,6 +111,7 @@ struct MobileAuroraBackground: View {
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 
     /// Radial gradient instead of a blurred circle: same look, no offscreen blur pass behind every list.

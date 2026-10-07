@@ -169,7 +169,8 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertEqual(app.buttons["archive.asset.ui-similar-photo-b"].value as? String, "Not selected")
         XCTAssertFalse(app.buttons["Compare Group"].exists)
         app.buttons["archive.undoSelection"].tap()
-        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        XCTAssertFalse(app.buttons["archive.reviewSelection"].exists)
+        XCTAssertTrue(others.isEnabled)
     }
 
     func testPhotoTapSelectsWithoutMagnifierAndCanBeUndone() {
@@ -198,7 +199,7 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
         XCTAssertEqual(select.label, "Extra Copies Selected"); XCTAssertFalse(select.isEnabled)
         app.buttons["archive.undoSelection"].tap()
-        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        XCTAssertFalse(app.buttons["archive.reviewSelection"].exists)
         XCTAssertTrue(select.isEnabled)
     }
 

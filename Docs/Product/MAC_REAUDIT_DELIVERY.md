@@ -2,7 +2,7 @@
 
 7 Ekim 2026 · `feat/photo-cleaner-library` · başlangıç revizyonu `7a19e1101b6f1bc676721c6d6260ead0318e97d7`.
 
-[Başlangıç denetimindeki](MAC_PROFESSIONAL_REAUDIT.md) R01–R20 için kod değişiklikleri uygulandı. Bu, native derleme, gerçek cihaz ekranları veya gerçek arşiv performansının onaylandığı anlamına gelmez. Linux doğrulaması aşağıda ayrı; kullanıcı tarafından yapılacak Xcode/Mac/iPhone kabul adımları en sonda. Dal `main` ile birleştirilmez.
+[Başlangıç denetimindeki](MAC_PROFESSIONAL_REAUDIT.md) R01–R20 için kod değişiklikleri uygulandı. Linux ve Apple CI doğrulaması aşağıda ayrı gösterilir; gerçek cihaz ekranları ve gerçek arşiv performansı henüz onaylanmış sayılmaz. Kullanıcı tarafından yapılacak Xcode/Mac/iPhone kabul adımları en sonda. Dal `main` ile birleştirilmez.
 
 ## Bulguların karşılığı
 
@@ -13,7 +13,7 @@
 | R03 | Varsayılan politika analizörün ölçülen kalite önerisini korur. Koruma ve açık saklama stratejileri önceliklidir; neden metni kullanılan politikaya uyar. | Ortak keeper/kalite/strateji testleri geçti. Gerçek görsel corpus doğruluğu native kabulde. |
 | R04 | Sonuç tamamlanan, başarısız ve denenmeyen ID'leri ayırır. Son inceleme tamamlananları çıkarır; kalan öğeler açık yeniden inceleme olmadan tekrar kaldırılmaz. | Frozen review/kalan seçim testleri geçti. PhotoKit başarı + klasör hatası native kabulde. |
 | R05 | Kalıcı kayıt-sağlığı uyarısı, kayıt hatasında karar/kaldırma engeli, retry ve okunamayan özgün kayıtları koruyarak onarma eklendi. Başarısız flush çıkışı iptal eder. | Ortak repository ve Mac bozuk kayıt/yazma hatası/onarma model testleri geçti. Gerçek disk-full ve native quit kabulü ayrıca gerekli. |
-| R06 | Ana ve gelişmiş Mac motoru aynı kaynak/volume read/write sahibini kullanır. Quit yeni işleri engeller; iki motorun tarama ve onaylanmış taşıma işleri beklenir. | Ortak lease/çatışma/quit testleri geçti. Native iki-motor ve işlem sırasında quit kabulü gerekli. |
+| R06 | Ana ve gelişmiş Mac motoru aynı kaynak/volume read/write sahibini kullanır. Quit yeni işleri engeller; iki motorun tarama ve onaylanmış taşıma işleri beklenir. Yenileme durumu synchronous lease bildirimi öncesinde sahiplenilir; bekleyen yenileme tekrar kendini başlatmaz. | Ortak lease/çatışma/quit testleri geçti. Writer sonrası pending-refresh regresyonu eklendi; native iki-motor ve işlem sırasında quit kabulü gerekli. |
 | R07 | Sağlıklı ve bozuk/unsafe kurtarma kayıtları ayrı döner; biri diğerini gizlemez. Tamamlanmış restore makbuzu sonraki düzenleme/rename nedeniyle bozulmaz. | Apple runner'da recovery testleri geçti. Payload otomatik silinmez. Gerçek provider/harici disk kabulü ayrıca gerekli. |
 | R08 | Her restore taşımasının hemen öncesinde taze hash/revizyon, sonrasında hedef hash kontrol edilir; ancak sonra makbuz kaydedilir. İptal/compensation kayıtla uzlaştırılır. | Geç mutasyon, hedef mutasyonu ve child-task iptali Apple testleri geçti. Gerçek disk çıkarma/uyku/disk-full kabulü ayrıca gerekli. |
 | R09 | Hard link fiziksel kimliği ile directory-entry seçim kimliği ayrıldı. Kendi taşıması sonrası sibling ctime değişimi, özgün digest korunarak uzlaştırılır. | Gerçek hard-link kimlik testi ve iki entry quarantine/restore Apple testi geçti. |
@@ -25,7 +25,7 @@
 | R15 | Muhtemel blur, düşük çözünürlük, karanlık, aşırı parlaklık ve sorunlu öğeler için adetli bağımsız filtreler eklendi. Kalite önerisi otomatik silme değildir. | Ortak kalite/filtre testleri geçti; gerçek portre/bokeh/gece corpus'u ile insan doğrulaması gerekli. |
 | R16 | Arama, filtre, tarama ve kaynak özeti sabit üst kontrollere taşındı. Ayrıntılar tek Kaynaklar panelinde; filtreler tek tek kaldırılabilir; Cmd-F aramayı odaklar. | Swift parse geçti. 900×650 pencere, uzun TR/FR/DE metinler ve erişilebilirlik native görsel kabulde. |
 | R17 | 50 adımlı seçim/karar Undo/Redo, native UndoManager ve grid Cmd-Z/Cmd-Shift-Z eklendi. Metin editörünün undo'su korunur; busy model çağrısı geçmişi tüketmez. | Ortak 3.000 işlem/bounded history testleri geçti. Mac model ve metin/grid UI testleri eklendi. |
-| R18 | Toolbar ve Cmd-comma aynı native Ayarlar'ı açar. Pro sheet başlatan pencereye bağlıdır; Dock reopen ana pencere kimliğini hedefler. | Paywall host model testi ve yalnız Ayarlar açıkken Pro UI testi eklendi; Xcode'da çalıştırılmalı. |
+| R18 | Toolbar ve Cmd-comma aynı native Ayarlar'ı açar. Pro sheet başlatan pencereye bağlıdır; Dock reopen ana pencere kimliğini hedefler. | Paywall host model testi ve yalnız Ayarlar açıkken Pro native UI testi geçti. Dock/gerçek satın alma ayrıca cihaz kabulünde. |
 | R19 | Kullanıcı durumu ve büyük analiz/cache ayrı yazılır. Kaynak içi 100 öğelik batch, cache'li galeri/albüm/issue projeksiyonu, 120 ms arama debounce ve metadata-first recovery refresh var. Pozisyon asenkron yükleme sonrası uygulanır. | Mac 3.000 öğe projection reuse/cache ayrımı testleri geçti. Gerçek FPS/p95/RSS/enerji ölçülmedi. SwiftUI modelin tüm değişimlerini hâlâ gözler; daha fazla parçalama ölçüme göre yapılmalı. |
 | R20 | Karar nedenleri, cleanup durumları ve interpolasyonlu grup metinleri uygulama diline bağlandı. Validator bilinen dinamik metin haritalarını da kontrol ediyor. | EN/TR/FR/DE 661 metin anahtarı, format parametreleri ve dört dil native model testi geçti; ekranda plural/layout kabulü gerekli. |
 

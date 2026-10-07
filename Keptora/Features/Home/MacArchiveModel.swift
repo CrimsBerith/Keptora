@@ -564,14 +564,19 @@ final class MacArchiveModel: ObservableObject {
     func refresh() {
         guard sourceReady, !operations.isTerminating else { return }
         guard !busy, !analyzing, !loading else { pendingRefresh = true; return }
-        guard let lease = operations.acquire(operationResources, mode: .read) else { pendingRefresh = true; return }
+        // Lease notifications are synchronous. Claim the refresh before acquiring
+        // so an observer cannot start the same pending refresh recursively.
         pendingRefresh = false
+        loading = true
+        guard let lease = operations.acquire(operationResources, mode: .read) else {
+            loading = false; pendingRefresh = true; return
+        }
         do {
             try sourceAccess.revalidate(configuration: .stored())
             connectedFolders = connectedFolders.compactMap { folderAdapters[$0.id]?.source }
             sourceAccess.observeChanges { [weak self] in Task { @MainActor in self?.refresh() } }
         } catch { connectionErrors = [L10n.tr("Reconnect an unavailable folder in Sources.")] }
-        task?.cancel(); loading = true
+        task?.cancel()
         let current = UUID(); generation = current
         let adapter = self.adapter
         let previousAssets = assets

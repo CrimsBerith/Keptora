@@ -411,6 +411,7 @@ struct MobileLibraryView: View {
         return VStack(spacing: 6) {
             Button { store.toggleLibrarySelection(asset) } label: {
                 selectionThumbnail(asset, selected: selected, keeperLabel: kept ? keeperLabel : nil)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(spoken.joined(separator: ", "))
@@ -439,8 +440,9 @@ struct MobileLibraryView: View {
         ZStack(alignment: .bottomTrailing) {
             MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
                 .overlay(selected ? Color.black.opacity(0.28) : .clear)
-            thumbnailBadges(asset, keeperLabel: keeperLabel)
-            thumbnailSelectionIndicator(asset, selected: selected)
+                .allowsHitTesting(false)
+            thumbnailBadges(asset, keeperLabel: keeperLabel).allowsHitTesting(false)
+            thumbnailSelectionIndicator(asset, selected: selected).allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? MobileKeptoraDesign.accent : .clear, lineWidth: 3))

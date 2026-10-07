@@ -102,6 +102,7 @@ struct MobileSourceLibraryView: View {
             }
         }
         .navigationTitle("Sources")
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier(isStartupSetup ? "ios.sourceSetup" : "ios.page.library")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {

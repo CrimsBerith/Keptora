@@ -141,7 +141,7 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSourceCheckboxesPreserveManualSelectionAndPersist \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
-            test
+            test-without-building
       - name: Export iPhone screenshots and diagnostics
         if: always()
         run: |
