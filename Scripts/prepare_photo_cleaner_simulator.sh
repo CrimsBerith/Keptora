@@ -25,7 +25,8 @@ xcrun simctl addmedia "$KEPTORA_SIMULATOR_ID" \
   AppStore/Generated/Keptora_Review_Corpus/Exact/Beach_Copy.jpg
 xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
   -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
-  -derivedDataPath Build/CI CODE_SIGNING_ALLOWED=NO build-for-testing
+  -derivedDataPath Build/CI CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
+  CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= build-for-testing
 KEPTORA_APP=Build/CI/Build/Products/Debug-iphonesimulator/KeptoraiOS.app
 if [[ ! -d "$KEPTORA_APP" ]]; then
   KEPTORA_APP=Build/CI/Build/Products/Debug-iphonesimulator/Keptora.app

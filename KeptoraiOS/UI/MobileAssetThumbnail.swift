@@ -10,6 +10,7 @@ struct MobileAssetThumbnail: View {
     var pixelSize: CGFloat = 384
     var contentMode: ContentMode = .fill
     var allowNetwork = false
+    var showsRetryButton = true
     @State private var image: UIImage?
     @State private var didFinish = false
     @State private var needsDownload = false
@@ -29,8 +30,10 @@ struct MobileAssetThumbnail: View {
                 VStack(spacing: 6) {
                     Image(systemName: "photo.badge.exclamationmark").font(.title2)
                     Text(needsDownload ? LocalizedStringKey("Cloud original needs download") : LocalizedStringKey("Preview unavailable")).font(.caption2).multilineTextAlignment(.center)
-                    Button { Task { didFinish = false; await load(); didFinish = true } } label: {
-                        Text("Retry").font(.caption).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                    if showsRetryButton {
+                        Button { Task { didFinish = false; await load(); didFinish = true } } label: {
+                            Text("Retry").font(.caption).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        }
                     }
                 }.foregroundStyle(.secondary).padding(4)
             }

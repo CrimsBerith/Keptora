@@ -5,6 +5,12 @@ final class KeptoraiOSUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
+    override func tearDownWithError() throws {
+        if (testRun?.failureCount ?? 0) > 0 {
+            let hierarchy = XCTAttachment(string: XCUIApplication().debugDescription)
+            hierarchy.name = "Failed iPhone app hierarchy"; hierarchy.lifetime = .keepAlways; add(hierarchy)
+        }
+    }
 
     private func launch(
         arguments: [String] = [],
@@ -25,11 +31,45 @@ final class KeptoraiOSUITests: XCTestCase {
 
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication, scrollDown: Bool = false) {
-        for _ in 0..<10 where !element.isHittable {
-            if scrollDown { app.swipeDown() } else { app.swipeUp() }
+        for _ in 0..<10 {
+            var viewport = app.frame
+            if let navigation = app.navigationBars.allElementsBoundByIndex.last {
+                viewport.origin.y = max(viewport.minY, navigation.frame.maxY)
+                viewport.size.height = app.frame.maxY - viewport.minY
+            }
+            for id in ["archive.selectionBar", "archive.review.actions", "ios.sourceSetup.continue"] {
+                let footer = app.descendants(matching: .any)[id].firstMatch
+                if footer.exists, footer.frame.height > 0 {
+                    viewport.size.height = max(1, min(viewport.maxY, footer.frame.minY) - viewport.minY)
+                }
+            }
+            if app.tabBars.firstMatch.exists {
+                viewport.size.height = max(1, min(viewport.maxY, app.tabBars.firstMatch.frame.minY) - viewport.minY)
+            }
+            var down = scrollDown
+            if element.exists {
+                if element.isHittable && viewport.contains(element.frame) { break }
+                if element.frame.minY < viewport.minY { down = true }
+                else if element.frame.maxY > viewport.maxY { down = false }
+            }
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let start = origin.withOffset(CGVector(dx: viewport.midX, dy: viewport.minY + viewport.height * (down ? 0.2 : 0.8)))
+            let end = origin.withOffset(CGVector(dx: viewport.midX, dy: viewport.minY + viewport.height * (down ? 0.8 : 0.2)))
+            start.press(forDuration: 0.05, thenDragTo: end)
         }
         XCTAssertTrue(element.waitForExistence(timeout: 5))
         XCTAssertTrue(element.isHittable)
+    }
+    private func connectRealPhotos(_ app: XCUIApplication) {
+        if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
+        let fullAccess = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Allow Full Access"]
+        if fullAccess.waitForExistence(timeout: 3) { fullAccess.tap() }
+        XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 20))
+    }
+    func testGrantPhotosAccessForRealMedia() {
+        let app = launch()
+        connectRealPhotos(app)
+        XCTAssertTrue(app.buttons["archive.selectAll"].isEnabled)
     }
 
     private func assertTouchTarget(_ button: XCUIElement, in app: XCUIApplication, minimumHeight: CGFloat = 44,
@@ -83,14 +123,15 @@ final class KeptoraiOSUITests: XCTestCase {
             "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
         app.launch()
         XCTAssertTrue(app.staticTexts["Connect your library"].waitForExistence(timeout: 10))
-        let settings = app.buttons["ios.library.openSettings"]
+        let setup = app.descendants(matching: .any)["ios.sourceSetup"].firstMatch
+        let settings = setup.buttons["ios.library.openSettings"]
         for _ in 0..<5 where !settings.isHittable { app.swipeUp() }
         XCTAssertTrue(settings.isHittable)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Startup source access — denied Photos"
         attachment.lifetime = .keepAlways; add(attachment)
-        let files = app.buttons["library.source.files"]
-        for _ in 0..<8 where !files.isHittable { app.swipeUp() }
+        let files = setup.buttons["library.source.files"]
+        reveal(files, in: app)
         XCTAssertTrue(files.isHittable)
         app.buttons["ios.sourceSetup.continue"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 5))
@@ -181,7 +222,7 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Close Preview"].exists)
         XCTAssertFalse(app.buttons["archive.preview.ui-photo-copy"].exists)
         reveal(item, in: app); item.tap()
-        XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
+        XCTAssertTrue(app.staticTexts["Selected items: 0"].waitForExistence(timeout: 5))
         app.buttons["archive.undoSelection"].tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)
     }
@@ -217,7 +258,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testScanAllSourcesFindsCopiesInRealSimulatorPhotos() {
         let app = launch()
-        if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
+        connectRealPhotos(app)
         let scan = app.buttons["archive.scanAll"]
         XCTAssertTrue(scan.waitForExistence(timeout: 15)); scan.tap()
         XCTAssertTrue(scan.waitForExistence(timeout: 120), "Scan and both similarity passes must finish")
@@ -233,7 +274,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testCaptureCurrentPhotoLibraryScreens() {
         let app = launch()
-        if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
+        connectRealPhotos(app)
         XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["archive.selectAll"].isEnabled, "Imported simulator photos must be visible")
         let attachment = XCTAttachment(screenshot: app.screenshot())
@@ -343,7 +384,7 @@ final class KeptoraiOSUITests: XCTestCase {
         app.buttons["archive.reviewSelection"].tap()
         let exclude = app.buttons["archive.review.exclude.ui-photo-copy"]
         reveal(exclude, in: app); exclude.tap()
-        XCTAssertTrue(app.staticTexts["No items selected."].exists)
+        XCTAssertTrue(app.staticTexts["No items selected."].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["archive.review.remove"].isEnabled)
         XCTAssertTrue(app.staticTexts["Selected items: 0"].exists)
         app.buttons["archive.review.undo"].tap()
@@ -379,8 +420,10 @@ final class KeptoraiOSUITests: XCTestCase {
         app.segmentedControls.buttons["Photos"].tap()
         XCTAssertTrue(app.buttons["archive.filter.remove.finding"].exists)
         XCTAssertTrue(app.buttons["archive.filter.remove.media"].exists)
-        app.buttons["archive.filter.remove.finding"].tap()
-        XCTAssertFalse(app.buttons["archive.filter.remove.finding"].exists)
+        let chip = app.buttons["archive.filter.remove.finding"]
+        reveal(chip, in: app); chip.tap()
+        let removed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: chip)
+        XCTAssertEqual(XCTWaiter.wait(for: [removed], timeout: 5), .completed)
         XCTAssertTrue(app.buttons["archive.filter.remove.media"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["Photos"].isSelected)
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)

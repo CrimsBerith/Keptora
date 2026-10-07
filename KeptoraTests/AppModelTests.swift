@@ -123,11 +123,12 @@ final class AppModelTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        let owner = LibraryOperationCoordinator(), archive = MacArchiveModel(persistentSession: false, operations: owner)
-        archive.connectFolder(root)
-        XCTAssertEqual(archive.connectedFolders.count, 1)
-        for _ in 0..<200 where archive.loading { try await Task.sleep(nanoseconds: 10_000_000) }
-        XCTAssertFalse(archive.loading)
+        let owner = LibraryOperationCoordinator(), access = MacSourceAccessCoordinator()
+        // App-owned test storage needs no user-selected security-scoped grant.
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        access.scopes[adapter.source.id] = root; access.adapters[adapter.source.id] = adapter
+        let archive = MacArchiveModel(sourceAccess: access, persistentSession: false, operations: owner)
+        archive.connectedFolders = [adapter.source]; archive.sourceReady = true
         let resources: Set<String> = [LibraryFileIdentity.volumeKey(for: root)]
         let writer = try XCTUnwrap(owner.acquire(resources, mode: .write))
         archive.refresh()
@@ -136,6 +137,7 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(archive.loading, "Releasing the writer starts the pending refresh without recursive acquisition")
         for _ in 0..<200 where archive.loading { try await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertFalse(archive.loading)
+        XCTAssertEqual(archive.coverage.first?.authorization, .authorized)
         XCTAssertTrue(owner.canAcquire(resources, mode: .write), "The completed refresh releases its reader lease")
         XCTAssertNil(archive.error)
     }

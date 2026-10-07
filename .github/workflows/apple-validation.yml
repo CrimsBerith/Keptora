@@ -66,6 +66,7 @@ jobs:
             -maximum-test-execution-time-allowance 120 -parallel-testing-enabled NO \
             -only-testing:KeptoraTests -skip-testing:KeptoraTests/StoreKitEntitlementTests test
       - name: macOS product UI tests
+        if: success() || failure()
         timeout-minutes: 15
         run: |
           xcodebuild -project Keptora.xcodeproj -scheme Keptora \
@@ -118,12 +119,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare iPhone simulator with actual media
         run: bash Scripts/prepare_photo_cleaner_simulator.sh
+      - name: Approve actual Photos permission before integration tests
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
+            -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
+            -derivedDataPath Build/CI -resultBundlePath Build/iPhonePermission.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testGrantPhotosAccessForRealMedia \
+            test-without-building
       - name: iPhone unit and product UI tests
         run: |
           xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
             -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
             -derivedDataPath Build/CI -resultBundlePath Build/iPhoneTests.xcresult \
-            CODE_SIGNING_ALLOWED=NO -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -parallel-testing-enabled NO \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
             -maximum-test-execution-time-allowance 180 \
             -only-testing:KeptoraiOSTests \
@@ -149,6 +161,9 @@ jobs:
             xcrun xcresulttool export attachments --path Build/iPhoneTests.xcresult --output-path Build/iPhoneAttachments
             xcrun xcresulttool export diagnostics --path Build/iPhoneTests.xcresult --output-path Build/iPhoneDiagnostics
           fi
+          if [[ -d Build/iPhonePermission.xcresult ]]; then
+            xcrun xcresulttool export attachments --path Build/iPhonePermission.xcresult --output-path Build/iPhonePermissionAttachments
+          fi
       - name: Keep iPhone test evidence and current screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -158,6 +173,7 @@ jobs:
             Build/*.xcresult
             Build/iPhoneAttachments
             Build/iPhoneDiagnostics
+            Build/iPhonePermissionAttachments
           retention-days: 14
 
   native-storekit:

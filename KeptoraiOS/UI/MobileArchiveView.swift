@@ -438,7 +438,7 @@ struct MobileLibraryView: View {
 
     private func selectionThumbnail(_ asset: UniversalMediaAsset, selected: Bool, keeperLabel: String?) -> some View {
         ZStack(alignment: .bottomTrailing) {
-            MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
+            MobileAssetThumbnail(asset: asset, showsRetryButton: false).aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
                 .overlay(selected ? Color.black.opacity(0.28) : .clear)
                 .allowsHitTesting(false)
             thumbnailBadges(asset, keeperLabel: keeperLabel).allowsHitTesting(false)
@@ -528,6 +528,7 @@ struct MobileLibraryView: View {
                 .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true)).disabled(store.selectedLibraryIDs.isEmpty)
                 .accessibilityIdentifier("archive.reviewSelection")
         }.padding(14).background(.bar).disabled(store.isCleaningUp)
+            .accessibilityElement(children: .contain).accessibilityIdentifier("archive.selectionBar")
     }
     @ViewBuilder private var secondarySelectionButtons: some View {
         if store.canUndoLibrarySelection {
@@ -624,6 +625,7 @@ struct MobileSelectionReviewSheet: View {
                         .disabled((!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty) || reviewedItems.isEmpty || (!store.unresolvedSelectionIDs.intersection(store.selectedLibraryIDs).isEmpty || !store.pendingSelection.filter({ store.selectedLibraryIDs.contains($0.id) }).isEmpty) || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
                     if store.scanState.isScanning || store.isAnalyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.footnote) }
                 }.padding(16).background(.bar)
+                    .accessibilityElement(children: .contain).accessibilityIdentifier("archive.review.actions")
             }
             .onChange(of: reviewedItems) { _, _ in leaveLinkedFiles = false }
             .onAppear { if !captured { review = FrozenSelectionReview(store.librarySelection); captured = true } }
