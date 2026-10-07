@@ -241,7 +241,8 @@ struct MobileLibraryView: View {
                     }
                 }
             }
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                         count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 8) {
                     ForEach(LibraryFindingFilter.allCases) { option in
                         Button { finding = option } label: {
                             Text(LocalizedStringKey(option.titleKey)).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
