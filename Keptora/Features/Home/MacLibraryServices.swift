@@ -68,13 +68,18 @@ struct MacGalleryKeyboardMonitor: NSViewRepresentable {
     var redo: () -> Void = {}
     func makeCoordinator() -> Coordinator { Coordinator(selectAll: selectAll, find: find, undo: undo, redo: redo) }
     func makeNSView(context: Context) -> NSView {
-        let view = NSView(); context.coordinator.view = view; return view
+        let view = EventProbe(); context.coordinator.view = view; return view
     }
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.selectAll = selectAll; context.coordinator.find = find
         context.coordinator.undo = undo; context.coordinator.redo = redo
     }
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) { coordinator.stop() }
+    // The probe observes its window's keyboard events only. A full-size native
+    // background view must let mouse events reach SwiftUI's gallery controls.
+    private final class EventProbe: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    }
     @MainActor final class Coordinator {
         weak var view: NSView?
         var selectAll: () -> Void
@@ -175,6 +180,7 @@ struct MacMainWindowMarker: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { Marker() }
     func updateNSView(_ nsView: NSView, context: Context) {}
     private final class Marker: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
         override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); window?.identifier = MacWindowIdentity.main; window?.minSize = NSSize(width: 900, height: 650) }
     }
 }

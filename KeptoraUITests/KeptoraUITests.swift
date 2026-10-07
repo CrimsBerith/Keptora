@@ -147,7 +147,8 @@ final class KeptoraUITests: XCTestCase {
     }
     func testNativeSettingsCanPresentProWithMainWindowClosed() {
         let app = launchUnifiedMacFixture()
-        XCTAssertTrue(app.buttons["mac.toolbar.settings"].waitForExistence(timeout: 10)); app.buttons["mac.toolbar.settings"].click()
+        let settingsButton = app.buttons["mac.toolbar.settings"].firstMatch
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 10)); settingsButton.click()
         let settings = app.windows.containing(.any, identifier: "mac.page.settings").firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 10))
         app.windows["Keptora"].buttons[XCUIIdentifierCloseWindow].click()

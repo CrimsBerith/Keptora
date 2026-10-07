@@ -482,7 +482,7 @@ struct MacArchiveView: View {
         return VStack(alignment: .leading, spacing: 8) {
                                 Button { selectByClick(item) } label: {
                                     MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .allowsHitTesting(false).accessibilityHidden(true)
+                                        .accessibilityHidden(true)
                                         .overlay(selected ? Color.black.opacity(0.28) : .clear, in: RoundedRectangle(cornerRadius: 12))
                                         .overlay(alignment: .topLeading) {
                                             Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources)).font(.caption.weight(.semibold)).lineLimit(1)
@@ -491,6 +491,7 @@ struct MacArchiveView: View {
                                             Image(systemName: archive.decisions.protectedIDs.contains(item.id) ? "lock.fill" : (selected ? "checkmark.circle.fill" : "circle")).font(.title2)
                                                 .foregroundStyle(selected ? KeptoraDesign.accent : .white).padding(8)
                                         }
+                                        .contentShape(Rectangle())
                                 }.buttonStyle(.plain).accessibilityLabel(item.displayName + ", " + archive.sourceLabel(item))
                                     .accessibilityValue(Text(verbatim: ([L10n.tr(selected ? "Selected" : "Not selected")] + groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) } + (archive.qualityAssessments[item.id]?.findings.map { L10n.tr(String.LocalizationValue($0.titleKey)) } ?? [])).joined(separator: ", ")))
                                     .accessibilityHint("Click or press Space to change selection. Shift selects a range.").accessibilityAddTraits(selected ? .isSelected : [])

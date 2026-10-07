@@ -1484,7 +1484,7 @@ private struct MobileSimilarityCompareView: View {
     }
 }
 
-private extension UniversalMediaAsset {
+extension UniversalMediaAsset {
     var formattedDuration: String {
         let value = max(0, Int((duration ?? 0).rounded()))
         return String(format: "%d:%02d", value / 60, value % 60)

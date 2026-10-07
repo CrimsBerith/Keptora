@@ -437,7 +437,7 @@ struct MobileLibraryView: View {
 
     private func selectionThumbnail(_ asset: UniversalMediaAsset, selected: Bool, keeperLabel: String?) -> some View {
         ZStack(alignment: .bottomTrailing) {
-            MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).allowsHitTesting(false).accessibilityHidden(true)
+            MobileAssetThumbnail(asset: asset).aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
                 .overlay(selected ? Color.black.opacity(0.28) : .clear)
             thumbnailBadges(asset, keeperLabel: keeperLabel)
             thumbnailSelectionIndicator(asset, selected: selected)
