@@ -37,13 +37,18 @@ final class KeptoraiOSUITests: XCTestCase {
                 viewport.origin.y = max(viewport.minY, navigation.frame.maxY)
                 viewport.size.height = app.frame.maxY - viewport.minY
             }
-            for id in ["archive.selectionBar", "archive.review.actions", "ios.sourceSetup.continue"] {
+            var hasModalFooter = false
+            // Only the frontmost sheet limits its content. The gallery's bar
+            // remains in the AX tree underneath a review sheet.
+            for id in ["archive.review.actions", "ios.sourceSetup.actions", "archive.selectionBar"] {
                 let footer = app.descendants(matching: .any)[id].firstMatch
                 if footer.exists, footer.frame.height > 0 {
                     viewport.size.height = max(1, min(viewport.maxY, footer.frame.minY) - viewport.minY)
+                    hasModalFooter = id != "archive.selectionBar"
+                    break
                 }
             }
-            if app.tabBars.firstMatch.exists {
+            if !hasModalFooter, app.tabBars.firstMatch.exists {
                 viewport.size.height = max(1, min(viewport.maxY, app.tabBars.firstMatch.frame.minY) - viewport.minY)
             }
             var down = scrollDown
@@ -146,6 +151,10 @@ final class KeptoraiOSUITests: XCTestCase {
         reveal(files, in: app)
         XCTAssertTrue(files.isHittable)
         app.buttons["ios.sourceSetup.continue"].tap()
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !app.buttons["ios.sourceSetup.continue"].exists
+        }, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 10), .completed)
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 5))
         app.buttons["ios.library.options"].tap()
         app.buttons["Sources"].firstMatch.tap()

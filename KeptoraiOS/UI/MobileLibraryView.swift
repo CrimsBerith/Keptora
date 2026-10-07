@@ -107,15 +107,20 @@ struct MobileSourceLibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             if isStartupSetup {
-                Button {
-                    sourceSetupCompleted = true
-                    store.dismissModal()
-                } label: {
-                    Text("Continue to Library")
+                VStack {
+                    Button {
+                        sourceSetupCompleted = true
+                        store.dismissModal()
+                    } label: {
+                        Text("Continue to Library")
+                    }
+                    .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
+                    .disabled(store.isRequestingPhotosAccess)
+                    .accessibilityIdentifier("ios.sourceSetup.continue")
                 }
-                .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
-                .padding().background(.regularMaterial).disabled(store.isRequestingPhotosAccess)
-                .accessibilityIdentifier("ios.sourceSetup.continue")
+                .padding().background(.regularMaterial)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("ios.sourceSetup.actions")
             }
         }
         .interactiveDismissDisabled(isStartupSetup)
