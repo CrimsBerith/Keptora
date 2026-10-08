@@ -266,39 +266,6 @@ struct KeptoraUnavailableView: View {
     }
 }
 
-struct KeptoraSheetCloseButton: View {
-    let accessibilityLabel: LocalizedStringKey
-    let accessibilityIdentifier: String
-    var isDisabled = false
-    var disabledHint: LocalizedStringKey?
-    let action: () -> Void
-
-    var body: some View {
-        ZStack {
-            Button(action: action) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .frame(width: 28, height: 28)
-                    .background(Color.primary.opacity(0.07), in: Circle())
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.cancelAction)
-            .help(isDisabled ? Text(disabledHint ?? "This screen cannot be closed until the operation finishes.") : Text("Close"))
-            .accessibilityLabel(Text(accessibilityLabel))
-            .accessibilityIdentifier(accessibilityIdentifier)
-            .accessibilityHint(isDisabled ? Text(disabledHint ?? "This screen cannot be closed until the operation finishes.") : Text("Returns to the previous screen."))
-
-            Button(action: action) { EmptyView() }
-                .keyboardShortcut("w", modifiers: .command)
-                .frame(width: 0, height: 0)
-                .opacity(0)
-                .accessibilityHidden(true)
-        }
-        .disabled(isDisabled)
-    }
-}
-
 // MARK: – Brand Logo Mark
 
 /// Keptora logo. Two photo frames: the translucent one behind is the duplicate that is set aside,
@@ -425,24 +392,5 @@ extension View {
                 action()
             }
         }
-    }
-}
-
-// MARK: - Hover / pressed feedback
-
-/// Plain button that lifts slightly on hover and dips when pressed (Reduce Motion aware).
-struct KeptoraCardButtonStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovered = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .brightness(isHovered && !configuration.isPressed ? 0.02 : 0)
-            .shadow(color: .black.opacity(isHovered ? 0.10 : 0), radius: 8, y: 3)
-            .animation(reduceMotion ? nil : KeptoraDesign.animFast, value: isHovered)
-            .animation(reduceMotion ? nil : KeptoraDesign.animFast, value: configuration.isPressed)
-            .onHover { isHovered = $0 }
-            .contentShape(Rectangle())
     }
 }

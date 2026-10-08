@@ -47,7 +47,6 @@
 		525BD695287CD33E88884757 /* ExactHasherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE5DA7FD9A3318E0C570BC97 /* ExactHasherTests.swift */; };
 		53089C968C1CCC7615A67765 /* KeptoraLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 509D9DDB93AA9F6C86CEF0A0 /* KeptoraLifecycleCoordinator.swift */; };
 		536747C378CF3034CEBF9448 /* QuarantineCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD67D5EC530D90385D0B18DE /* QuarantineCoordinator.swift */; };
-		54335D2D6291EB372B2F17B1 /* SwipeCullingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B53F48756F4C19FC340C986 /* SwipeCullingView.swift */; };
 		584FBBA895C42A20D55F5D29 /* KeptoraiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311B4F566C0C3F84630B8205 /* KeptoraiOSApp.swift */; };
 		5BB4759CFBD33F60D662D943 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2F1ABB3C2D822ADB36E913 /* HomeView.swift */; };
 		5D42C0BF2A8042D07CD39E28 /* IncrementalIndexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD37E0BF84C1B37C5FE0F03 /* IncrementalIndexTests.swift */; };
@@ -71,7 +70,6 @@
 		8140D28E8C0EB0286D054D5D /* RecoveryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837793731F4772175C79C346 /* RecoveryModels.swift */; };
 		83214BA1B8E122CC708E8F11 /* MobileKeptoraStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C58F1AC3180E8D9825200A /* MobileKeptoraStore.swift */; };
 		83299A97161982A87A09E5BA /* FolderSourcePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABBA5E0C346DAF9B438049B /* FolderSourcePicker.swift */; };
-		86206A4776E5A638E19BB45A /* MobilePhotoInspectorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025DC88E37E819FF25CFA767 /* MobilePhotoInspectorSheet.swift */; };
 		89C322DDC514009A958FE95C /* QuarantineCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8059A0EF1EF059E10671E191 /* QuarantineCoordinatorTests.swift */; };
 		8B694055048BE79189AAD736 /* KeptoraCore in Frameworks */ = {isa = PBXBuildFile; productRef = B24870071C26701538012E60 /* KeptoraCore */; };
 		8D69D4AAB1CE665E077AB34A /* KeptoraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C5F7336819BC426CBBCE48 /* KeptoraApp.swift */; };
@@ -93,14 +91,12 @@
 		B4B299DDC8D929536AB19F9D /* SourceExclusionPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D0ED2D5DA7C4B25311C21C1 /* SourceExclusionPolicyTests.swift */; };
 		B826014FE0D61AC89590DD9C /* ReconciliationCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 928EB48A930DD70E348A312D /* ReconciliationCoordinatorTests.swift */; };
 		B935F59D252D43B12811EFFE /* FamilySafetyPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CA2614CD556AE85176B7B48 /* FamilySafetyPlanTests.swift */; };
-		B937D53C8DBC0B504041E6FD /* SmartBucketsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D75B159141B6FECB1DF35560 /* SmartBucketsView.swift */; };
 		BA7D0508DC67BF6299686B60 /* SQLiteDatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62575DEA7DE99B65D026C57E /* SQLiteDatabaseTests.swift */; };
 		BC7B13BB4EE72299AA5BDFC4 /* SimilarityGroupBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29A98A462228BF210F2A6DC2 /* SimilarityGroupBuilder.swift */; };
 		C02864EACDF705F063943BE7 /* ManifestSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6388D83E93574733AF355104 /* ManifestSigner.swift */; };
 		C41B4620F19FD2CA6BDEC91A /* ReviewSessionCheckpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA63995F2CC7995BB8B42E6D /* ReviewSessionCheckpointTests.swift */; };
 		C52A7D1EF462E27AC235B5AC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AE1278DFA4EA6E22DB0E92C /* InfoPlist.strings */; };
 		C626039D67F02D9420466F03 /* PhotoLibraryAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D392DC814C1CEAF9A36D312 /* PhotoLibraryAdapter.swift */; };
-		C910EF420417DE3A67FFF6E7 /* MobileReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E19BE3E9CF6A7ACBD7A4C5 /* MobileReviewView.swift */; };
 		C9E406E4BC3F33760085569B /* DemoLibraryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F585FFE7D2A41E7E66AA279 /* DemoLibraryFactory.swift */; };
 		CB54FFF34F7BC67C4BCB03BB /* CleanupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC5619BA2AD331ED8C9D78D /* CleanupModels.swift */; };
 		D2F28896F07B5A8F273FDA5E /* PerformanceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7DEA1FFEA2F76E246B79576 /* PerformanceRecorder.swift */; };
@@ -116,8 +112,6 @@
 		E403676CFC405153B3C2020B /* KeptoraiOSEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E3BD3F0BFD823252D556F91 /* KeptoraiOSEdgeCaseTests.swift */; };
 		E4E74DFE2FDE2B92849C52A9 /* ReconciliationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D1E740E522D5D4759414EA2 /* ReconciliationCoordinator.swift */; };
 		E5AE59E8E7E14112985C67D2 /* StoreKitEntitlementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAF74F5CC8839E3307733FF0 /* StoreKitEntitlementTests.swift */; };
-		EAA3AC5D8B1A9796206AB5D0 /* MobileSplitComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E785D178CEA4191802F9F31 /* MobileSplitComparisonView.swift */; };
-		F30291D799B5267816731C9B /* PhysicalArchiveExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74E04BD1566A0B285E47113 /* PhysicalArchiveExportSheet.swift */; };
 		F6C23CEB92D5B7D65E9FE435 /* ReviewStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EC316C8FC0FB260B1199F8 /* ReviewStudioView.swift */; };
 		FE90091F1F4A73526853D6DB /* MobilePurchaseController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473A12B7FE32849AAA52517E /* MobilePurchaseController.swift */; };
 /* End PBXBuildFile section */
@@ -162,7 +156,6 @@
 		0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		01FB6C8ACDCC9E3B5600691F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
-		025DC88E37E819FF25CFA767 /* MobilePhotoInspectorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobilePhotoInspectorSheet.swift; sourceTree = "<group>"; };
 		037C37231366F97D1F79847D /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		0407C1F163F498CF4DBA78A1 /* ReviewInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewInsightsView.swift; sourceTree = "<group>"; };
 		063E1C90E99E65B6CA09D468 /* JourneyMatchCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyMatchCore.swift; sourceTree = "<group>"; };
@@ -198,12 +191,10 @@
 		509D9DDB93AA9F6C86CEF0A0 /* KeptoraLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraLifecycleCoordinator.swift; sourceTree = "<group>"; };
 		50E774654B7B6226883187D4 /* MobileDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileDesignSystem.swift; sourceTree = "<group>"; };
 		51A67311226C96284F4B89DA /* StoreEntitlementController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreEntitlementController.swift; sourceTree = "<group>"; };
-		51E19BE3E9CF6A7ACBD7A4C5 /* MobileReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileReviewView.swift; sourceTree = "<group>"; };
 		53406219D4FB25D5BA694E94 /* KeptoraTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeptoraTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		573358EB00CA10450884EC53 /* KeptoraiOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5883DE01B18E906F673AE422 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5B0CF7E49D7B8018572A86EF /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
-		5B53F48756F4C19FC340C986 /* SwipeCullingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeCullingView.swift; sourceTree = "<group>"; };
 		5D71FBC4F04636456993EFC7 /* AssetFamilyGraphTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetFamilyGraphTests.swift; sourceTree = "<group>"; };
 		5DEC4EE51D2DCDE5458471C2 /* FamilyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyModels.swift; sourceTree = "<group>"; };
 		5FA1004237B3B0853C8F881D /* CoordinatedFileMover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinatedFileMover.swift; sourceTree = "<group>"; };
@@ -228,7 +219,6 @@
 		8A9BD8448E4EDD56110BDE1F /* KeptoraResiliencePerformanceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraResiliencePerformanceController.swift; sourceTree = "<group>"; };
 		8CA2614CD556AE85176B7B48 /* FamilySafetyPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilySafetyPlanTests.swift; sourceTree = "<group>"; };
 		8D321F01F9EDBBAD8523EB98 /* RestorePreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestorePreviewTests.swift; sourceTree = "<group>"; };
-		8E785D178CEA4191802F9F31 /* MobileSplitComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSplitComparisonView.swift; sourceTree = "<group>"; };
 		91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		928EB48A930DD70E348A312D /* ReconciliationCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReconciliationCoordinatorTests.swift; sourceTree = "<group>"; };
 		92B5C409584D291112E5CEE7 /* KeptoraWindowStressContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraWindowStressContract.swift; sourceTree = "<group>"; };
@@ -260,7 +250,6 @@
 		D010325F738E4252924DE63D /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		D2329B10C41146459D9F4F4F /* KeptoraiOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraiOSUITests.swift; sourceTree = "<group>"; };
 		D3365B0498140C384429804F /* SimilarityCalibratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimilarityCalibratorTests.swift; sourceTree = "<group>"; };
-		D75B159141B6FECB1DF35560 /* SmartBucketsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartBucketsView.swift; sourceTree = "<group>"; };
 		D8E28E72F83827870657A00F /* DiagnosticsRedactionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsRedactionTests.swift; sourceTree = "<group>"; };
 		DAF74F5CC8839E3307733FF0 /* StoreKitEntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitEntitlementTests.swift; sourceTree = "<group>"; };
 		DE5DA7FD9A3318E0C570BC97 /* ExactHasherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExactHasherTests.swift; sourceTree = "<group>"; };
@@ -269,7 +258,6 @@
 		E277B95318C9347BA1C53BAA /* SimilarityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimilarityEngine.swift; sourceTree = "<group>"; };
 		EA1E687AA29A6BA772AA7BC6 /* ExactHasher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExactHasher.swift; sourceTree = "<group>"; };
 		F22DEF245C44F472A32B3C58 /* BoundedThumbnailCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedThumbnailCache.swift; sourceTree = "<group>"; };
-		F74E04BD1566A0B285E47113 /* PhysicalArchiveExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicalArchiveExportSheet.swift; sourceTree = "<group>"; };
 		FC909A005028E311153D71A0 /* PerceptualCandidateIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerceptualCandidateIndex.swift; sourceTree = "<group>"; };
 		FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraiOSTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -381,11 +369,8 @@
 				247968AEA26B410B9CC6A740 /* MobileArchiveView.swift */,
 				3DA20DA12EE914B907307D05 /* MobileOnboardingView.swift */,
 				11D09C4A20DA834789E9E33A /* MobilePaywallView.swift */,
-				025DC88E37E819FF25CFA767 /* MobilePhotoInspectorSheet.swift */,
-				51E19BE3E9CF6A7ACBD7A4C5 /* MobileReviewView.swift */,
 				4CAEA51DF0D5568AEFD0544A /* MobileRootView.swift */,
 				BE6B3E20A313AC590D81BFBC /* MobileSettingsView.swift */,
-				8E785D178CEA4191802F9F31 /* MobileSplitComparisonView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -649,9 +634,6 @@
 			isa = PBXGroup;
 			children = (
 				6E1AD912CB6AF54852E468B4 /* InteractivePhotoViewer.swift */,
-				F74E04BD1566A0B285E47113 /* PhysicalArchiveExportSheet.swift */,
-				D75B159141B6FECB1DF35560 /* SmartBucketsView.swift */,
-				5B53F48756F4C19FC340C986 /* SwipeCullingView.swift */,
 			);
 			path = PhotoViewer;
 			sourceTree = "<group>";
@@ -1053,7 +1035,6 @@
 				D2F28896F07B5A8F273FDA5E /* PerformanceRecorder.swift in Sources */,
 				0ACF7BD8E7B752B2A9E70470 /* PhotoKitBenchmark.swift in Sources */,
 				C626039D67F02D9420466F03 /* PhotoLibraryAdapter.swift in Sources */,
-				F30291D799B5267816731C9B /* PhysicalArchiveExportSheet.swift in Sources */,
 				536747C378CF3034CEBF9448 /* QuarantineCoordinator.swift in Sources */,
 				E4E74DFE2FDE2B92849C52A9 /* ReconciliationCoordinator.swift in Sources */,
 				8140D28E8C0EB0286D054D5D /* RecoveryModels.swift in Sources */,
@@ -1073,9 +1054,7 @@
 				6589EB510CA689E8297C47B9 /* SimilarityEngine.swift in Sources */,
 				BC7B13BB4EE72299AA5BDFC4 /* SimilarityGroupBuilder.swift in Sources */,
 				A9314E7EE1CD6729B2A047B2 /* SimilarityModels.swift in Sources */,
-				B937D53C8DBC0B504041E6FD /* SmartBucketsView.swift in Sources */,
 				90788F6F062FDC4207C0803D /* StoreEntitlementController.swift in Sources */,
-				54335D2D6291EB372B2F17B1 /* SwipeCullingView.swift in Sources */,
 				072992B3B92777B062DBBCF4 /* VolumeIdentity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1103,12 +1082,9 @@
 				088D4FA225BE4000810CF63B /* MobileArchiveView.swift in Sources */,
 				7E2E9ABF3C87FEACF21C0C28 /* MobileOnboardingView.swift in Sources */,
 				15DFAD7618D55BF256A1BA6A /* MobilePaywallView.swift in Sources */,
-				86206A4776E5A638E19BB45A /* MobilePhotoInspectorSheet.swift in Sources */,
 				FE90091F1F4A73526853D6DB /* MobilePurchaseController.swift in Sources */,
-				C910EF420417DE3A67FFF6E7 /* MobileReviewView.swift in Sources */,
 				298791524DEA5B5174EE7F3D /* MobileRootView.swift in Sources */,
 				D9AD822D1748DA98FED51FC4 /* MobileSettingsView.swift in Sources */,
-				EAA3AC5D8B1A9796206AB5D0 /* MobileSplitComparisonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
