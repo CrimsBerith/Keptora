@@ -75,9 +75,6 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
     }
     private func openUnifiedCopies(_ app: XCUIApplication) -> XCUIElement {
-        app.typeKey("2", modifierFlags: .command)
-        let category = app.buttons["mac.suggestions.copies"]
-        XCTAssertTrue(category.waitForExistence(timeout: 10)); waitForEnabled(category); category.click()
         let copies = app.buttons["mac.archive.selectExtraCopies"]
         XCTAssertTrue(copies.waitForExistence(timeout: 10)); waitForEnabled(copies)
         return copies
@@ -106,11 +103,11 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertTrue(undo.isEnabled); undo.click()
         app.buttons["mac.archive.review.remove"].click()
         confirmUnifiedRemoval(app)
-        app.typeKey("3", modifierFlags: .command)
+        app.buttons["mac.sidebar.history"].click()
         let restore = app.buttons["Restore Files"]
         XCTAssertTrue(restore.waitForExistence(timeout: 10)); restore.click()
         XCTAssertTrue(app.staticTexts["Restored"].waitForExistence(timeout: 10))
-        app.typeKey("1", modifierFlags: .command)
+        app.buttons["mac.sidebar.archive"].click()
         XCTAssertTrue(app.buttons["mac.archive.scanAll"].waitForExistence(timeout: 5))
         let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Unified Mac gallery after actual restore"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
@@ -120,7 +117,7 @@ final class KeptoraUITests: XCTestCase {
         app.buttons["mac.archive.scanAll"].click()
         let copies = openUnifiedCopies(app); copies.click()
         app.buttons["mac.archive.reviewSelection"].click(); app.buttons["mac.archive.review.remove"].click()
-        confirmUnifiedRemoval(app); app.typeKey("3", modifierFlags: .command)
+        confirmUnifiedRemoval(app); app.buttons["mac.sidebar.history"].click()
         let restore = app.buttons["Restore Files"]
         XCTAssertTrue(restore.waitForExistence(timeout: 10)); restore.click()
         XCTAssertTrue(app.staticTexts["Restore stopped because an original path is occupied or quarantine content is missing."].waitForExistence(timeout: 10))
@@ -140,7 +137,7 @@ final class KeptoraUITests: XCTestCase {
         app.typeKey("z", modifierFlags: [.command, .shift])
         XCTAssertEqual(search.value as? String, "missing")
         app.typeKey("a", modifierFlags: .command); search.typeText("holiday")
-        app.typeKey("3", modifierFlags: .command); app.typeKey("1", modifierFlags: .command)
+        app.buttons["mac.sidebar.history"].click(); app.buttons["mac.sidebar.archive"].click()
         XCTAssertEqual(search.value as? String, "holiday")
         app.buttons["mac.archive.reviewSelection"].click()
         XCTAssertTrue(app.staticTexts["Review Selection"].waitForExistence(timeout: 5))
