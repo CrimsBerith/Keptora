@@ -79,8 +79,7 @@ jobs:
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacScanSelectionReviewUndoAndRestore \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacRestoreFailureIsVisibleAndDoesNotOverwriteOriginal \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacSearchDoesNotLoseSelectionOrHijackTextUndo \
-            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo \
-            -only-testing:KeptoraUITests/KeptoraUITests/testNativeSettingsCanPresentProWithMainWindowClosed test
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo test
       - name: Native 2000 / 3000 item measurement
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_items != '0')
         env:

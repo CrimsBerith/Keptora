@@ -5,7 +5,7 @@ import SwiftUI
 @MainActor
 private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
     let operations = LibraryOperationCoordinator()
-    lazy var model = AppModel(operations: operations)
+    let navigation = MacNavigation()
     let store = StoreEntitlementController()
     lazy var archive = MacArchiveModel(operations: operations)
     private var terminating = false
@@ -33,11 +33,8 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
         guard !terminating else { return .terminateLater }
         terminating = true
         operations.beginTermination()
-        model.checkpointReviewSession()
         Task {
-            async let legacyPreparation: Void = model.prepareForTermination()
             let saved = await archive.prepareForTermination()
-            await legacyPreparation
             await operations.waitForIdle()
             if !saved { terminating = false; operations.resumeAfterCancelledTermination() }
             sender.reply(toApplicationShouldTerminate: saved)
@@ -56,15 +53,11 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
         let activeLocale = AppLanguage(rawValue: selectedLang)?.locale ?? .current
 
         let root = MainRootView()
-            .environmentObject(model)
+            .environmentObject(navigation)
             .environmentObject(store)
             .environmentObject(archive)
             .environment(\.locale, activeLocale)
-            .task { [model, store] in
-                async let appPreparation: Void = model.prepare()
-                async let storePreparation: Void = store.refresh()
-                _ = await (appPreparation, storePreparation)
-            }
+            .task { [store] in await store.refresh() }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1240, height: 800),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -95,90 +88,30 @@ struct KeptoraApp: App {
     var body: some Scene {
         Window("Keptora", id: "main") {
             MainRootView()
-                .environmentObject(appDelegate.model)
+                .environmentObject(appDelegate.navigation)
                 .environmentObject(appDelegate.store)
                 .environmentObject(appDelegate.archive)
                 .environment(\.locale, activeLocale)
-                .task {
-                    async let appPreparation: Void = appDelegate.model.prepare()
-                    async let storePreparation: Void = appDelegate.store.refresh()
-                    _ = await (appPreparation, storePreparation)
-                }
+                .task { await appDelegate.store.refresh() }
         }
         .defaultSize(width: 1240, height: 800)
         .windowResizability(.contentMinSize)
         .windowStyle(.titleBar)
-        .commands { MacLibraryCommands(archive: appDelegate.archive, model: appDelegate.model, store: appDelegate.store) }
-        Settings {
-            SettingsView().environmentObject(appDelegate.model).environmentObject(appDelegate.store)
-                .environmentObject(appDelegate.archive).environment(\.locale, activeLocale)
-                .frame(minWidth: 560, idealWidth: 650, minHeight: 580)
-        }
+        .commands { MacLibraryCommands(archive: appDelegate.archive, navigation: appDelegate.navigation) }
     }
 }
 
 @MainActor
 private struct MacLibraryCommands: Commands {
     @ObservedObject var archive: MacArchiveModel
-    @ObservedObject var model: AppModel
-    @ObservedObject var store: StoreEntitlementController
+    @ObservedObject var navigation: MacNavigation
     var body: some Commands {
         CommandGroup(after: .newItem) {
-            Button("Add Folder…") { model.selectedRoute = .archive; archive.chooseFolder() }
+            Button("Add Folder…") { navigation.selectedRoute = .archive; archive.chooseFolder() }
                 .keyboardShortcut("o", modifiers: [.command]).disabled(archive.sourceControlsDisabled)
-            Button("Start Scan") { model.selectedRoute = .archive; archive.analyze() }
+            Button("Start Scan") { navigation.selectedRoute = .archive; archive.analyze() }
                 .keyboardShortcut("r", modifiers: [.command]).disabled(!archive.canScanSelectedSources)
-            Button("Pause Scan") { archive.pauseAnalysis() }
-                .disabled(!archive.analyzing || archive.analysisPaused)
-            Button("Resume Scan") { archive.resumeAnalysis() }.disabled(!archive.analysisPaused)
             Button("Cancel Scan") { archive.cancelAnalysis() }.disabled(!archive.analyzing && !archive.analysisPaused)
         }
-        CommandMenu("Advanced Review") {
-            Button("Previous Exact Group") { model.selectPreviousExactGroup() }
-                .keyboardShortcut("[", modifiers: [.command])
-                .disabled(!model.canNavigateExactGroups)
-            Button("Next Exact Group") { model.selectNextExactGroup() }
-                .keyboardShortcut("]", modifiers: [.command])
-                .disabled(!model.canNavigateExactGroups)
-            Divider()
-            Button("Previous Photo") { model.focusPreviousReviewAsset() }
-                .keyboardShortcut(.leftArrow, modifiers: [.option])
-                .disabled(!model.canApplyFocusedReviewDecision)
-            Button("Next Photo") { model.focusNextReviewAsset() }
-                .keyboardShortcut(.rightArrow, modifiers: [.option])
-                .disabled(!model.canApplyFocusedReviewDecision)
-            Divider()
-            Button("Keep Focused Photo") { model.applyFocusedDecision(.keep, access: store) }
-                .keyboardShortcut("1", modifiers: [.command, .option])
-                .disabled(!model.canApplyFocusedReviewDecision)
-            Button("Add Focused Photo to Safety Plan") { model.applyFocusedDecision(.quarantinePlan, access: store) }
-                .keyboardShortcut("2", modifiers: [.command, .option])
-                .disabled(!model.canApplyFocusedReviewDecision)
-            Button("Skip Focused Photo") { model.applyFocusedDecision(.skip, access: store) }
-                .keyboardShortcut("3", modifiers: [.command, .option])
-                .disabled(!model.canApplyFocusedReviewDecision)
-            Divider()
-            Button("Select All Safe Copies") { model.applyBatchActionToAllExactGroups(.planSafeExtras, access: store) }
-                .keyboardShortcut("p", modifiers: [.command, .shift])
-                .disabled(!model.canApplyAllExactGroups)
-            Button("Skip This Group") { model.applyBatchActionToSelected(.skipExtras, access: store) }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!model.canApplySelectedGroupBatch)
-            Divider()
-            Button("Resume Last Review Session") { model.resumeReviewSession() }
-                .keyboardShortcut("r", modifiers: [.command, .option])
-                .disabled(!model.hasResumableReviewSession)
-        }
-        CommandMenu("Go") {
-            Button("Photos") { model.selectedRoute = .archive }.keyboardShortcut("1", modifiers: [.command])
-            Button("Suggestions") { model.selectedRoute = .smartBuckets }.keyboardShortcut("2", modifiers: [.command])
-            Button("History") { model.selectedRoute = .history }.keyboardShortcut("3", modifiers: [.command])
-            Divider()
-            Button("Support & Diagnostics") { model.selectedRoute = .diagnostics }
-        }
-        CommandGroup(after: .help) {
-            Button("Export Diagnostics…") { archive.exportDiagnostics() }
-            Button("Show Welcome Tour") { model.showOnboarding() }
-        }
-        }
+    }
 }

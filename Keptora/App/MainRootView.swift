@@ -4,20 +4,17 @@ import SwiftUI
 struct MainRootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
-    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var navigation: MacNavigation
     @EnvironmentObject private var store: StoreEntitlementController
     @EnvironmentObject private var archive: MacArchiveModel
     @Environment(\.undoManager) private var undoManager
     @State private var hoveredRoute: SidebarRoute?
     @State private var isDropTargeted: Bool = false
-    @AppStorage(AppStorageKeys.onboardingCompleted) private var introductionCompleted = false
     @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
     @State private var startupSourcesPrepared = false
     @State private var showSourceSetup = false
-    @State private var advancedToolsExpanded = false
 
-    private let primaryRoutes: [SidebarRoute] = [.archive, .smartBuckets, .history]
-    private let toolRoutes:    [SidebarRoute] = [.home, .review, .insights]
+    private let primaryRoutes: [SidebarRoute] = [.archive, .history]
 
     var body: some View {
         NavigationSplitView {
@@ -26,10 +23,6 @@ struct MainRootView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     sidebarSection("Workspace", routes: primaryRoutes)
-
-                    DisclosureGroup("Advanced Tools", isExpanded: $advancedToolsExpanded) {
-                        ForEach(toolRoutes) { route in sidebarButton(route) }
-                    }.padding(.top, 12).accessibilityIdentifier("mac.sidebar.advancedTools")
 
                     Spacer(minLength: 0)
                 }
@@ -75,7 +68,7 @@ struct MainRootView: View {
                     if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
                         Task { @MainActor in
                             archive.connectFolder(url)
-                            model.selectedRoute = .archive
+                            navigation.selectedRoute = .archive
                         }
                     } else {
                         Task { @MainActor in
@@ -85,30 +78,14 @@ struct MainRootView: View {
                 }
                 return true
             }
-            .toolbar { utilityToolbar }
-            .sheet(isPresented: $model.isShowingSafetyPlan) {
-                SafetyPlanSheet()
-                    .environmentObject(model)
-                    .environmentObject(store)
-            }
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 900, minHeight: 650)
         .background(MacMainWindowMarker())
-        .onChange(of: model.selectedRoute) { route in
-            if toolRoutes.contains(route) { advancedToolsExpanded = true }
-        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("keptora.root")
         .sheet(isPresented: store.paywallBinding(for: .main)) {
             PaywallView().environmentObject(store)
-        }
-        // Presented from the root (not a sidebar subview) so they are not tied to sidebar visibility.
-        .sheet(isPresented: $model.isShowingRestorePreview) {
-            RestorePreviewSheet().environmentObject(model)
-        }
-        .sheet(isPresented: $model.isShowingOnboarding, onDismiss: { presentStartupIfNeeded() }) {
-            OnboardingView().environmentObject(model)
         }
         .sheet(isPresented: $showSourceSetup) {
             MacSourceSetupView(isStartupSetup: true).environmentObject(archive)
@@ -121,12 +98,9 @@ struct MainRootView: View {
         .keptoraOnChange(of: sourceSetupCompleted) { _ in presentStartupIfNeeded() }
         .onAppear {
             archive.undoManager = undoManager
-            if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
-                model.selectedRoute = .review
-            }
         }
         .keptoraOnChange(of: scenePhase) { phase in
-            if phase != .active { model.checkpointReviewSession(); Task { await archive.flushState() } }
+            if phase != .active { Task { await archive.flushState() } }
             else if startupSourcesPrepared { Task { await archive.refreshPhotosAccess() } }
         }
         .alert("Something went wrong", isPresented: archive.errorBinding(for: .main)) {
@@ -135,19 +109,12 @@ struct MainRootView: View {
             }
             Button("OK", role: .cancel) { archive.error = nil }
         } message: { Text(archive.error ?? "") }
-        .alert("Something went wrong", isPresented: $model.isShowingError) {
-            Button("Copy Diagnostics") { archive.copyDiagnostics() }
-            Button("Export Diagnostics…") { archive.exportDiagnostics() }
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(model.errorMessage ?? "An unknown error occurred.")
-        }
     }
 
     private func presentStartupIfNeeded() {
         guard startupSourcesPrepared, !LaunchArguments.contains(LaunchArguments.portfolioUITesting),
-              !model.isShowingOnboarding, !store.isShowingPaywall, !model.isShowingRestorePreview else { return }
-        if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: introductionCompleted, setupCompleted: sourceSetupCompleted) {
+              !store.isShowingPaywall else { return }
+        if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: true, setupCompleted: sourceSetupCompleted) {
             showSourceSetup = true
         }
     }
@@ -188,10 +155,10 @@ struct MainRootView: View {
     }
 
     private func sidebarButton(_ route: SidebarRoute) -> some View {
-        let isSelected = model.selectedRoute == route
+        let isSelected = navigation.selectedRoute == route
         let isHovered  = hoveredRoute == route
         return Button {
-            withAnimation(reduceMotion ? nil : KeptoraDesign.animFast) { model.selectedRoute = route }
+            withAnimation(reduceMotion ? nil : KeptoraDesign.animFast) { navigation.selectedRoute = route }
         } label: {
             HStack(spacing: 11) {
                 ZStack {
@@ -267,45 +234,11 @@ struct MainRootView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var utilityToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            Button {
-                model.selectedRoute = .insights
-            } label: {
-                Label("Insights", systemImage: model.selectedRoute == .insights ? "chart.bar.xaxis.ascending" : "chart.bar.xaxis")
-            }
-            .help("Review insights")
-            .accessibilityIdentifier("mac.toolbar.insights")
-
-            Button {
-                model.selectedRoute = .diagnostics
-            } label: {
-                Label("Support", systemImage: model.selectedRoute == .diagnostics ? "questionmark.circle.fill" : "questionmark.circle")
-            }
-            .help("Support and diagnostics")
-            .accessibilityIdentifier("mac.toolbar.support")
-
-            if #available(macOS 14, *) {
-                SettingsLink { Label("Settings", systemImage: "gearshape") }.help("Keptora settings").accessibilityIdentifier("mac.toolbar.settings")
-            } else {
-                Button { MacWindowIdentity.openSettings() } label: { Label("Settings", systemImage: "gearshape") }
-                    .help("Keptora settings").accessibilityIdentifier("mac.toolbar.settings")
-            }
-        }
-    }
-
     @ViewBuilder
     private var routeDetail: some View {
-        switch model.selectedRoute {
-        case .archive:      MacArchiveView()
-        case .home:         HomeView()
-        case .review:       ReviewStudioView()
-        case .smartBuckets: MacSuggestionsView()
-        case .insights:     ReviewInsightsView()
-        case .history:      CombinedCleanupHistoryView()
-        case .diagnostics:  DiagnosticsView()
-        case .settings:     SettingsView()
+        switch navigation.selectedRoute {
+        case .archive: MacArchiveView()
+        case .history: CombinedCleanupHistoryView()
         }
     }
 }

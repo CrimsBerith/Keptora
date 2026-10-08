@@ -10,7 +10,6 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 catalogue = json.loads((root / "Keptora/Resources/Localizable.xcstrings").read_text())["strings"]
 paths = list((root / "Keptora/App").glob("*.swift")) + list((root / "Keptora/Features").rglob("*.swift"))
-paths += [root / "Keptora/Core/Models" / name for name in ("ReviewModels.swift", "CleanupModels.swift")]
 patterns = [r'(?:Text|Label|Button|Menu|Toggle|Picker|ProgressView|DisclosureGroup|Section|CommandMenu|L10n\.tr|L10n\.format|ReviewText\.tr|ReviewText\.format|\.alert|\.navigationTitle|\.accessibilityLabel|\.accessibilityHint|\.help)\("([^"\n]*)"', r'String\(localized:\s*"([^"\n]*)"']
 keys = set()
 for path in paths:

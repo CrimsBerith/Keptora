@@ -825,56 +825,10 @@ struct MacManualHistoryView: View {
 }
 
 struct CombinedCleanupHistoryView: View {
-    @State private var manual = true
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("History source", selection: $manual) {
-                Text("Library Cleanup").tag(true)
-                Text("Verified Copy Plans").tag(false)
-            }.pickerStyle(.segmented).padding(20).frame(maxWidth: 500)
-            if manual { ScrollView { MacManualHistoryView() } }
-            else { HistoryView() }
-        }
-    }
+    var body: some View { ScrollView { MacManualHistoryView() } }
 }
-
 
 private struct MacGalleryPositions: PreferenceKey {
     static let defaultValue: [String: CGFloat] = [:]
     static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
-}
-
-struct MacSuggestionsView: View {
-    @EnvironmentObject private var archive: MacArchiveModel
-    @EnvironmentObject private var model: AppModel
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Suggestions").font(.largeTitle.bold())
-                Text(LocalizedStringKey(archive.sessionProgress.isComplete ? "Scan complete. Choose what to keep." : "Scan your selected sources to find copies and photos worth reviewing.")).foregroundStyle(.secondary)
-                ForEach(LibraryFindingFilter.allCases.filter { $0 != .all }) { category in
-                    let count = archive.gallery.findingCounts[category] ?? 0
-                    Button {
-                        archive.openFinding(category); model.selectedRoute = .archive
-                    } label: {
-                        HStack {
-                            Label(LocalizedStringKey(category.titleKey), systemImage: category == .copies ? "square.on.square" : category == .verySimilar ? "photo.on.rectangle.angled" : "sparkles")
-                            Spacer(); Text(count.formatted()).monospacedDigit(); Image(systemName: "chevron.right")
-                        }.padding(20).frame(minHeight: 64)
-                    }.buttonStyle(.bordered).disabled(count == 0).accessibilityIdentifier("mac.suggestions." + category.rawValue)
-                }
-                ForEach(LibraryQualityFilter.allCases.filter { $0 != .all }) { category in
-                    let count = archive.gallery.qualityCounts[category] ?? 0
-                    if count > 0 {
-                        Button { archive.openFinding(quality: category); model.selectedRoute = .archive } label: {
-                            HStack { Text(LocalizedStringKey(category.titleKey)); Spacer(); Text(count.formatted()); Image(systemName: "chevron.right") }.padding(16).frame(minHeight: 44)
-                        }.buttonStyle(.bordered).accessibilityIdentifier("mac.suggestions.quality." + category.rawValue)
-                    }
-                }
-                if archive.analysisPaused { Text("Scan paused."); Button("Resume Scan") { archive.resumeAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
-                else if archive.analyzing { ProgressView(archive.status ?? L10n.tr("Loading sources")); Button("Pause Scan") { archive.pauseAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
-                else { Button("Start Scan") { archive.analyze() }.buttonStyle(.borderedProminent).disabled(!archive.canScanSelectedSources) }
-            }.padding(24).frame(maxWidth: 850, alignment: .leading)
-        }.accessibilityElement(children: .contain).accessibilityIdentifier("mac.page.suggestions")
-    }
 }
