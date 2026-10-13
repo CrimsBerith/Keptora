@@ -297,3 +297,13 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 - **Galeri üst bölümünün yeniden düzenlenmesi** birçok UI testinin öğe kimliklerini etkiler. Kimlikler korunur; değişen yerleşim için testler aynı PR'da güncellenir.
 - **Vurgu renginin değişmesi** ekran görüntülerini ve App Store görsellerini etkiler. Yeni renkle ekran görüntüleri Dalga 1 sonunda yeniden alınır.
 - **Tanıtımın kısalması** ilk kullanımda güven mesajını zayıflatabilir. Gizlilik cümlesi karşılama ekranında ve izin ekranında kalır.
+
+## 10. Yayın öncesi kalan engeller (13 Ekim kontrolü)
+
+Kodda ve repoda düzeltilebilenler düzeltildi. Aşağıdakiler bu repodan yapılamaz veya kullanıcı kararı gerektirir:
+
+1. **Yayındaki web sayfaları eski.** `alfagolab.com/keptora/privacy` ve `/support` uygulamayı hâlâ yalnızca Mac için "Keptora: Duplicate Cleaner" olarak, karantina akışıyla anlatıyor; iPhone hiç geçmiyor. Güncel metinler [AppStore/PRIVACY_POLICY.md](../../AppStore/PRIVACY_POLICY.md) ve [AppStore/SUPPORT_PAGE.md](../../AppStore/SUPPORT_PAGE.md) içinde. Website reposu harici `DATA` diskinde; disk takılıyken güncellenip yayınlanmalı ([site eşleme notu](../../ALFAGOLAB_SITE_SYNC.md)).
+2. **Gerçek App Store ekran görüntüleri yok.** `AppStore/Generated/Screenshots` içindeki 12 görsel tasarım önizlemesi ve kaldırılmış özellikleri (karşılaştırma ekranı, Safety Plan) gösteriyor; gönderilmemeli. Gereken: 6.9" iPhone ve Mac için, gerçek fotoğraflarla, dört dilde native ekran görüntüleri.
+3. **Yasal alanlar:** gizlilik politikasında yürürlük tarihi, geliştiricinin yasal adı ve gerekiyorsa posta adresi.
+4. **Almanca hitap birliği** (Paket M): anadili Almanca olan biri tarafından gözden geçirilmeli.
+5. **Cihazda kontrol:** VoiceOver ile baştan sona, StoreKit sandbox satın alma ve geri yükleme, 10.000+ fotoğraflık gerçek kütüphanede akıcılık.

@@ -4,7 +4,7 @@ Publish this page at the final support URL after replacing placeholders.
 
 ## Contact
 
-Email: `[SUPPORT EMAIL]`  
+Email: `support@alfagolab.com`  
 Typical support languages: English and Turkish  
 Version/build: include the value shown in Keptora Settings (iPhone: Library ▸ ⋯ ▸ Settings; Mac: Keptora ▸ Settings…).
 

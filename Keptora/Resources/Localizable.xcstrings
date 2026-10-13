@@ -34071,6 +34071,29 @@
           }
         }
       }
+    },
+    "Purchases could not be refreshed: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satın alımlar yenilenemedi: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käufe konnten nicht aktualisiert werden: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’actualiser les achats : %@"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

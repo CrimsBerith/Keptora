@@ -1,18 +1,18 @@
-# Alfago Lab website name sync
+# Alfago Lab website sync
 
-- **Cullora: Duplicate Cleaner** → `https://alfagolab.com/keptora`
+- **Keptora** (iPhone and Mac) → `https://alfagolab.com/keptora`
+- Privacy: `https://alfagolab.com/keptora/privacy` — source text in [AppStore/PRIVACY_POLICY.md](AppStore/PRIVACY_POLICY.md)
+- Support: `https://alfagolab.com/keptora/support` — source text in [AppStore/SUPPORT_PAGE.md](AppStore/SUPPORT_PAGE.md)
 
-## Consolidation status
+The App Store marketing, privacy and support pages are maintained in the website repository (`/Users/khankartal/Desktop/alfagolab.com`, a link to the external `DATA` volume).
 
-Cullora is the active product for the former **AtlasTrace GPX** and **Aurelio Metadata** workflows. GPX journey/photo matching and metadata inspection/cleanup should be integrated here as separate photo-library modules.
+## Open item (13 October 2026)
 
-Before App Store submission, confirm the native build contains every capability claimed on the website. Keep `/Users/khankartal/Desktop/alfagolab.com/PORTFOLIO_CONSOLIDATION.md` synchronized when scope or naming changes.
+The published privacy and support pages still describe the earlier Mac-only "Keptora: Duplicate Cleaner" with a quarantine workflow. Replace them with the current texts above, which cover iPhone and Mac, Recently Deleted for Photos and the recovery folder for files, before submitting to App Store review.
 
-The App Store marketing, privacy and support pages are maintained in `/Users/khankartal/Desktop/alfagolab.com`.
+## When the app name changes
 
-If a shipping app name changes:
-
-1. Update the app's real display name in its source project.
+1. Update the app's display name in `Keptora/Resources/Info.plist` and `KeptoraiOS/Resources/Info.plist`.
 2. Keep the existing URL slug unless an intentional URL migration is planned.
 3. Run `cd /Users/khankartal/Desktop/alfagolab.com && npm run sync:app-names`.
 4. Build and publish the website before updating App Store Connect.
