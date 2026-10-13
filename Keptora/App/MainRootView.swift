@@ -226,7 +226,7 @@ struct MainRootView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(KeptoraDesign.accent)
+            .tint(KeptoraDesign.accentFill)
             .controlSize(.regular)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)

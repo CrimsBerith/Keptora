@@ -30,6 +30,7 @@
 		75B3BC8F3596780C3CA05CCC /* SidebarRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81E19EA94178B31F1612EB08 /* SidebarRoute.swift */; };
 		7E2E9ABF3C87FEACF21C0C28 /* MobileOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA20DA12EE914B907307D05 /* MobileOnboardingView.swift */; };
 		83214BA1B8E122CC708E8F11 /* MobileKeptoraStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C58F1AC3180E8D9825200A /* MobileKeptoraStore.swift */; };
+		88CCD75AF9048082178F97C4 /* ColorContrastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6D7EAB98E9F77A4ED67CC4 /* ColorContrastTests.swift */; };
 		8B694055048BE79189AAD736 /* KeptoraCore in Frameworks */ = {isa = PBXBuildFile; productRef = B24870071C26701538012E60 /* KeptoraCore */; };
 		8D69D4AAB1CE665E077AB34A /* KeptoraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C5F7336819BC426CBBCE48 /* KeptoraApp.swift */; };
 		8E5298D7C5F1390EAB394FA1 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */; };
@@ -133,6 +134,7 @@
 		DAF74F5CC8839E3307733FF0 /* StoreKitEntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitEntitlementTests.swift; sourceTree = "<group>"; };
 		E1C3D5EB4BA07723F5267078 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		E902F7C94B03B002D8515AF5 /* MacArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveView.swift; sourceTree = "<group>"; };
+		FA6D7EAB98E9F77A4ED67CC4 /* ColorContrastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorContrastTests.swift; sourceTree = "<group>"; };
 		FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraiOSTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -368,6 +370,7 @@
 		FB13B706F93CDABFAAA4ABE8 /* KeptoraiOSTests */ = {
 			isa = PBXGroup;
 			children = (
+				FA6D7EAB98E9F77A4ED67CC4 /* ColorContrastTests.swift */,
 				3E3BD3F0BFD823252D556F91 /* KeptoraiOSEdgeCaseTests.swift */,
 				FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */,
 			);
@@ -643,6 +646,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				88CCD75AF9048082178F97C4 /* ColorContrastTests.swift in Sources */,
 				E403676CFC405153B3C2020B /* KeptoraiOSEdgeCaseTests.swift in Sources */,
 				A58610C59A1A9391201AD72F /* KeptoraiOSTests.swift in Sources */,
 			);

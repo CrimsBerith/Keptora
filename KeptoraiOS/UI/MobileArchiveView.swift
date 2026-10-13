@@ -232,7 +232,7 @@ struct MobileLibraryView: View {
                     .accessibilityValue(Text(current))
             }
             if store.scanState.isScanning || store.isAnalyzing { Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(.secondary) }
-            if let error = store.similarityError ?? store.videoSimilarityError { Text(error).font(.caption).foregroundStyle(.orange) }
+            if let error = store.similarityError ?? store.videoSimilarityError { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(MobileKeptoraDesign.warning) }
             if store.skippedCloudItems > 0 {
                 Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), store.skippedCloudItems)).font(.caption).foregroundStyle(.secondary)
             }
@@ -692,7 +692,7 @@ struct MobileSelectionReviewSheet: View {
                     Button(role: .destructive) {
                         capturedIDs = Set(reviewedItems.map(\.id)); confirm = true
                     } label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)) }
-                        .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.danger)).accessibilityIdentifier("archive.review.remove")
+                        .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.dangerFill)).accessibilityIdentifier("archive.review.remove")
                         .disabled((!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty) || reviewedItems.isEmpty || hasUnavailableSelection || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
                     if store.scanState.isScanning || store.isAnalyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.footnote) }
                     else if hasUnavailableSelection { Text("Remove unavailable items from your selection to continue.").font(.footnote) }
