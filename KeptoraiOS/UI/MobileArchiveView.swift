@@ -207,15 +207,16 @@ struct MobileLibraryView: View {
                 catalogueCount
             }
             Button { sources = true } label: {
-                HStack {
+                // Stacked at accessibility sizes so "Sources" is never split mid-word.
+                (typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout())) {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Sources", systemImage: "checklist")
                         Text(store.connectedSources.filter { store.selectedSourceIDs.contains($0.id) }.map(\.localizedScanTitle).joined(separator: " · "))
                             .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                     }
-                    Spacer()
+                    if !typeSize.isAccessibilitySize { Spacer() }
                     Text(L10n.format("%lld selected", store.selectedSourceIDs.count)).font(.caption)
-                    Image(systemName: "chevron.right")
+                    if !typeSize.isAccessibilitySize { Image(systemName: "chevron.right") }
                 }.frame(minHeight: 44).contentShape(Rectangle())
             }.accessibilityIdentifier("archive.sourcesSummary")
             // Per-source counts and access live in the Sources sheet; here only a problem is shown.
@@ -578,16 +579,21 @@ struct MobileLibraryView: View {
             summaryLayout {
                 let summary = MediaSelectionSummary(store.librarySelection)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(String(format: L10n.tr("Selected items: %lld"), store.selectedLibraryIDs.count)).font(.headline)
-                    Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.caption).foregroundStyle(.secondary)
+                    Text(typeSize.isAccessibilitySize ? L10n.format("%lld selected", store.selectedLibraryIDs.count)
+                         : String(format: L10n.tr("Selected items: %lld"), store.selectedLibraryIDs.count)).font(.headline)
+                    if !typeSize.isAccessibilitySize {
+                        Text(String(format: L10n.tr("Photos: %lld · Videos: %lld"), summary.photos, summary.videos)).font(.caption).foregroundStyle(.secondary)
+                    }
                     let hidden = store.selectedLibraryIDs.subtracting(visible.map(\.id)).count
                     if hidden > 0 { Text(String(format: L10n.tr("%lld selected outside this view"), hidden)).font(.caption).foregroundStyle(.secondary) }
                 }
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 8) }
                 VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
                     Text(ByteCountFormatter.string(fromByteCount: summary.knownBytes, countStyle: .file)).font(.subheadline.weight(.semibold))
-                    Text("Space is not freed right away").font(.caption2).foregroundStyle(.secondary)
-                    if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption2).foregroundStyle(.secondary) }
+                    if !typeSize.isAccessibilitySize {
+                        Text("Space is not freed right away").font(.caption2).foregroundStyle(.secondary)
+                        if summary.unknownSizeCount > 0 { Text("Some item sizes are unavailable.").font(.caption2).foregroundStyle(.secondary) }
+                    }
                 }
             }
             if typeSize.isAccessibilitySize {
@@ -603,9 +609,11 @@ struct MobileLibraryView: View {
     }
     @ViewBuilder private var secondarySelectionButtons: some View {
         if store.canUndoLibrarySelection {
-            Button("Undo Selection") { store.undoLibrarySelection() }.buttonStyle(MobileActionButtonStyle(fillsWidth: true)).accessibilityIdentifier("archive.undoSelection")
+            // Short labels at accessibility text sizes so the bar does not cover the gallery or truncate.
+            Button { store.undoLibrarySelection() } label: { Text(typeSize.isAccessibilitySize ? LocalizedStringKey("Undo") : LocalizedStringKey("Undo Selection")) }
+                .buttonStyle(MobileActionButtonStyle(fillsWidth: true)).accessibilityIdentifier("archive.undoSelection")
         }
-        Button("Clear All Selections") { store.replaceLibrarySelection([]) }.buttonStyle(MobileActionButtonStyle(fillsWidth: true)).disabled(store.selectedLibraryIDs.isEmpty).accessibilityIdentifier("archive.clearSelection")
+        Button { store.replaceLibrarySelection([]) } label: { Text(typeSize.isAccessibilitySize ? LocalizedStringKey("Clear") : LocalizedStringKey("Clear All Selections")) }.buttonStyle(MobileActionButtonStyle(fillsWidth: true)).disabled(store.selectedLibraryIDs.isEmpty).accessibilityIdentifier("archive.clearSelection")
     }
 }
 
@@ -736,7 +744,7 @@ struct MobileSelectionReviewSheet: View {
         HStack(alignment: .top, spacing: 12) {
             MobileAssetThumbnail(asset: asset, showsRetryButton: false).frame(width: 60, height: 60).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) {
-                Text(asset.displayName).lineLimit(2)
+                Text(asset.displayName).lineLimit(2).truncationMode(.middle)
                 Text(store.sourceLabel(asset)).font(.caption).foregroundStyle(.secondary)
                 if let date = asset.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
             }
@@ -754,10 +762,11 @@ struct MobileSelectionReviewSheet: View {
 
 struct MobileCleanupHubView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
+    @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Choose where to start.").font(.title.bold())
+                // The navigation title already names the screen; one short line explains it.
                 Text("Open a category to choose photos.").foregroundStyle(.secondary)
                 if store.connectedSources.isEmpty {
                     NavigationLink { MobileSourceLibraryView() } label: {
@@ -810,7 +819,10 @@ struct MobileCleanupHubView: View {
     private func collection(_ title: String, icon: String, items: [UniversalMediaAsset], needsScan: Bool = false) -> some View {
         Button { store.openCollection(items, title: L10n.tr(String.LocalizationValue(title)), sortBySize: title == "Videos by Size", kind: title) } label: {
             HStack(spacing: 14) {
-                Image(systemName: icon).font(.title2).foregroundStyle(items.isEmpty ? Color.secondary : MobileKeptoraDesign.accent).frame(width: 40)
+                // At accessibility sizes the icon would squeeze long titles into mid-word breaks.
+                if !typeSize.isAccessibilitySize {
+                    Image(systemName: icon).font(.title2).foregroundStyle(items.isEmpty ? Color.secondary : MobileKeptoraDesign.accent).frame(width: 40)
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(LocalizedStringKey(title)).font(.headline)
                     Text(collectionSubtitle(items.count, needsScan: needsScan)).font(.subheadline).foregroundStyle(.secondary)
