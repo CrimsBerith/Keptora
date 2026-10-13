@@ -377,6 +377,7 @@ struct MacArchiveView: View {
         Picker("Library view", selection: contextBinding(\.finding)) {
             ForEach(LibraryFindingFilter.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
         }
+        .accessibilityIdentifier("mac.archive.libraryView")
     }
     private var headerActions: some View {
         ViewThatFits(in: .horizontal) {

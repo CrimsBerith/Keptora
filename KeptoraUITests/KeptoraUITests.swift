@@ -80,7 +80,8 @@ final class KeptoraUITests: XCTestCase {
         if segment.waitForExistence(timeout: 10) {
             segment.click()
         } else {
-            let menu = app.popUpButtons["Library view"]
+            // Narrow windows show the Library view picker as a pop-up menu.
+            let menu = app.popUpButtons["mac.archive.libraryView"]
             XCTAssertTrue(menu.waitForExistence(timeout: 5)); menu.click()
             app.menuItems["Exact Copies"].click()
         }

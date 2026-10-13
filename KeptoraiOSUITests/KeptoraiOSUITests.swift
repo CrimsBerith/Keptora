@@ -66,28 +66,24 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertTrue(element.waitForExistence(timeout: 5))
         XCTAssertTrue(element.isHittable)
     }
-    private func connectRealPhotos(_ app: XCUIApplication) {
-        // PhotoKit's permission sheet can be hosted outside SpringBoard's
-        // accessibility tree. Let XCTest handle the actual system interruption.
-        let permissionMonitor = addUIInterruptionMonitor(withDescription: "Photos full-access permission") { alert in
-            // The system prompt follows the simulator's language, not the app's launch language.
-            let fullAccessLabels = ["Allow Full Access", "Tam Erişime İzin Ver", "Vollzugriff erlauben", "Autoriser l’accès complet"]
-            guard let allow = fullAccessLabels.lazy.map({ alert.buttons[$0] }).first(where: \.exists) else {
-                let dump = XCTAttachment(string: alert.debugDescription)
-                dump.name = "Unhandled permission alert"; dump.lifetime = .keepAlways; self.add(dump)
-                return false
+    /// The Photos prompt follows the simulator's language, not the app's launch language.
+    private static let fullAccessLabels = ["Allow Full Access", "Tam Erişime İzin Ver", "Vollzugriff erlauben", "Autoriser l’accès complet"]
+
+    /// Taps "Allow Full Access" on the system Photos prompt if it appears before `ready` exists.
+    private func allowPhotosAccessIfPrompted(until ready: XCUIElement, timeout: TimeInterval = 20) {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, !ready.exists {
+            if let allow = Self.fullAccessLabels.lazy.map({ springboard.buttons[$0] }).first(where: \.exists) {
+                allow.tap()
+                return
             }
-            allow.tap()
-            return true
+            _ = ready.waitForExistence(timeout: 1)
         }
-        defer { removeUIInterruptionMonitor(permissionMonitor) }
+    }
+    private func connectRealPhotos(_ app: XCUIApplication) {
         if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
-        if !app.buttons["archive.selectAll"].waitForExistence(timeout: 3) {
-            // A user interaction is required to invoke registered interruption
-            // monitors; querying an unrelated application's buttons is not.
-            // Tap the status bar area so the interaction cannot hit a gallery control.
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)).tap()
-        }
+        allowPhotosAccessIfPrompted(until: app.buttons["archive.selectAll"])
         XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 20))
     }
     func testGrantPhotosAccessForRealMedia() {
@@ -534,12 +530,6 @@ final class KeptoraiOSUITests: XCTestCase {
     /// Walks the first-run path a new user takes, from introduction to removal review, with real
     /// simulator Photos. Run after uninstalling the app so onboarding and the permission prompt appear.
     func testFreshInstallWalkthrough() throws {
-        let monitor = addUIInterruptionMonitor(withDescription: "Photos permission") { alert in
-            let labels = ["Allow Full Access", "Tam Erişime İzin Ver", "Vollzugriff erlauben", "Autoriser l’accès complet"]
-            guard let allow = labels.lazy.map({ alert.buttons[$0] }).first(where: \.exists) else { return false }
-            allow.tap(); return true
-        }
-        defer { removeUIInterruptionMonitor(monitor) }
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -550,7 +540,7 @@ final class KeptoraiOSUITests: XCTestCase {
         for page in 1...3 { saveScreenshot(app, name: "Walkthrough \(page) — introduction"); next.tap() }
         let continueSetup = app.buttons["ios.sourceSetup.continue"]
         if continueSetup.waitForExistence(timeout: 10) {
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)).tap()
+            allowPhotosAccessIfPrompted(until: app.staticTexts["Access granted"], timeout: 15)
             saveScreenshot(app, name: "Walkthrough 4 — source setup")
             let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: continueSetup)
             _ = XCTWaiter.wait(for: [enabled], timeout: 20)
