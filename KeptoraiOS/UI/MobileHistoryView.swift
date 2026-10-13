@@ -1,3 +1,4 @@
+import KeptoraCore
 import SwiftUI
 
 struct MobileHistoryView: View {
@@ -13,12 +14,12 @@ struct MobileHistoryView: View {
                     ContentUnavailableView {
                         Label("No cleanup history", systemImage: "clock.badge.checkmark")
                     } description: {
-                        Text("Completed cleanup actions will appear here with full restoration records.")
+                        Text("Completed actions show their source, result and available recovery steps.")
                     } actions: {
                         Button {
                             store.selectedTab = .library
                         } label: {
-                            Text("Scan Media")
+                            Text("Browse Library")
                                 .font(.headline)
                         }
                         .buttonStyle(.borderedProminent)
@@ -51,10 +52,10 @@ struct MobileHistoryView: View {
                                             Text("Photos Recently Deleted")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         } else {
-                                            Text("Keptora Safe Bin")
+                                            Text("Recovery Folder")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         }
-                                        Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        Text(entry.createdAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.currentLocale)))
                                             .font(.system(.caption, design: .rounded))
                                             .foregroundStyle(.secondary)
                                     }
@@ -65,7 +66,7 @@ struct MobileHistoryView: View {
                                     HStack(spacing: 5) {
                                         Image(systemName: "doc.on.doc")
                                             .font(.system(.caption2, design: .rounded).weight(.semibold))
-                                        Text("^[\(entry.itemCount) item](inflect: true)")
+                                        Text(L10n.format("%lld items", entry.itemCount))
                                             .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)
@@ -75,7 +76,7 @@ struct MobileHistoryView: View {
                                     HStack(spacing: 5) {
                                         Image(systemName: "internaldrive")
                                             .font(.system(.caption2, design: .rounded).weight(.semibold))
-                                        Text(ByteCountFormatter.string(fromByteCount: entry.byteCount, countStyle: .file))
+                                        Text(entry.byteCount > 0 ? ByteCountFormatter.string(fromByteCount: entry.byteCount, countStyle: .file) : L10n.tr("Media size unavailable"))
                                             .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)
@@ -86,7 +87,7 @@ struct MobileHistoryView: View {
 
                                 if entry.kind == .photosRecentlyDeleted {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        Text("Recover items from Recently Deleted in Apple Photos. With iCloud Photos, recovery syncs across your devices.")
+                                        Text("Recover items in Apple Photos → Recently Deleted for up to 30 days unless permanently deleted sooner.")
                                             .font(.system(.footnote, design: .rounded))
                                             .foregroundStyle(.secondary)
 
@@ -98,8 +99,7 @@ struct MobileHistoryView: View {
                                             Label("Open Apple Photos", systemImage: "arrow.up.forward.app")
                                                 .font(.system(.caption, design: .rounded).weight(.semibold))
                                         }
-                                        .buttonStyle(.bordered)
-                                        .controlSize(.small)
+                                        .buttonStyle(MobileActionButtonStyle())
                                     }
                                 } else if entry.restoredAt != nil {
                                     HStack(spacing: 6) {
@@ -113,12 +113,11 @@ struct MobileHistoryView: View {
                                     .padding(.vertical, 5)
                                     .background(MobileKeptoraDesign.mint.opacity(0.12), in: Capsule())
                                 } else {
+                                    Text("Files remain in the recovery folder on the same storage.").font(.footnote).foregroundStyle(.secondary)
                                     Button("Restore Files") {
                                         entryToRestore = entry
                                     }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(MobileKeptoraDesign.accent)
-                                    .controlSize(.regular)
+                                    .buttonStyle(MobilePrimaryButtonStyle())
                                     .accessibilityIdentifier("ios.history.restore.\(entry.id.uuidString)")
                                 }
                             }
@@ -135,6 +134,8 @@ struct MobileHistoryView: View {
                 }
             }
         }
+        .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? L10n.tr("Restoring files…")).padding(22).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
+        .disabled(store.isCleaningUp)
         .navigationTitle("History")
         .accessibilityIdentifier("ios.page.history")
         .alert("Restore Files", isPresented: Binding(

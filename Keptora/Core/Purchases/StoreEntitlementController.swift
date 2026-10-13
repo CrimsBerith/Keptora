@@ -2,9 +2,11 @@ import Combine
 import Foundation
 import KeptoraCore
 import StoreKit
+import SwiftUI
 
 @MainActor
 final class StoreEntitlementController: ObservableObject {
+    enum PaywallHost { case main, settings }
     static let lifetimeProductID = AppStoreConfiguration.defaultLifetimeProductID
 
     @Published private(set) var lifetimeProduct: Product?
@@ -12,6 +14,7 @@ final class StoreEntitlementController: ObservableObject {
     @Published private(set) var isWorking = false
     @Published private(set) var statusMessage: String?
     @Published var isShowingPaywall = false
+    @Published private(set) var paywallHost: PaywallHost = .main
     @Published private(set) var paywallReason: PaywallReason = .settings
     @Published private(set) var reviewedAssetIDs: Set<String>
     private var reservedAssetIDs: Set<String> = []
@@ -114,9 +117,15 @@ final class StoreEntitlementController: ObservableObject {
         return true
     }
 
-    func presentPaywall(_ reason: PaywallReason) {
+    func presentPaywall(_ reason: PaywallReason, host: PaywallHost = .main) {
+        paywallHost = host
         paywallReason = reason
         isShowingPaywall = true
+    }
+    func paywallBinding(for host: PaywallHost) -> Binding<Bool> {
+        Binding(get: { self.isShowingPaywall && self.paywallHost == host }, set: { value in
+            if self.paywallHost == host { self.isShowingPaywall = value }
+        })
     }
 
     func refresh() async {

@@ -1,6 +1,6 @@
 # Keptora App Store Metadata Draft
 
-**Snapshot date:** 4 August 2026  
+**Snapshot date:** 13 October 2026  
 **Status:** Content-complete draft; legal identity, URLs, identifiers, pricing tiers, and final screenshots remain release blockers.
 
 ## Shared app information
@@ -27,35 +27,36 @@ The proposed name is 21 characters. Both localized subtitles are within the 30-c
 
 ### Promotional text
 
-Find exact photo and video copies, compare similar media, and reclaim space with explicit, protected cleanup on Mac and iPhone.
+Find exact copies, similar shots, screenshots and large videos. Choose what goes, review it, and recover it if you change your mind. On iPhone and Mac.
 
 ### Keywords
 
-`duplicate,photo cleanup,similar photos,library,storage,organizer,offline,RAW,quarantine,restore`
+`duplicate,photo cleaner,similar photos,storage,screenshots,large videos,blurry,live photos,restore`
 
 ### Description
 
-Keptora helps you clean photo archives without trusting a black-box delete button.
+Keptora helps you clear out your photo library without a risky one-tap delete. Every photo stays in view, you decide what goes, and you can review everything before it is removed.
 
-**START WITH EXACT DUPLICATES**  
-Scan a folder, external drive, or cloud folder mounted in Finder locally. Keptora groups files only after SHA-256 confirms byte-for-byte equality. It protects a keeper and explains why copies belong together.
+**SEE EVERYTHING, CHOOSE ANYTHING**  
+Browse Apple Photos or a folder you choose. Filter by photos or videos, album, favorites or date, sort by size, and group by day or month. Select with a tap or click, open a larger preview, and undo any selection step.
 
-**REVIEW SIMILAR MEDIA**
-Compare similar photos without cleanup actions. Similar videos use duration, shape, and sampled frames; they are never auto-selected and require your explicit review before cleanup.
+**EXACT COPIES, PROVEN**  
+Keptora groups copies only after SHA-256 confirms they are byte-for-byte identical. Select Extra Copies keeps one photo in every group and leaves protected items alone.
 
-**REVIEW BEFORE ANY MOVE**  
-Keptora builds a Safety Plan showing every proposed action, destination, and recoverability status. Approved copies move to a reversible quarantine on the same volume. Signed manifests and history make restoration auditable.
+**SIMILAR SHOTS TOGETHER**  
+Very similar and similar photos are grouped using the image itself plus capture time, location and bursts. Keptora suggests which one to keep; you choose.
 
-**UNDERSTAND PHOTO FAMILIES**  
-RAW + JPEG, XMP sidecars, Live Photo components, bursts, and edited exports are treated as related assets instead of isolated files.
+**QUICK WINS**  
+Open Screenshots, Videos by Size, Live Photos and photos worth reviewing - blurry, dark, overexposed or low resolution - in one tap.
+
+**REVIEW, THEN REMOVE**  
+The final review lists every item, its source and how to recover it. Photos items go to Recently Deleted after Apple's confirmation. Folder files move to a recovery folder and can be restored from History.
 
 **PRIVATE BY DESIGN**  
-No account. No ads. No analytics. No media upload. Your archive is processed on your supported Apple device.
+No account. No ads. No analytics. No uploads. Analysis runs on your iPhone or Mac, and iCloud originals are downloaded only if you ask.
 
 **FREE TO START**  
-Scan without a limit and review the first 100 unique recommendations. A one-time Keptora Pro purchase unlocks unlimited review and Safety Plans. No subscription.
-
-Important: Keptora does not permanently delete files from Apple Photos. Similar-photo suggestions always require your review.
+Browsing, scanning, manual selection, removal and recovery are free. Suggested batch selection is free for your first 100 items; a one-time Keptora Pro purchase removes the limit on iPhone and Mac. No subscription.
 
 ## Turkish
 
@@ -65,35 +66,36 @@ Important: Keptora does not permanently delete files from Apple Photos. Similar-
 
 ### Promotional text
 
-Birebir fotoğraf ve video kopyalarını bulun, benzer medyaları karşılaştırın ve Mac ile iPhone’da açık onaylı güvenli temizlik yapın.
+Birebir kopyaları, benzer çekimleri, ekran görüntülerini ve büyük videoları bulun. Neyin gideceğini seçin, inceleyin, fikrinizi değiştirirseniz geri alın.
 
 ### Keywords
 
-`kopya,fotoğraf,temizleme,benzer,arşiv,depolama,düzenleme,çevrimdışı,karantina,geri yükleme`
+`kopya,fotoğraf temizle,benzer,depolama,ekran görüntüsü,video,bulanık,geri yükle`
 
 ### Description
 
-Keptora, fotoğraf arşivinizi ne yaptığını açıklamayan tek tıklamalı bir silme aracına güvenmeden düzenlemenize yardımcı olur.
+Keptora, tek dokunuşla riskli silme yapmadan fotoğraf arşivinizi temizlemenize yardım eder. Her fotoğraf gözünüzün önünde kalır, neyin gideceğine siz karar verirsiniz ve kaldırmadan önce hepsini incelersiniz.
 
-**ÖNCE TAM KOPYALAR**  
-Bir klasörü veya harici diski tamamen yerel olarak tarayın. Keptora, dosyaları yalnızca SHA-256 ile birebir aynı oldukları doğrulandıktan sonra gruplar. Saklanacak ana kopyayı korur ve dosyaların neden aynı grupta olduğunu açıklar.
+**HER ŞEYİ GÖRÜN, İSTEDİĞİNİZİ SEÇİN**  
+Apple Fotoğraflar'ı veya seçtiğiniz bir klasörü inceleyin. Fotoğraf ya da videoya, albüme, favorilere veya tarihe göre filtreleyin; boyuta göre sıralayın, güne veya aya göre gruplayın. Dokunarak veya tıklayarak seçin, büyük önizleme açın ve her seçim adımını geri alın.
 
-**BENZER MEDYALARI İNCELEYİN**
-Benzer fotoğrafları temizleme eylemi olmadan karşılaştırın. Benzer videolar süre, görüntü oranı ve örnek karelerle önerilir; otomatik seçilmez ve temizlikten önce açıkça sizin incelemenizi gerektirir.
+**KANITLANMIŞ BİREBİR KOPYALAR**  
+Keptora kopyaları yalnızca SHA-256 bayt bayt aynı olduklarını doğruladıktan sonra gruplar. Fazla Kopyaları Seç her grupta bir fotoğrafı saklar ve korunan öğelere dokunmaz.
 
-**HER HAREKETTEN ÖNCE İNCELEYİN**  
-Keptora, önerilen her işlemi, hedef konumu ve geri alınabilirlik durumunu gösteren bir Güvenlik Planı oluşturur. Onaylanan kopyalar aynı disk üzerindeki geri alınabilir karantinaya taşınır. İmzalı manifestler ve geçmiş, geri yüklemeyi denetlenebilir kılar.
+**BENZER ÇEKİMLER BİR ARADA**  
+Çok benzer ve benzer fotoğraflar görüntünün kendisi, çekim zamanı, konum ve seri çekimlere göre gruplanır. Keptora hangisini saklayacağınızı önerir; karar sizindir.
 
-**FOTOĞRAF AİLELERİNİ ANLAYIN**  
-RAW + JPEG, XMP sidecar dosyaları, Live Photo bileşenleri, burst çekimler ve düzenlenmiş dışa aktarımlar birbirinden kopuk dosyalar olarak değil, ilişkili varlıklar olarak ele alınır.
+**HIZLI KAZANÇLAR**  
+Ekran görüntülerini, boyuta göre videoları, Live Photo'ları ve incelemeye değer fotoğrafları (bulanık, karanlık, aşırı parlak veya düşük çözünürlüklü) tek dokunuşla açın.
+
+**ÖNCE İNCELE, SONRA KALDIR**  
+Son inceleme her öğeyi, kaynağını ve nasıl geri alınacağını gösterir. Fotoğraflar öğeleri Apple onayıyla Son Silinenler'e gider. Klasör dosyaları kurtarma klasörüne taşınır ve Geçmiş'ten geri yüklenebilir.
 
 **GİZLİLİK ODAKLI**  
-Hesap yok. Reklam yok. Analitik yok. Medya yükleme yok. Arşiviniz desteklenen Apple aygıtınızda işlenir.
+Hesap, reklam, analitik veya yükleme yoktur. Analiz iPhone veya Mac'inizde yapılır; iCloud orijinalleri yalnızca siz isterseniz indirilir.
 
 **ÜCRETSİZ BAŞLAYIN**  
-Sınırsız tarama yapın ve ilk 100 benzersiz öneriyi inceleyin. Tek seferlik Keptora Pro satın alımı sınırsız incelemeyi ve Güvenlik Planlarını açar. Abonelik yok.
-
-Önemli: Keptora, Apple Photos içindeki dosyaları kalıcı olarak silmez. Benzer fotoğraf önerileri her zaman sizin incelemenizi gerektirir.
+Gezinme, tarama, elle seçim, kaldırma ve kurtarma ücretsizdir. Önerilen toplu seçim ilk 100 öğe için ücretsizdir; tek seferlik Keptora Pro satın alımı sınırı iPhone ve Mac'te kaldırır. Abonelik yoktur.
 
 ## Metadata entry checklist
 

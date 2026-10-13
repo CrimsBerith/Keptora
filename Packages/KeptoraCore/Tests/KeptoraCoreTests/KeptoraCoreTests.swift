@@ -2,6 +2,98 @@ import XCTest
 @testable import KeptoraCore
 
 final class KeptoraCoreTests: XCTestCase {
+    private func recoveryFixture(count: Int = 2) async throws -> (URL, FolderQuarantineRecord) {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        for n in 0..<count { try Data("reviewed photo \(n)".utf8).write(to: root.appendingPathComponent("\(n).jpg")) }
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        var selections: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
+        for item in try await adapter.enumerateAssets() {
+            let hash = try await adapter.exactFingerprint(for: item, allowNetwork: false, progress: { _ in })
+            selections.append((item, hash.digest))
+        }
+        return (root, try await FolderQuarantineExecutor().quarantine(root: root, selections: selections))
+    }
+    func testRecoveryCatalogueKeepsHealthyRecordsBesideCorruptAndUnsafeManifests() async throws {
+        let (root, record) = try await recoveryFixture(count: 1)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let directory = root.appendingPathComponent(".Keptora Quarantine")
+        let corrupt = directory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: corrupt, withIntermediateDirectories: true)
+        try Data("unreadable".utf8).write(to: corrupt.appendingPathComponent("recovery.json"))
+        let id = UUID(), unsafe = directory.appendingPathComponent(id.uuidString)
+        try FileManager.default.createDirectory(at: unsafe, withIntermediateDirectories: true)
+        let invalid = FolderQuarantineRecord(id: id, sourceRoot: root, operations: [
+            .init(originalURL: URL(fileURLWithPath: "/outside/photo.jpg"), quarantineURL: unsafe.appendingPathComponent("photo.jpg"), expectedDigest: "x")])
+        try JSONEncoder().encode(invalid).write(to: unsafe.appendingPathComponent("recovery.json"))
+        let result = try await FolderQuarantineExecutor().recoveryCatalogue(root: root)
+        XCTAssertEqual(result.records.map(\.id), [record.id]); XCTAssertEqual(result.issues.count, 2)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.operations[0].quarantineURL.path))
+    }
+    func testCompletedRestoreReceiptSurvivesSubsequentEditAndRename() async throws {
+        let (root, record) = try await recoveryFixture(count: 1)
+        defer { try? FileManager.default.removeItem(at: root) }
+        _ = try await FolderQuarantineExecutor().restore(record)
+        let original = record.operations[0].originalURL
+        try Data("user edited this later".utf8).write(to: original)
+        try FileManager.default.moveItem(at: original, to: root.appendingPathComponent("renamed.jpg"))
+        let catalogue = try await FolderQuarantineExecutor().recoveryCatalogue(root: root)
+        let receipt = try XCTUnwrap(catalogue.records.first)
+        XCTAssertNotNil(receipt.restoredAt); XCTAssertEqual(receipt.unresolvedCount, 0); XCTAssertTrue(catalogue.issues.isEmpty)
+    }
+    func testRestoreRejectsLateContentChangeAndPersistsCompensatedLedger() async throws {
+        let (root, record) = try await recoveryFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executor = FolderQuarantineExecutor(beforeRestoreMove: { operation, index in
+            if index == 1 { try Data("changed after initial preflight".utf8).write(to: operation.quarantineURL) }
+        })
+        do { _ = try await executor.restore(record); XCTFail("Late changes must stop restore") } catch { }
+        let ledgerURL = root.appendingPathComponent(".Keptora Quarantine/\(record.id.uuidString)/recovery.json")
+        let ledger = try JSONDecoder().decode(FolderQuarantineRecord.self, from: Data(contentsOf: ledgerURL))
+        XCTAssertNil(ledger.restoredAt); XCTAssertEqual(ledger.operations[0].state, .moved)
+        XCTAssertEqual(ledger.operations[1].state, .interrupted)
+        XCTAssertTrue(ledger.operations.allSatisfy { FileManager.default.fileExists(atPath: $0.quarantineURL.path) })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: record.operations[0].originalURL.path))
+    }
+    func testRestoreVerifiesAfterMoveBeforeWritingCompletedReceipt() async throws {
+        let (root, record) = try await recoveryFixture(count: 1)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executor = FolderQuarantineExecutor(afterRestoreMove: { operation, _ in
+            try Data("changed during move".utf8).write(to: operation.originalURL)
+        })
+        do { _ = try await executor.restore(record); XCTFail("Changed target must not become a completed receipt") } catch { }
+        let catalogue = try await executor.recoveryCatalogue(root: root)
+        let remaining = try XCTUnwrap(catalogue.records.first)
+        XCTAssertNil(remaining.restoredAt); XCTAssertEqual(remaining.unresolvedCount, 1)
+        XCTAssertEqual(try Data(contentsOf: remaining.operations[0].quarantineURL), Data("changed during move".utf8))
+    }
+    func testRestoreCancellationCompensatesAndKeepsDurableRecoveryState() async throws {
+        let (root, record) = try await recoveryFixture()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executor = FolderQuarantineExecutor(beforeRestoreMove: { _, index in
+            if index == 1 { withUnsafeCurrentTask { $0?.cancel() }; throw CancellationError() }
+        })
+        let work = Task { try await executor.restore(record) }
+        do { _ = try await work.value; XCTFail("Cancellation must interrupt the restore") } catch is CancellationError { }
+        let catalogue = try await FolderQuarantineExecutor().recoveryCatalogue(root: root)
+        let remaining = try XCTUnwrap(catalogue.records.first)
+        XCTAssertNil(remaining.restoredAt); XCTAssertEqual(remaining.movedCount, 2); XCTAssertEqual(remaining.unresolvedCount, 0)
+    }
+    func testHardLinkEntriesCanBothBeQuarantinedAndRestored() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let a = root.appendingPathComponent("a.jpg"), b = root.appendingPathComponent("b.jpg")
+        try Data("one physical image, two entries".utf8).write(to: a); try FileManager.default.linkItem(at: a, to: b)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true), executor = FolderQuarantineExecutor()
+        let items = try await adapter.enumerateAssets(); XCTAssertEqual(Set(items.map(\.id)).count, 2)
+        let prepared = try await LibraryCleanupPreflight().prepare(items, adapter: adapter)
+        let record = try await executor.quarantine(root: root, selections: prepared)
+        XCTAssertEqual(record.movedCount, 2)
+        _ = try await executor.restore(record)
+        XCTAssertEqual(LibraryFileIdentity.key(for: a), LibraryFileIdentity.key(for: b))
+        XCTAssertEqual(try Data(contentsOf: a), Data("one physical image, two entries".utf8))
+    }
     func testExactGroupNeverSelectsKeeperOrProtectedAssets() {
         let keeper = asset(id: "keeper")
         let favorite = asset(id: "favorite", favorite: true)
@@ -92,9 +184,11 @@ final class KeptoraCoreTests: XCTestCase {
         
         let report = VisualQualityEngine.evaluateQuality(for: image, asset: testAsset)
         XCTAssertGreaterThan(report.sharpnessScore, 10.0)
-        XCTAssertTrue(report.badges.contains(VisualQualityBadge.proRawOriginal))
-        XCTAssertTrue(report.badges.contains(VisualQualityBadge.highResolution))
-        XCTAssertGreaterThanOrEqual(report.compositeScore, 20.0)
+        XCTAssertFalse(report.badges.contains(.eyesOpen))
+        XCTAssertFalse(report.badges.contains(.proRawOriginal))
+        XCTAssertEqual(report.formatBonus, 0)
+        XCTAssertEqual(report.faceScore, 0)
+        XCTAssertNotNil(report.assessment)
     }
 
     func testFolderQuarantineRehashesMovesAndRestoresWithoutOverwrite() async throws {
@@ -143,8 +237,115 @@ final class KeptoraCoreTests: XCTestCase {
         }
     }
 
+    func testRecoveryManifestSurvivesLostInAppHistory() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("unique.jpg")
+        try Data("a unique manually selected photo".utf8).write(to: file)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let items = try await adapter.enumerateAssets()
+        let item = try XCTUnwrap(items.first)
+        let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false) { _ in }
+        let executor = FolderQuarantineExecutor()
+        let record = try await executor.quarantine(root: root, selections: [(item, fingerprint.digest)])
+        let reloaded = try await FolderQuarantineExecutor().recoveryRecords(root: root)
+        XCTAssertEqual(reloaded.first?.id, record.id)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.operations[0].quarantineURL.deletingLastPathComponent().appendingPathComponent("recovery.json").path))
+    }
+
+    func testRecoveryAfterFolderRenameUsesVerifiedNewRootAndPreservesLedger() async throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let root = base.appendingPathComponent("Before"), renamed = base.appendingPathComponent("After")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        try Data("verified photo".utf8).write(to: root.appendingPathComponent("one.jpg"))
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let items = try await adapter.enumerateAssets()
+        let asset = try XCTUnwrap(items.first)
+        let hash = try await adapter.exactFingerprint(for: asset, allowNetwork: false, progress: { _ in })
+        let executor = FolderQuarantineExecutor()
+        let record = try await executor.quarantine(root: root, selections: [(asset, hash.digest)])
+        try FileManager.default.moveItem(at: root, to: renamed)
+        let records = try await executor.recoveryRecords(root: renamed)
+        XCTAssertEqual(records.first?.id, record.id); XCTAssertEqual(records.first?.movedCount, 1)
+        let restored = try await executor.restore(try XCTUnwrap(records.first))
+        XCTAssertNotNil(restored.restoredAt); XCTAssertTrue(FileManager.default.fileExists(atPath: renamed.appendingPathComponent("one.jpg").path))
+    }
+    func testUnifiedFolderEnumerationAppliesSnapshotAndAlwaysSkipsInternalFolders() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for name in ["photo.jpg", "keep.png", "node_modules/ignored.jpg", "CACHE/ignored.jpg", "nested/photo.jpg", ".Keptora Quarantine/ignored.jpg"] {
+            let url = root.appendingPathComponent(name)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data("test media".utf8).write(to: url)
+        }
+        let config = LibraryConfiguration(excludedFolders: ["cache"], excludedExtensions: ["png"])
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: false, configuration: config)
+        let items = try await adapter.enumerateAssets()
+        XCTAssertEqual(items.count, 2); XCTAssertTrue(items.allSatisfy { $0.displayName == "photo.jpg" })
+    }
+
+    func testMainFileCleanupRequiresExplicitConsentForIncompleteFamily() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("photo".utf8).write(to: root.appendingPathComponent("capture.jpg"))
+        try Data("editing instructions".utf8).write(to: root.appendingPathComponent("capture.xmp"))
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let items = try await adapter.enumerateAssets()
+        let asset = try XCTUnwrap(items.first)
+        let hash = try await adapter.exactFingerprint(for: asset, allowNetwork: false, progress: { _ in })
+        let executor = FolderQuarantineExecutor()
+        do { _ = try await executor.quarantine(root: root, selections: [(asset, hash.digest)]); XCTFail("Family needs a review") } catch UniversalScanError.cleanupNotPermitted { }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("capture.jpg").path))
+        let record = try await executor.quarantine(root: root, selections: [(asset, hash.digest)], allowPartialFamilies: true)
+        XCTAssertEqual(record.movedCount, 1); XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("capture.xmp").path))
+    }
+
+    func testRestoreResumesAfterInterruptionWithoutOverwritingVerifiedOriginal() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for name in ["one.jpg", "two.jpg"] { try Data(name.utf8).write(to: root.appendingPathComponent(name)) }
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        var selections: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
+        for item in try await adapter.enumerateAssets() {
+            let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false) { _ in }
+            selections.append((item, fingerprint.digest))
+        }
+        let executor = FolderQuarantineExecutor()
+        let record = try await executor.quarantine(root: root, selections: selections)
+        let first = record.operations[0]
+        try FileManager.default.moveItem(at: first.quarantineURL, to: first.originalURL)
+        let restored = try await executor.restore(record)
+        XCTAssertNotNil(restored.restoredAt)
+        for operation in restored.operations {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: operation.originalURL.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: operation.quarantineURL.path))
+        }
+    }
+
+    func testManualFileChangeFailsBeforeAnyMove() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("selected.jpg")
+        try Data("original".utf8).write(to: file)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let items = try await adapter.enumerateAssets(); let item = try XCTUnwrap(items.first)
+        let fingerprint = try await adapter.exactFingerprint(for: item, allowNetwork: false) { _ in }
+        try Data("changed after review".utf8).write(to: file)
+        do {
+            _ = try await FolderQuarantineExecutor().quarantine(root: root, selections: [(item, fingerprint.digest)])
+            XCTFail("Changed content must stay at its original path")
+        } catch UniversalScanError.cleanupNotPermitted { }
+        XCTAssertEqual(try Data(contentsOf: file), Data("changed after review".utf8))
+    }
+
     func testResumedScanReusesOnlySameRevisionCheckpointEntries() async throws {
-        let first = asset(id: "copy-1")
+        let first = asset(id: "copy-1").with(modificationDate: .some(Date(timeIntervalSince1970: 100)))
         let second = asset(id: "copy-2")
         let unique = asset(id: "unique")
         let fingerprinted = UniversalMediaAsset(
@@ -209,15 +410,16 @@ final class KeptoraCoreTests: XCTestCase {
             sharpnessScore: 0.85
         )
         
-        await cache.store(assetID: "asset-123", modificationDate: now, byteCount: 2048, entry: entry)
+        let revision = asset(id: "asset-123").with(byteCount: .some(2048), modificationDate: .some(now))
+        await cache.store(asset: revision, algorithm: MediaAnalysisVersion.exact, entry: entry)
         await cache.persistToDisk()
         
-        let fetched = await cache.get(assetID: "asset-123", modificationDate: now, byteCount: 2048)
+        let fetched = await cache.get(asset: revision, algorithm: MediaAnalysisVersion.exact)
         XCTAssertEqual(fetched?.digest, "sha256-abc")
         XCTAssertEqual(fetched?.sharpnessScore, 0.85)
         
         // Non-existent key should return nil
-        let missing = await cache.get(assetID: "asset-999", modificationDate: now, byteCount: 2048)
+        let missing = await cache.get(asset: asset(id: "asset-999").with(modificationDate: .some(now)), algorithm: MediaAnalysisVersion.exact)
         XCTAssertNil(missing)
     }
 
@@ -527,4 +729,44 @@ private actor CountingSourceAdapter: SourceAdapter {
         return UniversalExactFingerprint(digest: asset.id == "unique" ? "unique" : "same", byteCount: 100)
     }
     func hashCount() -> Int { calls }
+}
+
+
+extension KeptoraCoreTests {
+    func testCoordinatorCompletesAccessibleStagesAndReportsUnsupportedPreviews() async throws {
+        let recorder = AnalysisUpdatesRecorder()
+        let coordinator = LibraryAnalysisCoordinator { await recorder.record($0) }
+        let video = UniversalMediaAsset(id: "video", sourceID: "test", reference: .photoLibrary(localIdentifier: "video"), displayName: "video.mov", mediaKind: .video)
+        let adapter = UnifiedLibraryAdapter(adapters: [CountingSourceAdapter(assets: [asset(id: "image"), video])])
+        try await coordinator.run(adapter: adapter, allowNetwork: false)
+        let events = await recorder.events
+        let completions = events.compactMap { event -> AnalysisSessionProgress? in if case .finished(let result) = event { return result }; return nil }
+        XCTAssertEqual(completions.count, 1); XCTAssertTrue(completions[0].isFinished); XCTAssertFalse(completions[0].isComplete)
+        XCTAssertEqual(completions[0].stages[.exact]?.status, .completed)
+        XCTAssertEqual(completions[0].stages[.photos]?.status, .partial)
+        XCTAssertEqual(completions[0].stages[.videos]?.status, .partial)
+    }
+    func testCheckpointTicketRejectsLateWriteAfterCompletion() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let archive = LibraryCheckpointArchive()
+        _ = await archive.load(url: url, ticket: 1, sourceID: "test", allowNetwork: false)
+        let checkpoint = UniversalScanCheckpoint(sourceID: "test", allowNetwork: false, entries: [])
+        try await archive.save(checkpoint, url: url, ticket: 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        await archive.stop(url: url, ticket: 2, preserve: false)
+        try await archive.save(checkpoint, url: url, ticket: 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    }
+    func testIssueReasonsDoNotCallUnreadableFilesCloudDownloads() {
+        let item = asset(id: "image")
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .exact, error: UniversalScanError.networkRequired("image")).reason, .downloadRequired)
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .exact, error: UniversalScanError.inaccessibleAsset("image")).reason, .unreadable)
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .photos, error: UniversalScanError.sourcePermissionDenied).reason, .accessDenied)
+        XCTAssertEqual(AnalysisIssue(asset: item, stage: .videos, error: CancellationError()).reason, .cancelled)
+    }
+}
+private actor AnalysisUpdatesRecorder {
+    private(set) var events: [LibraryAnalysisUpdate] = []
+    func record(_ update: LibraryAnalysisUpdate) { events.append(update) }
 }

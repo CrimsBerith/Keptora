@@ -4,25 +4,46 @@ import SwiftUI
 
 @MainActor
 private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
-    let model = AppModel()
+    let operations = LibraryOperationCoordinator()
+    let navigation = MacNavigation()
     let store = StoreEntitlementController()
+    lazy var archive = MacArchiveModel(operations: operations)
+    private var terminating = false
     private var fallbackWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        archive.authorizeSuggestions = { [weak self] identifiers in
+            guard let self else { return false }
+            let ids = identifiers.map { AssetID(rawValue: $0) }
+            guard self.store.authorizeReviews(ids) else { return false }
+            self.store.recordReviews(ids)
+            return true
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.showMainWindowIfNeeded()
         }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
-            showMainWindowIfNeeded()
-        }
+        showMainWindowIfNeeded()
         return true
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !terminating else { return .terminateLater }
+        terminating = true
+        operations.beginTermination()
+        Task {
+            let saved = await archive.prepareForTermination()
+            await operations.waitForIdle()
+            if !saved { terminating = false; operations.resumeAfterCancelledTermination() }
+            sender.reply(toApplicationShouldTerminate: saved)
+        }
+        return .terminateLater
+    }
+
     private func showMainWindowIfNeeded() {
-        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
+        if let window = NSApp.windows.first(where: { $0.identifier == MacWindowIdentity.main }) {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -32,14 +53,11 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
         let activeLocale = AppLanguage(rawValue: selectedLang)?.locale ?? .current
 
         let root = MainRootView()
-            .environmentObject(model)
+            .environmentObject(navigation)
             .environmentObject(store)
+            .environmentObject(archive)
             .environment(\.locale, activeLocale)
-            .task { [model, store] in
-                async let appPreparation: Void = model.prepare()
-                async let storePreparation: Void = store.refresh()
-                _ = await (appPreparation, storePreparation)
-            }
+            .task { [store] in await store.refresh() }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1240, height: 800),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -47,6 +65,7 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.title = "Keptora"
+        window.identifier = MacWindowIdentity.main
         window.minSize = NSSize(width: 900, height: 650)
         window.contentViewController = NSHostingController(rootView: root)
         window.center()
@@ -69,87 +88,37 @@ struct KeptoraApp: App {
     var body: some Scene {
         Window("Keptora", id: "main") {
             MainRootView()
-                .environmentObject(appDelegate.model)
+                .environmentObject(appDelegate.navigation)
                 .environmentObject(appDelegate.store)
+                .environmentObject(appDelegate.archive)
                 .environment(\.locale, activeLocale)
-                .task {
-                    async let appPreparation: Void = appDelegate.model.prepare()
-                    async let storePreparation: Void = appDelegate.store.refresh()
-                    _ = await (appPreparation, storePreparation)
-                }
+                .task { await appDelegate.store.refresh() }
         }
         .defaultSize(width: 1240, height: 800)
+        .windowResizability(.contentMinSize)
         .windowStyle(.titleBar)
-        .commands {
-            CommandGroup(after: .newItem) {
-                Button("Choose Photo Folder…") { appDelegate.model.chooseFolder() }
-                    .keyboardShortcut("o", modifiers: [.command])
-                Button("Connect Cloud Folder…") { appDelegate.model.chooseCloudFolder() }
-                    .keyboardShortcut("o", modifiers: [.command, .shift])
-                Button("Start Read-Only Scan") { appDelegate.model.startScan() }
-                    .keyboardShortcut("r", modifiers: [.command])
-                    .disabled(!appDelegate.model.canStartScan)
-                Button("Analyze Similar Photos") { appDelegate.model.startSimilarityAnalysis() }
-                    .keyboardShortcut("i", modifiers: [.command, .shift])
-                    .disabled(appDelegate.model.similarityProgress.isRunning)
-            }
-            CommandMenu("Review") {
-                Button("Previous Exact Group") { appDelegate.model.selectPreviousExactGroup() }
-                    .keyboardShortcut("[", modifiers: [.command])
-                    .disabled(!appDelegate.model.canNavigateExactGroups)
-                Button("Next Exact Group") { appDelegate.model.selectNextExactGroup() }
-                    .keyboardShortcut("]", modifiers: [.command])
-                    .disabled(!appDelegate.model.canNavigateExactGroups)
-                Divider()
-                Button("Previous Photo") { appDelegate.model.focusPreviousReviewAsset() }
-                    .keyboardShortcut(.leftArrow, modifiers: [.option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Button("Next Photo") { appDelegate.model.focusNextReviewAsset() }
-                    .keyboardShortcut(.rightArrow, modifiers: [.option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Divider()
-                Button("Keep Focused Photo") { appDelegate.model.applyFocusedDecision(.keep, access: appDelegate.store) }
-                    .keyboardShortcut("1", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Button("Add Focused Photo to Safety Plan") { appDelegate.model.applyFocusedDecision(.quarantinePlan, access: appDelegate.store) }
-                    .keyboardShortcut("2", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Button("Skip Focused Photo") { appDelegate.model.applyFocusedDecision(.skip, access: appDelegate.store) }
-                    .keyboardShortcut("3", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.canApplyFocusedReviewDecision)
-                Divider()
-                Button("Select All Safe Copies") { appDelegate.model.applyBatchActionToAllExactGroups(.planSafeExtras, access: appDelegate.store) }
-                    .keyboardShortcut("p", modifiers: [.command, .shift])
-                    .disabled(!appDelegate.model.canApplyAllExactGroups)
-                Button("Skip This Group") { appDelegate.model.applyBatchActionToSelected(.skipExtras, access: appDelegate.store) }
-                    .keyboardShortcut("s", modifiers: [.command, .shift])
-                    .disabled(!appDelegate.model.canApplySelectedGroupBatch)
-                Divider()
-                Button("Resume Last Review Session") { appDelegate.model.resumeReviewSession() }
-                    .keyboardShortcut("r", modifiers: [.command, .option])
-                    .disabled(!appDelegate.model.hasResumableReviewSession)
-            }
-            CommandMenu("Go") {
-                Button("Library") { appDelegate.model.selectedRoute = .home }
-                    .keyboardShortcut("1", modifiers: [.command])
-                Button("Review Studio") { appDelegate.model.selectedRoute = .review }
-                    .keyboardShortcut("2", modifiers: [.command])
-                Button("Smart Categories") { appDelegate.model.selectedRoute = .smartBuckets }
-                    .keyboardShortcut("3", modifiers: [.command])
-                Button("History & Restore") { appDelegate.model.selectedRoute = .history }
-                    .keyboardShortcut("4", modifiers: [.command])
-                Button("Insights") { appDelegate.model.selectedRoute = .insights }
-                    .keyboardShortcut("5", modifiers: [.command])
-                Divider()
-                Button("Review Safety Plan…") { appDelegate.model.isShowingSafetyPlan = true }
-                    .keyboardShortcut("s", modifiers: [.command, .option])
-                Button("Restore From Quarantine…") { appDelegate.model.isShowingRestorePreview = true }
-                    .keyboardShortcut("z", modifiers: [.command, .option])
-            }
-            CommandGroup(after: .help) {
-                Button("Export Diagnostics…") { appDelegate.model.exportDiagnostics() }
-                Button("Show Welcome Tour") { appDelegate.model.showOnboarding() }
-            }
+        .commands { MacLibraryCommands(archive: appDelegate.archive, navigation: appDelegate.navigation) }
+
+        Settings {
+            MacSettingsView()
+                .environmentObject(appDelegate.store)
+                .environmentObject(appDelegate.archive)
+                .environment(\.locale, activeLocale)
+        }
+    }
+}
+
+@MainActor
+private struct MacLibraryCommands: Commands {
+    @ObservedObject var archive: MacArchiveModel
+    @ObservedObject var navigation: MacNavigation
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Add Folder…") { navigation.selectedRoute = .archive; archive.chooseFolder() }
+                .keyboardShortcut("o", modifiers: [.command]).disabled(archive.sourceControlsDisabled)
+            Button("Start Scan") { navigation.selectedRoute = .archive; archive.analyze() }
+                .keyboardShortcut("r", modifiers: [.command]).disabled(!archive.canScanSelectedSources)
+            Button("Cancel Scan") { archive.cancelAnalysis() }.disabled(!archive.analyzing && !archive.analysisPaused)
         }
     }
 }

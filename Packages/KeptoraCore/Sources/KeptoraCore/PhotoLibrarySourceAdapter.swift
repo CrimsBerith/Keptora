@@ -25,6 +25,20 @@ private final class LockedPhotoHasher: @unchecked Sendable {
     }
 }
 
+private final class CancellablePhotosRequest: @unchecked Sendable {
+    private let lock = NSLock()
+    private var id: PHImageRequestID?
+    private var cancelled = false
+    func install(_ id: PHImageRequestID) {
+        lock.lock(); self.id = id; let shouldCancel = cancelled; lock.unlock()
+        if shouldCancel { PHImageManager.default().cancelImageRequest(id) }
+    }
+    func cancel() {
+        lock.lock(); cancelled = true; let current = id; lock.unlock()
+        if let current { PHImageManager.default().cancelImageRequest(current) }
+    }
+}
+
 private final class SingleShotContinuation<T>: @unchecked Sendable {
     private let lock = NSLock()
     private var isResumed = false
@@ -68,27 +82,30 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
     }
 
     public func enumerateAssets() async throws -> [UniversalMediaAsset] {
+        try await enumerateAssets(batchSize: 100, control: nil, onBatch: { _ in })
+    }
+    public func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset] {
         let authorization = await authorizationStatus()
         guard authorization == .authorized || authorization == .limited else {
             throw UniversalScanError.sourcePermissionDenied
         }
-        let fetch = PHAsset.fetchAssets(with: nil)
-        let albumMemberIDs = Self.albumMemberIdentifiers()
+        let options = PHFetchOptions()
+        options.includeAllBurstAssets = true
+        options.includeHiddenAssets = true
+        let fetch = PHAsset.fetchAssets(with: options)
+        let albumMemberships = Self.albumMemberships()
         var output: [UniversalMediaAsset] = []
         output.reserveCapacity(fetch.count)
         for index in 0..<fetch.count {
-            try Task.checkCancellation()
+            try Task.checkCancellation(); try await control?.waitIfPaused()
             let asset = fetch.object(at: index)
             guard asset.mediaType == .image || asset.mediaType == .video else { continue }
-            let filename = (asset.value(forKey: "filename") as? String) ?? (asset.mediaType == .video ? "Video_\(index + 1)" : "Photo_\(index + 1)")
-            let byteCount: Int64? = autoreleasepool {
-                let resources = PHAssetResource.assetResources(for: asset)
-                if let primary = Self.primaryResource(in: resources, mediaType: asset.mediaType),
-                   let size = primary.value(forKey: "fileSize") as? Int64, size > 0 {
-                    return size
-                }
-                return resources.compactMap { $0.value(forKey: "fileSize") as? Int64 }.first
-            }
+            let resources = PHAssetResource.assetResources(for: asset)
+            let filename = Self.primaryResource(in: resources, mediaType: asset.mediaType)?.originalFilename
+                ?? resources.first?.originalFilename ?? (asset.mediaType == .video ? "Video_\(index + 1)" : "Photo_\(index + 1)")
+            // PhotoKit has no public size property. Unknown is honest; a completed
+            // fingerprint supplies measured bytes without private KVC keys.
+            let byteCount: Int64? = nil
             output.append(
                 UniversalMediaAsset(
                     id: "photos:\(asset.localIdentifier)",
@@ -104,12 +121,18 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     modificationDate: asset.modificationDate,
                     isFavorite: asset.isFavorite,
                     isHidden: asset.isHidden,
-                    hasAdjustments: asset.hasAdjustments,
+                    hasAdjustments: resources.contains { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto || $0.type == .adjustmentBaseVideo },
                     isSharedLibraryAsset: Self.isSharedAsset(asset),
-                    hasAlbumMembership: albumMemberIDs.contains(asset.localIdentifier)
+                    hasAlbumMembership: !(albumMemberships[asset.localIdentifier] ?? []).isEmpty,
+                    context: MediaContext(albums: albumMemberships[asset.localIdentifier] ?? [],
+                        location: asset.location.map { MediaLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) },
+                        captureDate: asset.creationDate, captureTimeIsReliable: true, burstID: asset.burstIdentifier,
+                        isLivePhoto: asset.mediaSubtypes.contains(.photoLive), isScreenshot: asset.mediaSubtypes.contains(.photoScreenshot))
                 )
             )
+            if output.count % max(25, batchSize) == 0 { await onBatch(output) }
         }
+        await onBatch(output)
         return output
     }
 
@@ -151,13 +174,32 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         allowNetwork: Bool,
         progress: @escaping @Sendable (Int64) -> Void
     ) async throws -> UniversalExactFingerprint {
+        let resources = Self.originalResources(in: PHAssetResource.assetResources(for: photo), mediaType: .image)
+        if photo.mediaSubtypes.contains(.photoLive) || resources.count > 1 {
+            guard !resources.isEmpty else { throw UniversalScanError.inaccessibleAsset(displayName) }
+            if photo.mediaSubtypes.contains(.photoLive), !resources.contains(where: { $0.type == .pairedVideo || $0.type == .fullSizePairedVideo }) {
+                throw UniversalScanError.resourceUnavailable(displayName)
+            }
+            let options = PHAssetResourceRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
+            var family = SHA256(), bytes: Int64 = 0
+            for resource in resources {
+                let accumulator = LockedPhotoHasher()
+                try await requestData(for: resource, options: options) { data in _ = accumulator.append(data) }
+                let part = accumulator.finish()
+                family.update(data: Data("\(resource.type.rawValue)|\(part.byteCount)|\(part.digest)|".utf8))
+                bytes += part.byteCount; progress(bytes)
+            }
+            return UniversalExactFingerprint(algorithm: "photos-family-sha256-v2", digest: family.finalize().map { String(format: "%02x", $0) }.joined(), byteCount: bytes)
+        }
         let imgOptions = PHImageRequestOptions()
         imgOptions.isNetworkAccessAllowed = allowNetwork
         imgOptions.isSynchronous = false
         imgOptions.deliveryMode = .highQualityFormat
-        return try await withCheckedThrowingContinuation { continuation in
+        let request = CancellablePhotosRequest()
+        return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
-            PHImageManager.default().requestImageDataAndOrientation(for: photo, options: imgOptions) { data, _, _, info in
+            let requestID = PHImageManager.default().requestImageDataAndOrientation(for: photo, options: imgOptions) { data, _, _, info in
                 autoreleasepool {
                     if let error = info?[PHImageErrorKey] as? Error {
                         if !allowNetwork && Self.isNetworkAccessRequired(error) {
@@ -169,11 +211,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         } else {
                             singleShot.resume(throwing: error)
                         }
-                    } else if let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool, isInCloud, !allowNetwork {
+                    } else if let isInCloud = info?[PHImageResultIsInCloudKey] as? Bool, isInCloud, !allowNetwork,
+                           data == nil || (info?[PHImageResultIsDegradedKey] as? Bool) == true {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(displayName))
                     } else if let data {
                         var hasher = SHA256()
-                        hasher.update(data: Data("keptora-resource-v1|direct-image|".utf8))
                         hasher.update(data: data)
                         let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
                         let count = Int64(data.count)
@@ -184,7 +226,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     }
                 }
             }
-        }
+                request.install(requestID)
+            }
+            } onCancel: { request.cancel() }
     }
 
     private static func fingerprintVideo(
@@ -196,9 +240,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let vidOptions = PHVideoRequestOptions()
         vidOptions.isNetworkAccessAllowed = allowNetwork
         vidOptions.deliveryMode = .highQualityFormat
-        let avAsset: AVAsset = try await withCheckedThrowingContinuation { continuation in
+        let request = CancellablePhotosRequest()
+        let avAsset: AVAsset = try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
-            PHImageManager.default().requestAVAsset(forVideo: photo, options: vidOptions) { avAsset, _, info in
+            let requestID = PHImageManager.default().requestAVAsset(forVideo: photo, options: vidOptions) { avAsset, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
                     if !allowNetwork && Self.isNetworkAccessRequired(error) {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(displayName))
@@ -215,19 +261,25 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(displayName))
                 }
             }
-        }
+                request.install(requestID)
+            }
+            } onCancel: { request.cancel() }
         if let urlAsset = avAsset as? AVURLAsset {
             return try await StreamingSHA256.file(at: urlAsset.url, progress: progress)
         }
-        let resources = Self.originalResources(in: PHAssetResource.assetResources(for: photo), mediaType: .video)
+        let availableResources = PHAssetResource.assetResources(for: photo)
+        // An edited AVComposition without a current file URL must not be compared
+        // to its unedited resource as if those were the bytes the user sees.
+        guard !availableResources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBaseVideo }) else {
+            throw UniversalScanError.resourceUnavailable(displayName)
+        }
+        let resources = Self.originalResources(in: availableResources, mediaType: .video)
         guard let primary = resources.first else {
             throw UniversalScanError.inaccessibleAsset(displayName)
         }
         let resOptions = PHAssetResourceRequestOptions()
         resOptions.isNetworkAccessAllowed = allowNetwork
         let accumulator = LockedPhotoHasher()
-        let boundary = Data("keptora-resource-v1|\(primary.type.rawValue)|".utf8)
-        _ = accumulator.append(boundary, countAsContent: false)
         try await requestData(for: primary, options: resOptions) { chunk in
             progress(accumulator.append(chunk))
         }
@@ -253,17 +305,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 
     public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
         if let byteCount = asset.byteCount, byteCount > 0 { return byteCount }
-        guard case .photoLibrary(let localIdentifier) = asset.reference else { return nil }
-        return autoreleasepool {
-            let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
-            guard let photo = fetch.firstObject else { return nil }
-            let resources = PHAssetResource.assetResources(for: photo)
-            if let primary = Self.primaryResource(in: resources, mediaType: photo.mediaType),
-               let size = primary.value(forKey: "fileSize") as? Int64, size > 0 {
-                return size
-            }
-            return resources.compactMap { $0.value(forKey: "fileSize") as? Int64 }.first
-        }
+        return nil
     }
 
     private static func isNetworkAccessRequired(_ error: Error) -> Bool {
@@ -296,6 +338,26 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         return desc.contains("cancelled") || desc.contains("canceled")
     }
 
+    /// Detailed camera/lens/EXIF data is fetched only when a person opens Details.
+    public func metadata(for asset: UniversalMediaAsset, allowNetwork: Bool = false) async throws -> DetailedPhotoMetadata {
+        guard case .photoLibrary(let id) = asset.reference, asset.mediaKind == .image,
+              let photo = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
+            throw UniversalScanError.unsupportedReference
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            let singleShot = SingleShotContinuation<DetailedPhotoMetadata>(continuation)
+            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
+            options.deliveryMode = .highQualityFormat; options.version = .current
+            PHImageManager.default().requestImageDataAndOrientation(for: photo, options: options) { data, _, _, info in
+                if let data, let source = CGImageSourceCreateWithData(data as CFData, nil) {
+                    singleShot.resume(returning: PhotoMetadataExtractor.extract(from: source))
+                } else {
+                    singleShot.resume(throwing: (info?[PHImageErrorKey] as? Error) ?? UniversalScanError.inaccessibleAsset(asset.displayName))
+                }
+            }
+        }
+    }
+
     public func similarityImage(
         for asset: UniversalMediaAsset,
         maximumPixelSize: Int,
@@ -308,14 +370,16 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
         return try await Self.withTimeout(seconds: 10) {
             let options = PHImageRequestOptions()
-            options.deliveryMode = .fastFormat
-            options.resizeMode = .fast
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .exact
             options.isNetworkAccessAllowed = allowNetwork
             options.isSynchronous = false
             let targetSize = CGSize(width: maximumPixelSize, height: maximumPixelSize)
-            return try await withCheckedThrowingContinuation { continuation in
+            let request = CancellablePhotosRequest()
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
                 let singleShot = SingleShotContinuation(continuation)
-                PHImageManager.default().requestImage(
+                let requestID = PHImageManager.default().requestImage(
                     for: photo,
                     targetSize: targetSize,
                     contentMode: .aspectFit,
@@ -341,8 +405,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 #if os(macOS)
                         let cgImage = image?.cgImage(forProposedRect: nil, context: nil, hints: nil)
 #else
-                        let cgImage = image?.cgImage
+                        let cgImage = Self.orientedPreview(image)
 #endif
+                        if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
                         if let cgImage {
                             singleShot.resume(returning: cgImage)
                         } else {
@@ -353,7 +418,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         }
                     }
                 }
+                request.install(requestID)
             }
+            } onCancel: { request.cancel() }
         }
     }
 
@@ -361,23 +428,33 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         try await deleteSelectedAssets(localIdentifiers: localIdentifiers)
     }
 
-    public func deleteSelectedAssets(localIdentifiers: [String]) async throws {
+    public func deleteSelectedAssets(localIdentifiers: [String], intent: PhotosRemovalIntent = .suggestedCopies,
+                                     reviewedAssets: [UniversalMediaAsset]? = nil) async throws {
         let identifiers = Array(Set(localIdentifiers))
         guard !identifiers.isEmpty else { return }
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
         guard fetched.count == identifiers.count else {
             throw UniversalScanError.cleanupNotPermitted("Some Photos items changed after review. Scan again before cleanup.")
         }
+        if case .suggestedCopies = intent {
         var protectedNames: [String] = []
         let albumMemberIDs = Self.albumMemberIdentifiers()
         fetched.enumerateObjects { asset, _, _ in
             let resources = PHAssetResource.assetResources(for: asset)
-            if asset.isFavorite || asset.isHidden || asset.hasAdjustments || Self.isSharedAsset(asset) || albumMemberIDs.contains(asset.localIdentifier) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
+            if asset.isFavorite || asset.isHidden || Self.isSharedAsset(asset) || albumMemberIDs.contains(asset.localIdentifier) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
                 protectedNames.append(resources.first?.originalFilename ?? asset.localIdentifier)
             }
         }
         guard protectedNames.isEmpty else {
             throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
+        }
+        }
+        if let reviewedAssets {
+            let reviewedIDs = Set(reviewedAssets.compactMap { item -> String? in
+                if case .photoLibrary(let id) = item.reference { return id }; return nil
+            })
+            guard reviewedIDs == Set(identifiers), reviewedAssets.count == identifiers.count else { throw UnifiedLibraryError.selectionChanged }
+            try LibraryRevisionValidator.validate(reviewedAssets)
         }
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(fetched)
@@ -397,9 +474,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let options = PHVideoRequestOptions()
         options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = allowNetwork
-        let avAsset: AVAsset = try await withCheckedThrowingContinuation { continuation in
+        let request = CancellablePhotosRequest()
+        let avAsset: AVAsset = try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
-            PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
+            let requestID = PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
                     if !allowNetwork && Self.isNetworkAccessRequired(error) {
                         singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
@@ -418,7 +497,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
                 }
             }
-        }
+                request.install(requestID)
+            }
+            } onCancel: { request.cancel() }
         return try await UniversalVideoFrameSampler.sample(
             avAsset: avAsset,
             maximumPixelSize: maximumPixelSize
@@ -456,13 +537,23 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         dataReceived: @escaping @Sendable (Data) -> Void
     ) async throws {
         final class RequestBox: @unchecked Sendable {
-            var requestID: PHAssetResourceDataRequestID?
+            private let lock = NSLock()
+            private var requestID: PHAssetResourceDataRequestID?
+            private var cancelled = false
+            func install(_ id: PHAssetResourceDataRequestID) {
+                lock.lock(); requestID = id; let pending = cancelled; lock.unlock()
+                if pending { PHAssetResourceManager.default().cancelDataRequest(id) }
+            }
+            func cancel() {
+                lock.lock(); cancelled = true; let id = requestID; lock.unlock()
+                if let id { PHAssetResourceManager.default().cancelDataRequest(id) }
+            }
         }
         let box = RequestBox()
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 let singleShot = SingleShotContinuation(continuation)
-                box.requestID = PHAssetResourceManager.default().requestData(
+                let requestID = PHAssetResourceManager.default().requestData(
                     for: resource,
                     options: options,
                     dataReceivedHandler: dataReceived,
@@ -471,11 +562,10 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                         else { singleShot.resume(returning: ()) }
                     }
                 )
+                box.install(requestID)
             }
         } onCancel: {
-            if let id = box.requestID {
-                PHAssetResourceManager.default().cancelDataRequest(id)
-            }
+            box.cancel()
         }
     }
 
@@ -488,6 +578,17 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         case .limited: return .limited
         @unknown default: return .unavailable
         }
+    }
+
+    private static func albumMemberships() -> [String: [MediaAlbum]] {
+        let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        var membership: [String: [MediaAlbum]] = [:]
+        collections.enumerateObjects { collection, _, _ in
+            let album = MediaAlbum(id: collection.localIdentifier, title: collection.localizedTitle ?? "Album")
+            let members = PHAsset.fetchAssets(in: collection, options: nil)
+            members.enumerateObjects { asset, _, _ in membership[asset.localIdentifier, default: []].append(album) }
+        }
+        return membership
     }
 
     private static func albumMemberIdentifiers() -> Set<String> {
@@ -508,3 +609,28 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 #endif
     }
 }
+
+#if os(iOS)
+import CoreImage
+import UIKit
+private extension PhotoLibrarySourceAdapter {
+    static func orientedPreview(_ image: UIImage?) -> CGImage? {
+        guard let image, let cg = image.cgImage else { return nil }
+        guard image.imageOrientation != .up else { return cg }
+        let orientation: Int32
+        switch image.imageOrientation {
+        case .up: orientation = 1
+        case .upMirrored: orientation = 2
+        case .down: orientation = 3
+        case .downMirrored: orientation = 4
+        case .leftMirrored: orientation = 5
+        case .right: orientation = 6
+        case .rightMirrored: orientation = 7
+        case .left: orientation = 8
+        @unknown default: orientation = 1
+        }
+        let oriented = CIImage(cgImage: cg).oriented(forExifOrientation: orientation)
+        return CIContext().createCGImage(oriented, from: oriented.extent)
+    }
+}
+#endif

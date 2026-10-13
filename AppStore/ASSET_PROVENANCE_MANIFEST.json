@@ -1,80 +1,80 @@
 {
   "app": "Keptora",
   "identity": "Archive Review Studio",
-  "policy_version": "Phase L",
-  "app_icon_status": "PRODUCTION_CANDIDATE_INCLUDED_PHASE_Q_OPAQUE_1024_MASTER",
+  "policy_version": "October 2026 visual regeneration",
+  "app_icon_status": "REGENERATED_INDIVIDUALLY_REVIEWED_NATIVE_ACCEPTANCE_PENDING",
   "screens": [
     {
       "screen": "Archive Review Studio",
       "asset_policy": "owned_synthetic_or_system",
-      "requirements": "Synthetic photo corpus with EXIF stripped",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "Exact Review Group",
       "asset_policy": "owned_synthetic_or_system",
-      "requirements": "Small demo thumbnails only",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "Similar Comparison",
       "asset_policy": "owned_synthetic_or_system",
-      "requirements": "Synthetic non-personal image pairs",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "Safety Plan",
       "asset_policy": "native_system_or_owned_synthetic",
-      "requirements": "No raster",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "History & Restore",
       "asset_policy": "owned_synthetic_or_system",
-      "requirements": "Deterministic manifests",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "Quarantine Verification Lineage",
       "asset_policy": "native_system_or_owned_synthetic",
-      "requirements": "No raster",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "Onboarding",
       "asset_policy": "native_system_or_owned_synthetic",
-      "requirements": "SF Symbols",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     },
     {
       "screen": "Settings & Pro",
       "asset_policy": "native_system_or_owned_synthetic",
-      "requirements": "No raster",
+      "requirements": "Generated fictional imagery; explicit fictional EXIF date/GPS permitted in QA corpus; native capture required for release screenshots",
       "personal_data_allowed": false,
       "third_party_trademark_allowed": false,
       "license_evidence_required_for_external_asset": true,
-      "release_status": "SOURCE_CONTRACT_READY"
+      "release_status": "NATIVE_CAPTURE_AND_ACCEPTANCE_PENDING"
     }
   ],
   "global_rules": {
@@ -83,5 +83,8 @@
     "fixtures": "synthetic only; no customer/user data",
     "retina": "all raster shipping assets require Retina-quality source",
     "no_cross_app_shell_reuse": true
-  }
+  },
+  "regeneration_manifest": "Docs/Product/VISUAL_REGENERATION_MANIFEST.json",
+  "source_manifest": "AppStore/SourceAssets/2026-10/sources.json",
+  "screen_asset_status": "DESIGN_PREVIEWS_ONLY_NOT_APP_STORE_APPROVED"
 }

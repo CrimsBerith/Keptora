@@ -6,54 +6,58 @@ Publish this page at the final support URL after replacing placeholders.
 
 Email: `[SUPPORT EMAIL]`  
 Typical support languages: English and Turkish  
-Version/build: include the value shown in Keptora Settings.
+Version/build: include the value shown in Keptora Settings (iPhone: Library ▸ ⋯ ▸ Settings; Mac: Keptora ▸ Settings…).
 
 ## Before contacting support
 
-1. Open **Diagnostics** in Keptora.
-2. Keep **Redact paths and file names** enabled.
-3. Export the JSON support snapshot.
-4. Describe what you expected, what happened, and whether an external drive was connected.
-5. Do not send personal photos unless support explicitly requests a minimal test file and you are comfortable sharing it.
+1. Describe what you expected, what happened, and whether the photos were in Apple Photos, in a folder, or on an external drive.
+2. On Mac, open **Keptora ▸ Settings…** and choose **Export Diagnostics…**. The file contains counts and app state only; it does not include photos, file names or paths.
+3. Do not send personal photos unless support explicitly asks for a minimal test file and you are comfortable sharing it.
 
 ## Frequently asked questions
 
 ### Does Keptora upload my photos?
 
-No. The current version processes the selected archive on the Mac and contains no photo-upload or analytics service. This also applies when the selected folder is an iCloud Drive or other cloud-provider folder mounted in Finder.
+No. Keptora analyzes your photos on your iPhone or Mac. It has no photo upload, account or analytics service.
 
-### Can I use iCloud Drive or another cloud provider?
+### Which photos can Keptora see?
 
-Yes. Sign in to the provider in its Mac app first, wait until its folder appears in Finder, then choose **Connect Cloud Folder…** in Keptora. Keptora uses the Finder/File Provider folder locally and read-only; it does not ask for provider credentials or add direct cloud sync.
+Only what you allow: Apple Photos (all photos or just the photos you selected in the permission prompt) and the folders you choose. You can change Photos access in Settings ▸ Privacy & Security ▸ Photos on iPhone, or System Settings ▸ Privacy & Security ▸ Photos on Mac.
+
+### Does Keptora download my iCloud photos?
+
+Not by default. Items whose originals are only in iCloud are skipped. Choose **Include Cloud Originals** before a scan if you want Keptora to download and analyze them; this may use network data and storage.
+
+### How does Keptora decide what is a copy?
+
+- **Exact Copies** are proven byte-for-byte identical with SHA-256.
+- **Very Similar** and **Similar Photos** are suggestions based on the image, capture time, location and burst information. Review them yourself.
+
+When you use **Select Extra Copies** or **Select Others**, Keptora keeps one suggested photo in each group and leaves protected items unselected. You can tap any photo to change the selection, and touch and hold a photo on iPhone to see it larger.
 
 ### Does Keptora permanently delete files?
 
-No permanent-delete command is included in the current app target. Approved exact copies move to a reversible quarantine. Use History to restore them.
+No.
 
-### Why can’t similar photos enter a Safety Plan?
+- Apple Photos items move to **Recently Deleted** after Apple’s confirmation. You can recover them in the Photos app for up to 30 days unless you delete them sooner. With iCloud Photos, the change syncs to your other devices.
+- Folder files move to a recovery folder on the same storage. This does not free disk space yet. Use **History ▸ Restore Files** to put them back.
 
-Visual similarity is probabilistic. Keptora keeps those groups advisory so the user can compare them without allowing the model to authorize cleanup.
+### How does the free version work?
 
-### How does the free tier work?
-
-Scanning is unlimited. The first 100 unique review decisions are free. Re-editing a previously counted asset does not consume another review. A lifetime purchase unlocks unlimited review and Safety Plans.
+Browsing, scanning, manual selection, removal and recovery are free. Automatic selection of suggested copies is free for the first 100 items; Keptora Pro is a one-time purchase that removes this limit. There is no subscription.
 
 ### How do I restore a purchase?
 
-Open Settings or the Pro sheet and choose **Restore Purchase**. Use the same Apple Account that acquired the non-consumable product.
+Open Settings or the Keptora Pro screen and choose **Restore Purchases**. Use the same Apple Account that made the purchase.
 
-### How do I restore files?
+### How do I restore folder files?
 
-Reconnect and select the original source volume, open History, select the cleanup plan, and choose Restore. Do not manually alter the quarantine directory or manifest before restoring.
+Reconnect the original folder or drive, open **History**, and choose **Restore Files** on the cleanup entry. Do not move or rename the recovery folder before restoring. If an original path is now occupied, Keptora stops instead of overwriting the file.
 
-### The original drive is missing
+### How do I change the app language?
 
-Reconnect the same physical/logical volume. Keptora records volume identity to reduce the risk of restoring into the wrong location.
+On iPhone, open Settings in Keptora and choose a language. On Mac, open **Keptora ▸ Settings…**.
 
-### How do I revoke folder or Photos access?
+## Known boundaries
 
-Use macOS System Settings → Privacy & Security and review the relevant file/folder or Photos permission.
-
-## Known release boundaries
-
-The first App Store version does not include direct provider account integration, cloud sync, an account, collaboration, Windows support, permanent Apple Photos deletion, or automatic cleanup of visually similar images. Finder-mounted iCloud Drive and other File Provider folders can be selected for local, read-only scanning.
+Keptora 1.0 has no account, cloud sync, collaboration or Windows version. It cannot access WhatsApp’s private chat storage; it can clean WhatsApp media that you saved to Photos or exported to a folder.

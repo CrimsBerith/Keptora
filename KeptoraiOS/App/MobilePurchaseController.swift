@@ -23,7 +23,7 @@ final class MobilePurchaseController: ObservableObject {
                     await self.refreshEntitlement()
                     await transaction.finish()
                 case .unverified(let transaction, let error):
-                    self.statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
+                    self.statusMessage = L10n.tr("Unverified transaction: \(error.localizedDescription)")
                     await transaction.finish()
                 }
             }
@@ -41,7 +41,7 @@ final class MobilePurchaseController: ObservableObject {
         do {
             product = try await Product.products(for: [Self.productID]).first
             if product == nil {
-                statusMessage = String(localized: "StoreKit product unavailable. Check internet connection and try again.")
+                statusMessage = L10n.tr("StoreKit product unavailable. Check internet connection and try again.")
             }
         } catch {
             statusMessage = error.localizedDescription
@@ -58,16 +58,16 @@ final class MobilePurchaseController: ObservableObject {
             case .success(.verified(let transaction)):
                 await refreshEntitlement()
                 await transaction.finish()
-                statusMessage = String(localized: "Keptora Pro is unlocked on this Apple Account.")
+                statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
             case .success(.unverified(let transaction, let error)):
-                statusMessage = String(localized: "Unverified transaction: \(error.localizedDescription)")
+                statusMessage = L10n.tr("Unverified transaction: \(error.localizedDescription)")
                 await transaction.finish()
             case .pending:
-                statusMessage = String(localized: "Purchase is pending approval.")
+                statusMessage = L10n.tr("Purchase is pending approval.")
             case .userCancelled:
-                statusMessage = String(localized: "Purchase cancelled.")
+                statusMessage = L10n.tr("Purchase cancelled.")
             default:
-                statusMessage = String(localized: "The purchase could not be verified.")
+                statusMessage = L10n.tr("The purchase could not be verified.")
             }
         } catch {
             statusMessage = error.localizedDescription
@@ -82,8 +82,8 @@ final class MobilePurchaseController: ObservableObject {
             try await AppStore.sync()
             await refreshEntitlement()
             statusMessage = isUnlocked
-                ? String(localized: "Purchase restored.")
-                : String(localized: "No purchase was found for this Apple Account.")
+                ? L10n.tr("Purchase restored.")
+                : L10n.tr("No purchase was found for this Apple Account.")
         } catch {
             statusMessage = error.localizedDescription
         }

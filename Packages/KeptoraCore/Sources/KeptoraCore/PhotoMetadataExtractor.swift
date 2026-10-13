@@ -18,7 +18,9 @@ public struct DetailedPhotoMetadata: Codable, Sendable, Hashable {
     public let pixelWidth: Int
     public let pixelHeight: Int
     public let megapixelCount: Double
+    public let captureTimeIsReliable: Bool?
     public let dateCaptured: Date?
+    public let dateCapturedText: String?
     public let latitude: Double?
     public let longitude: Double?
     public let altitude: Double?
@@ -40,6 +42,8 @@ public struct DetailedPhotoMetadata: Codable, Sendable, Hashable {
         pixelHeight: Int = 0,
         megapixelCount: Double = 0.0,
         dateCaptured: Date? = nil,
+        captureTimeIsReliable: Bool = false,
+        dateCapturedText: String? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
         altitude: Double? = nil,
@@ -60,6 +64,8 @@ public struct DetailedPhotoMetadata: Codable, Sendable, Hashable {
         self.pixelHeight = pixelHeight
         self.megapixelCount = megapixelCount
         self.dateCaptured = dateCaptured
+        self.dateCapturedText = dateCapturedText
+        self.captureTimeIsReliable = captureTimeIsReliable
         self.latitude = latitude
         self.longitude = longitude
         self.altitude = altitude
@@ -142,9 +148,16 @@ public enum PhotoMetadataExtractor: Sendable {
         let dateString = (exif[kCGImagePropertyExifDateTimeOriginal] as? String) ?? (tiff[kCGImagePropertyTIFFDateTime] as? String)
         if let dateString {
             let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
             formatter.locale = Locale(identifier: "en_US_POSIX")
-            dateCaptured = formatter.date(from: dateString)
+            let offset = exif["OffsetTimeOriginal" as CFString] as? String
+            if let offset {
+                formatter.dateFormat = "yyyy:MM:dd HH:mm:ssXXXXX"
+                dateCaptured = formatter.date(from: dateString + offset)
+            } else {
+                formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+                formatter.timeZone = TimeZone(secondsFromGMT: 0)
+                dateCaptured = formatter.date(from: dateString)
+            }
         }
         
         // Parse GPS
@@ -183,6 +196,8 @@ public enum PhotoMetadataExtractor: Sendable {
             pixelHeight: height,
             megapixelCount: (mp * 10).rounded() / 10.0,
             dateCaptured: dateCaptured,
+            captureTimeIsReliable: dateCaptured != nil && (exif["OffsetTimeOriginal" as CFString] as? String) != nil,
+            dateCapturedText: dateString,
             latitude: lat,
             longitude: lon,
             altitude: alt,

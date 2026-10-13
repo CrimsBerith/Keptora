@@ -2,61 +2,60 @@
 
 ## Product and platforms
 
-Keptora is a universal Mac and iPhone utility for finding byte-for-byte exact photo/video copies, reviewing visually similar photos, and manually reviewing similar-video suggestions. The same non-consumable Keptora Pro entitlement is used on both platforms. No account, advertising, analytics SDK, or photo upload is present.
+Keptora is a universal iPhone and Mac photo and video cleaner. People browse their Apple Photos library or a folder they choose, select any items by hand or with suggestions (exact copies, very similar shots, screenshots, large videos, Live Photos, blurry or dark photos), review the selection, and remove it. The same non-consumable Keptora Pro entitlement is used on both platforms. There is no account, advertising, analytics SDK or photo upload.
 
-## Exact-copy safety
+## Safety rules
 
-1. Exact groups require SHA-256 verification of original resource bytes.
-2. Live Photo, RAW/JPEG, and paired original resources are fingerprinted as a deterministic composite asset.
-3. Every exact group retains a protected keeper.
-4. Favorites, hidden or adjusted Photos assets, shared sources, and user-album members are excluded from global safe selection.
-5. Similar photos expose no cleanup action. Similar-video suggestions require explicit manual selection and never receive automatic cleanup authority.
-6. The selected content is re-hashed immediately before a folder move or Photos removal.
+1. Exact copies require SHA-256 verification of the original resource bytes.
+2. Suggested batch actions (Select Extra Copies, Select Others) keep one suggested item in every group and never select protected items.
+3. Similar-photo suggestions are never removed automatically; the user must select them.
+4. Nothing is removed until the user confirms the final review screen, which lists every item, its source and how it can be recovered.
+5. Selections persist and can be undone; the review screen also lets the user take items out of the selection.
 
-## Cleanup behavior
+## Removal and recovery
 
-- Mac and iPhone folders: when the selected volume/File Provider supports safe coordinated writes, approved exact copies move to `.Keptora Quarantine`. Restore stops if the original path is occupied, quarantine content is missing, or its digest changed.
-- Apple Photos: approved exact copies are removed only after Keptora's summary and Apple's system confirmation. They appear in Recently Deleted. With iCloud Photos, the change synchronizes to the user's other devices. Recovery occurs in Apple Photos, not inside Keptora.
-- Keptora never offers cleanup for visually similar photos.
-- Similar videos are never auto-selected. The reviewer must tap each candidate or use the clearly labeled safe-selection action; Keptora protects one keeper and metadata-sensitive assets, then rehashes every selected original before requesting cleanup.
+- **Apple Photos:** after Keptora’s review screen, iOS/macOS shows Apple’s own deletion confirmation. Items move to Recently Deleted (up to 30 days). With iCloud Photos the change syncs to the user’s other devices. Recovery happens in the Photos app; History links there.
+- **Folders:** files move to a recovery folder on the same storage and are recorded in History. **Restore Files** puts them back and stops instead of overwriting if the original path is occupied.
 
 ## iCloud and permissions
 
-- Photos permission is requested only after the user selects Apple Photos.
-- Limited Photos access is supported and includes a Manage Access action.
-- iCloud-only originals are not downloaded during the default scan. Network access requires a separate confirmation.
-- iPhone folder access uses the system directory picker and a security-scoped bookmark. The scan checkpoints when the app leaves the foreground and resumes after source access is restored.
+- Photos permission is requested only after the user chooses Apple Photos. Limited access is supported and offers Manage Access.
+- iCloud-only originals are not downloaded during a normal scan. **Include Cloud Originals** asks for separate confirmation.
+- Folder access uses the system folder picker and security-scoped bookmarks.
 
 ## Suggested review flow
 
-### Mac
-
-1. Choose the supplied review corpus from Library.
-2. Open Review and inspect Exact and Similar modes.
-3. Select safe copies; confirm the protected keeper remains unselected.
-4. Review and commit the Safety Plan, then use History to verify and restore the quarantine record.
-
 ### iPhone
 
-1. Choose Apple Photos or a folder through Files.
-2. Run Scan and open Review.
-3. Switch between Photos and Videos, then use card, checkbox, group, and safe-all selection on an exact group.
-4. Verify similar photos have no cleanup control. In Similar > Videos, manually select a non-keeper candidate and verify the keeper remains locked.
-5. For Photos, continue through Apple's system deletion confirmation and recover from Photos > Recently Deleted. For Files, use Keptora History to restore a quarantine record.
+1. Skip or finish the three-page introduction. On the source screen, choose **Open Photos** (or choose a folder) and allow access.
+2. In **Photo Library**, tap **Start Scan**. Results appear while the scan runs.
+3. Tap **Exact Copies**, then **Select Extra Copies**. The suggested photo in each group stays unselected and is labeled.
+4. Touch and hold any photo to see it larger; tap photos to add or remove them from the selection.
+5. Tap **Review Selection**, check the list, then **Remove**. Confirm Apple’s Photos prompt.
+6. Open **History** to see the entry, or the **Suggestions** tab for screenshots, large videos and other categories.
+
+### Mac
+
+1. In the startup sheet, connect Apple Photos or choose **Add Folder…** (⌘O). Folders can also be dragged onto the window.
+2. Choose **Start Scan** (⌘R).
+3. Switch the library view to **Exact Copies** and choose **Select Extra Copies**, or click photos to select them.
+4. Choose **Review Selection**, then **Remove** and confirm.
+5. For folder items, open **History** and choose **Restore Files**.
+6. **Keptora ▸ Settings…** contains Restore Purchases, language, support links and diagnostics export.
 
 ## In-App Purchase
 
 - Type: Non-consumable.
 - Product ID: `com.keptora.app.pro.lifetime`.
 - Display name: `Keptora Pro Lifetime`.
+- What it unlocks: automatic selection of suggestions beyond the first 100 items. Browsing, manual selection, removal and recovery are free.
 - Family Sharing: disabled.
-- Restore Purchases remains visible on both platforms.
+- Restore Purchases is available on the Pro screen and in Settings on both platforms.
 
 ## Owner-supplied submission fields still required
 
-- Real Bundle ID and Apple Development Team.
-- Review contact name, email, and phone.
-- Signed Mac/iPhone archive validation, TestFlight build, IAP review screenshot, and final localized screenshots.
+- Review contact name, email and phone.
+- Signed Mac/iPhone archive validation, TestFlight build, IAP review screenshot and final localized screenshots.
 
 Support: `https://alfagolab.com/keptora/support`
 Privacy: `https://alfagolab.com/keptora/privacy`

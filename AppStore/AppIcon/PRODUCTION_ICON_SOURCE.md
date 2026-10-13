@@ -1,11 +1,11 @@
-# Keptora — Production AppIcon source
+# Current Keptora icon source
 
-Concept: two photo frames — the translucent one behind is the duplicate that is set aside, the solid one in front with a check mark is the keeper. No letters, so it stays legible at 16 px.
+October 2026: `AppStore/SourceAssets/2026-10/icon.png` is the new generated master. `source-1024.png` is its opaque 1024 export. All 34 original icon/logo paths were regenerated and individually inspected.
 
-- `source-1024.png`: 1024×1024 opaque RGB full-bleed master (iOS / App Store marketing icon).
-- `logo/keptora-icon-fullbleed.svg`: vector master of the full-bleed icon.
-- `logo/keptora-icon-mac.svg`: macOS icon (824 px squircle on a 1024 canvas, transparent margin + soft shadow).
-- `logo/keptora-mark.svg`, `logo/keptora-mark-mono.svg`: standalone mark (coloured / single-colour) for web, docs, marketing.
-- Asset catalog: iPhone + `ios-marketing` slots use the full-bleed art (`icon_1024_ios.png` for marketing); `mac` slots use the pre-masked squircle art (these files intentionally contain alpha).
-- The previous icon set is kept in `AppStore/AppIcon/previous_icon_set/` — it is not referenced by Contents.json and can be deleted once the new icon is accepted.
-- Remaining acceptance: inspect the compiled icon on a real Mac at Finder/Dock/App Store sizes.
+The icon depicts a photo frame, mountain/sun and selection check. macOS exports retain a transparent margin and rounded tile; iPhone and marketing exports are opaque. The compatibility `previous_icon_set` directory was refreshed at the user's explicit request and is not a rollback snapshot.
+
+`logo/*.svg` files are raster-backed SVG wrappers, not native vector masters. The colored and monochrome transparent marks were generated separately from the icon reference and individually rendered on white for review.
+
+Use `python3 Scripts/export_regenerated_visuals.py` for the complete export, or `python3 Scripts/build_phase_n_appicon.py` for icons only. Python 3, Pillow (metadata only) and ImageMagick are required. Historical procedural Swift generators do not reproduce the approved October design.
+
+[Per-file acceptance](../../Docs/Product/VISUAL_REGENERATION_REVIEW.md) and [source checksums](../SourceAssets/2026-10/sources.json). Native OS rendering acceptance remains pending Apple validation.

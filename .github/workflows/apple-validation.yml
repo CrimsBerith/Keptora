@@ -1,0 +1,201 @@
+name: Apple validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      benchmark_items:
+        description: 'Native JPEG benchmark corpus (0 skips)'
+        type: choice
+        options: ['0', '2000', '3000']
+        default: '0'
+  schedule:
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-core:
+    runs-on: ubuntu-latest
+    container: swift:6.0.3
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shared catalogue, selection, quality and cache policies
+        run: swift test --package-path Packages/KeptoraCore --parallel
+  visual-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Image inspection dependency
+        run: python3 -m pip install Pillow==12.3.0
+      - name: Reviewed artwork and corpus integrity
+        run: |
+          python3 Scripts/validate_photo_cleaner_assets.py
+          python3 Scripts/validate_regenerated_visuals.py
+          python3 Scripts/validate_mac_localization.py
+  native-mac:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shared Apple core and recovery tests
+        run: swift test --package-path Packages/KeptoraCore --parallel
+      - name: Project and visual asset integrity
+        run: |
+          python3 Scripts/validate_project_references.py
+          python3 Scripts/validate_photo_cleaner_assets.py
+      - name: macOS build and unit tests
+        timeout-minutes: 10
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme Keptora \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/MacTests.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 60 \
+            -maximum-test-execution-time-allowance 120 -parallel-testing-enabled NO \
+            -only-testing:KeptoraTests -skip-testing:KeptoraTests/StoreKitEntitlementTests test
+      - name: macOS product UI tests
+        if: success() || failure()
+        timeout-minutes: 15
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme Keptora \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/MacUITests.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -maximum-test-execution-time-allowance 180 -parallel-testing-enabled NO \
+            -only-testing:KeptoraUITests/KeptoraUITests/testStartupSetupCanContinueWithDeniedPhotos \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacScanSelectionReviewUndoAndRestore \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacRestoreFailureIsVisibleAndDoesNotOverwriteOriginal \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacSearchDoesNotLoseSelectionOrHijackTextUndo \
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo \
+            -only-testing:KeptoraUITests/KeptoraUITests/testSettingsWindowOffersLanguagePurchasesAndSupport test
+      - name: Native 2000 / 3000 item measurement
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_items != '0')
+        env:
+          KEPTORA_BENCHMARK_ITEMS: ${{ github.event_name == 'schedule' && '3000' || inputs.benchmark_items }}
+          KEPTORA_BENCHMARK_OUTPUT: ${{ github.workspace }}/Build/native-analysis-benchmark.json
+        run: swift test --package-path Packages/KeptoraCore --filter NativeAnalysisBenchmarkTests
+      - name: Export Mac UI screenshots and diagnostics
+        if: always()
+        run: |
+          if [[ -d Build/MacUITests.xcresult ]]; then
+            xcrun xcresulttool export attachments --path Build/MacUITests.xcresult --output-path Build/MacUIAttachments
+            xcrun xcresulttool export diagnostics --path Build/MacUITests.xcresult --output-path Build/MacUIDiagnostics
+          fi
+          mkdir -p Build/MacCrashReports
+          for report in "$HOME/Library/Logs/DiagnosticReports"/Keptora*.ips; do
+            [[ -f "$report" ]] && cp "$report" Build/MacCrashReports/
+          done
+          exit 0
+      - name: Keep Mac test evidence and current screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-test-evidence
+          path: |
+            Build/*.xcresult
+            Build/MacUIAttachments
+            Build/MacUIDiagnostics
+            Build/MacCrashReports
+            Build/native-analysis-benchmark.json
+          retention-days: 14
+
+  native-ios:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare iPhone simulator with actual media
+        run: bash Scripts/prepare_photo_cleaner_simulator.sh
+      - name: Approve actual Photos permission before integration tests
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
+            -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
+            -derivedDataPath Build/CI -resultBundlePath Build/iPhonePermission.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testGrantPhotosAccessForRealMedia \
+            test-without-building
+      - name: iPhone unit and product UI tests
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS \
+            -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" \
+            -derivedDataPath Build/CI -resultBundlePath Build/iPhoneTests.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -maximum-test-execution-time-allowance 180 \
+            -only-testing:KeptoraiOSTests \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testVerySimilarKeeperAndSelectOthersWorkInsideGallery \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPhotoTapSelectsWithoutMagnifierAndCanBeUndone \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testTouchAndHoldShowsLargerPreviewAndSelects \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testExactPhotoSelectionAndFinalReviewCanBeCancelled \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testFinalReviewRemovalCanBeUndoneEvenWhenEmpty \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testRemovingOneFilterPreservesOtherFiltersAndSelection \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSelectionActionsHaveAccessibleTargetsAndDoNotOverlap \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCombinedGroupsPreserveSelectionWhenReturningToAllItems \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testScanAllSourcesFindsCopiesInRealSimulatorPhotos \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSourceCheckboxesPreserveManualSelectionAndPersist \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
+            test-without-building
+      - name: Export iPhone screenshots and diagnostics
+        if: always()
+        run: |
+          if [[ -d Build/iPhoneTests.xcresult ]]; then
+            xcrun xcresulttool export attachments --path Build/iPhoneTests.xcresult --output-path Build/iPhoneAttachments
+            xcrun xcresulttool export diagnostics --path Build/iPhoneTests.xcresult --output-path Build/iPhoneDiagnostics
+          fi
+          if [[ -d Build/iPhonePermission.xcresult ]]; then
+            xcrun xcresulttool export attachments --path Build/iPhonePermission.xcresult --output-path Build/iPhonePermissionAttachments
+          fi
+      - name: Keep iPhone test evidence and current screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-test-evidence
+          path: |
+            Build/*.xcresult
+            Build/iPhoneAttachments
+            Build/iPhoneDiagnostics
+            Build/iPhonePermissionAttachments
+          retention-days: 14
+
+  native-storekit:
+    runs-on: macos-26
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Signed local StoreKit purchase and restore integration
+        timeout-minutes: 10
+        run: |
+          xcodebuild -project Keptora.xcodeproj -scheme Keptora \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/StoreKitTests.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 60 \
+            -maximum-test-execution-time-allowance 120 -parallel-testing-enabled NO \
+            -only-testing:KeptoraTests/StoreKitEntitlementTests test
+      - name: Keep StoreKit integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storekit-test-evidence
+          path: Build/*.xcresult
+          retention-days: 14

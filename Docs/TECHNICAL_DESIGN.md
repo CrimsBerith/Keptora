@@ -1,5 +1,7 @@
 # TECHNICAL_DESIGN.md — Phase 5I
 
+> Historical Phase 5I / advanced SQLite workflow. The current unified Photos product, including PhotoKit removal, is described in [Current library architecture](Product/CURRENT_LIBRARY_ARCHITECTURE.md) and [Mac delivery](Product/MAC_ARCHITECTURE_DELIVERY.md). The boundaries below are the scope of that earlier phase.
+
 ## Source access and identity
 - `NSOpenPanel` creates a persisted security-scoped bookmark.
 - Finder-mounted File Provider locations are supported, including iCloud Drive and providers exposed under `~/Library/CloudStorage`.

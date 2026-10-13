@@ -33,7 +33,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Keptora. All rights reserved.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Keptora needs access to scan your Photos library locally, find exact copies, and review similar photos and videos. It never uploads your media.</string>
+	<string>Keptora uses the Photos access you approve to show your photos and videos, compare copies and similar items, and remove only items you confirm. Your media is never uploaded.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>APP_LIFETIME_PRODUCT_ID</key>

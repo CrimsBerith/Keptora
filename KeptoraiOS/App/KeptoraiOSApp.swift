@@ -20,8 +20,9 @@ struct KeptoraiOSApp: App {
                 .environment(\.locale, activeLocale)
                 .task {
                     await store.restoreSavedSource()
-                    await purchase.refresh()
                     await store.handleAppLaunchAuthorization()
+                    store.startupSourcesPrepared = true
+                    await purchase.refresh()
                 }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {

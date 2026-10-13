@@ -12,7 +12,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .system: return String(localized: "System Default")
+        case .system: return L10n.tr("System Default")
         case .english: return "English"
         case .turkish: return "Türkçe"
         case .german: return "Deutsch"
@@ -42,12 +42,20 @@ public enum L10n {
     }
 
     public static func tr(_ key: String.LocalizationValue, bundle: Bundle? = nil, comment: StaticString? = nil) -> String {
-        String(localized: key, bundle: bundle ?? .main, locale: currentLocale, comment: comment)
+        String(localized: key, bundle: localizedBundle(in: bundle ?? .main), locale: currentLocale, comment: comment)
+    }
+
+    // Locale formats numbers/plurals; it does not override the bundle's preferred
+    // localization. Resolve the user's explicit app language before string lookup.
+    private static func localizedBundle(in bundle: Bundle) -> Bundle {
+        let language = currentLanguage
+        guard language != .system, let path = bundle.path(forResource: language.rawValue, ofType: "lproj"),
+              let localized = Bundle(path: path) else { return bundle }
+        return localized
     }
 
     public static func format(_ formatKey: String.LocalizationValue, _ arguments: CVarArg...) -> String {
-        let template = String(localized: formatKey, bundle: .main, locale: currentLocale)
+        let template = tr(formatKey)
         return String(format: template, locale: currentLocale, arguments: arguments)
     }
 }
-

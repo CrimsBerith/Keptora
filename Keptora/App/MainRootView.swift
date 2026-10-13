@@ -1,15 +1,20 @@
+import KeptoraCore
 import SwiftUI
 
 struct MainRootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
-    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var navigation: MacNavigation
     @EnvironmentObject private var store: StoreEntitlementController
+    @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.undoManager) private var undoManager
     @State private var hoveredRoute: SidebarRoute?
     @State private var isDropTargeted: Bool = false
+    @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
+    @State private var startupSourcesPrepared = false
+    @State private var showSourceSetup = false
 
-    private let primaryRoutes: [SidebarRoute] = [.home, .review, .smartBuckets, .history]
-    private let toolRoutes:    [SidebarRoute] = [.insights]
+    private let primaryRoutes: [SidebarRoute] = [.archive, .history]
 
     var body: some View {
         NavigationSplitView {
@@ -18,8 +23,6 @@ struct MainRootView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     sidebarSection("Workspace", routes: primaryRoutes)
-
-                    sidebarSection("Tools", routes: toolRoutes)
 
                     Spacer(minLength: 0)
                 }
@@ -33,8 +36,10 @@ struct MainRootView: View {
         } detail: {
             ZStack {
                 KeptoraBackdrop()
-                routeDetail
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    MacSessionHealthBanner()
+                    routeDetail.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }.environmentObject(archive)
 
                 if isDropTargeted {
                     ZStack {
@@ -46,7 +51,7 @@ struct MainRootView: View {
                             Image(systemName: "arrow.down.doc.fill")
                                 .font(.system(size: 46))
                                 .foregroundStyle(Color.accentColor)
-                            Text("Drop Folder to Connect & Scan")
+                            Text("Drop Folder to Connect")
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(.primary)
                         }
@@ -62,51 +67,55 @@ struct MainRootView: View {
                     var isDir: ObjCBool = false
                     if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
                         Task { @MainActor in
-                            model.connectFolderURL(url)
-                            model.selectedRoute = .home
+                            archive.connectFolder(url)
+                            navigation.selectedRoute = .archive
                         }
                     } else {
                         Task { @MainActor in
-                            model.presentError("Please drop a folder to scan, not an individual file.")
+                            archive.error = L10n.tr("Please drop a folder to scan, not an individual file.")
                         }
                     }
                 }
                 return true
             }
-            .toolbar { utilityToolbar }
-            .sheet(isPresented: $model.isShowingSafetyPlan) {
-                SafetyPlanSheet()
-                    .environmentObject(model)
-                    .environmentObject(store)
-            }
         }
         .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 900, minHeight: 650)
+        .background(MacMainWindowMarker())
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("keptora.root")
-        .sheet(isPresented: $store.isShowingPaywall) {
+        .sheet(isPresented: store.paywallBinding(for: .main)) {
             PaywallView().environmentObject(store)
         }
-        // Presented from the root (not a sidebar subview) so they are not tied to sidebar visibility.
-        .sheet(isPresented: $model.isShowingRestorePreview) {
-            RestorePreviewSheet().environmentObject(model)
+        .sheet(isPresented: $showSourceSetup) {
+            MacSourceSetupView(isStartupSetup: true).environmentObject(archive)
         }
-        .sheet(isPresented: $model.isShowingOnboarding) {
-            OnboardingView().environmentObject(model)
+        .task {
+            await archive.restoreConnections()
+            startupSourcesPrepared = true
+            presentStartupIfNeeded()
         }
+        .keptoraOnChange(of: sourceSetupCompleted) { _ in presentStartupIfNeeded() }
         .onAppear {
-            if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
-                model.selectedRoute = .review
-            }
+            archive.undoManager = undoManager
         }
         .keptoraOnChange(of: scenePhase) { phase in
-            if phase != .active { model.checkpointReviewSession() }
+            if phase != .active { Task { await archive.flushState() } }
+            else if startupSourcesPrepared { Task { await archive.refreshPhotosAccess() } }
         }
-        .alert("Something went wrong", isPresented: $model.isShowingError) {
-            Button("Copy Diagnostics") { model.copyDiagnostics() }
-            Button("Export Diagnostics…") { model.exportDiagnostics() }
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(model.errorMessage ?? "An unknown error occurred.")
+        .alert("Something went wrong", isPresented: archive.errorBinding(for: .main)) {
+            if archive.canRepairPersistence {
+                Button("Save Current Session") { Task { await archive.repairPersistence() } }
+            }
+            Button("OK", role: .cancel) { archive.error = nil }
+        } message: { Text(archive.error ?? "") }
+    }
+
+    private func presentStartupIfNeeded() {
+        guard startupSourcesPrepared, !LaunchArguments.contains(LaunchArguments.portfolioUITesting),
+              !store.isShowingPaywall else { return }
+        if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: true, setupCompleted: sourceSetupCompleted) {
+            showSourceSetup = true
         }
     }
 
@@ -121,8 +130,9 @@ struct MainRootView: View {
                 Text("Photo & video intelligence")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
@@ -145,10 +155,10 @@ struct MainRootView: View {
     }
 
     private func sidebarButton(_ route: SidebarRoute) -> some View {
-        let isSelected = model.selectedRoute == route
+        let isSelected = navigation.selectedRoute == route
         let isHovered  = hoveredRoute == route
         return Button {
-            withAnimation(reduceMotion ? nil : KeptoraDesign.animFast) { model.selectedRoute = route }
+            withAnimation(reduceMotion ? nil : KeptoraDesign.animFast) { navigation.selectedRoute = route }
         } label: {
             HStack(spacing: 11) {
                 ZStack {
@@ -224,45 +234,11 @@ struct MainRootView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var utilityToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            Button {
-                model.selectedRoute = .insights
-            } label: {
-                Label("Insights", systemImage: model.selectedRoute == .insights ? "chart.bar.xaxis.ascending" : "chart.bar.xaxis")
-            }
-            .help("Review insights")
-            .accessibilityIdentifier("mac.toolbar.insights")
-
-            Button {
-                model.selectedRoute = .diagnostics
-            } label: {
-                Label("Support", systemImage: model.selectedRoute == .diagnostics ? "questionmark.circle.fill" : "questionmark.circle")
-            }
-            .help("Support and diagnostics")
-            .accessibilityIdentifier("mac.toolbar.support")
-
-            Button {
-                model.selectedRoute = .settings
-            } label: {
-                Label("Settings", systemImage: model.selectedRoute == .settings ? "gearshape.fill" : "gearshape")
-            }
-            .help("Keptora settings")
-            .accessibilityIdentifier("mac.toolbar.settings")
-        }
-    }
-
     @ViewBuilder
     private var routeDetail: some View {
-        switch model.selectedRoute {
-        case .home:         HomeView()
-        case .review:       ReviewStudioView()
-        case .smartBuckets: SmartBucketsDashboardView()
-        case .insights:     ReviewInsightsView()
-        case .history:      HistoryView()
-        case .diagnostics:  DiagnosticsView()
-        case .settings:     SettingsView()
+        switch navigation.selectedRoute {
+        case .archive: MacArchiveView()
+        case .history: CombinedCleanupHistoryView()
         }
     }
 }

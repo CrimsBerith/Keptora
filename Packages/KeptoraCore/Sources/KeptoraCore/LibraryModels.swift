@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 
 public struct LibrarySource: Identifiable, Hashable, Codable, Sendable {
     public enum Kind: String, Codable, CaseIterable, Sendable {
@@ -88,11 +90,13 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
     public let duration: TimeInterval?
     public let creationDate: Date?
     public let modificationDate: Date?
+    public let fileRevision: LibraryFileRevision?
     public let isFavorite: Bool
     public let isHidden: Bool
     public let hasAdjustments: Bool
     public let isSharedLibraryAsset: Bool
     public let hasAlbumMembership: Bool
+    public let context: MediaContext?
     public let requiresNetwork: Bool
 
     public init(
@@ -112,7 +116,9 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         hasAdjustments: Bool = false,
         isSharedLibraryAsset: Bool = false,
         hasAlbumMembership: Bool = false,
-        requiresNetwork: Bool = false
+        requiresNetwork: Bool = false,
+        context: MediaContext? = nil,
+        fileRevision: LibraryFileRevision? = nil
     ) {
         self.id = id
         self.sourceID = sourceID
@@ -131,13 +137,16 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         self.isSharedLibraryAsset = isSharedLibraryAsset
         self.hasAlbumMembership = hasAlbumMembership
         self.requiresNetwork = requiresNetwork
+        self.context = context
+        self.fileRevision = fileRevision
     }
 
     public var isProtectedFromGlobalSelection: Bool {
-        isFavorite || isHidden || hasAdjustments || isSharedLibraryAsset || hasAlbumMembership
+        isFavorite || isHidden || hasAdjustments || isSharedLibraryAsset
     }
 
     public func with(
+        id: String? = nil,
         sourceID: String? = nil,
         reference: MediaAssetReference? = nil,
         displayName: String? = nil,
@@ -153,10 +162,12 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
         hasAdjustments: Bool? = nil,
         isSharedLibraryAsset: Bool? = nil,
         hasAlbumMembership: Bool? = nil,
-        requiresNetwork: Bool? = nil
+        requiresNetwork: Bool? = nil,
+        context: MediaContext?? = nil,
+        fileRevision: LibraryFileRevision?? = nil
     ) -> UniversalMediaAsset {
         UniversalMediaAsset(
-            id: self.id,
+            id: id ?? self.id,
             sourceID: sourceID ?? self.sourceID,
             reference: reference ?? self.reference,
             displayName: displayName ?? self.displayName,
@@ -172,7 +183,9 @@ public struct UniversalMediaAsset: Identifiable, Hashable, Codable, Sendable {
             hasAdjustments: hasAdjustments ?? self.hasAdjustments,
             isSharedLibraryAsset: isSharedLibraryAsset ?? self.isSharedLibraryAsset,
             hasAlbumMembership: hasAlbumMembership ?? self.hasAlbumMembership,
-            requiresNetwork: requiresNetwork ?? self.requiresNetwork
+            requiresNetwork: requiresNetwork ?? self.requiresNetwork,
+            context: context != nil ? context! : self.context,
+            fileRevision: fileRevision != nil ? fileRevision! : self.fileRevision
         )
     }
 }
@@ -234,14 +247,9 @@ public enum UniversalKeeperPolicy: Sendable {
         var score = 0
         if asset.isFavorite { score += 10_000 }
         if asset.hasAdjustments { score += 5_000 }
-        if asset.hasAlbumMembership { score += 3_000 }
         if asset.isSharedLibraryAsset { score += 2_000 }
         if asset.isHidden { score += 1_000 }
         
-        let ext = (asset.displayName as NSString).pathExtension.lowercased()
-        if ["cr2", "cr3", "nef", "arw", "dng", "raw", "raf", "orf", "rw2"].contains(ext) {
-            score += 800
-        }
         return score
     }
 }
@@ -270,6 +278,9 @@ public struct UniversalExactGroup: Identifiable, Hashable, Codable, Sendable {
 }
 
 public struct UniversalSimilarityGroup: Identifiable, Hashable, Codable, Sendable {
+    public enum Strength: String, Codable, Sendable { case verySimilar, similar }
+    public let strength: Strength?
+
     public let id: String
     public let assets: [UniversalMediaAsset]
     public let maximumDistance: Float
@@ -280,12 +291,14 @@ public struct UniversalSimilarityGroup: Identifiable, Hashable, Codable, Sendabl
         id: String,
         assets: [UniversalMediaAsset],
         maximumDistance: Float,
+        strength: Strength? = nil,
         mediaKind: UniversalMediaKind? = nil,
         keeperID: String? = nil
     ) {
         let ordered = assets.sorted(by: UniversalKeeperPolicy.prefersAsKeeper)
         self.id = id
         self.assets = ordered
+        self.strength = strength
         self.maximumDistance = maximumDistance
         self.mediaKind = mediaKind ?? ordered.first?.mediaKind ?? .image
         self.keeperID = keeperID ?? ordered.first?.id ?? ""
@@ -300,6 +313,7 @@ public struct UniversalSimilarityGroup: Identifiable, Hashable, Codable, Sendabl
     }
 }
 
+#if canImport(CoreGraphics)
 public struct UniversalVideoSimilaritySample: @unchecked Sendable {
     public let duration: TimeInterval
     public let pixelWidth: Int
@@ -313,6 +327,8 @@ public struct UniversalVideoSimilaritySample: @unchecked Sendable {
         self.frames = frames
     }
 }
+
+#endif
 
 public enum SourceAuthorization: String, Codable, Sendable {
     case notDetermined
@@ -329,20 +345,28 @@ public protocol SourceAdapter: Sendable {
     func authorizationStatus() async -> SourceAuthorization
     func requestAuthorization() async -> SourceAuthorization
     func enumerateAssets() async throws -> [UniversalMediaAsset]
+    func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset]
     func exactFingerprint(
         for asset: UniversalMediaAsset,
         allowNetwork: Bool,
         progress: @escaping @Sendable (Int64) -> Void
     ) async throws -> UniversalExactFingerprint
     func assetByteCount(for asset: UniversalMediaAsset) async -> Int64?
+    func enumerationWarnings() async -> [String]
 }
 
 extension SourceAdapter {
+    public func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset] {
+        try await control?.waitIfPaused()
+        let items = try await enumerateAssets(); await onBatch(items); return items
+    }
+    public func enumerationWarnings() async -> [String] { [] }
     public func assetByteCount(for asset: UniversalMediaAsset) async -> Int64? {
         asset.byteCount
     }
 }
 
+#if canImport(CoreGraphics)
 public protocol SimilarityImageProviding: Sendable {
     func similarityImage(
         for asset: UniversalMediaAsset,
@@ -358,6 +382,8 @@ public protocol SimilarityVideoProviding: Sendable {
         allowNetwork: Bool
     ) async throws -> UniversalVideoSimilaritySample
 }
+
+#endif
 
 public struct DashboardSnapshot: Hashable, Codable, Sendable {
     public let scannedItems: Int

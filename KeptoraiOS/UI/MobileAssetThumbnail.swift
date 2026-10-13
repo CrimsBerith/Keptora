@@ -7,10 +7,13 @@ import SwiftUI
 struct MobileAssetThumbnail: View {
     let asset: UniversalMediaAsset
     /// Longest edge requested from PhotoKit; grid cells use the default, full-screen viewers pass more.
-    var pixelSize: CGFloat = 500
+    var pixelSize: CGFloat = 384
     var contentMode: ContentMode = .fill
+    var allowNetwork = false
+    var showsRetryButton = true
     @State private var image: UIImage?
     @State private var didFinish = false
+    @State private var needsDownload = false
 
     var body: some View {
         ZStack {
@@ -24,24 +27,31 @@ struct MobileAssetThumbnail: View {
             } else if !didFinish {
                 ProgressView()
             } else {
-                Image(systemName: asset.mediaKind == .video ? "video.fill" : "photo")
-                    .font(.largeTitle).foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Image(systemName: "photo.badge.exclamationmark").font(.title2)
+                    Text(needsDownload ? LocalizedStringKey("Cloud original needs download") : LocalizedStringKey("Preview unavailable")).font(.caption2).multilineTextAlignment(.center)
+                    if showsRetryButton {
+                        Button { Task { didFinish = false; await load(); didFinish = true } } label: {
+                            Text("Retry").font(.caption).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        }
+                    }
+                }.foregroundStyle(.secondary).padding(4)
             }
         }
         .clipped()
-        .task(id: asset.id) {
-            didFinish = false
+        .task(id: cacheKey) {
+            image = nil; didFinish = false; needsDownload = false
             await load()
             if !Task.isCancelled { didFinish = true }
         }
     }
 
     private var cacheKey: String {
-        "\(asset.id)_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")"
+        "\(asset.id)_\(asset.modificationDate?.timeIntervalSince1970 ?? 0)_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
     }
 
     private func load() async {
-        if let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
+        if asset.modificationDate != nil, let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
             self.image = cached
             return
         }
@@ -49,10 +59,13 @@ struct MobileAssetThumbnail: View {
         var loadedImage: UIImage?
         switch asset.reference {
         case .file(let url):
+            do { try await FolderSourceAdapter(rootURL: url.deletingLastPathComponent(), cleanupAvailable: false).prepareForAccess(url, allowNetwork: allowNetwork) }
+            catch UniversalScanError.networkRequired { needsDownload = true; return }
+            catch { return }
             if asset.mediaKind == .video {
                 let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
                 generator.appliesPreferredTrackTransform = true
-                generator.maximumSize = CGSize(width: max(pixelSize, 600), height: max(pixelSize, 600))
+                generator.maximumSize = CGSize(width: max(pixelSize, 64), height: max(pixelSize, 64))
                 loadedImage = await withTaskCancellationHandler {
                     if let frame = try? await generator.image(at: CMTime(seconds: 0.2, preferredTimescale: 600)).image {
                         return UIImage(cgImage: frame)
@@ -62,15 +75,19 @@ struct MobileAssetThumbnail: View {
                     generator.cancelAllCGImageGeneration()
                 }
             } else {
-                loadedImage = await Task.detached(priority: .utility) {
+                let work = Task.detached(priority: .utility) { () -> UIImage? in
+                    try? await MediaWorkGate.thumbnails.withPermit {
+                    guard !Task.isCancelled else { return nil as UIImage? }
                     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                           let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                             kCGImageSourceCreateThumbnailFromImageAlways: true,
-                            kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 600),
+                            kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 64),
                             kCGImageSourceCreateThumbnailWithTransform: true
                           ] as CFDictionary) else { return nil }
                     return UIImage(cgImage: cgImage)
-                }.value
+                    }
+                }
+                loadedImage = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
             }
         case .photoLibrary(let localIdentifier):
             let result = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
@@ -84,7 +101,7 @@ struct MobileAssetThumbnail: View {
                     let options = PHImageRequestOptions()
                     options.deliveryMode = .highQualityFormat
                     options.resizeMode = .fast
-                    options.isNetworkAccessAllowed = false
+                    options.isNetworkAccessAllowed = allowNetwork
                     let targetMode: PHImageContentMode = (contentMode == .fit) ? .aspectFit : .aspectFill
                     let id = PHImageManager.default().requestImage(
                         for: photo,
@@ -96,7 +113,7 @@ struct MobileAssetThumbnail: View {
                         let failed = info?[PHImageErrorKey] != nil || (info?[PHImageCancelledKey] as? Bool) == true
                         let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
                         // If network access is disabled or asset is in iCloud, degraded image is the only locally available representation
-                        let isFinalOrOnlyAvailable = !options.isNetworkAccessAllowed || isInCloud
+                        let isFinalOrOnlyAvailable = !options.isNetworkAccessAllowed && isInCloud
                         if degraded && img != nil && !failed && !isFinalOrOnlyAvailable { return }
                         request.resumeOnce { continuation.resume(returning: img) }
                     }
@@ -108,9 +125,38 @@ struct MobileAssetThumbnail: View {
         }
 
         if let loadedImage, !Task.isCancelled {
-            MobileThumbnailCache.shared.setImage(loadedImage, forKey: cacheKey)
+            if asset.modificationDate != nil { MobileThumbnailCache.shared.setImage(loadedImage, forKey: cacheKey) }
             self.image = loadedImage
         }
+    }
+}
+
+/// Larger look at one item from the gallery's touch-and-hold menu, so people can check a photo
+/// before selecting it. Uses on-device data only; iCloud originals are not downloaded here.
+struct MobileAssetPreview: View {
+    let asset: UniversalMediaAsset
+    let sourceLabel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            MobileAssetThumbnail(asset: asset, pixelSize: 1200, contentMode: .fit, showsRetryButton: false)
+                .frame(width: 340, height: 340)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(asset.displayName).font(.subheadline.weight(.semibold)).lineLimit(1)
+                Text(details).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+            .padding(12)
+            .frame(width: 340, alignment: .leading)
+        }
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    private var details: String {
+        var parts = [sourceLabel]
+        if let date = asset.captureDateDescription { parts.append(date) }
+        if asset.mediaKind == .video { parts.append(asset.formattedDuration) }
+        if let bytes = asset.byteCount { parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -128,7 +174,7 @@ final class MobileThumbnailCache: @unchecked Sendable {
     }
 
     func setImage(_ image: UIImage, forKey key: String) {
-        let cost = Int(image.size.width * image.size.height * 4)
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? Int(image.size.width * image.scale * image.size.height * image.scale * 4)
         cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 }
@@ -142,15 +188,13 @@ private final class PhotoImageRequest: @unchecked Sendable {
     private var wasCancelled = false
 
     func setID(_ id: PHImageRequestID) {
-        lock.lock(); defer { lock.unlock() }
-        requestID = id
-        if wasCancelled { PHImageManager.default().cancelImageRequest(id) }
+        lock.lock(); requestID = id; let cancelNow = wasCancelled; lock.unlock()
+        if cancelNow { PHImageManager.default().cancelImageRequest(id) }
     }
 
     func cancel() {
-        lock.lock(); defer { lock.unlock() }
-        wasCancelled = true
-        if requestID != PHInvalidImageRequestID { PHImageManager.default().cancelImageRequest(requestID) }
+        lock.lock(); wasCancelled = true; let id = requestID; lock.unlock()
+        if id != PHInvalidImageRequestID { PHImageManager.default().cancelImageRequest(id) }
     }
 
     func resumeOnce(_ body: () -> Void) {
@@ -159,5 +203,12 @@ private final class PhotoImageRequest: @unchecked Sendable {
         didResume = true
         lock.unlock()
         if shouldResume { body() }
+    }
+}
+
+extension UniversalMediaAsset {
+    var formattedDuration: String {
+        let value = max(0, Int((duration ?? 0).rounded()))
+        return String(format: "%d:%02d", value / 60, value % 60)
     }
 }

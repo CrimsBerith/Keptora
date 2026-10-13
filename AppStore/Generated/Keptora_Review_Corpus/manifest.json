@@ -1,76 +1,82 @@
 {
-  "schema": 1,
+  "schema": 2,
   "synthetic": true,
+  "origin": "OpenAI image generation, fictional photo fixtures, 2026-10-03",
   "files": [
     {
       "path": "EdgeCases/Corrupted.jpg",
-      "bytes": 18,
-      "sha256": "1246f1fb02971d89deecb8e2e2baaaa861f840f5ed776307ed9a354518f8fee4"
+      "bytes": 64,
+      "sha256": "5a013e61965920993cbc39b4e39e0ff9fba6315261700c11af7c6daf70572689"
     },
     {
       "path": "Exact/Beach_Copy.jpg",
-      "bytes": 75291,
-      "sha256": "6f4d2ebea0dfadd84f9cb02a10bd8e88d8a98dc915a076c5930d959d958c17af"
+      "bytes": 1260956,
+      "sha256": "3ff66857212ba0d56090b51eb4c78de511301483b12060fde0539fd422a937c6"
     },
     {
       "path": "Exact/Beach_Original.jpg",
-      "bytes": 75291,
-      "sha256": "6f4d2ebea0dfadd84f9cb02a10bd8e88d8a98dc915a076c5930d959d958c17af"
+      "bytes": 1260956,
+      "sha256": "3ff66857212ba0d56090b51eb4c78de511301483b12060fde0539fd422a937c6"
     },
     {
       "path": "Exact/Family_Copy_1.jpg",
-      "bytes": 68879,
-      "sha256": "b1ddd3b30bbe12418e290b32dd349900739ea55f1d68aa1bcd1cdefbf07284bb"
+      "bytes": 1022488,
+      "sha256": "602b9cf9ba0fd79118400ef389943809a49796da6dcf75ec6d775cbe4fe8a3ad"
     },
     {
       "path": "Exact/Family_Copy_2.jpg",
-      "bytes": 68879,
-      "sha256": "b1ddd3b30bbe12418e290b32dd349900739ea55f1d68aa1bcd1cdefbf07284bb"
+      "bytes": 1022488,
+      "sha256": "602b9cf9ba0fd79118400ef389943809a49796da6dcf75ec6d775cbe4fe8a3ad"
     },
     {
       "path": "Exact/Family_Original.jpg",
-      "bytes": 68879,
-      "sha256": "b1ddd3b30bbe12418e290b32dd349900739ea55f1d68aa1bcd1cdefbf07284bb"
+      "bytes": 1022488,
+      "sha256": "602b9cf9ba0fd79118400ef389943809a49796da6dcf75ec6d775cbe4fe8a3ad"
     },
     {
       "path": "Exact/Poster copy.png",
-      "bytes": 8626,
-      "sha256": "477ffecf86892d33267c78468d1be27af8394aa52f84456bcc8e02a92f2bed0e"
+      "bytes": 2231367,
+      "sha256": "3db96f8cd44519576ab6e56ce804178c965798f9c2401e3acd82593cae0d91dc"
     },
     {
       "path": "Exact/Poster.png",
-      "bytes": 8626,
-      "sha256": "477ffecf86892d33267c78468d1be27af8394aa52f84456bcc8e02a92f2bed0e"
+      "bytes": 2231367,
+      "sha256": "3db96f8cd44519576ab6e56ce804178c965798f9c2401e3acd82593cae0d91dc"
     },
     {
       "path": "Families/DSC_0001.jpg",
-      "bytes": 60982,
-      "sha256": "9d37ea4c4080ee480ddfff628be2b46de1c59ef2dbc94d0b1cb3308fa65509f7"
+      "bytes": 1362946,
+      "sha256": "b4ceeea736c9b366679f231fbe27fe7b93b681f37c300197b19deff1094ec47f"
     },
     {
       "path": "Families/DSC_0001.xmp",
-      "bytes": 153,
-      "sha256": "9250f219ff2cf7ab32c4539698c9779a3e3027c8b70b3425322f38d14c63d24d"
+      "bytes": 279,
+      "sha256": "db6fa5350c700c3d13dea0e409fea41f95bb96645d2e149a7c8122cdf4b57de7"
     },
     {
       "path": "Families/DSC_0001_Edit.jpg",
-      "bytes": 60982,
-      "sha256": "9d37ea4c4080ee480ddfff628be2b46de1c59ef2dbc94d0b1cb3308fa65509f7"
+      "bytes": 1373967,
+      "sha256": "c9627fca59302c84c33f645852515d6aae45bdebe29d963937739b41170af487"
+    },
+    {
+      "path": "README.txt",
+      "bytes": 277,
+      "sha256": "95f977dfaebb039977619ce476aa449a2b754d152df39c29831458c59fc6d46f"
     },
     {
       "path": "Similar/Sunset_1.jpg",
-      "bytes": 67155,
-      "sha256": "2e8fb28d1d2dc9355d9eeb99537d1e633871da1277db46b23e84ffa4851543af"
+      "bytes": 1187158,
+      "sha256": "5b1e0956c3325cc28567fccba00abd562f1f9edf134bef19b71a8115f01f1c57"
     },
     {
       "path": "Similar/Sunset_2.jpg",
-      "bytes": 54533,
-      "sha256": "e58101a878d1adc3c7b8e7206029f9f73619cb0e829d3032cee486c3c7e19b56"
+      "bytes": 1190084,
+      "sha256": "2a43f5b764fa85a12f73a54a25163b1f8330cc96bbac6664fdf24018d464fc7a"
     },
     {
       "path": "Similar/Sunset_3.jpg",
-      "bytes": 59661,
-      "sha256": "7085b8bcdc66102429ecc95b02bee5017b0dbc9f47297685dd4ef60bac531638"
+      "bytes": 1216094,
+      "sha256": "3939acd442896450dc4d38f007888d0befc558008a1b7700d7f341a239fd5257"
     }
   ]
 }

@@ -1,18 +1,18 @@
+import KeptoraCore
 import SwiftUI
 
 struct MobileRootView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @EnvironmentObject private var purchase: MobilePurchaseController
-    @AppStorage("hasSeenMobileOnboarding") private var hasSeenMobileOnboarding = false
 
     var body: some View {
         TabView(selection: $store.selectedTab) {
             NavigationStack { MobileLibraryView() }
-                .tabItem { Label("Library", systemImage: "photo.stack") }
+                .tabItem { Label("Photo Library", systemImage: "photo.stack") }
                 .tag(MobileTab.library)
                 .accessibilityIdentifier("tab.library")
-            NavigationStack { MobileReviewView() }
-                .tabItem { Label("Review", systemImage: "sparkles.rectangle.stack") }
+            NavigationStack { MobileCleanupHubView() }
+                .tabItem { Label("Suggestions", systemImage: "sparkles.rectangle.stack") }
                 .tag(MobileTab.review)
                 .accessibilityIdentifier("tab.review")
             NavigationStack { MobileHistoryView() }
@@ -21,12 +21,9 @@ struct MobileRootView: View {
                 .accessibilityIdentifier("tab.history")
         }
         .tint(MobileKeptoraDesign.accent)
-        .onAppear {
-            if !hasSeenMobileOnboarding {
-                store.present(.onboarding)
-            }
-        }
-        .sheet(item: $store.modalRoute) { route in
+        .onAppear { presentStartupIfNeeded() }
+        .onChange(of: store.startupSourcesPrepared) { _, _ in presentStartupIfNeeded() }
+        .sheet(item: $store.modalRoute, onDismiss: { presentStartupIfNeeded() }) { route in
             MobileModalHost(route: route)
         }
         .alert("Something went wrong", isPresented: Binding(
@@ -36,6 +33,18 @@ struct MobileRootView: View {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
             Text(store.errorMessage ?? "")
+        }
+    }
+
+    private func presentStartupIfNeeded() {
+        guard store.startupSourcesPrepared, store.modalRoute == nil else { return }
+        // Read the durable completion flags now. A dismissed sheet can invoke
+        // this closure before another view's AppStorage snapshot is updated.
+        let hasSeenMobileOnboarding = UserDefaults.standard.bool(forKey: "hasSeenMobileOnboarding")
+        let sourceSetupCompleted = UserDefaults.standard.bool(forKey: AppStorageKeys.iOSSourceSetupCompleted)
+        if !hasSeenMobileOnboarding { store.present(.onboarding) }
+        else if LibraryAccessPolicy.needsStartupSetup(introductionCompleted: hasSeenMobileOnboarding, setupCompleted: sourceSetupCompleted) {
+            store.present(.sourceSetup)
         }
     }
 }
@@ -59,6 +68,9 @@ private struct MobileModalHost: View {
                 MobilePaywallView()
             case .onboarding:
                 MobileOnboardingView()
+                    .interactiveDismissDisabled()
+            case .sourceSetup:
+                NavigationStack { MobileSourceLibraryView(isStartupSetup: true) }
             }
         }
         .alert("Something went wrong", isPresented: Binding(

@@ -1,60 +1,142 @@
 import KeptoraCore
 import SwiftUI
+import UIKit
 
-struct MobileLibraryView: View {
+struct MobileScanSourcesSection: View {
     @EnvironmentObject private var store: MobileKeptoraStore
-    @EnvironmentObject private var purchase: MobilePurchaseController
-    @State private var showCloudDownloadConfirmation = false
+    private var masterSymbol: String {
+        switch store.sourceSelectionState {
+        case .none: return "square"
+        case .some: return "minus.square.fill"
+        case .all: return "checkmark.square.fill"
+        }
+    }
+    private var masterValue: LocalizedStringKey {
+        switch store.sourceSelectionState {
+        case .none: return "Not selected"
+        case .some: return "Partially selected"
+        case .all: return "Selected"
+        }
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button { store.toggleAllScanSources() } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: masterSymbol).font(.title3).foregroundStyle(MobileKeptoraDesign.accent)
+                    Text("All Connected Sources").font(.headline)
+                    Spacer(minLength: 0)
+                }.frame(maxWidth: .infinity, minHeight: 48, alignment: .leading).contentShape(Rectangle())
+            }.buttonStyle(.plain)
+                .accessibilityValue(Text(masterValue)).accessibilityIdentifier("sources.selectAll")
+                .disabled(store.sourceControlsDisabled || LibrarySourceSelection().selectedIDs(in: store.connectedSources, coverage: store.coverage).isEmpty)
+            Divider()
+            ForEach(store.connectedSources) { source in
+                let report = store.coverage.first { $0.id == source.id }
+                let available = report == nil || report?.authorization == .authorized || report?.authorization == .limited
+                let selected = store.selectedSourceIDs.contains(source.id)
+                Button { store.toggleScanSource(source.id) } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: selected ? "checkmark.square.fill" : "square")
+                            .font(.title3).foregroundStyle(selected ? MobileKeptoraDesign.accent : Color.secondary)
+                        Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName).font(.subheadline.weight(.semibold))
+                            if let report {
+                                (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete"))
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text(LocalizedStringKey(report.statusKey)).font(.caption)
+                                    .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
+                            } else { Text("Loading item count…").font(.caption).foregroundStyle(.secondary) }
+                        }
+                        Spacer(minLength: 0)
+                    }.padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 54, alignment: .leading).contentShape(Rectangle())
+                }.buttonStyle(.plain).disabled(store.sourceControlsDisabled || !available)
+                    .accessibilityValue(Text(selected ? LocalizedStringKey("Selected") : LocalizedStringKey("Not selected")))
+                    .accessibilityIdentifier("sources.source." + source.id)
+            }
+            Divider()
+            if store.selectedSourceIDs.isEmpty {
+                Text("Select at least one source").font(.footnote).foregroundStyle(.secondary)
+                    .padding(.top, 12).accessibilityIdentifier("sources.emptySelection")
+            } else {
+                Text(store.selectedSourceIDs.count == 1
+                     ? L10n.format("1 source selected · %lld different items", store.scopedAssets.count)
+                     : L10n.format("%lld sources selected · %lld different items", store.selectedSourceIDs.count, store.scopedAssets.count))
+                    .font(.footnote).foregroundStyle(.secondary).padding(.top, 12).accessibilityIdentifier("sources.summary")
+            }
+            // These only matter once there is more than one source to combine.
+            if store.connectedSources.count > 1 {
+                Text("Selected sources appear together. The same item in overlapping folders is counted once.")
+                    .font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+                Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+            }
+        }.padding(14)
+            .background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+struct MobileSourceLibraryView: View {
+    var onChooseFolder: (() -> Void)? = nil
+    var isStartupSetup = false
+    @EnvironmentObject private var store: MobileKeptoraStore
+    @State private var showFolderPicker = false
+
+    private var photosConnected: Bool { store.connectedSources.contains { $0.id == LibrarySource.photos.id } }
+    private var controlsDisabled: Bool { store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing || store.isRequestingPhotosAccess || store.isLoadingCatalogue }
 
     var body: some View {
         ZStack {
             MobileAuroraBackground()
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
-                    hero
-                    sourceSection
-                    if store.source != .none { scanSection }
-                    if !store.exactGroups.isEmpty {
-                        resultSection
-                    } else if store.scanState == .completed && !store.isAnalyzing {
-                        noDuplicatesSection
+                    if isStartupSetup {
+                        Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
+                            .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
+                        Text("Connect your library").font(.title2.bold())
+                        Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(.secondary)
+                        if store.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
                     }
+                    sourceSection.disabled(controlsDisabled)
+                    Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.footnote).foregroundStyle(.secondary)
+                    if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(.secondary) }
                     privacyStrip
                 }
                 .padding(.horizontal, MobileKeptoraDesign.pagePadding)
                 .padding(.bottom, 24)
             }
         }
-        .navigationTitle("Library")
-        .accessibilityIdentifier("ios.page.library")
+        .navigationTitle("Sources")
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(isStartupSetup ? "ios.sourceSetup" : "ios.page.library")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { store.present(.settings) } label: {
-                    ZStack {
-                        Circle().fill(MobileKeptoraDesign.brandGradient)
-                        Image(systemName: purchase.isUnlocked ? "checkmark.seal.fill" : "person.crop.circle.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
+        .safeAreaInset(edge: .bottom) {
+            if isStartupSetup {
+                VStack {
+                    Button {
+                        store.completeSourceSetup()
+                    } label: {
+                        Text("Continue to Library")
                     }
-                    .frame(width: 36, height: 36)
-                    .shadow(color: MobileKeptoraDesign.violet.opacity(0.30), radius: 8, y: 3)
-                    .padding(4)
-                    .contentShape(Rectangle())
+                    .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
+                    .disabled(store.isRequestingPhotosAccess)
+                    .accessibilityIdentifier("ios.sourceSetup.continue")
                 }
-                .accessibilityLabel("Settings")
-                .accessibilityIdentifier("ios.library.settings")
+                .padding().background(.regularMaterial)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("ios.sourceSetup.actions")
             }
         }
-        .confirmationDialog(
-            "Download iCloud originals?",
-            isPresented: $showCloudDownloadConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Download and Scan") { store.startScan(allowNetwork: true) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This may use network data and device storage. You can cancel the scan at any time.")
+        .interactiveDismissDisabled(isStartupSetup)
+        .sheet(isPresented: $showFolderPicker) {
+            DirectoryPicker { url in
+                showFolderPicker = false
+                if let url { store.connectFolder(url) }
+            }
+        }
+        .task {
+            if isStartupSetup, LibraryAccessPolicy.shouldRequestPhotosAtStartup(store.authorization) {
+                await store.connectPhotos()
+            }
         }
         .alert("Photos Access Needed", isPresented: $store.isShowingPhotosPermissionHelp) {
             if store.canOpenPhotosSettings {
@@ -68,103 +150,36 @@ struct MobileLibraryView: View {
         }
     }
 
-    // MARK: – Hero Header
-
-    private var hero: some View {
-        ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(MobileKeptoraDesign.heroGradient)
-
-            Circle()
-                .fill(MobileKeptoraDesign.coral.opacity(0.24))
-                .frame(width: 180, height: 180)
-                .blur(radius: 12)
-                .offset(x: 60, y: 60)
-
-            Circle()
-                .fill(MobileKeptoraDesign.cyan.opacity(0.18))
-                .frame(width: 130, height: 130)
-                .blur(radius: 18)
-                .offset(x: -80, y: -40)
-
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 108, weight: .ultraLight))
-                .foregroundStyle(.white.opacity(0.09))
-                .offset(x: -12, y: 14)
-
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 10) {
-                    MobileBrandMark(size: 40)
-                    HStack(spacing: 5) {
-                        if purchase.isUnlocked {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(MobileKeptoraDesign.cyan)
-                        }
-                        Text(purchase.isUnlocked ? "KEPTORA PRO" : "KEPTORA")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(1.8)
-                            .foregroundStyle(.white.opacity(0.90))
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(.white.opacity(0.12), in: Capsule())
-                    .overlay { Capsule().stroke(.white.opacity(0.20), lineWidth: 1) }
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Make room for what matters.")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .minimumScaleFactor(0.8)
-                        .lineLimit(2)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(22)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.35), Color.white.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        }
-        .shadow(color: MobileKeptoraDesign.violet.opacity(0.26), radius: 26, y: 12)
-        .padding(.top, 4)
-    }
-
     // MARK: – Source Section
 
     private var sourceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Circle().fill(MobileKeptoraDesign.accent).frame(width: 5, height: 5)
-                Text("YOUR LIBRARY")
+                Text("Sources")
                     .font(MobileKeptoraDesign.labelFont)
                     .tracking(1.4)
                     .foregroundStyle(MobileKeptoraDesign.accent)
             }
             .padding(.leading, 4)
 
-            Button { Task { await store.connectPhotos() } } label: {
-                sourceCard(
-                    title: "Photos",
-                    subtitle: store.source == .photos ? Text("Connected") : Text("Photos and videos on this device"),
-                    image: "photo.on.rectangle.angled",
-                    selected: store.source == .photos,
-                    tint: MobileKeptoraDesign.coral
-                )
+            if !photosConnected {
+                Button { Task { await store.connectPhotos() } } label: {
+                    sourceCard(
+                        title: "Photos",
+                        subtitle: photosConnected ? Text("Connected") : Text("Photos and videos on this device"),
+                        image: "photo.on.rectangle.angled",
+                        selected: photosConnected,
+                        tint: MobileKeptoraDesign.coral
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("library.source.photos")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("library.source.photos")
+            if !store.connectedSources.isEmpty { MobileScanSourcesSection() }
 
-            if store.authorization == .limited, store.source == .photos {
+            Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.").font(.footnote).foregroundStyle(.secondary)
+            if store.authorization == .limited, photosConnected {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         Image(systemName: "photo.badge.exclamationmark")
@@ -179,7 +194,7 @@ struct MobileLibraryView: View {
                         Button("Manage Access") { store.manageLimitedPhotosAccess() }
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(MobileKeptoraDesign.accent)
-                            .frame(minHeight: 44)
+                            .buttonStyle(MobileActionButtonStyle())
                             .accessibilityIdentifier("ios.library.managePhotosAccess")
                     }
                     VStack(alignment: .leading, spacing: 8) {
@@ -193,7 +208,7 @@ struct MobileLibraryView: View {
                         Button("Manage Access") { store.manageLimitedPhotosAccess() }
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(MobileKeptoraDesign.accent)
-                            .frame(minHeight: 44)
+                            .buttonStyle(MobileActionButtonStyle())
                             .accessibilityIdentifier("ios.library.managePhotosAccess")
                     }
                 }
@@ -232,7 +247,7 @@ struct MobileLibraryView: View {
                             Button("Open Settings") { store.openPhotosSettings() }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
-                                .frame(minHeight: 44)
+                                .buttonStyle(MobileActionButtonStyle())
                                 .accessibilityIdentifier("ios.library.openSettings")
                         }
                     }
@@ -252,7 +267,7 @@ struct MobileLibraryView: View {
                             Button("Open Settings") { store.openPhotosSettings() }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
-                                .frame(minHeight: 44)
+                                .buttonStyle(MobileActionButtonStyle())
                                 .accessibilityIdentifier("ios.library.openSettings")
                         }
                     }
@@ -269,24 +284,37 @@ struct MobileLibraryView: View {
                 )
             }
 
-            Button { store.present(.filePicker) } label: {
+            Text("Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library.")
+                .font(.footnote).foregroundStyle(.secondary)
+            Text("Cloud providers may download files according to their own settings.").font(.footnote).foregroundStyle(.secondary)
+            ForEach(store.connectedFolders) { folder in
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { connectedFolderControls(folder) }
+                    VStack(alignment: .leading, spacing: 8) { connectedFolderControls(folder) }
+                }
+            }
+            Button(action: chooseFolder) {
                 sourceCard(
-                    title: "Files and iCloud Drive",
-                    subtitle: {
-                        if case .folder(let url) = store.source { return Text(verbatim: url.lastPathComponent) }
-                        return Text(LocalizedStringKey("Choose a folder or connected drive"))
-                    }(),
-                    image: "folder.badge.gearshape",
-                    selected: {
-                        if case .folder = store.source { return true }
-                        return false
-                    }(),
+                    title: "Add Files or Cloud Folder",
+                    subtitle: Text("Choose a folder or connected drive"),
+                    image: "folder.badge.plus",
+                    selected: !store.connectedFolders.isEmpty,
                     tint: MobileKeptoraDesign.cyan
                 )
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("library.source.files")
         }
+    }
+    @ViewBuilder private func connectedFolderControls(_ folder: LibrarySource) -> some View {
+        Label(folder.displayName, systemImage: "folder")
+        Button("Disconnect") { store.disconnectFolder(folder.id) }.buttonStyle(MobileActionButtonStyle())
+    }
+
+    private func chooseFolder() {
+        if let onChooseFolder { onChooseFolder() }
+        else if isStartupSetup { showFolderPicker = true }
+        else { store.present(.filePicker) }
     }
 
     private var photosAccessHint: LocalizedStringKey {
@@ -357,233 +385,6 @@ struct MobileLibraryView: View {
         .shadow(color: selected ? tint.opacity(0.18) : Color.black.opacity(0.03), radius: 16, y: 7)
         .contentShape(Rectangle())
         .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    // MARK: – Scan Section
-
-    @ViewBuilder
-    private var scanSection: some View {
-        if store.isAnalyzing {
-            // Exact scan is done but similarity passes still run: do not offer a new scan yet.
-            HStack(spacing: 10) {
-                ProgressView().tint(MobileKeptoraDesign.cyan)
-                Text("Analyzing similar photos and videos…")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                Spacer()
-                Button("Cancel", role: .cancel) { store.cancelScan() }
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(MobileKeptoraDesign.danger)
-                    .frame(minHeight: 44)
-            }
-            .keptoraPanel(tint: MobileKeptoraDesign.cyan)
-            .accessibilityElement(children: .combine)
-        } else {
-            scanStateSection
-        }
-    }
-
-    @ViewBuilder
-    private var scanStateSection: some View {
-        switch store.scanState {
-        case .scanning(let processed, let total, let current):
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.85)
-                            .tint(MobileKeptoraDesign.cyan)
-                        Text("Scanning \(store.source.title)")
-                            .font(.system(.headline, design: .rounded).weight(.semibold))
-                    }
-                    Spacer()
-                    Button("Cancel", role: .cancel) { store.cancelScan() }
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                        .foregroundStyle(MobileKeptoraDesign.danger)
-                        .frame(minHeight: 44)
-                }
-
-                ProgressView(value: Double(processed), total: Double(max(total, 1)))
-                    .tint(MobileKeptoraDesign.cyan)
-                    .accessibilityLabel("Scan progress")
-                    .accessibilityValue(String(format: String(localized: "%1$lld of %2$lld"), Int64(processed), Int64(total)))
-
-                HStack {
-                    Text("\(processed.formatted()) of \(total.formatted())")
-                        .font(.system(.caption, design: .rounded).weight(.bold))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Spacer()
-                    Text(current)
-                        .font(.system(.caption, design: .rounded))
-                        .lineLimit(1)
-                }
-                .foregroundStyle(.secondary)
-            }
-            .keptoraPanel(tint: MobileKeptoraDesign.cyan)
-
-        case .failed(let message):
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.title3)
-                        .foregroundStyle(MobileKeptoraDesign.amber)
-                    Text("Scan Interrupted")
-                        .font(.system(.headline, design: .rounded).weight(.semibold))
-                }
-                Text(message)
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(.secondary)
-                Button {
-                    store.startScan()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.clockwise")
-                        Text("Try Again")
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 34)
-                }
-                .buttonStyle(MobilePrimaryButtonStyle())
-            }
-            .keptoraPanel(tint: MobileKeptoraDesign.amber)
-
-        default:
-            VStack(spacing: 12) {
-                Button { store.startScan() } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkle.magnifyingglass")
-                            .font(.system(size: 17, weight: .semibold))
-                        if store.hasScanCheckpoint {
-                            Text("Resume Scan")
-                        } else if store.source == .photos {
-                            Text("Scan Photos")
-                        } else {
-                            Text("Scan Files")
-                        }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 34)
-                }
-                .buttonStyle(MobilePrimaryButtonStyle())
-                .accessibilityIdentifier("ios.library.scan")
-
-                if store.skippedCloudItems > 0 {
-                    Button {
-                        showCloudDownloadConfirmation = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "icloud.and.arrow.down")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Scan \(store.skippedCloudItems.formatted()) iCloud-only items")
-                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                        }
-                        .foregroundStyle(MobileKeptoraDesign.accent)
-                        .padding(.vertical, 6)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: – Results & Metrics
-
-    private var resultSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Ready to review")
-                        .font(.system(.title2, design: .rounded).weight(.bold))
-                    Text("Only verified exact copies can enter cleanup.")
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                ZStack {
-                    Circle().fill(MobileKeptoraDesign.mint.opacity(0.14))
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(MobileKeptoraDesign.mint)
-                        .font(.title2)
-                }
-                .frame(width: 44, height: 44)
-            }
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                MobileMetricTile(
-                    title: "Scanned",
-                    value: store.dashboard.scannedItems.formatted(),
-                    systemImage: "photo.stack",
-                    tint: MobileKeptoraDesign.cyan
-                )
-                MobileMetricTile(
-                    title: "Exact sets",
-                    value: store.dashboard.exactGroups.formatted(),
-                    systemImage: "square.on.square",
-                    tint: MobileKeptoraDesign.violet
-                )
-                MobileMetricTile(
-                    title: "Safe copies",
-                    value: store.dashboard.safeCopies.formatted(),
-                    systemImage: "checkmark.circle.fill",
-                    tint: MobileKeptoraDesign.mint
-                )
-                MobileMetricTile(
-                    title: "Potential space",
-                    value: ByteCountFormatter.string(fromByteCount: store.dashboard.potentialRecoveryBytes, countStyle: .file),
-                    systemImage: "internaldrive",
-                    tint: MobileKeptoraDesign.coral
-                )
-            }
-
-            Button {
-                store.selectedTab = .review
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles.rectangle.stack.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Start Review")
-                        .font(.system(.headline, design: .rounded).weight(.bold))
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .frame(maxWidth: .infinity, minHeight: 34)
-            }
-            .buttonStyle(MobilePrimaryButtonStyle())
-            .accessibilityIdentifier("ios.library.startReview")
-        }
-        .keptoraPanel(tint: MobileKeptoraDesign.mint)
-    }
-
-    /// Shown when a scan finished without finding any exact copies, so the screen is not just blank.
-    private var noDuplicatesSection: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.largeTitle)
-                .foregroundStyle(MobileKeptoraDesign.mint)
-                .accessibilityHidden(true)
-            Text("No exact copies found")
-                .font(.system(.title3, design: .rounded).weight(.bold))
-            Text("Nothing in \(store.source.title) is a byte-identical duplicate.")
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            if !store.similarVideoGroups.isEmpty || !store.similarityGroups.isEmpty {
-                let count = store.similarVideoGroups.count + store.similarityGroups.count
-                Button {
-                    store.selectedTab = .review
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles.rectangle.stack.fill")
-                        Text("Review \(count) Similar Sets")
-                            .font(.system(.subheadline, design: .rounded).weight(.bold))
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 38)
-                }
-                .buttonStyle(MobilePrimaryButtonStyle())
-                .padding(.top, 4)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .keptoraPanel(tint: MobileKeptoraDesign.mint)
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: – Privacy Strip

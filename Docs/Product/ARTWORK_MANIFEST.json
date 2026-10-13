@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-03",
+  "illustrations": [
+    {
+      "name": "onboarding_privacy",
+      "path": "Keptora/Resources/Assets.xcassets/onboarding_privacy.imageset/onboarding_privacy.png",
+      "purpose": "On-device privacy",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "85575cef476e80a5a97000c5a5849cc3de7614341ab997e74607a9c814f14d47",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/privacy.png"
+    },
+    {
+      "name": "onboarding_proof",
+      "path": "Keptora/Resources/Assets.xcassets/onboarding_proof.imageset/onboarding_proof.png",
+      "purpose": "Manual choice and comparison",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "fe9eb9732b41dd6186a0d13085f42f2ee98401d571d381cbc09a491bcef878d9",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/proof.png"
+    },
+    {
+      "name": "onboarding_restore",
+      "path": "Keptora/Resources/Assets.xcassets/onboarding_restore.imageset/onboarding_restore.png",
+      "purpose": "Source-specific recovery",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "108e87fec8e6ec70b257c97d42d4bfee76fb2283601a6f52c499e3eb2b583173",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/restore.png"
+    },
+    {
+      "name": "paywall_hero",
+      "path": "Keptora/Resources/Assets.xcassets/paywall_hero.imageset/paywall_hero.png",
+      "purpose": "Pro library illustration",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "9932d21f86fa3dca16be0e955207bb7ead0b9c33145c0ead464d868c6f9d7de7",
+      "origin": "OpenAI image generation, created for Keptora in this session",
+      "review": "Per-file review in VISUAL_REGENERATION_MANIFEST.json; native layout acceptance pending",
+      "source": "AppStore/SourceAssets/2026-10/hero.png"
+    }
+  ],
+  "app_icon": "New October 2026 master and every OS size regenerated; per-file review recorded separately.",
+  "screenshots": "12 visibly labelled design previews, not native captures; not approved for App Store submission."
+}

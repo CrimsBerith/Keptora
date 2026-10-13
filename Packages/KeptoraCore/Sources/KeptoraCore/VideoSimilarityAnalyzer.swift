@@ -41,6 +41,7 @@ enum UniversalVideoFrameSampler {
 }
 
 public actor VideoSimilarityAnalyzer {
+    public private(set) var issues: [AnalysisIssue] = []
     private struct Signature {
         let asset: UniversalMediaAsset
         let duration: TimeInterval
@@ -56,14 +57,17 @@ public actor VideoSimilarityAnalyzer {
         allowNetwork: Bool = false,
         averageThreshold: Float = 0.31,
         maximumFrameDistance: Float = 0.48,
-        maximumAssets: Int = 1_500,
+        maximumAssets: Int = .max,
+        control: LibraryAnalysisControl? = nil,
         progress: @escaping @Sendable (_ processed: Int, _ total: Int) -> Void
     ) async throws -> [UniversalSimilarityGroup] {
         let candidates = Array(assets.lazy.filter { $0.mediaKind == .video }.prefix(maximumAssets))
+        issues = []
         var clusters: [(representative: Signature, members: [UniversalMediaAsset], maximumDistance: Float)] = []
         var durationIndex: [Int: Set<Int>] = [:]
 
         for (offset, asset) in candidates.enumerated() {
+            try await control?.waitIfPaused()
             try Task.checkCancellation()
             progress(offset, candidates.count)
             let sample: UniversalVideoSimilaritySample
@@ -73,11 +77,13 @@ public actor VideoSimilarityAnalyzer {
                     maximumPixelSize: 320,
                     allowNetwork: allowNetwork
                 )
-            } catch {
+            } catch is CancellationError { throw CancellationError() }
+            catch {
+                issues.append(.init(asset: asset, stage: .videos, error: error))
                 continue
             }
             let features = sample.frames.compactMap(featurePrint)
-            guard !features.isEmpty else { continue }
+            guard !features.isEmpty else { issues.append(.init(assetID: asset.id, sourceID: asset.sourceID, stage: .videos, reason: .unreadable)); continue }
             
             let signature = Signature(
                 asset: asset,

@@ -1,13 +1,12 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "onboarding_privacy.jpg",
-      "idiom" : "universal",
-      "scale" : "1x"
+      "filename": "onboarding_privacy.png",
+      "idiom": "universal"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }
