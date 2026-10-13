@@ -6,31 +6,31 @@ import os
 // Runtime failure + resource-budget infrastructure for Cullora.
 // This file stores categories/metrics only; it intentionally never persists raw file names or document content.
 
-enum CulloraFailureKind: String, Codable, CaseIterable {
+enum KeptoraFailureKind: String, Codable, CaseIterable {
     case missingInput, permissionDenied, corruptInput, diskFull, cancelled, timedOut, memoryPressure, unexpected
 }
 
-struct CulloraFailurePresentation: Equatable {
+struct KeptoraFailurePresentation: Equatable {
     let title: String
     let message: String
     let recoveryAction: String
     let canRetry: Bool
 }
 
-struct CulloraRuntimeFailure: Codable, Equatable {
-    let kind: CulloraFailureKind
+struct KeptoraRuntimeFailure: Codable, Equatable {
+    let kind: KeptoraFailureKind
     let operation: String
     let occurredAt: Date
 }
 
-struct CulloraRuntimeHealthSnapshot: Equatable {
+struct KeptoraRuntimeHealthSnapshot: Equatable {
     let failureCount: Int
     let latencySampleCount: Int
     let p95Milliseconds: Double
     let recommendedBatchSize: Int
 }
 
-private struct CulloraBoundedBuffer<Element> {
+private struct KeptoraBoundedBuffer<Element> {
     private var storage: [Element?]
     private var nextIndex = 0
     private(set) var count = 0
@@ -48,13 +48,13 @@ private struct CulloraBoundedBuffer<Element> {
     }
 }
 
-struct CulloraResourceBudget: Equatable {
+struct KeptoraResourceBudget: Equatable {
     let temporaryWorkingSetBytes: Int
     let minBatchItems: Int
     let maxBatchItems: Int
     let safetyFraction: Double
 
-    static let production = CulloraResourceBudget(
+    static let production = KeptoraResourceBudget(
         temporaryWorkingSetBytes: 96 * 1024 * 1024,
         minBatchItems: 8,
         maxBatchItems: 2048,
@@ -69,14 +69,14 @@ struct CulloraResourceBudget: Equatable {
     }
 }
 
-struct CulloraFailureClassifier {
-    static func classify(error: Error) -> CulloraFailureKind {
+struct KeptoraFailureClassifier {
+    static func classify(error: Error) -> KeptoraFailureKind {
         if error is CancellationError { return .cancelled }
         let ns = error as NSError
         return classify(domain: ns.domain, code: ns.code)
     }
 
-    static func classify(domain: String, code: Int) -> CulloraFailureKind {
+    static func classify(domain: String, code: Int) -> KeptoraFailureKind {
         if domain == NSURLErrorDomain {
             if code == -999 { return .cancelled }
             if code == -1001 { return .timedOut }
@@ -93,7 +93,7 @@ struct CulloraFailureClassifier {
         return .unexpected
     }
 
-    static func presentation(for kind: CulloraFailureKind) -> CulloraFailurePresentation {
+    static func presentation(for kind: KeptoraFailureKind) -> KeptoraFailurePresentation {
         switch kind {
         case .missingInput: return .init(title: "Archive Review Missing", message: "The source is no longer available. Re-select the source before continuing.", recoveryAction: "Return to Review Floor", canRetry: true)
         case .permissionDenied: return .init(title: "Archive Review Locked", message: "macOS denied access. Restore access without weakening sandbox boundaries.", recoveryAction: "Return to Review Floor", canRetry: true)
@@ -107,26 +107,26 @@ struct CulloraFailureClassifier {
     }
 }
 
-final class CulloraResiliencePerformanceController {
+final class KeptoraResiliencePerformanceController {
     private let lock = NSLock()
-    private var failures: CulloraBoundedBuffer<CulloraRuntimeFailure>
-    private var latencies: CulloraBoundedBuffer<Double>
-    let budget: CulloraResourceBudget
+    private var failures: KeptoraBoundedBuffer<KeptoraRuntimeFailure>
+    private var latencies: KeptoraBoundedBuffer<Double>
+    let budget: KeptoraResourceBudget
 
-    init(failureHistoryLimit: Int = 128, latencySampleLimit: Int = 512, budget: CulloraResourceBudget = .production) {
+    init(failureHistoryLimit: Int = 128, latencySampleLimit: Int = 512, budget: KeptoraResourceBudget = .production) {
         self.failures = .init(capacity: failureHistoryLimit)
         self.latencies = .init(capacity: latencySampleLimit)
         self.budget = budget
     }
 
     @discardableResult
-    func record(error: Error, operation: String, now: Date = Date()) -> CulloraFailurePresentation {
-        let kind = CulloraFailureClassifier.classify(error: error)
+    func record(error: Error, operation: String, now: Date = Date()) -> KeptoraFailurePresentation {
+        let kind = KeptoraFailureClassifier.classify(error: error)
         record(kind: kind, operation: operation, now: now)
-        return CulloraFailureClassifier.presentation(for: kind)
+        return KeptoraFailureClassifier.presentation(for: kind)
     }
 
-    func record(kind: CulloraFailureKind, operation: String, now: Date = Date()) {
+    func record(kind: KeptoraFailureKind, operation: String, now: Date = Date()) {
         lock.lock(); defer { lock.unlock() }
         failures.append(.init(kind: kind, operation: operation, occurredAt: now))
     }
@@ -137,12 +137,12 @@ final class CulloraResiliencePerformanceController {
         latencies.append(milliseconds)
     }
 
-    func recentFailures() -> [CulloraRuntimeFailure] {
+    func recentFailures() -> [KeptoraRuntimeFailure] {
         lock.lock(); defer { lock.unlock() }
         return failures.values()
     }
 
-    func snapshot(estimatedItemBytes: Int) -> CulloraRuntimeHealthSnapshot {
+    func snapshot(estimatedItemBytes: Int) -> KeptoraRuntimeHealthSnapshot {
         lock.lock(); defer { lock.unlock() }
         let samples = latencies.values().sorted()
         let p95: Double
@@ -162,27 +162,27 @@ final class CulloraResiliencePerformanceController {
 
 // MARK: - Instruments / real-corpus profiling readiness
 
-enum CulloraProfileOperation: CaseIterable {
+enum KeptoraProfileOperation: CaseIterable {
     case enumerateLibrary, fingerprintAssets, groupSimilarity, quarantineCommit, healthSnapshot
 
 #if canImport(os)
     var signpostName: StaticString {
         switch self {
-        case .enumerateLibrary: return "CulloraEnumerateLibrary"
-        case .fingerprintAssets: return "CulloraFingerprintAssets"
-        case .groupSimilarity: return "CulloraGroupSimilarity"
-        case .quarantineCommit: return "CulloraQuarantineCommit"
-        case .healthSnapshot: return "CulloraHealthSnapshot"
+        case .enumerateLibrary: return "KeptoraEnumerateLibrary"
+        case .fingerprintAssets: return "KeptoraFingerprintAssets"
+        case .groupSimilarity: return "KeptoraGroupSimilarity"
+        case .quarantineCommit: return "KeptoraQuarantineCommit"
+        case .healthSnapshot: return "KeptoraHealthSnapshot"
         }
     }
 #endif
 }
 
-enum CulloraProfilingHooks {
+enum KeptoraProfilingHooks {
     static let realCorpusEnvironmentKey = "CULLORA_REAL_CORPUS_PATH"
     static let allowedRealCorpusExtensions: Set<String> = ["jpg", "jpeg", "heic", "png", "tif", "tiff", "dng"]
 
-    static func measure<T>(_ operation: CulloraProfileOperation, _ body: () throws -> T) rethrows -> T {
+    static func measure<T>(_ operation: KeptoraProfileOperation, _ body: () throws -> T) rethrows -> T {
 #if canImport(os)
         let log = OSLog(
             subsystem: Bundle.main.bundleIdentifier ?? "local.Cullora",

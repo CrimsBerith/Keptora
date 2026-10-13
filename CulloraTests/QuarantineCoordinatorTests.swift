@@ -1,5 +1,5 @@
 import XCTest
-@testable import Cullora
+@testable import Keptora
 
 final class QuarantineCoordinatorTests: XCTestCase {
     func testCommitCreatesSignedManifestAndRestoreMovesFileBack() async throws {
@@ -155,12 +155,12 @@ extension QuarantineCoordinatorTests {
 
     func testQuarantineVerificationLineageChainsCommitManualAndRestoreReviews() {
         let manifest = CleanupManifest(
-            schemaVersion: 4, planID: "plan", sourceRoot: "/source", quarantineRoot: "/source/.Cullora Quarantine/plan",
+            schemaVersion: 4, planID: "plan", sourceRoot: "/source", quarantineRoot: "/source/.Keptora Quarantine/plan",
             createdAt: Date(timeIntervalSince1970: 1), appVersion: "test", decisionSnapshotFingerprint: "decision",
             safetyPlanLineageID: "safety-1", safetyPlanRevision: 1,
             operations: [CleanupManifestOperation(
                 operationID: "op", groupID: "group", assetID: "asset", originalPath: "/source/a",
-                quarantinePath: "/source/.Cullora Quarantine/plan/a", byteCount: 5, digest: "digest"
+                quarantinePath: "/source/.Keptora Quarantine/plan/a", byteCount: 5, digest: "digest"
             )]
         )
         let observed = [QuarantineObservedOperationState(

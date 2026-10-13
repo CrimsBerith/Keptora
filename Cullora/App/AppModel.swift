@@ -54,10 +54,10 @@ final class AppModel: ObservableObject {
     private var similarityTask: Task<Void, Never>?
     private var volumeObservers: [NSObjectProtocol] = []
     private var expectedVolume: VolumeIdentity?
-    private let bookmarkDefaultsKey = "Cullora.SourceBookmark.v1"
-    private let volumeDefaultsKey = "Cullora.SourceVolume.v1"
-    private let onboardingCompletedKey = "Cullora.Onboarding.Completed.v1"
-    private let reviewCheckpointDefaultsKey = "Cullora.ReviewCheckpoint.v1"
+    private let bookmarkDefaultsKey = "Keptora.SourceBookmark.v1"
+    private let volumeDefaultsKey = "Keptora.SourceVolume.v1"
+    private let onboardingCompletedKey = "Keptora.Onboarding.Completed.v1"
+    private let reviewCheckpointDefaultsKey = "Keptora.ReviewCheckpoint.v1"
 
     private var currentSimilaritySensitivity: SimilaritySensitivityPreset {
         SimilaritySensitivityPreset.stored()
@@ -70,7 +70,7 @@ final class AppModel: ObservableObject {
         applicationSupportDirectory = directory
         safetyPlanLineage = Self.loadSafetyPlanLineage(from: directory)
         quarantineVerificationLineage = Self.loadQuarantineVerificationLineage(from: directory)
-        database = SQLiteDatabase(url: directory.appendingPathComponent("Cullora.sqlite"))
+        database = SQLiteDatabase(url: directory.appendingPathComponent("Keptora.sqlite"))
         cleanupCoordinator = QuarantineCoordinator(database: database, applicationSupportDirectory: directory)
         reconciliationCoordinator = ReconciliationCoordinator(database: database)
         similarityCoordinator = SimilarityCoordinator(database: database)
@@ -894,7 +894,7 @@ final class AppModel: ObservableObject {
     }
 
     func makeDiagnosticsSnapshot() -> DiagnosticsSnapshot {
-        let showPaths = UserDefaults.standard.bool(forKey: "Cullora.ShowFilePaths")
+        let showPaths = UserDefaults.standard.bool(forKey: "Keptora.ShowFilePaths")
         let paths = [sourceURL?.path, NSHomeDirectory()].compactMap { $0 }
         let sourceReference: String
         if let sourceURL { sourceReference = showPaths ? sourceURL.path : "<selected-folder-redacted>" }

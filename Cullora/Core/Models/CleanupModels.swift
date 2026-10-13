@@ -197,7 +197,7 @@ enum SafetyPlanLineageEngine {
     }
 }
 
-private struct CulloraSafetyPlanSHA256 {
+private struct KeptoraSafetyPlanSHA256 {
     private static let initialState: [UInt32] = [
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
@@ -212,7 +212,7 @@ private struct CulloraSafetyPlanSHA256 {
         0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
         0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
     ]
-    private var state = CulloraSafetyPlanSHA256.initialState
+    private var state = KeptoraSafetyPlanSHA256.initialState
     private var buffer: [UInt8] = []
     private var byteCount: UInt64 = 0
 
@@ -237,7 +237,7 @@ private struct CulloraSafetyPlanSHA256 {
     }
 
     static func hex(_ string: String) -> String {
-        var hasher = CulloraSafetyPlanSHA256()
+        var hasher = KeptoraSafetyPlanSHA256()
         hasher.update(bytes: string.utf8)
         return hasher.finalizeHex()
     }
@@ -323,7 +323,7 @@ enum SafetyPlanDecisionFingerprint {
     }
 
     private static func digest(_ rows: [String]) -> String {
-        CulloraSafetyPlanSHA256.hex(rows.sorted().joined(separator: "\u{1e}"))
+        KeptoraSafetyPlanSHA256.hex(rows.sorted().joined(separator: "\u{1e}"))
     }
 }
 
@@ -789,7 +789,7 @@ enum QuarantineVerificationEngine {
     }
 
     private static func fingerprint(_ rows: [String]) -> String {
-        CulloraSafetyPlanSHA256.hex(rows.joined(separator: "\u{1e}"))
+        KeptoraSafetyPlanSHA256.hex(rows.joined(separator: "\u{1e}"))
     }
 }
 
@@ -822,7 +822,7 @@ struct QuarantineDecisionReconciliationRecord: Identifiable, Codable, Hashable, 
     var reasons: [String]
 }
 
-enum CulloraPhase6DecisionCore {
+enum KeptoraPhase6DecisionCore {
     static func assess(previous: QuarantineDecisionSnapshot?, current: QuarantineDecisionSnapshot) -> (QuarantineDecisionReconciliationState, [String]) {
         guard let previous else { return (.reverifyRequired, ["No prior decision snapshot exists."]) }
         var reasons: [String] = []

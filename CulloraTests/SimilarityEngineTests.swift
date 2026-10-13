@@ -3,7 +3,7 @@ import ImageIO
 import UniformTypeIdentifiers
 import XCTest
 import Vision
-@testable import Cullora
+@testable import Keptora
 
 final class SimilarityEngineTests: XCTestCase {
     func testArchivedFeaturePrintRoundTripHasNearZeroDistance() async throws {

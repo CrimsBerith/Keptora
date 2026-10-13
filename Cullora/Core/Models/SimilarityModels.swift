@@ -29,7 +29,7 @@ enum SimilaritySensitivityPreset: String, Codable, CaseIterable, Sendable, Ident
         case .discovery: return 1.00
         }
     }
-    static let defaultsKey = "Cullora.SimilaritySensitivity.v1"
+    static let defaultsKey = "Keptora.SimilaritySensitivity.v1"
     static func stored(defaults: UserDefaults = .standard) -> Self {
         guard let raw = defaults.string(forKey: defaultsKey), let value = Self(rawValue: raw) else { return .precisionFirst }
         return value

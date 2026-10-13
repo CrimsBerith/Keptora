@@ -1,5 +1,5 @@
 import XCTest
-@testable import Cullora
+@testable import Keptora
 
 final class SQLiteDatabaseTests: XCTestCase {
     func testMigrationAndExactGrouping() async throws {

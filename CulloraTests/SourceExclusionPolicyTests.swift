@@ -1,5 +1,5 @@
 import XCTest
-@testable import Cullora
+@testable import Keptora
 
 final class SourceExclusionPolicyTests: XCTestCase {
     func testFolderMatchingIsUnicodeNormalizedAndCaseInsensitive() {
@@ -19,7 +19,7 @@ final class SourceExclusionPolicyTests: XCTestCase {
     }
 
     func testBuiltInQuarantineNameCannotBeBypassedByCase() {
-        let policy = SourceExclusionPolicy(folderNames: [".Cullora Quarantine"], extensions: [])
+        let policy = SourceExclusionPolicy(folderNames: [".Keptora Quarantine"], extensions: [])
         let root = URL(fileURLWithPath: "/Library")
         let file = root.appendingPathComponent(".CULLORA QUARANTINE/plan/copy.jpg")
         XCTAssertTrue(policy.excludes(file, root: root))

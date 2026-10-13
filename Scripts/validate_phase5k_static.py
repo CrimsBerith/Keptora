@@ -17,27 +17,27 @@ def run(cmd):
         errors.append(f"Command failed: {' '.join(cmd)}\n{result.stdout}{result.stderr}")
 
 # Syntax parse every Swift source without resolving macOS-only frameworks.
-for path in sorted(list((ROOT/'Cullora').rglob('*.swift')) + list((ROOT/'CulloraTests').rglob('*.swift'))):
+for path in sorted(list((ROOT/'Cullora').rglob('*.swift')) + list((ROOT/'KeptoraTests').rglob('*.swift'))):
     run(['swiftc','-frontend','-parse',str(path.relative_to(ROOT))])
 run(['python3','Scripts/validate_project_references.py'])
 run(['python3','Scripts/validate_app_store_metadata.py'])
 
 # Structured resources.
 resources = {}
-for rel in ['Cullora/Resources/Localizable.xcstrings','Cullora/Resources/Cullora.storekit']:
+for rel in ['Cullora/Resources/Localizable.xcstrings','Cullora/Resources/Keptora.storekit']:
     try: resources[rel]=json.loads((ROOT/rel).read_text())
     except Exception as e: errors.append(f'{rel}: {e}')
 try: info=plistlib.loads((ROOT/'Cullora/Resources/Info.plist').read_bytes())
 except Exception as e: errors.append(f'Info.plist: {e}'); info={}
-try: entitlements=plistlib.loads((ROOT/'Cullora/Resources/Cullora.entitlements').read_bytes())
-except Exception as e: errors.append(f'Cullora.entitlements: {e}'); entitlements={}
+try: entitlements=plistlib.loads((ROOT/'Cullora/Resources/Keptora.entitlements').read_bytes())
+except Exception as e: errors.append(f'Keptora.entitlements: {e}'); entitlements={}
 try: privacy=plistlib.loads((ROOT/'Cullora/Resources/PrivacyInfo.xcprivacy').read_bytes())
 except Exception as e: errors.append(f'PrivacyInfo.xcprivacy: {e}'); privacy={}
 
 project=(ROOT/'Cullora.xcodeproj/project.pbxproj').read_text()
 purchase_source=(ROOT/'Cullora/Core/Purchases/StoreEntitlementController.swift').read_text()
 access_source=(ROOT/'Cullora/Core/Purchases/AccessPolicy.swift').read_text()
-store=resources.get('Cullora/Resources/Cullora.storekit', {'products':[{'productID':''}]})
+store=resources.get('Cullora/Resources/Keptora.storekit', {'products':[{'productID':''}]})
 store_id=store['products'][0]['productID']
 source_match=re.search(r'lifetimeProductID = "([^"]+)"', purchase_source)
 source_id=source_match.group(1) if source_match else ''

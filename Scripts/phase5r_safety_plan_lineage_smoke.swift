@@ -9,7 +9,7 @@ struct Phase5RSmoke {
             return CleanupOperationPreview(
                 id: "op-\(index)", groupID: "group-\(index % 25)", assetID: id,
                 displayName: "asset-\(index).jpg", originalURL: URL(fileURLWithPath: "/source/asset-\(index).jpg"),
-                quarantineURL: URL(fileURLWithPath: "/source/.Cullora Quarantine/asset-\(index).jpg"),
+                quarantineURL: URL(fileURLWithPath: "/source/.Keptora Quarantine/asset-\(index).jpg"),
                 byteCount: 100, digest: "digest-\(index % 5)", decisionActor: "user",
                 decisionReasonCode: reason, decisionUpdatedAt: baseDate.addingTimeInterval(Double(index)),
                 canonicalAssetID: AssetID(rawValue: "keeper-\(index % 25)")

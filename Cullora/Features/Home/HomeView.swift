@@ -17,10 +17,10 @@ struct HomeView: View {
                 metrics
                 scanStatus
             }
-            .padding(CulloraDesign.pagePadding)
+            .padding(KeptoraDesign.pagePadding)
             .frame(maxWidth: 1120, alignment: .leading)
         }
-        .background(CulloraDesign.canvas)
+        .background(KeptoraDesign.canvas)
         .navigationTitle("Home")
     }
 
@@ -44,10 +44,10 @@ struct HomeView: View {
                 HStack(spacing: 16) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(CulloraDesign.accent.opacity(0.12))
+                            .fill(KeptoraDesign.accent.opacity(0.12))
                         Image(systemName: "folder.badge.gearshape")
                             .font(.system(size: 28))
-                            .foregroundStyle(CulloraDesign.accent)
+                            .foregroundStyle(KeptoraDesign.accent)
                     }
                     .frame(width: 58, height: 58)
 
@@ -59,7 +59,7 @@ struct HomeView: View {
                             .lineLimit(1)
                         Label(model.sourceAvailability.label, systemImage: model.sourceAvailability.isAvailable ? "externaldrive.badge.checkmark" : "externaldrive.badge.exclamationmark")
                             .font(.caption)
-                            .foregroundStyle(model.sourceAvailability.isAvailable ? CulloraDesign.success : CulloraDesign.warning)
+                            .foregroundStyle(model.sourceAvailability.isAvailable ? KeptoraDesign.success : KeptoraDesign.warning)
                     }
                     Spacer()
                 }
@@ -118,7 +118,7 @@ struct HomeView: View {
     private func scanResultMetric(_ title: String, value: String, image: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: image)
-                .foregroundStyle(CulloraDesign.accent)
+                .foregroundStyle(KeptoraDesign.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
                     .font(.headline.monospacedDigit())
@@ -129,7 +129,7 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(CulloraDesign.quiet, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var workflowStrip: some View {
@@ -139,21 +139,21 @@ struct HomeView: View {
                 value: "SHA-256",
                 detail: "SHA-256 verified",
                 systemImage: "checkmark.seal.fill",
-                color: CulloraDesign.success
+                color: KeptoraDesign.success
             )
             workflowStep(
                 title: "Similar Photos",
                 value: "\(model.similarityGroups.count.formatted()) groups",
                 detail: "Advisory only, no auto-delete",
                 systemImage: "sparkles.rectangle.stack",
-                color: CulloraDesign.accent
+                color: KeptoraDesign.accent
             )
             workflowStep(
                 title: "Cleanup Plan",
                 value: ByteCountFormatter.string(fromByteCount: model.plannedBytes, countStyle: .file),
                 detail: "Reversible, signed manifest",
                 systemImage: "list.clipboard.fill",
-                color: CulloraDesign.warning
+                color: KeptoraDesign.warning
             )
         }
     }
@@ -222,10 +222,10 @@ struct HomeView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(CulloraDesign.accentSubtle)
+                            .fill(KeptoraDesign.accentSubtle)
                         Image(systemName: "sparkles")
                             .font(.title3.weight(.semibold))
-                            .foregroundStyle(CulloraDesign.accent)
+                            .foregroundStyle(KeptoraDesign.accent)
                     }
                     .frame(width: 42, height: 42)
                     VStack(alignment: .leading, spacing: 4) {
@@ -242,7 +242,7 @@ struct HomeView: View {
                         Button("View Cullora Pro") { store.presentPaywall(.settings) }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.small)
-                            .tint(CulloraDesign.accent)
+                            .tint(KeptoraDesign.accent)
                     }
                 }
             }
@@ -262,7 +262,7 @@ struct HomeView: View {
     private var headerCopy: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Free up space. Keep what matters.")
-                .font(CulloraDesign.titleFont)
+                .font(KeptoraDesign.titleFont)
             Text("Finds exact duplicates with byte-level proof. Review, then clean up — reversibly.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
@@ -274,7 +274,7 @@ struct HomeView: View {
         VStack(alignment: .trailing, spacing: 8) {
             Label(store.isLifetimeUnlocked ? "Lifetime unlocked" : store.trialLabel, systemImage: store.isLifetimeUnlocked ? "checkmark.seal.fill" : "gauge.with.dots.needle.50percent")
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(store.isLifetimeUnlocked ? CulloraDesign.success : CulloraDesign.accent)
+                .foregroundStyle(store.isLifetimeUnlocked ? KeptoraDesign.success : KeptoraDesign.accent)
         }
     }
 
@@ -309,7 +309,7 @@ struct HomeView: View {
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title.uppercased())
-                        .font(CulloraDesign.labelFont)
+                        .font(KeptoraDesign.labelFont)
                         .foregroundStyle(.secondary)
                     Text(value)
                         .font(.headline.monospacedDigit())

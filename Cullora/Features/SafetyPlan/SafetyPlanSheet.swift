@@ -179,7 +179,7 @@ struct SafetyPlanSheet: View {
             }
             .padding(22)
         } else {
-            CulloraUnavailableView("No plan available", systemImage: "shippingbox")
+            KeptoraUnavailableView("No plan available", systemImage: "shippingbox")
         }
     }
 
@@ -246,6 +246,6 @@ struct SafetyPlanSheet: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CulloraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

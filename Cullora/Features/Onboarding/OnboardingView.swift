@@ -52,24 +52,24 @@ struct OnboardingView: View {
             .shadow(color: item.accent.opacity(0.22), radius: 14, y: 6)
             .accessibilityHidden(true)
             .onChange(of: page) { _ in
-                withAnimation(CulloraDesign.animSpring) {
+                withAnimation(KeptoraDesign.animSpring) {
                     iconBounce = true
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                    withAnimation(CulloraDesign.animSpring) { iconBounce = false }
+                    withAnimation(KeptoraDesign.animSpring) { iconBounce = false }
                 }
             }
             .onAppear {
-                withAnimation(CulloraDesign.animSpring.delay(0.1)) { iconBounce = true }
+                withAnimation(KeptoraDesign.animSpring.delay(0.1)) { iconBounce = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                    withAnimation(CulloraDesign.animSpring) { iconBounce = false }
+                    withAnimation(KeptoraDesign.animSpring) { iconBounce = false }
                 }
             }
 
             // Kopya
             VStack(spacing: 12) {
                 Text(item.title)
-                    .font(CulloraDesign.titleFont)
+                    .font(KeptoraDesign.titleFont)
                     .multilineTextAlignment(.center)
                     .transition(.asymmetric(
                         insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -89,7 +89,7 @@ struct OnboardingView: View {
                     .id("detail-\(page)")
             }
             .padding(.top, 26)
-            .animation(CulloraDesign.animMedium, value: page)
+            .animation(KeptoraDesign.animMedium, value: page)
 
             // Dot indicator
             HStack(spacing: 8) {
@@ -97,7 +97,7 @@ struct OnboardingView: View {
                     Capsule()
                         .fill(index == page ? item.accent : Color.secondary.opacity(0.22))
                         .frame(width: index == page ? 28 : 8, height: 8)
-                        .animation(CulloraDesign.animSpring, value: page)
+                        .animation(KeptoraDesign.animSpring, value: page)
                 }
             }
             .padding(.top, 26)
@@ -113,7 +113,7 @@ struct OnboardingView: View {
                 Spacer()
                 if page > 0 {
                     Button("Back") {
-                        withAnimation(CulloraDesign.animMedium) { page -= 1 }
+                        withAnimation(KeptoraDesign.animMedium) { page -= 1 }
                     }
                 }
                 Button(page == pages.count - 1 ? "Get Started" : "Continue") {
@@ -121,13 +121,13 @@ struct OnboardingView: View {
                         model.completeOnboarding()
                         model.chooseFolder()
                     } else {
-                        withAnimation(CulloraDesign.animMedium) { page += 1 }
+                        withAnimation(KeptoraDesign.animMedium) { page += 1 }
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(item.accent)
                 .keyboardShortcut(.defaultAction)
-                .animation(CulloraDesign.animFast, value: page)
+                .animation(KeptoraDesign.animFast, value: page)
             }
             .padding(20)
         }

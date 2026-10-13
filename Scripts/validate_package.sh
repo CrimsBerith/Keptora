@@ -8,7 +8,7 @@ fi
 
 plutil -lint "$ROOT/Cullora.xcodeproj/project.pbxproj"
 plutil -lint "$ROOT/Cullora/Resources/Info.plist"
-plutil -lint "$ROOT/Cullora/Resources/Cullora.entitlements"
+plutil -lint "$ROOT/Cullora/Resources/Keptora.entitlements"
 plutil -lint "$ROOT/Cullora/Resources/PrivacyInfo.xcprivacy"
 
 python3 - <<PY
@@ -17,7 +17,7 @@ from pathlib import Path
 root = Path(r"$ROOT")
 for path in [
     root / "Cullora/Resources/Localizable.xcstrings",
-    root / "Cullora/Resources/Cullora.storekit",
+    root / "Cullora/Resources/Keptora.storekit",
     root / "Cullora/Resources/Assets.xcassets/Contents.json",
     root / "Cullora/Resources/Assets.xcassets/AccentColor.colorset/Contents.json",
     root / "Cullora/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json",
@@ -44,7 +44,7 @@ PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/cullora-python-cache" python3 -m py_compile
 SWIFT_FILES=()
 while IFS= read -r file; do
   SWIFT_FILES+=("$file")
-done < <(find "$ROOT/Cullora" "$ROOT/CulloraTests" -name '*.swift' -type f | sort)
+done < <(find "$ROOT/Cullora" "$ROOT/KeptoraTests" -name '*.swift' -type f | sort)
 $SWIFTC -frontend -parse "${SWIFT_FILES[@]}" >/dev/null
 
 python3 "$ROOT/Scripts/validate_project_references.py"

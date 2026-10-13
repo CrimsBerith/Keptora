@@ -13,7 +13,7 @@ command -v xcodebuild >/dev/null || { echo "xcodebuild not found" >&2; exit 69; 
 mkdir -p ValidationArtifacts/Mac
 mkdir -p Build
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT/Build/DerivedData}"
-rm -rf "$DERIVED_DATA_PATH" ValidationArtifacts/Mac/CulloraTests.xcresult
+rm -rf "$DERIVED_DATA_PATH" ValidationArtifacts/Mac/KeptoraTests.xcresult
 EXPORT_OPTIONS_PLIST="${EXPORT_OPTIONS_PLIST:-$ROOT/Release/ExportOptions-AppStore.plist}"
 if [[ ! -f "$EXPORT_OPTIONS_PLIST" ]]; then
   echo "Missing real App Store export options: $EXPORT_OPTIONS_PLIST" >&2
@@ -29,7 +29,7 @@ xcodebuild \
   -destination 'platform=macOS' \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   -enableCodeCoverage YES \
-  -resultBundlePath ValidationArtifacts/Mac/CulloraTests.xcresult \
+  -resultBundlePath ValidationArtifacts/Mac/KeptoraTests.xcresult \
   clean test | tee ValidationArtifacts/Mac/xcode_test.log
 xcodebuild \
   -project Cullora.xcodeproj \

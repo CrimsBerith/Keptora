@@ -10,7 +10,7 @@
 7. Add non-keeper copies to the Safety Plan.
 8. Review the exact file list, paths, and byte estimate.
 9. Cullora writes a signed precommit manifest before the first move.
-10. Each selected file is re-hashed and then moved into `.Cullora Quarantine/<plan-id>/…` under the selected source.
+10. Each selected file is re-hashed and then moved into `.Keptora Quarantine/<plan-id>/…` under the selected source.
 11. History shows the plan and signed manifest. Restore verifies the manifest and file digest before moving the file back.
 
 ## Incremental index
@@ -51,7 +51,7 @@ The manifest is stored before any file-system mutation and then made read-only w
 The quarantine destination is inside the selected source root:
 
 ```text
-<Selected Folder>/.Cullora Quarantine/<plan-id>/<relative-original-path>
+<Selected Folder>/.Keptora Quarantine/<plan-id>/<relative-original-path>
 ```
 
 This design keeps the move on the source volume and preserves the original relative path. Cullora blocks destination collisions and never overwrites an existing file. The hidden quarantine directory is skipped by the scanner.

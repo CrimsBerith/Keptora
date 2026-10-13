@@ -116,11 +116,11 @@ need(ac.get('marketing_screenshot_status')=='REAL_MAC_SIGNED_RELEASE_CAPTURE_REQ
 # Phase Q UI automation completeness: every portfolio app ships a real UI-test target.
 pbx_text=(R/'Cullora.xcodeproj'/'project.pbxproj').read_text(errors='replace')
 scheme_text=(R/'Cullora.xcodeproj'/'xcshareddata'/'xcschemes'/'Cullora.xcscheme').read_text(errors='replace')
-ui_test=R/'CulloraUITests'/'CulloraUITests.swift'
-need(ui_test.exists(), 'CulloraUITests source missing')
-need('com.apple.product-type.bundle.ui-testing' in pbx_text and 'CulloraUITests' in pbx_text, 'Cullora UI-testing target missing')
-need('CulloraUITests.xctest' in scheme_text, 'Cullora scheme does not execute UI tests')
-need('-portfolioUITesting' in ui_test.read_text(errors='replace') and '-culloraScreenshotReconciliation' in ui_test.read_text(errors='replace'), 'deterministic Cullora screenshot UI test missing')
+ui_test=R/'KeptoraUITests'/'KeptoraUITests.swift'
+need(ui_test.exists(), 'KeptoraUITests source missing')
+need('com.apple.product-type.bundle.ui-testing' in pbx_text and 'KeptoraUITests' in pbx_text, 'Cullora UI-testing target missing')
+need('KeptoraUITests.xctest' in scheme_text, 'Cullora scheme does not execute UI tests')
+need('-portfolioUITesting' in ui_test.read_text(errors='replace') and '-keptoraScreenshotReconciliation' in ui_test.read_text(errors='replace'), 'deterministic Cullora screenshot UI test missing')
 
 if err:
     print('FAIL Phase Q'); [print(' - '+e) for e in err]; sys.exit(1)

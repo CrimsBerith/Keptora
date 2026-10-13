@@ -49,9 +49,9 @@ require('Similarity suggestions never enter this evidence path' in review_ui,'Si
 require('Decision proof' in safety_ui and 'provenanceCount' in safety_ui,'Safety Plan provenance summary missing')
 require('signed manifest' in safety_ui.lower(),'Safety Plan does not explain sealed provenance')
 require('ContentUnavailableView' not in ''.join(p.read_text() for p in (ROOT/'Cullora').rglob('*.swift')),'macOS 13-incompatible ContentUnavailableView introduced')
-require('ReviewDecisionEvidenceTests' in (ROOT/'CulloraTests/ReviewSessionCheckpointTests.swift').read_text(),'Decision evidence XCTest source missing')
-require('reasonCode == "user-batch-added-exact-extras"' in (ROOT/'CulloraTests/SQLiteDatabaseTests.swift').read_text(),'Batch provenance DB assertion missing')
-require(('manifest.schemaVersion, 3' in (ROOT/'CulloraTests/RestorePreviewTests.swift').read_text()) or ('manifest.schemaVersion, 4' in (ROOT/'CulloraTests/RestorePreviewTests.swift').read_text()),'Signed manifest provenance assertion missing')
+require('ReviewDecisionEvidenceTests' in (ROOT/'KeptoraTests/ReviewSessionCheckpointTests.swift').read_text(),'Decision evidence XCTest source missing')
+require('reasonCode == "user-batch-added-exact-extras"' in (ROOT/'KeptoraTests/SQLiteDatabaseTests.swift').read_text(),'Batch provenance DB assertion missing')
+require(('manifest.schemaVersion, 3' in (ROOT/'KeptoraTests/RestorePreviewTests.swift').read_text()) or ('manifest.schemaVersion, 4' in (ROOT/'KeptoraTests/RestorePreviewTests.swift').read_text()),'Signed manifest provenance assertion missing')
 
 run(['swiftc','-typecheck','Scripts/VolumeIdentityLinuxStub.swift','Cullora/Core/Models/AssetDescriptor.swift','Cullora/Core/Models/FamilyModels.swift','Cullora/Core/Models/ReviewModels.swift'])
 run(['swiftc','-O','Scripts/VolumeIdentityLinuxStub.swift','Cullora/Core/Models/AssetDescriptor.swift','Cullora/Core/Models/FamilyModels.swift','Cullora/Core/Models/ReviewModels.swift','Scripts/phase5p_review_evidence_smoke.swift','-o','/tmp/cullora_phase5p_review_evidence'])

@@ -4,7 +4,7 @@ import json, plistlib, re, sys
 ROOT=Path(__file__).resolve().parents[1]
 errors=[]
 project=(ROOT/'Cullora.xcodeproj/project.pbxproj').read_text()
-store=json.loads((ROOT/'Cullora/Resources/Cullora.storekit').read_text())
+store=json.loads((ROOT/'Cullora/Resources/Keptora.storekit').read_text())
 metadata=json.loads((ROOT/'AppStore/app_store_metadata.json').read_text())
 info=plistlib.loads((ROOT/'Cullora/Resources/Info.plist').read_bytes())
 purchase=(ROOT/'Cullora/Core/Purchases/StoreEntitlementController.swift').read_text()

@@ -49,7 +49,7 @@ Safety Plans can be sorted by path, filename, or largest file. Plans over 1,000 
 - folds case and width predictably;
 - trims leading dots from extension rules;
 - compares path components rather than raw string replacement;
-- keeps `.Cullora Quarantine`, `.git`, `node_modules`, and `@eaDir` protected.
+- keeps `.Keptora Quarantine`, `.git`, `node_modules`, and `@eaDir` protected.
 
 New XCTest coverage checks decomposed accents, uppercase extensions, and mixed-case quarantine paths.
 

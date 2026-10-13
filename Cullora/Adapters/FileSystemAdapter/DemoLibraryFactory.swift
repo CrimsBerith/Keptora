@@ -6,7 +6,7 @@ enum DemoLibraryFactory {
 
     static func prepare(in applicationSupportDirectory: URL) throws -> URL {
         let root = applicationSupportDirectory.appendingPathComponent("Demo Photo Library 5M", isDirectory: true)
-        let marker = root.appendingPathComponent(".cullora-demo-version")
+        let marker = root.appendingPathComponent(".keptora-demo-version")
         if FileManager.default.fileExists(atPath: marker.path),
            (try? String(contentsOf: marker, encoding: .utf8)) == demoVersion {
             return root
@@ -41,7 +41,7 @@ enum DemoLibraryFactory {
         )
         try rawPreview.write(to: root.appendingPathComponent("DSC_0001.jpg"), options: .atomic)
         try rawPreview.write(to: root.appendingPathComponent("DSC_0001_Edit.jpg"), options: .atomic)
-        try #"<x:xmpmeta><rdf:Description cullora:demo="true"/></x:xmpmeta>"#.write(
+        try #"<x:xmpmeta><rdf:Description keptora:demo="true"/></x:xmpmeta>"#.write(
             to: root.appendingPathComponent("DSC_0001.xmp"), atomically: true, encoding: .utf8
         )
 

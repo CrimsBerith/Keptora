@@ -10,8 +10,8 @@ need() { if (set +o pipefail; eval "$2"); then ok "$1"; else bad "$1"; fi; }
 need "Xcode project present" "find "$ROOT" -maxdepth 1 -name '*.xcodeproj' -type d | grep -q ."
 need "Privacy manifest present" "find "$ROOT/Cullora" -name 'PrivacyInfo.xcprivacy' -type f | grep -q ."
 need "Entitlements present" "find "$ROOT/Cullora" -name '*.entitlements' -type f | grep -q ."
-need "Product root accessibility identity" "grep -R -F -- 'cullora.root' "$ROOT/Cullora" | grep -q ."
-need "Successor deterministic screenshot switch" "grep -R -F -- '-culloraScreenshotReconciliation' "$ROOT/Cullora" | grep -q ."
+need "Product root accessibility identity" "grep -R -F -- 'keptora.root' "$ROOT/Cullora" | grep -q ."
+need "Successor deterministic screenshot switch" "grep -R -F -- '-keptoraScreenshotReconciliation' "$ROOT/Cullora" | grep -q ."
 need "Successor surface title retained" "grep -R -F -- 'QUARANTINE DECISION RECONCILIATION' "$ROOT/Cullora" | grep -q ."
 need "Keyboard access exists" "grep -R -F -- 'keyboardShortcut' "$ROOT/Cullora" | grep -q ."
 count=$(grep -R -F -- 'accessibilityIdentifier(' "$ROOT/Cullora" | wc -l | tr -d ' ')
@@ -42,7 +42,7 @@ else
 fi
 
 if [ false = true ]; then
-  need "Successor UI test contract" "grep -R -F -- '-culloraScreenshotReconciliation' "$ROOT" | grep -q ."
+  need "Successor UI test contract" "grep -R -F -- '-keptoraScreenshotReconciliation' "$ROOT" | grep -q ."
 else
   ok "Successor UI test contract handled by source gate (no UI-test target)"
 fi

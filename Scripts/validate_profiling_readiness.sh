@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CTRL="$ROOT/Cullora/Core/CulloraResiliencePerformanceController.swift"
-grep -q 'enum CulloraProfilingHooks' "$CTRL"
+CTRL="$ROOT/Cullora/Core/KeptoraResiliencePerformanceController.swift"
+grep -q 'enum KeptoraProfilingHooks' "$CTRL"
 grep -q 'os_signpost' "$CTRL"
 grep -q 'CULLORA_REAL_CORPUS_PATH' "$CTRL"
 grep -q 'externalCorpusOnly' "$ROOT/Docs/Profiling/real-corpus-manifest.example.json"

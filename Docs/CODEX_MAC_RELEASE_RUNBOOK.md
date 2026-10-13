@@ -39,7 +39,7 @@ Also replace public URL, legal, contact, and review-note placeholders in `AppSto
 2. Select the Cullora app target and the real Development Team.
 3. Confirm macOS deployment target 13.0 or the approved final target.
 4. Confirm App Sandbox, Hardened Runtime, User Selected File read/write, `com.apple.security.files.bookmarks.app-scope`, and `com.apple.security.personal-information.photos-library`. Do not enable broad Pictures-folder access unless a shipping workflow requires it.
-5. Select `Cullora.storekit` in the Run scheme for local purchase testing only.
+5. Select `Keptora.storekit` in the Run scheme for local purchase testing only.
 6. Keep strict concurrency diagnostics enabled; do not silence warnings with unsafe isolation changes.
 7. Clean the build folder and resolve every compile error or warning that affects correctness.
 

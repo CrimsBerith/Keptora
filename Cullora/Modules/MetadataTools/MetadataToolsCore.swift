@@ -1,6 +1,6 @@
 import Foundation
 
-enum CulloraMetadataTools {
+enum KeptoraMetadataTools {
     enum Risk: Int, Codable, Comparable, Sendable { case clean = 0, review = 1, sensitive = 3; static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue } }
     enum Category: String, Codable, CaseIterable, Sendable { case location, creator, device, software, keywords, timing }
     struct Asset: Identifiable, Codable, Hashable, Sendable {

@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 import XCTest
-@testable import Cullora
+@testable import Keptora
 
 final class ReconciliationCoordinatorTests: XCTestCase {
     func testRepairsMoveThatFinishedBeforeDatabaseUpdate() async throws {
@@ -28,7 +28,7 @@ final class ReconciliationCoordinatorTests: XCTestCase {
         try await database.upsert(asset: asset, fingerprint: ExactFingerprint(algorithm: "sha256", digest: digest, byteCount: Int64(bytes.count)))
 
         let planID = "plan"
-        let quarantine = source.appendingPathComponent(".Cullora Quarantine/plan/copy.jpg")
+        let quarantine = source.appendingPathComponent(".Keptora Quarantine/plan/copy.jpg")
         let operation = CleanupOperationPreview(
             id: "operation", groupID: "group", assetID: asset.id, displayName: asset.displayName,
             originalURL: original, quarantineURL: quarantine, byteCount: Int64(bytes.count), digest: digest
@@ -56,7 +56,7 @@ final class ReconciliationCoordinatorTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let original = source.appendingPathComponent("copy.jpg")
-        let quarantine = source.appendingPathComponent(".Cullora Quarantine/plan/copy.jpg")
+        let quarantine = source.appendingPathComponent(".Keptora Quarantine/plan/copy.jpg")
         let bytes = Data("same bytes".utf8)
         try bytes.write(to: original)
         try FileManager.default.createDirectory(at: quarantine.deletingLastPathComponent(), withIntermediateDirectories: true)

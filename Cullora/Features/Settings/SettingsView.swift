@@ -3,10 +3,10 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
-    @AppStorage("Cullora.CheckpointInterval") private var checkpointInterval = 100
-    @AppStorage("Cullora.ShowFilePaths") private var showFilePaths = false
-    @AppStorage("Cullora.Feature.Similarity.v1") private var similarityEnabled = true
-    @AppStorage("Cullora.Feature.PhotoKitBytes.v1") private var photoKitProbeEnabled = false
+    @AppStorage("Keptora.CheckpointInterval") private var checkpointInterval = 100
+    @AppStorage("Keptora.ShowFilePaths") private var showFilePaths = false
+    @AppStorage("Keptora.Feature.Similarity.v1") private var similarityEnabled = true
+    @AppStorage("Keptora.Feature.PhotoKitBytes.v1") private var photoKitProbeEnabled = false
     @AppStorage(SourceExclusionPolicy.folderDefaultsKey) private var excludedFolders = ""
     @AppStorage(SourceExclusionPolicy.extensionDefaultsKey) private var excludedExtensions = ""
     @AppStorage(SimilaritySensitivityPreset.defaultsKey) private var sensitivityRaw = SimilaritySensitivityPreset.precisionFirst.rawValue
@@ -34,7 +34,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            CulloraReleaseLinks()
+            KeptoraReleaseLinks()
             Section("Scanning") {
                 Stepper("Checkpoint every \(checkpointInterval) assets", value: $checkpointInterval, in: 25...500, step: 25)
                 Text("Smaller checkpoints improve interruption recovery but add a small amount of database work.")
@@ -47,7 +47,7 @@ struct SettingsView: View {
                     .textFieldStyle(.roundedBorder)
                 TextField("File extensions, comma-separated", text: $excludedExtensions)
                     .textFieldStyle(.roundedBorder)
-                Label("Cullora always skips hidden items, package contents, .Cullora Quarantine, .git and node_modules. Custom rules apply on the next scan.", systemImage: "line.3.horizontal.decrease.circle")
+                Label("Cullora always skips hidden items, package contents, .Keptora Quarantine, .git and node_modules. Custom rules apply on the next scan.", systemImage: "line.3.horizontal.decrease.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -105,7 +105,7 @@ struct SettingsView: View {
                 HStack {
                     Button("View Cullora Pro") { store.presentPaywall(.settings) }
                         .buttonStyle(.borderedProminent)
-                        .tint(CulloraDesign.accent)
+                        .tint(KeptoraDesign.accent)
                     Button("Restore Purchases") { Task { await store.restorePurchases() } }
                         .disabled(store.isWorking)
                 }
@@ -133,7 +133,7 @@ struct SettingsView: View {
 }
 
 
-private struct CulloraReleaseLinks: View {
+private struct KeptoraReleaseLinks: View {
   private var privacy: URL? { URL(string: Bundle.main.object(forInfoDictionaryKey: "APP_PRIVACY_POLICY_URL") as? String ?? "") }
   private var support: URL? { URL(string: Bundle.main.object(forInfoDictionaryKey: "APP_SUPPORT_URL") as? String ?? "") }
   private func configured(_ url: URL?) -> Bool {

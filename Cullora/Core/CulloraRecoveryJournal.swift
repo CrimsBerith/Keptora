@@ -3,23 +3,23 @@
 
 import Foundation
 
-enum CulloraRecoveryState: String, Codable, Sendable {
+enum KeptoraRecoveryState: String, Codable, Sendable {
     case started
     case committed
     case cancelled
     case failed
 }
 
-struct CulloraRecoveryRecord: Codable, Hashable, Sendable, Identifiable {
+struct KeptoraRecoveryRecord: Codable, Hashable, Sendable, Identifiable {
     let id: UUID
     let operation: String
     let startedAt: Date
     var updatedAt: Date
     let payloadDigest: String
-    var state: CulloraRecoveryState
+    var state: KeptoraRecoveryState
     var note: String?
 
-    init(id: UUID = UUID(), operation: String, startedAt: Date = Date(), updatedAt: Date? = nil, payloadDigest: String, state: CulloraRecoveryState = .started, note: String? = nil) {
+    init(id: UUID = UUID(), operation: String, startedAt: Date = Date(), updatedAt: Date? = nil, payloadDigest: String, state: KeptoraRecoveryState = .started, note: String? = nil) {
         self.id = id
         self.operation = operation
         self.startedAt = startedAt
@@ -30,7 +30,7 @@ struct CulloraRecoveryRecord: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
-struct CulloraRecoveryJournal: Sendable {
+struct KeptoraRecoveryJournal: Sendable {
     let directory: URL
     let defaultStaleAfter: TimeInterval
 
@@ -49,7 +49,7 @@ struct CulloraRecoveryJournal: Sendable {
         try FileManager.default.createDirectory(at: archivedDirectory, withIntermediateDirectories: true)
     }
 
-    func record(_ record: CulloraRecoveryRecord) throws {
+    func record(_ record: KeptoraRecoveryRecord) throws {
         try prepare()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -58,14 +58,14 @@ struct CulloraRecoveryJournal: Sendable {
         try data.write(to: recordURL(record.id), options: .atomic)
     }
 
-    func begin(operation: String, payloadDigest: String, now: Date = Date()) throws -> CulloraRecoveryRecord {
-        let value = CulloraRecoveryRecord(operation: operation, startedAt: now, payloadDigest: payloadDigest)
+    func begin(operation: String, payloadDigest: String, now: Date = Date()) throws -> KeptoraRecoveryRecord {
+        let value = KeptoraRecoveryRecord(operation: operation, startedAt: now, payloadDigest: payloadDigest)
         try record(value)
         return value
     }
 
     @discardableResult
-    func transition(id: UUID, to state: CulloraRecoveryState, note: String? = nil, now: Date = Date()) throws -> CulloraRecoveryRecord? {
+    func transition(id: UUID, to state: KeptoraRecoveryState, note: String? = nil, now: Date = Date()) throws -> KeptoraRecoveryRecord? {
         guard var value = try load(id: id) else { return nil }
         value.state = state
         value.updatedAt = now
@@ -74,7 +74,7 @@ struct CulloraRecoveryJournal: Sendable {
         return value
     }
 
-    func load(id: UUID) throws -> CulloraRecoveryRecord? {
+    func load(id: UUID) throws -> KeptoraRecoveryRecord? {
         let url = recordURL(id)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         do {
@@ -85,10 +85,10 @@ struct CulloraRecoveryJournal: Sendable {
         }
     }
 
-    func loadAll() -> [CulloraRecoveryRecord] {
+    func loadAll() -> [KeptoraRecoveryRecord] {
         do { try prepare() } catch { return [] }
         let urls = (try? FileManager.default.contentsOfDirectory(at: recordsDirectory, includingPropertiesForKeys: nil)) ?? []
-        var values: [CulloraRecoveryRecord] = []
+        var values: [KeptoraRecoveryRecord] = []
         values.reserveCapacity(urls.count)
         for url in urls where url.pathExtension == "json" {
             do { values.append(try decode(Data(contentsOf: url))) }
@@ -100,12 +100,12 @@ struct CulloraRecoveryJournal: Sendable {
         }
     }
 
-    func recoverableOperations(now: Date = Date(), staleAfter: TimeInterval? = nil) -> [CulloraRecoveryRecord] {
+    func recoverableOperations(now: Date = Date(), staleAfter: TimeInterval? = nil) -> [KeptoraRecoveryRecord] {
         let threshold = max(1, staleAfter ?? defaultStaleAfter)
         return loadAll().filter { $0.state == .started && now.timeIntervalSince($0.updatedAt) >= threshold }
     }
 
-    func classifyRecoverable(_ records: [CulloraRecoveryRecord], now: Date, staleAfter: TimeInterval? = nil) -> [CulloraRecoveryRecord] {
+    func classifyRecoverable(_ records: [KeptoraRecoveryRecord], now: Date, staleAfter: TimeInterval? = nil) -> [KeptoraRecoveryRecord] {
         let threshold = max(1, staleAfter ?? defaultStaleAfter)
         return records.filter { $0.state == .started && now.timeIntervalSince($0.updatedAt) >= threshold }
     }
@@ -122,10 +122,10 @@ struct CulloraRecoveryJournal: Sendable {
 
     private func recordURL(_ id: UUID) -> URL { recordsDirectory.appendingPathComponent(id.uuidString.lowercased()).appendingPathExtension("json") }
 
-    private func decode(_ data: Data) throws -> CulloraRecoveryRecord {
+    private func decode(_ data: Data) throws -> KeptoraRecoveryRecord {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(CulloraRecoveryRecord.self, from: data)
+        return try decoder.decode(KeptoraRecoveryRecord.self, from: data)
     }
 
     private func quarantine(_ url: URL) throws {

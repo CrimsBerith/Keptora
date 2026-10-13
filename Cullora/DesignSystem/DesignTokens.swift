@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum CulloraDesign {
+enum KeptoraDesign {
     // MARK: – Layout
     static let pagePadding: CGFloat = 28
     static let cardRadius: CGFloat = 12
@@ -97,10 +97,10 @@ struct PremiumCard<Content: View>: View {
     var body: some View {
         content
             .padding(20)
-            .background(CulloraDesign.elevated, in: ArchivePlateShape(cut: 11))
+            .background(KeptoraDesign.elevated, in: ArchivePlateShape(cut: 11))
             .overlay {
                 ArchivePlateShape(cut: 11)
-                    .strokeBorder(CulloraDesign.accentBorder)
+                    .strokeBorder(KeptoraDesign.accentBorder)
             }
             .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
     }
@@ -117,7 +117,7 @@ struct MetricTile: View {
                 Image(systemName: systemImage)
                     .font(.title3)
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(CulloraDesign.accent)
+                    .foregroundStyle(KeptoraDesign.accent)
                 Text(value)
                     .font(.system(size: 27, weight: .semibold, design: .rounded))
                 Text(title)
@@ -129,7 +129,7 @@ struct MetricTile: View {
     }
 }
 
-struct CulloraUnavailableView: View {
+struct KeptoraUnavailableView: View {
     let title: LocalizedStringKey
     let systemImage: String
     let description: LocalizedStringKey?

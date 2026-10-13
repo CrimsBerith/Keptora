@@ -3,7 +3,7 @@ import Foundation
 import FoundationXML
 #endif
 
-enum CulloraJourneyMatch {
+enum KeptoraJourneyMatch {
     struct Point: Identifiable, Codable, Hashable, Sendable {
         let id: UUID; let latitude: Double; let longitude: Double; let elevation: Double?; let timestamp: Date; let segment: Int
         init(id: UUID = UUID(), latitude: Double, longitude: Double, elevation: Double? = nil, timestamp: Date, segment: Int = 0) {

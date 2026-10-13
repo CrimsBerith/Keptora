@@ -85,7 +85,7 @@ actor QuarantineCoordinator {
 
         let planID = UUID().uuidString.lowercased()
         let quarantineRoot = sourceRoot
-            .appendingPathComponent(".Cullora Quarantine", isDirectory: true)
+            .appendingPathComponent(".Keptora Quarantine", isDirectory: true)
             .appendingPathComponent(planID, isDirectory: true)
         let standardizedRoot = sourceRoot.standardizedFileURL
 

@@ -4,7 +4,7 @@ import StoreKit
 
 @MainActor
 final class StoreEntitlementController: ObservableObject {
-    static let lifetimeProductID = Bundle.main.object(forInfoDictionaryKey: "APP_LIFETIME_PRODUCT_ID") as? String ?? "com.cullora.app.pro.lifetime"
+    static let lifetimeProductID = Bundle.main.object(forInfoDictionaryKey: "APP_LIFETIME_PRODUCT_ID") as? String ?? "com.keptora.app.pro.lifetime"
 
     @Published private(set) var lifetimeProduct: Product?
     @Published private(set) var isLifetimeUnlocked = false
@@ -15,7 +15,7 @@ final class StoreEntitlementController: ObservableObject {
     @Published private(set) var reviewedAssetIDs: Set<String>
 
     private let defaults: UserDefaults
-    private let reviewedAssetsKey = "Cullora.Trial.ReviewedAssetIDs.v1"
+    private let reviewedAssetsKey = "Keptora.Trial.ReviewedAssetIDs.v1"
     private var transactionUpdatesTask: Task<Void, Never>?
 
     init(defaults: UserDefaults = .standard) {

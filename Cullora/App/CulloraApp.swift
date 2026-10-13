@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 @MainActor
-struct CulloraApp: App {
+struct KeptoraApp: App {
     @StateObject private var model = AppModel()
     @StateObject private var store = StoreEntitlementController()
 

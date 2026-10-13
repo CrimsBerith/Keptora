@@ -3,7 +3,7 @@ import Foundation
 @main
 struct FinalHardeningFixture {
     static func main() async {
-        let coordinator = CulloraLifecycleCoordinator()
+        let coordinator = KeptoraLifecycleCoordinator()
         let first = await coordinator.begin("first")
         let firstMayCommit = await coordinator.mayCommit(first)
         precondition(firstMayCommit)
@@ -21,8 +21,8 @@ struct FinalHardeningFixture {
         let snap = await coordinator.snapshot()
         precondition(snap.state == .active)
         precondition(snap.bookmarkRevision == 1)
-        precondition(CulloraWindowStressContract.density(width: 1010, height: 800) == .compact)
-        precondition(CulloraWindowStressContract.density(width: 1490, height: 900) == .expansive)
+        precondition(KeptoraWindowStressContract.density(width: 1010, height: 800) == .compact)
+        precondition(KeptoraWindowStressContract.density(width: 1490, height: 900) == .expansive)
         for i in 0..<50_000 {
             let t = await coordinator.begin("stress-\(i)")
             if i.isMultiple(of: 2) { await coordinator.cancel(t) } else { await coordinator.finish(t) }

@@ -16,7 +16,7 @@ struct HistoryView: View {
     var body: some View {
         Group {
             if model.cleanupHistory.isEmpty {
-                CulloraUnavailableView(
+                KeptoraUnavailableView(
                     "No cleanup history yet",
                     systemImage: "clock.badge.checkmark",
                     description: "Completed Safety Plans will appear here.",
@@ -42,10 +42,10 @@ struct HistoryView: View {
                             }
                         }
                     }
-                    .padding(CulloraDesign.pagePadding)
+                    .padding(KeptoraDesign.pagePadding)
                     .frame(maxWidth: 980)
                 }
-                .background(CulloraDesign.canvas)
+                .background(KeptoraDesign.canvas)
             }
         }
         .navigationTitle("Quarantine & Restore")
@@ -151,7 +151,7 @@ struct HistoryView: View {
                         }
                         .buttonStyle(.bordered)
                         .disabled(model.verifyingCleanupPlanID != nil || model.restoringPlanID != nil || model.isCommittingCleanup)
-                        .accessibilityIdentifier("cullora.history.verifyState.\(item.id)")
+                        .accessibilityIdentifier("keptora.history.verifyState.\(item.id)")
                     }
                     if item.canRestore {
                         Button {
@@ -181,7 +181,7 @@ struct HistoryView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CulloraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func statusImage(_ state: CleanupPlanState) -> String {

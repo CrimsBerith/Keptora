@@ -1,7 +1,7 @@
 import XCTest
 
 @MainActor
-final class CulloraUITests: XCTestCase {
+final class KeptoraUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -18,10 +18,10 @@ final class CulloraUITests: XCTestCase {
 
     func testReconciliationScreenshotModeLaunches() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-portfolioUITesting", "-culloraScreenshotReconciliation"]
+        app.launchArguments += ["-portfolioUITesting", "-keptoraScreenshotReconciliation"]
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["cullora.reconciliation.title"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.staticTexts["cullora.reconciliation.subtitle"].exists || app.staticTexts["WHY THIS CHANGED"].exists)
+        XCTAssertTrue(app.staticTexts["keptora.reconciliation.title"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["keptora.reconciliation.subtitle"].exists || app.staticTexts["WHY THIS CHANGED"].exists)
     }
 }

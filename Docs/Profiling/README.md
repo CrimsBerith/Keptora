@@ -10,11 +10,11 @@
 - Do not claim a real-corpus PASS until the local Mac corpus and trace have actually been run.
 
 ## Signpost spans
-- `CulloraEnumerateLibrary`
-- `CulloraFingerprintAssets`
-- `CulloraGroupSimilarity`
-- `CulloraQuarantineCommit`
-- `CulloraHealthSnapshot`
+- `KeptoraEnumerateLibrary`
+- `KeptoraFingerprintAssets`
+- `KeptoraGroupSimilarity`
+- `KeptoraQuarantineCommit`
+- `KeptoraHealthSnapshot`
 
 ## Corpus tiers
 

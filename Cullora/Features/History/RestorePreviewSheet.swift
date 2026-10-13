@@ -141,7 +141,7 @@ struct RestorePreviewSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            CulloraUnavailableView("No restore preview available", systemImage: "arrow.uturn.backward.circle")
+            KeptoraUnavailableView("No restore preview available", systemImage: "arrow.uturn.backward.circle")
         }
     }
 
@@ -198,7 +198,7 @@ struct RestorePreviewSheet: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CulloraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func icon(for readiness: RestoreOperationReadiness) -> String {

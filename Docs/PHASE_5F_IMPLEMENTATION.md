@@ -28,7 +28,7 @@ Phase 5F cannot delete files. `PhotoLibraryAdapter.delete` exists as an isolated
 - Signing: choose your team; use automatic signing.
 - Bundle ID: change placeholder in target Build Settings.
 - Photos description is included in `Info.plist`.
-- App Sandbox and user-selected read/write access are included in `Cullora.entitlements`.
+- App Sandbox and user-selected read/write access are included in `Keptora.entitlements`.
 - StoreKit product is test-only until App Store Connect creates the matching non-consumable.
 
 ## Validation commands

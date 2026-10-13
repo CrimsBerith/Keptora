@@ -56,7 +56,7 @@ struct ReviewStudioView: View {
                 reviewCanvas
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(CulloraDesign.reviewFloor)
+            .background(KeptoraDesign.reviewFloor)
             .safeAreaInset(edge: .bottom) {
                 decisionShelf
             }
@@ -77,9 +77,9 @@ struct ReviewStudioView: View {
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
-        .background(CulloraDesign.canvas)
+        .background(KeptoraDesign.canvas)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("cullora.review.floor")
+        .accessibilityIdentifier("keptora.review.floor")
         .onChange(of: model.selectedSimilarityGroupID) { _ in
             comparisonMemberID = nil
             resetComparisonViewport()
@@ -88,7 +88,7 @@ struct ReviewStudioView: View {
             model.setReviewModeExact(mode == .exact)
             model.ensureReviewFocus()
             model.checkpointReviewSession()
-            if ProcessInfo.processInfo.arguments.contains("-culloraScreenshotReconciliation") {
+            if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
                 showDecisionReconciliation = true
             }
         }
@@ -191,7 +191,7 @@ struct ReviewStudioView: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
             .background(.bar)
-            .overlay(alignment: .bottom) { Rectangle().fill(CulloraDesign.accent.opacity(0.18)).frame(height: 1) }
+            .overlay(alignment: .bottom) { Rectangle().fill(KeptoraDesign.accent.opacity(0.18)).frame(height: 1) }
     }
 
     @ViewBuilder
@@ -338,7 +338,7 @@ struct ReviewStudioView: View {
         }
         .frame(width: 342)
         .frame(maxHeight: .infinity)
-        .background(CulloraDesign.drawerSurface)
+        .background(KeptoraDesign.drawerSurface)
         .overlay {
             Rectangle().strokeBorder(.primary.opacity(0.10))
         }
@@ -484,7 +484,7 @@ struct ReviewStudioView: View {
             .listStyle(.inset)
             .overlay {
                 if filteredExactGroups.isEmpty {
-                    CulloraUnavailableView(
+                    KeptoraUnavailableView(
                         "No groups match",
                         systemImage: "line.3.horizontal.decrease.circle",
                         description: "Clear the review filter or search to see the full exact-duplicate queue."
@@ -614,7 +614,7 @@ struct ReviewStudioView: View {
                 .padding(22)
             }
         } else {
-            CulloraUnavailableView(
+            KeptoraUnavailableView(
                 "No exact duplicate groups",
                 systemImage: "square.on.square.dashed",
                 description: "Choose a folder and run a read-only scan to begin.",
@@ -679,7 +679,7 @@ struct ReviewStudioView: View {
                 .padding(22)
             }
         } else {
-            CulloraUnavailableView(
+            KeptoraUnavailableView(
                 "No similar-photo analysis yet",
                 systemImage: "sparkles.rectangle.stack",
                 description: "Build the local visual index to receive conservative, review-only suggestions.",
@@ -718,7 +718,7 @@ struct ReviewStudioView: View {
                 }.controlSize(.small)
             }
         } else {
-            CulloraUnavailableView(
+            KeptoraUnavailableView(
                 "No comparison candidate",
                 systemImage: "rectangle.split.2x1",
                 description: "This group needs at least two members for synchronized comparison."
@@ -797,7 +797,7 @@ struct ReviewStudioView: View {
                                 .controlSize(.small)
                         }
                         .padding(10)
-                        .background(CulloraDesign.quiet, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                     } else if model.selectedReviewAsset != nil {
                         Button {
                             showDecisionEvidence = true
@@ -1038,7 +1038,7 @@ private struct SynchronizedComparisonPane: View {
                 }
                 GeometryReader { proxy in
                     ZStack {
-                        Rectangle().fill(CulloraDesign.quiet)
+                        Rectangle().fill(KeptoraDesign.quiet)
                         if let image {
                             Image(nsImage: image).resizable().scaledToFit().scaleEffect(scale).offset(offset).frame(width: proxy.size.width, height: proxy.size.height)
                         } else { ProgressView() }
@@ -1073,7 +1073,7 @@ private struct LocalThumbnail: View {
 
     var body: some View {
         ZStack {
-            Rectangle().fill(CulloraDesign.quiet)
+            Rectangle().fill(KeptoraDesign.quiet)
             if let image {
                 Image(nsImage: image)
                     .resizable()
@@ -1184,7 +1184,7 @@ private struct DecisionEvidenceSheet: View {
                     .padding(22)
                 }
             } else {
-                CulloraUnavailableView(
+                KeptoraUnavailableView(
                     "No recorded decision",
                     systemImage: "doc.text.magnifyingglass",
                     description: "Choose Keep, Add to Plan, or Skip for the focused exact copy. Cullora will record the reason and show its evidence here."
@@ -1238,13 +1238,13 @@ struct QuarantineDecisionReconciliationView: View {
             HStack {
                 Text("QUARANTINE DECISION RECONCILIATION")
                     .font(.headline.monospaced())
-                    .accessibilityIdentifier("cullora.reconciliation.title")
+                    .accessibilityIdentifier("keptora.reconciliation.title")
                 Spacer()
                 Text("WHY THIS CHANGED")
                     .font(.caption.bold())
                     .foregroundStyle(.orange)
-                    .accessibilityIdentifier("cullora.reconciliation.subtitle")
-            }.padding(16).background(CulloraDesign.elevated)
+                    .accessibilityIdentifier("keptora.reconciliation.subtitle")
+            }.padding(16).background(KeptoraDesign.elevated)
             HStack(alignment: .top, spacing: 18) {
                 VStack(alignment: .leading, spacing: 10) {
                     TextField("Plan ID", text: $planID); TextField("Decision fingerprint", text: $decision); TextField("Manifest fingerprint", text: $manifest); TextField("Verification fingerprint", text: $verification); TextField("Filesystem fingerprint", text: $filesystem); TextField("Restore fingerprint (optional)", text: $restore)
@@ -1252,9 +1252,9 @@ struct QuarantineDecisionReconciliationView: View {
                     Button("Reconcile Snapshot") { reconcile() }.buttonStyle(.borderedProminent).disabled([planID,decision,manifest,verification,filesystem].contains(where: \.isEmpty))
                     if let message { Text(message).font(.caption).foregroundStyle(.secondary) }
                 }.textFieldStyle(.roundedBorder).frame(width: 360)
-                ScrollView { LazyVStack(alignment: .leading, spacing: 8) { ForEach(records.reversed()) { r in VStack(alignment: .leading, spacing: 4) { HStack { Text("R\(r.revisionNumber)").font(.caption.monospaced().bold()); Spacer(); Text(r.state.rawValue).font(.caption.bold()) }; Text(r.snapshot.planID).font(.caption); ForEach(r.reasons,id:\.self) { Text("• \($0)").font(.caption2) } }.padding(10).background(CulloraDesign.elevated, in: RoundedRectangle(cornerRadius: 8)) } } }.frame(maxWidth: .infinity)
+                ScrollView { LazyVStack(alignment: .leading, spacing: 8) { ForEach(records.reversed()) { r in VStack(alignment: .leading, spacing: 4) { HStack { Text("R\(r.revisionNumber)").font(.caption.monospaced().bold()); Spacer(); Text(r.state.rawValue).font(.caption.bold()) }; Text(r.snapshot.planID).font(.caption); ForEach(r.reasons,id:\.self) { Text("• \($0)").font(.caption2) } }.padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 8)) } } }.frame(maxWidth: .infinity)
             }.padding(18)
-        }.frame(minWidth: 780, minHeight: 500).background(CulloraDesign.reviewFloor).onAppear { records = store.load() }
+        }.frame(minWidth: 780, minHeight: 500).background(KeptoraDesign.reviewFloor).onAppear { records = store.load() }
     }
     private func loadCurrentSafetyPlan() {
         guard let plan = model.pendingPlan else {
@@ -1278,7 +1278,7 @@ struct QuarantineDecisionReconciliationView: View {
 
     private func reconcile() {
         let snapshot = QuarantineDecisionSnapshot(planID: planID, decisionFingerprint: decision, manifestFingerprint: manifest, verificationFingerprint: verification, filesystemFingerprint: filesystem, restoreFingerprint: restore.isEmpty ? nil : restore)
-        let r = CulloraPhase6DecisionCore.makeRecord(snapshot: snapshot, history: records)
+        let r = KeptoraPhase6DecisionCore.makeRecord(snapshot: snapshot, history: records)
         var next=records; next.append(r); do { try store.save(next); records=next; message="Snapshot persisted locally." } catch { message=error.localizedDescription }
     }
 }

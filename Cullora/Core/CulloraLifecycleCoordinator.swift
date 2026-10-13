@@ -3,13 +3,13 @@ import Foundation
 /// Product-owned stale-work and lifecycle ownership gate.
 /// The coordinator deliberately has no UI dependency so background/resume,
 /// external-volume and async adapters can share one deterministic epoch rule.
-struct CulloraWorkToken: Hashable, Sendable {
+struct KeptoraWorkToken: Hashable, Sendable {
     let id: UUID
     let epoch: UInt64
     let label: String
 }
 
-struct CulloraLifecycleSnapshot: Equatable, Sendable {
+struct KeptoraLifecycleSnapshot: Equatable, Sendable {
     enum State: String, Sendable { case active, suspended }
     let epoch: UInt64
     let state: State
@@ -17,31 +17,31 @@ struct CulloraLifecycleSnapshot: Equatable, Sendable {
     let bookmarkRevision: UInt64
 }
 
-actor CulloraLifecycleCoordinator {
+actor KeptoraLifecycleCoordinator {
     private var epoch: UInt64 = 1
-    private var state: CulloraLifecycleSnapshot.State = .active
-    private var activeTokens: Set<CulloraWorkToken> = []
+    private var state: KeptoraLifecycleSnapshot.State = .active
+    private var activeTokens: Set<KeptoraWorkToken> = []
     private var cancelledIDs: Set<UUID> = []
     private var bookmarkRevision: UInt64 = 0
 
     @discardableResult
-    func begin(_ label: String) -> CulloraWorkToken {
-        let token = CulloraWorkToken(id: UUID(), epoch: epoch, label: label)
+    func begin(_ label: String) -> KeptoraWorkToken {
+        let token = KeptoraWorkToken(id: UUID(), epoch: epoch, label: label)
         activeTokens.insert(token)
         return token
     }
 
     /// Call immediately before committing an async result to app state.
-    func mayCommit(_ token: CulloraWorkToken) -> Bool {
+    func mayCommit(_ token: KeptoraWorkToken) -> Bool {
         state == .active && token.epoch == epoch && activeTokens.contains(token) && !cancelledIDs.contains(token.id)
     }
 
-    func finish(_ token: CulloraWorkToken) {
+    func finish(_ token: KeptoraWorkToken) {
         activeTokens.remove(token)
         cancelledIDs.remove(token.id)
     }
 
-    func cancel(_ token: CulloraWorkToken) {
+    func cancel(_ token: KeptoraWorkToken) {
         if activeTokens.remove(token) != nil { cancelledIDs.insert(token.id) }
     }
 
@@ -59,7 +59,7 @@ actor CulloraLifecycleCoordinator {
     /// Increment only after a security-scoped bookmark or external resource is revalidated.
     func markBookmarkRevalidated() { bookmarkRevision &+= 1 }
 
-    func snapshot() -> CulloraLifecycleSnapshot {
+    func snapshot() -> KeptoraLifecycleSnapshot {
         .init(epoch: epoch, state: state, outstandingWorkCount: activeTokens.count, bookmarkRevision: bookmarkRevision)
     }
 }

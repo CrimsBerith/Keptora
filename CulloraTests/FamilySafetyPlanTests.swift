@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import Cullora
+@testable import Keptora
 
 final class FamilySafetyPlanTests: XCTestCase {
     func testPartialRAWFamilyIsBlocked() async throws {

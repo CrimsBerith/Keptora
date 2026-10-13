@@ -10,19 +10,19 @@ struct PaywallView: View {
                 // Hero icon
                 ZStack {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(CulloraDesign.accentGradient)
+                        .fill(KeptoraDesign.accentGradient)
                     Image(systemName: "sparkles.rectangle.stack.fill")
                         .font(.system(size: 48, weight: .semibold))
                         .foregroundStyle(.white)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .frame(width: 108, height: 108)
-                .shadow(color: CulloraDesign.accentGlow, radius: 18, y: 6)
+                .shadow(color: KeptoraDesign.accentGlow, radius: 18, y: 6)
 
                 // Headline
                 VStack(spacing: 8) {
                     Text(store.paywallReason.title)
-                        .font(CulloraDesign.titleFont)
+                        .font(KeptoraDesign.titleFont)
                     Text(store.paywallReason.detail)
                         .font(.title3)
                         .foregroundStyle(.secondary)
@@ -44,8 +44,8 @@ struct PaywallView: View {
                 }
                 .padding(20)
                 .frame(maxWidth: 590, alignment: .leading)
-                .background(CulloraDesign.quiet,
-                            in: RoundedRectangle(cornerRadius: CulloraDesign.cardRadius, style: .continuous))
+                .background(KeptoraDesign.quiet,
+                            in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
 
                 // Trial label
                 Text(store.trialLabel)
@@ -88,7 +88,7 @@ struct PaywallView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(CulloraDesign.accent)
+                .tint(KeptoraDesign.accent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(store.isWorking || store.isLifetimeUnlocked || store.lifetimeProduct == nil)
             }
@@ -104,7 +104,7 @@ struct PaywallView: View {
                 .font(.callout.weight(.medium))
         } icon: {
             Image(systemName: image)
-                .foregroundStyle(CulloraDesign.success)
+                .foregroundStyle(KeptoraDesign.success)
                 .symbolRenderingMode(.hierarchical)
         }
     }

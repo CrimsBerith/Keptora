@@ -12,9 +12,9 @@ struct MainRootView: View {
             routeDetail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(CulloraDesign.canvas)
+        .background(KeptoraDesign.canvas)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("cullora.root")
+        .accessibilityIdentifier("keptora.root")
         .sheet(isPresented: $model.isShowingOnboarding) {
             OnboardingView()
                 .environmentObject(model)
@@ -33,7 +33,7 @@ struct MainRootView: View {
                 .environmentObject(store)
         }
         .onAppear {
-            if ProcessInfo.processInfo.arguments.contains("-culloraScreenshotReconciliation") {
+            if ProcessInfo.processInfo.arguments.contains("-keptoraScreenshotReconciliation") {
                 model.selectedRoute = .review
             }
         }
@@ -57,9 +57,9 @@ struct MainRootView: View {
             HStack(spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(CulloraDesign.iconGradient)
+                        .fill(KeptoraDesign.iconGradient)
                         .frame(width: 34, height: 34)
-                        .shadow(color: CulloraDesign.accentGlow, radius: 6, y: 2)
+                        .shadow(color: KeptoraDesign.accentGlow, radius: 6, y: 2)
                     Image(systemName: "photo.stack.fill")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
@@ -89,21 +89,21 @@ struct MainRootView: View {
             if store.isLifetimeUnlocked {
                 HStack(spacing: 5) {
                     Circle()
-                        .fill(CulloraDesign.success)
+                        .fill(KeptoraDesign.success)
                         .frame(width: 7, height: 7)
                     Text("Pro")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(CulloraDesign.success)
+                        .foregroundStyle(KeptoraDesign.success)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(CulloraDesign.success.opacity(0.10),
+                .background(KeptoraDesign.success.opacity(0.10),
                             in: Capsule())
             } else {
                 Button("Unlock Pro") { store.presentPaywall(.settings) }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                    .tint(CulloraDesign.accent)
+                    .tint(KeptoraDesign.accent)
             }
         }
         .padding(.horizontal, 18)
@@ -111,7 +111,7 @@ struct MainRootView: View {
         .background(.bar)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(CulloraDesign.accentBorder)
+                .fill(KeptoraDesign.accentBorder)
                 .frame(height: 1)
         }
     }
@@ -150,24 +150,24 @@ private struct WorkspaceTicket: View {
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
             .background(
-                isSelected ? CulloraDesign.ticketSelected : CulloraDesign.ticketIdle,
+                isSelected ? KeptoraDesign.ticketSelected : KeptoraDesign.ticketIdle,
                 in: TicketShape(cut: 5)
             )
             .overlay {
                 TicketShape(cut: 5)
                     .strokeBorder(
                         isSelected
-                            ? CulloraDesign.accent.opacity(0.35)
+                            ? KeptoraDesign.accent.opacity(0.35)
                             : Color.primary.opacity(0.08)
                     )
             }
             .scaleEffect(isSelected ? 1.03 : 1.0)
             .shadow(
-                color: isSelected ? CulloraDesign.accentGlow : .clear,
+                color: isSelected ? KeptoraDesign.accentGlow : .clear,
                 radius: isSelected ? 6 : 0,
                 y: 2
             )
-            .animation(CulloraDesign.animFast, value: isSelected)
+            .animation(KeptoraDesign.animFast, value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

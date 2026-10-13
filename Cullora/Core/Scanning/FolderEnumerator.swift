@@ -1,8 +1,8 @@
 import Foundation
 
 struct SourceExclusionPolicy: Sendable {
-    static let folderDefaultsKey = "Cullora.ExcludedFolderNames"
-    static let extensionDefaultsKey = "Cullora.ExcludedExtensions"
+    static let folderDefaultsKey = "Keptora.ExcludedFolderNames"
+    static let extensionDefaultsKey = "Keptora.ExcludedExtensions"
 
     let folderNames: Set<String>
     let extensions: Set<String>
@@ -13,7 +13,7 @@ struct SourceExclusionPolicy: Sendable {
     }
 
     static func current(defaults: UserDefaults = .standard) -> SourceExclusionPolicy {
-        let builtInFolders = [".Cullora Quarantine", "@eaDir", "node_modules", ".git"]
+        let builtInFolders = [".Keptora Quarantine", "@eaDir", "node_modules", ".git"]
         let customFolders = defaults.string(forKey: folderDefaultsKey)?
             .split(separator: ",")
             .map(String.init) ?? []

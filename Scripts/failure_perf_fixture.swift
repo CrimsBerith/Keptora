@@ -4,13 +4,13 @@ import Foundation
 struct Runner {
     static func main() throws {
 
-        let c = CulloraResiliencePerformanceController(failureHistoryLimit: 128, latencySampleLimit: 512)
-        precondition(CulloraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 257) == .permissionDenied)
-        precondition(CulloraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 259) == .corruptInput)
-        precondition(CulloraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 260) == .missingInput)
-        precondition(CulloraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 640) == .diskFull)
-        precondition(CulloraFailureClassifier.classify(domain: NSURLErrorDomain, code: -1001) == .timedOut)
-        precondition(CulloraFailureClassifier.classify(domain: NSURLErrorDomain, code: -999) == .cancelled)
+        let c = KeptoraResiliencePerformanceController(failureHistoryLimit: 128, latencySampleLimit: 512)
+        precondition(KeptoraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 257) == .permissionDenied)
+        precondition(KeptoraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 259) == .corruptInput)
+        precondition(KeptoraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 260) == .missingInput)
+        precondition(KeptoraFailureClassifier.classify(domain: NSCocoaErrorDomain, code: 640) == .diskFull)
+        precondition(KeptoraFailureClassifier.classify(domain: NSURLErrorDomain, code: -1001) == .timedOut)
+        precondition(KeptoraFailureClassifier.classify(domain: NSURLErrorDomain, code: -999) == .cancelled)
 
         let start = Date()
         for i in 0..<100_000 {

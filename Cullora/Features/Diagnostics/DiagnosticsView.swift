@@ -3,7 +3,7 @@ import SwiftUI
 struct DiagnosticsView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var store: StoreEntitlementController
-    @AppStorage("Cullora.ShowFilePaths") private var showFilePaths = false
+    @AppStorage("Keptora.ShowFilePaths") private var showFilePaths = false
 
     var body: some View {
         ScrollView {
@@ -14,17 +14,17 @@ struct DiagnosticsView: View {
                 privacyCard
                 supportCard
             }
-            .padding(CulloraDesign.pagePadding)
+            .padding(KeptoraDesign.pagePadding)
             .frame(maxWidth: 980, alignment: .leading)
         }
-        .background(CulloraDesign.canvas)
+        .background(KeptoraDesign.canvas)
         .navigationTitle("Support & Diagnostics")
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Useful diagnostics without exposing your library.")
-                .font(CulloraDesign.titleFont)
+                .font(KeptoraDesign.titleFont)
             Text("Cullora exports app state, counters, and bounded local performance samples. Full local paths are excluded unless you explicitly enable them below.")
                 .font(.title3)
                 .foregroundStyle(.secondary)

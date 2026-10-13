@@ -1,5 +1,5 @@
 import XCTest
-@testable import Cullora
+@testable import Keptora
 
 final class SimilarityCalibratorTests: XCTestCase {
     func testCalibratorProducesMonotonicProfileWithEnoughLabels() {

@@ -12,10 +12,10 @@ struct ReviewInsightsView: View {
                 reviewPipeline
                 safetyBoundary
             }
-            .padding(CulloraDesign.pagePadding)
+            .padding(KeptoraDesign.pagePadding)
             .frame(maxWidth: 1120, alignment: .leading)
         }
-        .background(CulloraDesign.canvas)
+        .background(KeptoraDesign.canvas)
         .navigationTitle("Review Insights")
     }
 
@@ -25,7 +25,7 @@ struct ReviewInsightsView: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 7) {
                 Text("Know what is ready before cleanup.")
-                    .font(CulloraDesign.titleFont)
+                    .font(KeptoraDesign.titleFont)
                 Text("Track exact-set review progress, planned recovery, and conservative similarity evidence without turning suggestions into deletion decisions.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
@@ -94,7 +94,7 @@ struct ReviewInsightsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(CulloraDesign.quiet, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(KeptoraDesign.quiet, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var reviewPipeline: some View {
@@ -140,7 +140,7 @@ struct ReviewInsightsView: View {
                     .foregroundStyle(.secondary)
             }
             ProgressView(value: Double(value), total: Double(max(1, total)))
-                .tint(color == .blue ? CulloraDesign.accent : color)
+                .tint(color == .blue ? KeptoraDesign.accent : color)
         }
     }
 }

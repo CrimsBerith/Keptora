@@ -7,7 +7,7 @@ enum KeeperSelectionPolicy: String, CaseIterable, Identifiable, Sendable {
     case largest = "largest"
     case shortestPath = "shortestPath"
 
-    static let defaultsKey = "Cullora.KeeperSelectionPolicy"
+    static let defaultsKey = "Keptora.KeeperSelectionPolicy"
     var id: String { rawValue }
     var title: String {
         switch self {

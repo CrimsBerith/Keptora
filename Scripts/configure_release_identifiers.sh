@@ -22,7 +22,7 @@ s=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = "com\.yourcompany\.cullora\.tests"', f'PR
 s=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = "com\.yourcompany\.cullora"', f'PRODUCT_BUNDLE_IDENTIFIER = "{app}"', s)
 s=s.replace('DEVELOPMENT_TEAM = "";', f'DEVELOPMENT_TEAM = "{team}";')
 project.write_text(s)
-store=root/'Cullora/Resources/Cullora.storekit'
+store=root/'Cullora/Resources/Keptora.storekit'
 data=json.loads(store.read_text()); data['products'][0]['productID']=product; data['products'][0]['familyShareable']=False
 store.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
 purchase=root/'Cullora/Core/Purchases/StoreEntitlementController.swift'

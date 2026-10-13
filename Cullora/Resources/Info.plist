@@ -31,7 +31,7 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>APP_LIFETIME_PRODUCT_ID</key>
-	<string>com.cullora.app.pro.lifetime</string>
+	<string>com.keptora.app.pro.lifetime</string>
 	<key>APP_PRIVACY_POLICY_URL</key>
 	<string>https://alfagolab.com/cullora/privacy</string>
 	<key>APP_SUPPORT_URL</key>

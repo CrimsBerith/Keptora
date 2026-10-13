@@ -2,7 +2,7 @@ import Foundation
 
 /// Layout policy for Archive Review Studio. It encodes only this product's silhouette;
 /// it must not be reused as a shared visible shell by another portfolio app.
-struct CulloraWindowStressContract: Sendable {
+struct KeptoraWindowStressContract: Sendable {
     enum Density: String, Sendable { case compact, standard, expansive }
     enum PrimaryRegion: String, Sendable { case reviewFloor }
     enum CompactBehavior: String, Sendable { case collapseTicketShelf }

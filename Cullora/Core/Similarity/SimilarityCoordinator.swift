@@ -27,7 +27,7 @@ actor SimilarityCoordinator {
         sensitivity: SimilaritySensitivityPreset = .precisionFirst,
         progress: @escaping @Sendable (SimilarityProgress) async -> Void
     ) async throws -> SimilarityOutcome {
-        guard CulloraFeatureFlags.similarityPipelineEnabled else {
+        guard KeptoraFeatureFlags.similarityPipelineEnabled else {
             throw CoordinatorError.featureFlagDisabled
         }
         try await database.initialize()
