@@ -1,32 +1,26 @@
-# Keptora Build Plan — Phase 5O / 1.0.0 (181)
+# Keptora Build Plan — 1.0.0 (182)
 
 ## Delivered in source
 
-- Native macOS 13+ SwiftUI project.
-- Incremental exact hashing, protected keeper, SQLite schema v4, resumable scan, bounded thumbnails, external-volume identity, asset-family safety, reversible quarantine, signed manifest, restore/reconciliation, and review-only similarity.
-- Synchronized side-by-side similarity comparison and conservative calibration presets.
-- App-wide StoreKit 2 lifetime entitlement service.
-- Unlimited scan + 100 unique free reviews policy with non-UI enforcement.
-- Safety onboarding, lifetime paywall, diagnostics screen, and redacted JSON export.
-- Privacy manifest, App Sandbox/file entitlements, English/Turkish metadata, screenshot plan, support/privacy/review documents, and deterministic review corpus.
-- Fail-closed release scripts and static deletion-API scan.
+- Universal SwiftUI app: iPhone (iOS 17+) and Mac (macOS 13+), sharing `Packages/KeptoraCore`.
+- Photo library gallery for Apple Photos and user-chosen folders, with filters, grouping, manual selection and undo.
+- Exact copies (SHA-256), very similar / similar photo groups, quality findings (blur, dark, bright, low resolution), and suggestion collections (screenshots, videos by size, Live Photos).
+- Final review before removal; Photos items go to Recently Deleted, folder files to a recovery folder with History restore.
+- StoreKit 2 lifetime unlock; suggested batch selection is free for the first 100 items.
+- Settings on both platforms (Mac: Keptora ▸ Settings…) with language, purchases, support links; Mac diagnostics export.
+- English, Turkish, German and French localization; privacy manifest and App Sandbox entitlements.
 
-## Current validation status
+## Validation
 
-- Phase 5O static validation passes with only the intentional release-identity warning.
-- Unsigned Debug build, XCTest, XCUITest, Analyze, and unsigned Release archive are the local verification targets.
-- Release signing identifiers and public URLs remain intentionally deferred until final release configuration.
+- `swift test --package-path Packages/KeptoraCore`
+- `python3 Scripts/validate_project_references.py`, `validate_photo_cleaner_assets.py`, `validate_mac_localization.py`, `validate_app_store_metadata.py`
+- Mac and iPhone unit and UI tests run in `.github/workflows/apple-validation.yml`.
+- The Xcode project is generated from `project.yml` with XcodeGen; regenerate it after adding or removing files.
 
-## Required Mac-only work
+## Remaining release work
 
-1. Run a clean Xcode build, XCTest, static analyzer, and Release archive.
-2. Resolve every SDK/concurrency warning without weakening safety or actor isolation.
-3. Configure real bundle/team/IAP IDs and all public/legal placeholders.
-4. Complete StoreKit local, sandbox, restore, refund/revocation, pending, offline, and Family Sharing tests.
-5. Complete VoiceOver, Full Keyboard Access, contrast, motion, dark/light, and localization QA.
-6. Approve a human-labelled similarity calibration corpus.
-7. Measure 10K/50K/100K real libraries with Instruments and interruption tests.
-8. Complete App Store privacy, age, rights, export, business, screenshot, and review fields.
-9. Upload, validate, TestFlight/beta test, and submit.
-
-The project is a release-handoff source package, not a signed production binary.
+1. Fill the legal entity, support email and contact placeholders in `AppStore/PRIVACY_POLICY.md` and `AppStore/SUPPORT_PAGE.md`, and publish both pages.
+2. Complete StoreKit sandbox, restore, refund/revocation, pending and offline checks on device.
+3. Complete VoiceOver, Full Keyboard Access, Dynamic Type, dark/light and localization QA on device.
+4. Measure 10K/50K/100K real libraries with Instruments.
+5. Capture final localized screenshots, archive signed builds, validate, TestFlight and submit.

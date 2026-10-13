@@ -1,18 +1,10 @@
 # What’s New — 1.0 Draft
 
-Keptora helps you review exact photo duplicates without risky one-click deletion.
+Keptora 1.0 helps you clear out your photo library on iPhone and Mac without a risky one-tap delete.
 
-- Resume an exact-duplicate review exactly where you stopped.
-- Navigate groups and photos with keyboard-first shortcuts.
-- Explore a private synthetic sample library before selecting your own folder.
-- See local review pace, completed groups, and planned storage recovery.
-- Build reversible Safety Plans that always protect one verified keeper.
-
-All analysis stays on the device. Similar-photo suggestions remain review-only. Similar-video suggestions now support explicit card, checkbox, group, and safe-all selection with keeper protection and a fresh pre-cleanup file verification.
-
-
-## Verified recovery
-- Preview restore safety before any file moves.
-- Detect occupied original paths, missing quarantine files, and changed content.
-- Review large Safety Plans and restore lists in responsive 300-row batches.
-- Use Unicode-safe source exclusions and local performance history.
+- Browse Apple Photos or a folder you choose, with filters for media type, album, favorites, date and size.
+- Find exact copies proven byte-for-byte with SHA-256, plus very similar and similar shots grouped by image, time, place and burst.
+- Open screenshots, large videos, Live Photos and blurry or dark photos in one tap.
+- Select with a tap, preview larger, protect photos you want to keep, and undo any selection step.
+- Review every item before removal. Photos items go to Recently Deleted; folder files can be restored from History.
+- Everything runs on your device. No account, ads, analytics or uploads.
