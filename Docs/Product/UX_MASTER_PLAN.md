@@ -210,6 +210,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** Yeni kurulumda izin onayına kadar en fazla 2 ekran; `testFreshInstallWalkthrough` güncellenir ve geçer.
 
+**Durum (13 Ekim):** Yapıldı. İlk açılışta tek karşılama ekranı (başlık, üç kısa satır, **Başla**); üç sayfalık tanıtım Ayarlar ▸ Keptora Nasıl Çalışır altında kaldı. Yeni kurulumda izin penceresine kadar 2 ekran; izin sonrası Arşiv tarama sonucuyla açılıyor. Kurulum ekranının izin sonrası kendiliğinden kapanması bilinçli olarak yapılmadı: kullanıcı klasör de eklemek isteyebilir.
+
 ### Paket G — Son inceleme ekranı (P1, S)
 
 **Kural:** Yıkıcı eylemden önce tam liste, sade tasarım.
