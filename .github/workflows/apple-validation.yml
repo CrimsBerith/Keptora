@@ -1,7 +1,9 @@
 name: Apple validation
 
 on:
+  # Feature branches are validated through their pull request; pushing them as well doubled the macOS queue.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:

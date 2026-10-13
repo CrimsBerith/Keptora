@@ -4,6 +4,8 @@ struct MobileOnboardingView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var currentPage = 0
+    /// First launch gets one short welcome; Settings ▸ How Keptora Works opens the full three-page tour.
+    @State private var isFirstRun = !UserDefaults.standard.bool(forKey: "hasSeenMobileOnboarding")
 
     private struct OnboardingStep: Identifiable {
         let id: Int
@@ -38,6 +40,44 @@ struct MobileOnboardingView: View {
     ]
 
     var body: some View {
+        if isFirstRun { welcome } else { tour }
+    }
+
+    private var welcome: some View {
+        ZStack {
+            MobileAuroraBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: 24)).frame(maxWidth: .infinity).accessibilityHidden(true)
+                    Text("Every Photo. Your Choice.").font(.system(.largeTitle, design: .rounded).weight(.bold))
+                    VStack(alignment: .leading, spacing: 14) {
+                        welcomeRow("lock.shield.fill", "Your photos stay on this device.", tint: MobileKeptoraDesign.mint)
+                        welcomeRow("checkmark.circle.fill", "You choose what to remove and review it first.", tint: MobileKeptoraDesign.accent)
+                        welcomeRow("arrow.uturn.backward.circle.fill", "Removed items can be recovered.", tint: MobileKeptoraDesign.danger)
+                    }
+                }
+                .padding(24)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button { finishOnboarding() } label: {
+                Text("Get Started").font(.system(.headline, design: .rounded).weight(.bold)).frame(maxWidth: .infinity)
+            }
+            .buttonStyle(MobilePrimaryButtonStyle())
+            .accessibilityIdentifier("ios.onboarding.continue")
+            .padding(.horizontal, 24).padding(.bottom, 16)
+        }
+    }
+
+    private func welcomeRow(_ icon: String, _ text: LocalizedStringKey, tint: Color) -> some View {
+        Label { Text(text).font(.system(.body, design: .rounded)) } icon: {
+            Image(systemName: icon).font(.title2).foregroundStyle(tint)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var tour: some View {
         ZStack {
             MobileAuroraBackground()
 

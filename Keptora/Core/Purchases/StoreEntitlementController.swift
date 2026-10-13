@@ -138,10 +138,10 @@ final class StoreEntitlementController: ObservableObject {
         do {
             lifetimeProduct = try await Product.products(for: [Self.lifetimeProductID]).first
             if lifetimeProduct == nil {
-                statusMessage = L10n.tr("The StoreKit product was not returned. Verify the product ID, agreements, availability, and StoreKit configuration.")
+                statusMessage = L10n.tr("Keptora Pro is unavailable right now. Check your internet connection and try again.")
             }
         } catch {
-            statusMessage = L10n.format("StoreKit refresh failed: %@", error.localizedDescription)
+            statusMessage = L10n.format("Purchases could not be refreshed: %@", error.localizedDescription)
         }
     }
 

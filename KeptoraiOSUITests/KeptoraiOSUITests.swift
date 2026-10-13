@@ -558,7 +558,9 @@ final class KeptoraiOSUITests: XCTestCase {
         guard next.waitForExistence(timeout: 10) else {
             throw XCTSkip("Uninstall Keptora from the simulator first; this walkthrough needs a fresh install.")
         }
-        for page in 1...3 { saveScreenshot(app, name: "Walkthrough \(page) — introduction"); next.tap() }
+        // First launch shows one welcome screen instead of a three-page tour.
+        saveScreenshot(app, name: "Walkthrough 1 — welcome")
+        next.tap()
         let continueSetup = app.buttons["ios.sourceSetup.continue"]
         if continueSetup.waitForExistence(timeout: 10) {
             allowPhotosAccessIfPrompted(until: app.staticTexts["Access granted"], timeout: 15)
