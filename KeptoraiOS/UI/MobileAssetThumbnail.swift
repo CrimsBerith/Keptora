@@ -131,6 +131,35 @@ struct MobileAssetThumbnail: View {
     }
 }
 
+/// Larger look at one item from the gallery's touch-and-hold menu, so people can check a photo
+/// before selecting it. Uses on-device data only; iCloud originals are not downloaded here.
+struct MobileAssetPreview: View {
+    let asset: UniversalMediaAsset
+    let sourceLabel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            MobileAssetThumbnail(asset: asset, pixelSize: 1200, contentMode: .fit, showsRetryButton: false)
+                .frame(width: 340, height: 340)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(asset.displayName).font(.subheadline.weight(.semibold)).lineLimit(1)
+                Text(details).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+            .padding(12)
+            .frame(width: 340, alignment: .leading)
+        }
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    private var details: String {
+        var parts = [sourceLabel]
+        if let date = asset.captureDateDescription { parts.append(date) }
+        if asset.mediaKind == .video { parts.append(asset.formattedDuration) }
+        if let bytes = asset.byteCount { parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+        return parts.joined(separator: " · ")
+    }
+}
+
 final class MobileThumbnailCache: @unchecked Sendable {
     static let shared = MobileThumbnailCache()
     private let cache = NSCache<NSString, UIImage>()

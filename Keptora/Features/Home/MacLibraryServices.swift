@@ -150,7 +150,7 @@ struct MacGalleryProjection {
 
 enum MacWindowIdentity {
     static let main = NSUserInterfaceItemIdentifier("Keptora.main")
-    static func openSettings() {
+    @MainActor static func openSettings() {
         if !NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) {
             NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         }

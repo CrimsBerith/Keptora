@@ -3,6 +3,7 @@ import Combine
 import KeptoraCore
 @preconcurrency import Photos
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MacRecoveryEntry: Identifiable, Codable, Sendable {
     let id: UUID
@@ -110,7 +111,8 @@ final class MacArchiveModel: ObservableObject {
     private var pendingAccessRefresh = false
     private var pauseCommandSequence = 0
     private var discardScanCheckpoint = false
-    private var workspaceObservers: [NSObjectProtocol] = []
+    // Written on the main actor only; read once more in deinit to unregister.
+    nonisolated(unsafe) private var workspaceObservers: [NSObjectProtocol] = []
     private var analysisSession = MacAnalysisSession()
     private var checkpoint: UniversalScanCheckpoint? { didSet { analysisCacheDirty = true } }
     private var checkpointConfiguration: LibraryConfiguration?
@@ -1014,7 +1016,7 @@ final class MacArchiveModel: ObservableObject {
         return try encoder.encode(snapshot)
     }
     func exportDiagnostics() {
-        let panel = NSSavePanel(); panel.nameFieldStringValue = "Keptora-diagnostics.json"; panel.allowedFileTypes = ["json"]
+        let panel = NSSavePanel(); panel.nameFieldStringValue = "Keptora-diagnostics.json"; panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try diagnosticData().write(to: url, options: .atomic) } catch { self.error = error.localizedDescription }
     }

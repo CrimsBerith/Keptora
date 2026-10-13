@@ -98,6 +98,13 @@ struct KeptoraApp: App {
         .windowResizability(.contentMinSize)
         .windowStyle(.titleBar)
         .commands { MacLibraryCommands(archive: appDelegate.archive, navigation: appDelegate.navigation) }
+
+        Settings {
+            MacSettingsView()
+                .environmentObject(appDelegate.store)
+                .environmentObject(appDelegate.archive)
+                .environment(\.locale, activeLocale)
+        }
     }
 }
 

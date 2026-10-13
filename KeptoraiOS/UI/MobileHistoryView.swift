@@ -55,7 +55,7 @@ struct MobileHistoryView: View {
                                             Text("Recovery Folder")
                                                 .font(.system(.headline, design: .rounded).weight(.semibold))
                                         }
-                                        Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        Text(entry.createdAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.currentLocale)))
                                             .font(.system(.caption, design: .rounded))
                                             .foregroundStyle(.secondary)
                                     }
@@ -76,7 +76,7 @@ struct MobileHistoryView: View {
                                     HStack(spacing: 5) {
                                         Image(systemName: "internaldrive")
                                             .font(.system(.caption2, design: .rounded).weight(.semibold))
-                                        Text(entry.byteCount > 0 ? ByteCountFormatter.string(fromByteCount: entry.byteCount, countStyle: .file) : String(localized: "Media size unavailable"))
+                                        Text(entry.byteCount > 0 ? ByteCountFormatter.string(fromByteCount: entry.byteCount, countStyle: .file) : L10n.tr("Media size unavailable"))
                                             .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)
@@ -134,7 +134,7 @@ struct MobileHistoryView: View {
                 }
             }
         }
-        .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? String(localized: "Restoring files…")).padding(22).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
+        .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? L10n.tr("Restoring files…")).padding(22).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
         .disabled(store.isCleaningUp)
         .navigationTitle("History")
         .accessibilityIdentifier("ios.page.history")

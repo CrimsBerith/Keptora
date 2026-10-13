@@ -75,6 +75,9 @@ targets:
     deploymentTarget: "13.0"
     sources:
       - path: KeptoraTests
+      # StoreKitEntitlementTests load this configuration from the test bundle.
+      - path: Keptora/Resources/Keptora.storekit
+        buildPhase: resources
     dependencies:
       - target: Keptora
     settings:

@@ -75,6 +75,15 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
     }
     private func openUnifiedCopies(_ app: XCUIApplication) -> XCUIElement {
+        // Select Extra Copies only appears while the Library view shows Exact Copies.
+        let segment = app.radioButtons["Exact Copies"]
+        if segment.waitForExistence(timeout: 10) {
+            segment.click()
+        } else {
+            let menu = app.popUpButtons["Library view"]
+            XCTAssertTrue(menu.waitForExistence(timeout: 5)); menu.click()
+            app.menuItems["Exact Copies"].click()
+        }
         let copies = app.buttons["mac.archive.selectExtraCopies"]
         XCTAssertTrue(copies.waitForExistence(timeout: 10)); waitForEnabled(copies)
         return copies
@@ -129,16 +138,17 @@ final class KeptoraUITests: XCTestCase {
         let asset = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.asset.")).firstMatch
         XCTAssertTrue(asset.waitForExistence(timeout: 10)); asset.click()
         let search = app.textFields["Search filenames"]
-        search.click(); search.typeText("missing")
+        // Search words avoid "i", which XCUITest types incorrectly on Turkish keyboard layouts.
+        search.click(); search.typeText("absent")
         XCTAssertTrue(app.buttons["mac.archive.reviewSelection"].exists)
         app.typeKey("z", modifierFlags: .command)
-        XCTAssertNotEqual(search.value as? String, "missing")
+        XCTAssertNotEqual(search.value as? String, "absent")
         XCTAssertTrue(app.buttons["mac.archive.reviewSelection"].exists)
         app.typeKey("z", modifierFlags: [.command, .shift])
-        XCTAssertEqual(search.value as? String, "missing")
-        app.typeKey("a", modifierFlags: .command); search.typeText("holiday")
+        XCTAssertEqual(search.value as? String, "absent")
+        app.typeKey("a", modifierFlags: .command); search.typeText("beach")
         app.buttons["mac.sidebar.history"].click(); app.buttons["mac.sidebar.archive"].click()
-        XCTAssertEqual(search.value as? String, "holiday")
+        XCTAssertEqual(search.value as? String, "beach")
         app.buttons["mac.archive.reviewSelection"].click()
         XCTAssertTrue(app.staticTexts["Review Selection"].waitForExistence(timeout: 5))
     }
@@ -156,6 +166,17 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertFalse(app.buttons["mac.archive.reviewSelection"].isEnabled)
         app.typeKey("z", modifierFlags: [.command, .shift]); waitForSelectionCount(1, in: app)
         app.typeKey("z", modifierFlags: [.command, .shift]); waitForSelectionCount(2, in: app)
+    }
+
+    func testSettingsWindowOffersLanguagePurchasesAndSupport() {
+        let app = launchUnifiedMacFixture()
+        app.menuBarItems["Keptora"].click()
+        app.menuItems["Settings…"].click()
+        XCTAssertTrue(app.buttons["mac.settings.restorePurchases"].waitForExistence(timeout: 10))
+        XCTAssertTrue(element(withIdentifier: "mac.settings.language", in: app).exists)
+        XCTAssertTrue(element(withIdentifier: "mac.settings.support", in: app).exists)
+        XCTAssertTrue(app.buttons["mac.settings.exportDiagnostics"].exists)
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Mac Settings"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
 
     private func element(withIdentifier identifier: String, in app: XCUIApplication) -> XCUIElement {

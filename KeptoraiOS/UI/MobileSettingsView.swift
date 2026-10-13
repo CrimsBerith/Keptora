@@ -9,6 +9,7 @@ struct MobileSettingsView: View {
     @AppStorage(AppStorageKeys.appLanguage) private var selectedLanguage: String = AppLanguage.system.rawValue
     @State private var isConfirmingClearCache = false
     @State private var cacheClearedFeedback = false
+    @State private var cacheCleared = false
 
     /// Read from the bundle so the label can never drift from the shipped build.
     private var appVersionLabel: String {
@@ -98,15 +99,15 @@ struct MobileSettingsView: View {
 
             Section {
                 Label("Exact copies require SHA-256 byte-level proof.", systemImage: "checkmark.seal")
-                Label("Similar photos are review-only and never enter cleanup.", systemImage: "hand.raised")
+                Label("Similar photos are removed only when you select them.", systemImage: "hand.raised")
                 Label("Photos cleanup uses Apple's Recently Deleted flow.", systemImage: "photo.on.rectangle")
-                Label("Folder cleanup uses Keptora Safe Recovery Bin.", systemImage: "shippingbox")
+                Label("Folder cleanup moves files to a recovery folder on the same storage.", systemImage: "shippingbox")
                 Button {
                     dismiss()
                     store.selectedTab = .history
                 } label: {
                     HStack {
-                        Label("View History & Recovery Bin", systemImage: "clock.arrow.circlepath")
+                        Label("View History & Recovery", systemImage: "clock.arrow.circlepath")
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption.weight(.semibold))
@@ -120,17 +121,17 @@ struct MobileSettingsView: View {
             }
 
             Section {
-                LabeledContent(String(localized: "Photo upload")) { Text(String(localized: "Never")) }
-                LabeledContent(String(localized: "Account")) { Text(String(localized: "Not required")) }
-                LabeledContent(String(localized: "Analytics")) { Text(String(localized: "None")) }
-                Link(String(localized: "Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
+                LabeledContent(L10n.tr("Photo upload")) { Text(L10n.tr("Never")) }
+                LabeledContent(L10n.tr("Account")) { Text(L10n.tr("Not required")) }
+                LabeledContent(L10n.tr("Analytics")) { Text(L10n.tr("None")) }
+                Link(L10n.tr("Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
                     .accessibilityIdentifier("ios.settings.privacy")
-                Link(String(localized: "Support"), destination: AppStoreConfiguration.supportURL)
+                Link(L10n.tr("Support"), destination: AppStoreConfiguration.supportURL)
                     .accessibilityIdentifier("ios.settings.support")
-                Link(String(localized: "Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
+                Link(L10n.tr("Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
                     .accessibilityIdentifier("ios.settings.terms")
             } header: {
-                Text(String(localized: "Privacy"))
+                Text(L10n.tr("Privacy"))
                     .font(MobileKeptoraDesign.labelFont)
             }
 
@@ -165,6 +166,7 @@ struct MobileSettingsView: View {
                         Task {
                             await MediaFingerprintDiskCache.shared.clear()
                             cacheClearedFeedback.toggle()
+                            cacheCleared = true
                         }
                     }
                     Button("Cancel", role: .cancel) {}
@@ -172,6 +174,11 @@ struct MobileSettingsView: View {
                     Text("Your photos and decisions are not touched. The next scan will take longer because fingerprints are recomputed.")
                 }
                 .sensoryFeedback(.success, trigger: cacheClearedFeedback)
+                if cacheCleared {
+                    Label("Cache cleared.", systemImage: "checkmark.circle")
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("Maintenance")
                     .font(MobileKeptoraDesign.labelFont)
@@ -216,12 +223,12 @@ struct MobileSettingsView: View {
 
     private var permissionLabel: String {
         switch store.authorization {
-        case .authorized: return String(localized: "Full access")
-        case .limited: return String(localized: "Selected photos")
-        case .denied: return String(localized: "Denied")
-        case .restricted: return String(localized: "Restricted")
-        case .notDetermined: return String(localized: "Not requested")
-        case .unavailable: return String(localized: "Unavailable")
+        case .authorized: return L10n.tr("Full access")
+        case .limited: return L10n.tr("Selected photos")
+        case .denied: return L10n.tr("Denied")
+        case .restricted: return L10n.tr("Restricted")
+        case .notDetermined: return L10n.tr("Not requested")
+        case .unavailable: return L10n.tr("Unavailable")
         }
     }
 }

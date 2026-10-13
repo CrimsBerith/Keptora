@@ -49,19 +49,20 @@ struct MacPhotosThumbnail: View {
                 if let cgImage, !Task.isCancelled { image = NSImage(cgImage: cgImage, size: .zero) }
             } else {
                 let size = pixelSize
-                let work = Task.detached(priority: .utility) { () -> NSImage? in
+                // Decode off the main actor as CGImage; NSImage is only Sendable from macOS 14.
+                let work = Task.detached(priority: .utility) { () -> CGImage? in
                     try? await MediaWorkGate.thumbnails.withPermit {
                         guard !Task.isCancelled, let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                               let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                                 kCGImageSourceThumbnailMaxPixelSize: Int(size),
                                 kCGImageSourceCreateThumbnailWithTransform: true
-                              ] as CFDictionary) else { return nil as NSImage? }
-                        return NSImage(cgImage: cg, size: .zero)
+                              ] as CFDictionary) else { return nil as CGImage? }
+                        return cg
                     }
                 }
                 let decoded = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
-                if !Task.isCancelled { image = decoded }
+                if let decoded, !Task.isCancelled { image = NSImage(cgImage: decoded, size: .zero) }
             }
             return
         }

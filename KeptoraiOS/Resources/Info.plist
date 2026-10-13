@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>APP_LIFETIME_PRODUCT_ID</key>
+	<string>com.keptora.app.pro.lifetime</string>
+	<key>APP_MARKETING_URL</key>
+	<string>https://alfagolab.com/keptora</string>
+	<key>APP_PRIVACY_POLICY_URL</key>
+	<string>https://alfagolab.com/keptora/privacy</string>
+	<key>APP_SUPPORT_URL</key>
+	<string>https://alfagolab.com/keptora/support</string>
+	<key>APP_TERMS_OF_USE_URL</key>
+	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
 	<key>CFBundleDisplayName</key>
 	<string>Keptora</string>
 	<key>CFBundleExecutable</key>
@@ -18,10 +28,14 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Keptora uses the Photos access you approve to show your photos and videos, compare copies and similar items, and remove only items you confirm. Your media is never uploaded.</string>
+	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -35,18 +49,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>APP_LIFETIME_PRODUCT_ID</key>
-	<string>com.keptora.app.pro.lifetime</string>
-	<key>APP_PRIVACY_POLICY_URL</key>
-	<string>https://alfagolab.com/keptora/privacy</string>
-	<key>APP_SUPPORT_URL</key>
-	<string>https://alfagolab.com/keptora/support</string>
-	<key>APP_TERMS_OF_USE_URL</key>
-	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
-	<key>APP_MARKETING_URL</key>
-	<string>https://alfagolab.com/keptora</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>
-

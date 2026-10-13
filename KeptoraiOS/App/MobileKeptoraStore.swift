@@ -79,9 +79,9 @@ final class MobileKeptoraStore: ObservableObject {
     // Test fixtures use the same selection logic without exposing catalogue mutation in release builds.
     func replaceAssetsForTesting(_ items: [UniversalMediaAsset]) { assets = items }
     #endif
-    @Published internal(set) var exactGroups: [UniversalExactGroup] = []
+    @Published var exactGroups: [UniversalExactGroup] = []
     @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = []
-    @Published internal(set) var similarVideoGroups: [UniversalSimilarityGroup] = []
+    @Published var similarVideoGroups: [UniversalSimilarityGroup] = []
     @Published var similarityProgress: (processed: Int, total: Int)?
     @Published var videoSimilarityProgress: (processed: Int, total: Int)?
     @Published private(set) var skippedCloudItems = 0
@@ -145,6 +145,20 @@ final class MobileKeptoraStore: ObservableObject {
     func completeSourceSetup() {
         UserDefaults.standard.set(true, forKey: AppStorageKeys.iOSSourceSetupCompleted)
         dismissModal()
+        // First run: start finding copies right away instead of asking for another tap.
+        if !connectedSources.isEmpty, scanState == .idle, reviewGroups.isEmpty {
+            startsScanWhenCatalogueLoads = true
+            startPendingFirstScanIfReady()
+        }
+    }
+
+    /// Set when source setup finishes; the scan starts once the catalogue has loaded.
+    private var startsScanWhenCatalogueLoads = false
+
+    private func startPendingFirstScanIfReady() {
+        guard startsScanWhenCatalogueLoads, canScanSelectedSources, !scopedAssets.isEmpty else { return }
+        startsScanWhenCatalogueLoads = false
+        startScan()
     }
 
     private let photosAdapter = PhotoLibrarySourceAdapter()
@@ -679,6 +693,7 @@ final class MobileKeptoraStore: ObservableObject {
             catch { if catalogueGeneration == generation { catalogueError = error.localizedDescription } }
         }
         await catalogueTask?.value
+        startPendingFirstScanIfReady()
     }
 
     @discardableResult

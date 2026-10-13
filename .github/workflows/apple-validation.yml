@@ -45,7 +45,7 @@ jobs:
           python3 Scripts/validate_regenerated_visuals.py
           python3 Scripts/validate_mac_localization.py
   native-mac:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +79,8 @@ jobs:
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacScanSelectionReviewUndoAndRestore \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacRestoreFailureIsVisibleAndDoesNotOverwriteOriginal \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacSearchDoesNotLoseSelectionOrHijackTextUndo \
-            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo test
+            -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo \
+            -only-testing:KeptoraUITests/KeptoraUITests/testSettingsWindowOffersLanguagePurchasesAndSupport test
       - name: Native 2000 / 3000 item measurement
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_items != '0')
         env:
@@ -112,7 +113,7 @@ jobs:
           retention-days: 14
 
   native-ios:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
@@ -142,6 +143,7 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testVerySimilarKeeperAndSelectOthersWorkInsideGallery \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPhotoTapSelectsWithoutMagnifierAndCanBeUndone \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testTouchAndHoldShowsLargerPreviewAndSelects \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testExactPhotoSelectionAndFinalReviewCanBeCancelled \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testFinalReviewRemovalCanBeUndoneEvenWhenEmpty \
@@ -176,7 +178,7 @@ jobs:
           retention-days: 14
 
   native-storekit:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4

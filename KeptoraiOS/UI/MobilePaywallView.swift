@@ -59,7 +59,7 @@ struct MobilePaywallView: View {
                             .accessibilityIdentifier("ios.paywall.purchase")
 
                             if purchase.product == nil && !purchase.isUnlocked {
-                                Button(String(localized: "Retry Loading Product")) {
+                                Button(L10n.tr("Retry Loading Product")) {
                                     Task { await purchase.refresh() }
                                 }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))

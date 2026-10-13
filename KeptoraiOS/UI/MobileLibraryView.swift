@@ -59,12 +59,17 @@ struct MobileScanSourcesSection: View {
                 Text("Select at least one source").font(.footnote).foregroundStyle(.secondary)
                     .padding(.top, 12).accessibilityIdentifier("sources.emptySelection")
             } else {
-                Text(L10n.format("%lld sources selected · %lld different items", store.selectedSourceIDs.count, store.scopedAssets.count))
+                Text(store.selectedSourceIDs.count == 1
+                     ? L10n.format("1 source selected · %lld different items", store.scopedAssets.count)
+                     : L10n.format("%lld sources selected · %lld different items", store.selectedSourceIDs.count, store.scopedAssets.count))
                     .font(.footnote).foregroundStyle(.secondary).padding(.top, 12).accessibilityIdentifier("sources.summary")
             }
-            Text("Selected sources appear together. The same item in overlapping folders is counted once.")
-                .font(.caption).foregroundStyle(.secondary).padding(.top, 6)
-            Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+            // These only matter once there is more than one source to combine.
+            if store.connectedSources.count > 1 {
+                Text("Selected sources appear together. The same item in overlapping folders is counted once.")
+                    .font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+                Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+            }
         }.padding(14)
             .background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
     }
