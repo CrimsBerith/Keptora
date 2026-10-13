@@ -156,6 +156,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** iPhone 16 Pro'da, açılışta en az 2 tam satır fotoğraf görünür (ilk hücre `minY` ≤ 420 pt). AX5 boyutunda şerit dikey düzene geçer ve hiçbir metin kesilmez. Mevcut bütün UI testleri yeni kimliklerle geçer.
 
+**Durum (14 Ekim):** Yapıldı. Üst bölüm tek bir durum kartına indi (kaynak ve öğe sayısı, sağda küçük tarama butonu, altında ilerleme veya "Fazla kopya: 3 · 3,3 MB" sonucu). Dört bulgu butonu, sayılarıyla tek satırlık yatay çiplere dönüştü (sayı yalnızca 0'dan büyükse görünür; VoiceOver tam adı okur). "Tüm Arşivi Göster" butonu kaldırıldı (aynı iş filtre çipinde). Seçili bulgu artık bir de filtre çipi olarak tekrar gösterilmiyor; "Bu Listeyi Seç" bulgu görünümlerinde gizli, çünkü orada saklanması önerilen fotoğrafları da seçerdi. Ölçüm: ilk fotoğraf ~720 pt yerine ~450 pt'de başlıyor; `testFirstScreenShowsPhotos` ilk fotoğrafın ekranın üst %55'inde başladığını doğruluyor. Hedeflenen 420 pt için medya filtresinin de bu satıra alınması gerekir; ileride değerlendirilecek.
+
 ### Paket B — Toplu seçimde hata önleme (P0, S)
 
 **Kural:** Hata önleme, kullanıcı kontrolü.
@@ -263,7 +265,7 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 ## 6. Sıra ve bağımlılıklar
 
-1. **Dalga 1 (P0):** L ve M (buton/metin bütçesi ve dil; ilk kısmı yapıldı) → C (renk) → B (toplu seçim; ilk kısmı L içinde yapıldı) → A (galeri üst bölümü). Renk A'dan önce, çünkü A yeni renkleri kullanır.
+1. **Dalga 1 (P0):** L, M, C, A ve B'nin ilk kısmı tamamlandı (PR #21–#25). Kalan: Almanca hitap birliği, Ayarlar ekranının sadeleştirilmesi.
 2. **Dalga 2 (P1):** E (performans; A'dan sonra, yeni düzen üzerinde ölçülür) → G (inceleme) → F (ilk kullanım) → D (Dynamic Type) → H (Mac).
 3. **Dalga 3 (P2):** I, J, K.
 4. Her dalganın sonunda: bütün iPhone ve Mac testleri, walkthrough ekran görüntüleri, bu belgenin bölüm 3 tablosunun güncellenmesi.

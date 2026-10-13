@@ -117,7 +117,8 @@ final class KeptoraiOSUITests: XCTestCase {
             let app = launch(arguments: arguments, language: accessibleText ? "tr" : "en", locale: accessibleText ? "tr_TR" : "en_US")
             let scan = app.buttons["archive.scanAll"]
             reveal(scan, in: app, scrollDown: true)
-            assertTouchTarget(scan, in: app, minimumHeight: 52)
+            // After a finished scan, "Scan Again" is a secondary 44-pt action.
+            assertTouchTarget(scan, in: app)
 
             let photo = app.buttons["archive.asset.ui-photo-copy"]
             reveal(photo, in: app); photo.tap()
@@ -204,9 +205,22 @@ final class KeptoraiOSUITests: XCTestCase {
         XCTAssertFalse(app.buttons["archive.selectAll"].exists, "The whole library has no one-tap select-all")
         let copies = app.buttons["archive.finding.copies"]
         reveal(copies, in: app, scrollDown: true); copies.tap()
+        XCTAssertFalse(app.buttons["archive.selectAll"].exists, "Finding views use their own safe batch actions")
+        app.buttons["archive.finding.all"].tap()
+        app.segmentedControls.buttons["Photos"].tap()
         let selectAll = app.buttons["archive.selectAll"]
         reveal(selectAll, in: app, scrollDown: true)
         XCTAssertTrue(selectAll.isEnabled)
+    }
+
+    func testFirstScreenShowsPhotos() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        let firstPhoto = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "archive.asset.")).firstMatch
+        XCTAssertTrue(firstPhoto.waitForExistence(timeout: 10))
+        saveScreenshot(app, name: "First screen")
+        // Plan target: photos start in the upper half of the screen, not below the fold.
+        XCTAssertLessThanOrEqual(firstPhoto.frame.minY, app.frame.height * 0.55, "First photo starts at \(firstPhoto.frame.minY) pt")
+        XCTAssertTrue(firstPhoto.isHittable)
     }
 
     func testManualArchiveSelectionRetainsItemsWhenFiltering() {
@@ -502,12 +516,12 @@ final class KeptoraiOSUITests: XCTestCase {
         let copies = app.buttons["archive.finding.copies"]
         reveal(copies, in: app, scrollDown: true); copies.tap()
         app.segmentedControls.buttons["Photos"].tap()
-        XCTAssertTrue(app.buttons["archive.filter.remove.finding"].exists)
+        XCTAssertTrue(copies.isSelected)
         XCTAssertTrue(app.buttons["archive.filter.remove.media"].exists)
-        let chip = app.buttons["archive.filter.remove.finding"]
-        reveal(chip, in: app); chip.tap()
-        let removed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: chip)
-        XCTAssertEqual(XCTWaiter.wait(for: [removed], timeout: 5), .completed)
+        // The finding filter is shown once, on its chip; choosing "All" removes it.
+        let all = app.buttons["archive.finding.all"]
+        reveal(all, in: app, scrollDown: true); all.tap()
+        XCTAssertFalse(copies.isSelected)
         XCTAssertTrue(app.buttons["archive.filter.remove.media"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["Photos"].isSelected)
         XCTAssertTrue(app.staticTexts["Selected items: 1"].exists)

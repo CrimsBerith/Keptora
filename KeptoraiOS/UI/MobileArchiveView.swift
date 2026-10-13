@@ -195,142 +195,171 @@ struct MobileLibraryView: View {
         }.padding(8)
     }
 
+    // Header: one status card (sources, count, scan control, progress or result), one row of finding
+    // chips, then only rows that need attention. Keeps the first photos on the first screen.
     private var catalogueHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Selecting a whole list only makes sense for a narrowed list; on the full library it is a risky one-tap action.
-            if hasActiveFilters {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: MobileKeptoraDesign.actionSpacing) { catalogueCount; selectListButton }
-                    VStack(alignment: .leading, spacing: MobileKeptoraDesign.stackedActionSpacing) { catalogueCount; selectListButton }
-                }
-            } else {
-                catalogueCount
-            }
-            Button { sources = true } label: {
-                // Stacked at accessibility sizes so "Sources" is never split mid-word.
-                (typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout())) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Sources", systemImage: "checklist")
-                        Text(store.connectedSources.filter { store.selectedSourceIDs.contains($0.id) }.map(\.localizedScanTitle).joined(separator: " · "))
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                    }
-                    if !typeSize.isAccessibilitySize { Spacer() }
-                    Text(L10n.format("%lld selected", store.selectedSourceIDs.count)).font(.caption)
-                    if !typeSize.isAccessibilitySize { Image(systemName: "chevron.right") }
-                }.frame(minHeight: 44).contentShape(Rectangle())
-            }.accessibilityIdentifier("archive.sourcesSummary")
-            // Per-source counts and access live in the Sources sheet; here only a problem is shown.
-            if store.coverage.contains(where: { $0.error != nil }) || !store.connectionErrors.isEmpty {
-                Label("Some sources need attention.", systemImage: "exclamationmark.triangle").font(.caption)
-                Button("Manage Source Access") { sources = true }.buttonStyle(MobileActionButtonStyle())
-            }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: MobileKeptoraDesign.actionSpacing) { scanButtons }
-                VStack(alignment: .leading, spacing: MobileKeptoraDesign.stackedActionSpacing) { scanButtons }
-            }.disabled(store.isCleaningUp || store.isLoadingCatalogue)
-            if case .scanning(let processed, let total, let current) = store.scanState {
-                ProgressView(value: Double(processed), total: Double(max(total, 1)))
-                    .accessibilityValue(Text(current))
-            }
-            if store.scanState.isScanning || store.isAnalyzing { Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(.secondary) }
-            if let error = store.similarityError ?? store.videoSimilarityError { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(MobileKeptoraDesign.warning) }
-            if store.skippedCloudItems > 0 {
-                Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), store.skippedCloudItems)).font(.caption).foregroundStyle(.secondary)
-            }
-            if case .paused = store.scanState {
-                Text("Scan paused.").font(.caption).foregroundStyle(.secondary)
-            } else if store.scanState == .completed && store.sessionProgress.isComplete {
-                scanResults
-            }
-            if store.scanState == .completed && store.sessionProgress.isFinished && !store.sessionProgress.isComplete {
-                Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption)
-            }
-            if !store.analysisIssues.isEmpty {
-                DisclosureGroup("Items needing attention") {
-                    ForEach(AnalysisIssueReason.allCases, id: \.rawValue) { reason in
-                        let count = Set(store.analysisIssues.filter { $0.reason == reason }.map(\.assetID)).count
-                        if count > 0 { HStack { Text(LocalizedStringKey(reason.titleKey)); Spacer(); Text(count.formatted()) }.font(.caption) }
-                    }
-                }
-            }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
-                                         count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 8) {
-                    ForEach(LibraryFindingFilter.allCases) { option in
-                        Button { finding = option } label: {
-                            Text(LocalizedStringKey(option.titleKey)).font(.subheadline.weight(.semibold)).multilineTextAlignment(.center)
-                                .padding(.horizontal, 8).padding(.vertical, 8).frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-                        }.background(finding == option ? MobileKeptoraDesign.accent.opacity(0.16) : Color.clear, in: Capsule())
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(finding == option ? .isSelected : [])
-                        .accessibilityIdentifier("archive.finding." + option.rawValue)
-                    }
-                }.accessibilityIdentifier("archive.resultMode")
+        VStack(alignment: .leading, spacing: 10) {
+            statusCard
+            findingChips
             if finding == .copies { exactBatchSelection }
-            if store.authorization == .limited {
-                Button("Limited Photos access · Manage Access") { store.manageLimitedPhotosAccess() }.buttonStyle(MobileActionButtonStyle())
-            }
-            if store.libraryCollectionIDs != nil {
-                Button("Show Entire Library") { store.libraryCollectionIDs = nil; store.libraryCollectionTitle = nil; store.libraryCollectionSortBySize = false; store.libraryCollectionKind = nil }.buttonStyle(MobileActionButtonStyle())
-            }
+            // Finding views have their own safe batch actions; selecting the whole list there would include keepers.
+            if hasActiveFilters && finding == .all { selectListButton }
+            attentionRows
             if store.selectedLibraryIDs.isEmpty {
                 Text("Tap a photo to select it. Touch and hold to see it larger.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
-    /// What the finished scan found, with one tap into each result.
+
+    private var statusCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            (typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .center, spacing: 10))) {
+                Button { sources = true } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(store.connectedSources.filter { store.selectedSourceIDs.contains($0.id) }.map(\.localizedScanTitle).joined(separator: " · "))
+                                .font(.subheadline.weight(.semibold)).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
+                            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        }
+                        catalogueCount
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Sources"))
+                .accessibilityValue(Text(L10n.format("%lld selected", store.selectedSourceIDs.count)))
+                .accessibilityIdentifier("archive.sourcesSummary")
+                HStack(spacing: 8) { scanButtons }
+                    .disabled(store.isCleaningUp || store.isLoadingCatalogue)
+            }
+            if case .scanning(let processed, let total, let current) = store.scanState {
+                ProgressView(value: Double(processed), total: Double(max(total, 1)))
+                    .accessibilityValue(Text(current))
+                Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(.secondary)
+            } else if store.isAnalyzing {
+                Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(.secondary)
+            } else if case .paused = store.scanState {
+                Text("Scan paused.").font(.caption).foregroundStyle(.secondary)
+            } else if store.scanState == .completed && store.sessionProgress.isComplete {
+                scanResults
+            }
+        }
+        .padding(12)
+        .background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Short labels with counts in one horizontally scrolling row; the full name is read by VoiceOver.
+    private var findingChips: some View {
+        let scopeIDs = Set(store.scopedAssets.map(\.id))
+        let hasResults = !store.reviewGroups.isEmpty || !store.qualityAssessments.isEmpty
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(LibraryFindingFilter.allCases) { option in
+                    let count = option.ids(groups: store.reviewGroups, quality: store.qualityAssessments)?.intersection(scopeIDs).count
+                    Button { finding = option } label: {
+                        HStack(spacing: 6) {
+                            Text(Self.shortTitle(option))
+                            if hasResults, let count, count > 0 { Text(count.formatted(.number.locale(L10n.currentLocale))).foregroundStyle(.secondary) }
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 14).frame(minHeight: 44).contentShape(Capsule())
+                    }
+                    .background(finding == option ? MobileKeptoraDesign.accent.opacity(0.16) : MobileKeptoraDesign.elevated, in: Capsule())
+                    .overlay(Capsule().stroke(finding == option ? MobileKeptoraDesign.accent : .clear, lineWidth: 1.5))
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(LocalizedStringKey(option.titleKey)))
+                    .accessibilityAddTraits(finding == option ? .isSelected : [])
+                    .accessibilityIdentifier("archive.finding." + option.rawValue)
+                }
+            }
+        }
+        .accessibilityIdentifier("archive.resultMode")
+    }
+
+    private static func shortTitle(_ option: LibraryFindingFilter) -> LocalizedStringKey {
+        switch option {
+        case .all: return "All"
+        case .copies: return "Copies"
+        case .verySimilar: return "Very Similar"
+        case .review: return "Review"
+        }
+    }
+
+    /// Rows that only appear when something needs the person's attention.
+    @ViewBuilder private var attentionRows: some View {
+        if store.coverage.contains(where: { $0.error != nil }) || !store.connectionErrors.isEmpty {
+            Label("Some sources need attention.", systemImage: "exclamationmark.triangle").font(.caption)
+            Button("Manage Source Access") { sources = true }.buttonStyle(MobileActionButtonStyle())
+        }
+        if let error = store.similarityError ?? store.videoSimilarityError {
+            Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(MobileKeptoraDesign.warning)
+        }
+        if store.skippedCloudItems > 0 {
+            Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), store.skippedCloudItems)).font(.caption).foregroundStyle(.secondary)
+        }
+        if store.scanState == .completed && store.sessionProgress.isFinished && !store.sessionProgress.isComplete {
+            Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption)
+        }
+        if !store.analysisIssues.isEmpty {
+            DisclosureGroup("Items needing attention") {
+                ForEach(AnalysisIssueReason.allCases, id: \.rawValue) { reason in
+                    let count = Set(store.analysisIssues.filter { $0.reason == reason }.map(\.assetID)).count
+                    if count > 0 { HStack { Text(LocalizedStringKey(reason.titleKey)); Spacer(); Text(count.formatted()) }.font(.caption) }
+                }
+            }
+        }
+        if store.authorization == .limited {
+            Button("Limited Photos access · Manage Access") { store.manageLimitedPhotosAccess() }.buttonStyle(MobileActionButtonStyle())
+        }
+    }
+
+    /// What the finished scan found. Very similar and worth-reviewing counts sit on the chips below.
     private var scanResults: some View {
         let scope = Set(store.scopedAssets.map(\.id))
         let extraCopies = store.exactSuggestionCandidates(visibleIDs: scope)
         let extraBytes = extraCopies.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
-        let similarGroups = store.reviewGroups.filter { $0.kind == .verySimilar }.count
-        let worthReviewing = store.scopedAssets.filter { store.qualityAssessments[$0.id]?.needsReview == true }.count
-        return VStack(alignment: .leading, spacing: 8) {
-            Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle.fill").font(.subheadline.weight(.semibold))
-            if extraCopies.isEmpty && similarGroups == 0 && worthReviewing == 0 {
+        let anyFinding = !extraCopies.isEmpty || !store.reviewGroups.isEmpty || store.qualityAssessments.values.contains { $0.needsReview }
+        return VStack(alignment: .leading, spacing: 4) {
+            Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.secondary)
+            if !anyFinding {
                 Text("No copies or similar photos found.").font(.caption).foregroundStyle(.secondary)
             }
             if !extraCopies.isEmpty {
-                resultButton(L10n.format("Extra copies: %lld · %@", extraCopies.count, ByteCountFormatter.string(fromByteCount: extraBytes, countStyle: .file)),
-                             icon: "square.on.square", filter: .copies, id: "archive.results.copies")
-            }
-            if similarGroups > 0 {
-                resultButton(L10n.format("Very similar groups: %lld", similarGroups), icon: "photo.on.rectangle.angled", filter: .verySimilar, id: "archive.results.verySimilar")
-            }
-            if worthReviewing > 0 {
-                resultButton(L10n.format("Worth reviewing: %lld", worthReviewing), icon: "camera.metering.center.weighted", filter: .review, id: "archive.results.review")
+                Button { finding = .copies } label: {
+                    HStack {
+                        Label(L10n.format("Extra copies: %lld · %@", extraCopies.count, ByteCountFormatter.string(fromByteCount: extraBytes, countStyle: .file)), systemImage: "square.on.square")
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(MobileKeptoraDesign.accent)
+                .font(.subheadline.weight(.semibold))
+                .accessibilityIdentifier("archive.results.copies")
             }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MobileKeptoraDesign.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("archive.results")
-    }
-    private func resultButton(_ title: String, icon: String, filter: LibraryFindingFilter, id: String) -> some View {
-        Button { finding = filter } label: {
-            HStack {
-                Label(title, systemImage: icon).multilineTextAlignment(.leading)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
-            }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(MobileKeptoraDesign.accent)
-        .font(.subheadline.weight(.semibold))
-        .accessibilityIdentifier(id)
     }
     @ViewBuilder private var scanButtons: some View {
         if store.scanState.isScanning || store.isAnalyzing {
             Button("Pause Scan") { store.suspendScanForBackground() }.buttonStyle(MobileActionButtonStyle())
             Menu { Button("Cancel Scan") { store.cancelScan() } } label: {
-                Label("Scan Options", systemImage: "ellipsis.circle")
-            }.buttonStyle(MobileActionButtonStyle())
+                Image(systemName: "ellipsis.circle").frame(width: 44, height: 44).contentShape(Rectangle())
+            }.accessibilityLabel("Scan Options")
         } else if store.scanState == .paused {
             Button("Resume Scan") { store.startScan(allowNetwork: store.lastScanAllowedNetwork) }
                 .buttonStyle(MobilePrimaryButtonStyle()).disabled(!store.canScanSelectedSources)
         } else {
-            Button(store.scanState == .completed ? "Scan Again" : "Start Scan") { store.startScan() }.buttonStyle(MobilePrimaryButtonStyle())
-                .accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
+            if store.scanState == .completed {
+                // Results are showing; scanning again is secondary.
+                Button("Scan Again") { store.startScan() }.buttonStyle(MobileActionButtonStyle())
+                    .accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
+            } else {
+                Button("Start Scan") { store.startScan() }.buttonStyle(MobilePrimaryButtonStyle())
+                    .accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
+            }
             if store.skippedCloudItems > 0 {
                 Menu { Button("Include Cloud Originals") { cloudScan = true } } label: {
                     Image(systemName: "ellipsis.circle").frame(width: 44, height: 44).contentShape(Rectangle())
@@ -340,8 +369,8 @@ struct MobileLibraryView: View {
     }
     private var catalogueCount: some View {
         HStack {
-            Label(L10n.format("In this list: %lld items", visible.count), systemImage: "photo.stack")
-                .font(.subheadline.weight(.semibold)).accessibilityIdentifier("archive.visibleCount")
+            Text(L10n.format("In this list: %lld items", visible.count))
+                .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("archive.visibleCount")
             if store.isLoadingCatalogue { ProgressView() }
         }
     }
@@ -384,7 +413,6 @@ struct MobileLibraryView: View {
     }
     private var activeFilterChips: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
-            if finding != .all { filterChip(L10n.tr(String.LocalizationValue(finding.titleKey)), id: "finding") { finding = .all } }
             if media != 0 { filterChip(L10n.tr(media == 1 ? "Photos" : "Videos"), id: "media") { media = 0 } }
             if !albumID.isEmpty { filterChip(store.albums.first { $0.id == albumID }?.title ?? L10n.tr("Album"), id: "album") { albumID = "" } }
             if favouritesOnly { filterChip(L10n.tr("Favorites Only"), id: "favorites") { favouritesOnly = false } }

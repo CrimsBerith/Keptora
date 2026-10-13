@@ -147,6 +147,7 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPhotoTapSelectsWithoutMagnifierAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testTouchAndHoldShowsLargerPreviewAndSelects \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSelectAllAppearsOnlyForNarrowedLists \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testFirstScreenShowsPhotos \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testExactPhotoSelectionAndFinalReviewCanBeCancelled \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testFinalReviewRemovalCanBeUndoneEvenWhenEmpty \
