@@ -43,6 +43,19 @@ final class StoreKitEntitlementTests: XCTestCase {
         }
     }
 
+    /// The local StoreKit environment can still be starting when the first test buys; load the
+    /// product first and retry the purchase once instead of failing on a cold session.
+    private func buyLifetimeProduct() async throws {
+        let id = AppStoreConfiguration.defaultLifetimeProductID
+        _ = try await Product.products(for: [id])
+        do {
+            _ = try session.buyProduct(productIdentifier: id)
+        } catch {
+            try await Task.sleep(nanoseconds: 500_000_000)
+            _ = try session.buyProduct(productIdentifier: id)
+        }
+    }
+
     func testProductLoadingAndConfiguration() async {
         let controller = StoreEntitlementController(defaults: defaults)
         XCTAssertFalse(controller.isLifetimeUnlocked)
@@ -64,7 +77,7 @@ final class StoreKitEntitlementTests: XCTestCase {
         XCTAssertFalse(controller.isLifetimeUnlocked)
 
         // Simulate successful purchase via StoreKit test session
-        _ = try session.buyProduct(productIdentifier: AppStoreConfiguration.defaultLifetimeProductID)
+        try await buyLifetimeProduct()
         try await AppStore.sync()
         await controller.refresh()
 
@@ -80,7 +93,7 @@ final class StoreKitEntitlementTests: XCTestCase {
         XCTAssertFalse(controller.isLifetimeUnlocked)
 
         // Buy product directly through StoreKit Test session
-        _ = try session.buyProduct(productIdentifier: AppStoreConfiguration.defaultLifetimeProductID)
+        try await buyLifetimeProduct()
 
         await controller.restorePurchases()
 
@@ -99,7 +112,7 @@ final class StoreKitEntitlementTests: XCTestCase {
     }
 
     func testCachedEntitlementPersistsAcrossRefreshes() async throws {
-        _ = try session.buyProduct(productIdentifier: AppStoreConfiguration.defaultLifetimeProductID)
+        try await buyLifetimeProduct()
 
         let controller = StoreEntitlementController(defaults: defaults)
         await controller.refresh()
