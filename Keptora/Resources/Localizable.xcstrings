@@ -1476,7 +1476,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora temizlemeden önce seçilen her videonun özgün dosyasını yeniden doğrular. Korunan ana video hiçbir zaman seçilmez."
+            "value": "Keptora temizlemeden önce seçilen her videonun orijinal dosyasını yeniden doğrular. Korunan ana video hiçbir zaman seçilmez."
           }
         }
       }
@@ -3498,7 +3498,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keptora özgün baytların SHA-256 özetini kullanır. Temizleme yalnızca tam kopya gruplarında kullanılabilir; görsel benzerlikte asla kullanılamaz."
+            "value": "Keptora orijinal baytların SHA-256 özetini kullanır. Temizleme yalnızca tam kopya gruplarında kullanılabilir; görsel benzerlikte asla kullanılamaz."
           }
         }
       }
@@ -4024,7 +4024,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "iCloud özgünleri indirilsin mi?"
+            "value": "iCloud orijinalleri indirilsin mi?"
           }
         }
       }
@@ -4156,7 +4156,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hazır durumdaki her dosya imzalı manifestle eşleşir ve boş bir özgün hedefe sahiptir."
+            "value": "Hazır durumdaki her dosya imzalı manifestle eşleşir ve boş bir orijinal hedefe sahiptir."
           }
         }
       }
@@ -5663,7 +5663,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tüm geri yükleme çakışmalarını inceledim ve Keptora'nın dolu bir özgün yolun üzerine asla yazmayacağını anlıyorum."
+            "value": "Tüm geri yükleme çakışmalarını inceledim ve Keptora'nın dolu bir orijinal yolun üzerine asla yazmayacağını anlıyorum."
           }
         }
       }
@@ -5707,7 +5707,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siz ağ taramasını onaylamadan iCloud özgünleri indirilmez."
+            "value": "Siz ağ taramasını onaylamadan iCloud orijinalleri indirilmez."
           }
         }
       }
@@ -5729,7 +5729,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Siz ağ taramasını onaylayana kadar yalnızca iCloud’daki özgünlere dokunulmaz."
+            "value": "Siz ağ taramasını onaylayana kadar yalnızca iCloud’daki orijinallere dokunulmaz."
           }
         }
       }
@@ -8023,7 +8023,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Özgün yol dolu"
+            "value": "Orijinal yol dolu"
           }
         }
       }
@@ -8270,7 +8270,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotoğraflar"
+            "value": "Arşiv"
           }
         },
         "fr": {
@@ -8282,7 +8282,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos"
+            "value": "Mediathek"
           }
         }
       }
@@ -11544,7 +11544,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "iCloud Özgünlerini Tara"
+            "value": "iCloud Orijinallerini Tara"
           }
         }
       }
@@ -13885,7 +13885,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Her birebir gruptan toplam %@ boyutundaki %@ kopya plana eklenir. Korunan özgünlere dokunulmaz; Güvenlik Planı’nı onaylayana kadar hiçbir dosya taşınmaz."
+            "value": "Her birebir gruptan toplam %@ boyutundaki %@ kopya plana eklenir. Korunan orijinallere dokunulmaz; Güvenlik Planı’nı onaylayana kadar hiçbir dosya taşınmaz."
           }
         }
       }
@@ -24191,7 +24191,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erişilemeyen bir klasörü Kaynaklar bölümünden yeniden bağla."
+            "value": "Erişilemeyen klasörü Kaynaklar bölümünden yeniden bağlayın."
           }
         },
         "fr": {
@@ -24818,7 +24818,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bağlı bir kaynağa erişilemiyor. Yeniden bağlayıp tekrar dene."
+            "value": "Bağlı bir kaynağa erişilemiyor. Yeniden bağlayıp tekrar deneyin."
           }
         },
         "fr": {
@@ -24962,7 +24962,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arşivini bağla"
+            "value": "Arşivinizi bağlayın"
           }
         },
         "fr": {
@@ -25049,7 +25049,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arşive devam et"
+            "value": "Arşive Geç"
           }
         },
         "fr": {
@@ -25078,7 +25078,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tam Fotoğraflar erişimi, iCloud Fotoğrafları ve Fotoğraflar’a kaydedilmiş WhatsApp medyasını kapsar. Sınırlı erişimde yalnızca izin verdiğin öğeler görünür."
+            "value": "Tam Fotoğraflar erişimi, iCloud Fotoğrafları ve Fotoğraflar’a kaydedilmiş WhatsApp medyasını kapsar. Sınırlı erişimde yalnızca izin verdiğiniz öğeler görünür."
           }
         },
         "fr": {
@@ -25310,7 +25310,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resimler, İndirilenler, iCloud Drive veya başka bir bulut klasörünü seç. Keptora izin verdiğin klasörleri hatırlar; diğer uygulamaların özel depolaması erişime kapalıdır."
+            "value": "Resimler, İndirilenler, iCloud Drive veya başka bir bulut klasörünü seçin. Keptora izin verdiğiniz klasörleri hatırlar; diğer uygulamaların özel depolaması erişime kapalıdır."
           }
         },
         "fr": {
@@ -25368,7 +25368,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamera, mikrofon, kişiler veya canlı konum izni gerekmez. Mevcut fotoğraf bilgileri yalnızca izin verdiğin medyadan okunur."
+            "value": "Kamera, mikrofon, kişiler veya canlı konum izni gerekmez. Mevcut fotoğraf bilgileri yalnızca izin verdiğiniz medyadan okunur."
           }
         },
         "fr": {
@@ -27978,7 +27978,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu listeden çıkardığınız öğe kitaplığınızda kalır."
+            "value": "Bu listeden çıkardığınız öğe arşivinizde kalır."
           }
         },
         "fr": {
@@ -28007,7 +28007,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu öğe kitaplığınızda kalacak."
+            "value": "Bu öğe arşivinizde kalacak."
           }
         },
         "fr": {
@@ -28326,7 +28326,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tarama tamamlandı. Saklamak istediklerini seç."
+            "value": "Tarama tamamlandı. Saklamak istediklerinizi seçin."
           }
         },
         "fr": {
@@ -28500,7 +28500,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Senin seçimin"
+            "value": "Sizin seçiminiz"
           }
         },
         "fr": {
@@ -28558,7 +28558,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kaldırmadan önce bu öğeleri gözden geçir."
+            "value": "Kaldırmadan önce bu öğeleri gözden geçirin."
           }
         },
         "fr": {
@@ -28703,7 +28703,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nereden başlayacağını seç."
+            "value": "Nereden başlayacağınızı seçin."
           }
         },
         "fr": {
@@ -28732,7 +28732,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bir kategori aç; fotoğrafları ortak galeriden seç."
+            "value": "Bir kategori açın ve fotoğrafları seçin."
           }
         },
         "fr": {
@@ -28790,7 +28790,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Taşınan: %lld öğe. Taşınmayan: %lld öğe. Kurtarmak için Geçmiş’e bak."
+            "value": "Taşınan: %lld öğe. Taşınmayan: %lld öğe. Kurtarmak için Geçmiş’e bakın."
           }
         },
         "fr": {
@@ -28964,7 +28964,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kaynaklar’ı aç ve en az bir kaynak seç."
+            "value": "Kaynaklar’ı açın ve en az bir kaynak seçin."
           }
         },
         "fr": {
@@ -29080,7 +29080,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dosyalar özgün konumlarına geri taşınacak."
+            "value": "Dosyalar orijinal konumlarına geri taşınacak."
           }
         },
         "fr": {
@@ -29776,7 +29776,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kayıtlı oturum okunamadı. Özgün dosya korundu."
+            "value": "Kayıtlı oturum okunamadı. Orijinal dosya korundu."
           }
         },
         "fr": {
@@ -30182,7 +30182,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu dosyaları geri yüklemeden önce özgün kaynağı yeniden bağlayın."
+            "value": "Bu dosyaları geri yüklemeden önce orijinal kaynağı yeniden bağlayın."
           }
         },
         "fr": {
@@ -30211,7 +30211,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Özgün konumda başka bir dosya bulunduğu veya kurtarma dosyası eksik olduğu için geri yükleme durdu."
+            "value": "Orijinal konumda başka bir dosya bulunduğu veya kurtarma dosyası eksik olduğu için geri yükleme durdu."
           }
         },
         "fr": {
@@ -31487,7 +31487,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Konum bilgisi içermeyen yeni bir kopya kaydedin. Özgün dosya değişmez."
+            "value": "Konum bilgisi içermeyen yeni bir kopya kaydedin. Orijinal dosya değişmez."
           }
         },
         "fr": {
@@ -31632,7 +31632,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bir kurtarma yolu özgün kaynağın dışında. İşlem durduruldu."
+            "value": "Bir kurtarma yolu orijinal kaynağın dışında. İşlem durduruldu."
           }
         },
         "fr": {
@@ -33631,6 +33631,374 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 source sélectionnée · %lld éléments différents"
+          }
+        }
+      }
+    },
+    "Some sources need attention.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bazı kaynaklarda sorun var."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einige Quellen benötigen Aufmerksamkeit."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certaines sources nécessitent votre attention."
+          }
+        }
+      }
+    },
+    "Space is not freed right away": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yer hemen boşalmaz"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speicher wird nicht sofort frei"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’espace n’est pas libéré tout de suite"
+          }
+        }
+      }
+    },
+    "Open a category to choose photos.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir kategori açın ve fotoğrafları seçin."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen Sie eine Kategorie, um Fotos auszuwählen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrez une catégorie pour choisir des photos."
+          }
+        }
+      }
+    },
+    "Exact copies are confirmed byte by byte.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birebir kopyalar bayt bayt doğrulanır."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exakte Kopien werden Byte für Byte bestätigt."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les copies exactes sont vérifiées octet par octet."
+          }
+        }
+      }
+    },
+    "Keptora Pro is unavailable right now. Check your internet connection and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora Pro şu anda kullanılamıyor. İnternet bağlantınızı kontrol edip tekrar deneyin."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora Pro ist gerade nicht verfügbar. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora Pro n’est pas disponible pour le moment. Vérifiez votre connexion Internet et réessayez."
+          }
+        }
+      }
+    },
+    "No lifetime purchase was found for this Apple Account.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Apple Hesabı için ömür boyu satın alma bulunamadı."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diesen Apple Account wurde kein lebenslanger Kauf gefunden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun achat à vie n’a été trouvé pour ce compte Apple."
+          }
+        }
+      }
+    },
+    "Restore failed: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geri yükleme başarısız: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederherstellung fehlgeschlagen: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de la restauration : %@"
+          }
+        }
+      }
+    },
+    "Unverified transaction: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulanamayan işlem: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht verifizierte Transaktion: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transaction non vérifiée : %@"
+          }
+        }
+      }
+    },
+    "Unlocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kilidi açıldı"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freigeschaltet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déverrouillé"
+          }
+        }
+      }
+    },
+    "Product configuration required": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ürün yapılandırması gerekli"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Produktkonfiguration erforderlich"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration du produit requise"
+          }
+        }
+      }
+    },
+    "Search filenames": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya adlarında ara"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateinamen durchsuchen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher des noms de fichiers"
+          }
+        }
+      }
+    },
+    "Keptora needs Photos access only when you choose Photos as a source.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora, Fotoğraflar erişimine yalnızca Fotoğraflar’ı kaynak olarak seçtiğinizde ihtiyaç duyar."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora benötigt den Fotos-Zugriff nur, wenn Sie Fotos als Quelle wählen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora a besoin de l’accès à Photos uniquement si vous choisissez Photos comme source."
+          }
+        }
+      }
+    },
+    "Use Library to select this item manually. Suggested cleanup keeps it out of bulk selection.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu öğeyi Arşiv’den elle seçin. Önerilen temizlik onu toplu seçimin dışında tutar."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie dieses Objekt manuell in der Mediathek aus. Die vorgeschlagene Bereinigung schließt es von der Sammelauswahl aus."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionnez cet élément manuellement dans la photothèque. Le nettoyage suggéré l’exclut de la sélection groupée."
+          }
+        }
+      }
+    },
+    "Retry Loading Product": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ürünü Yeniden Yükle"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Produkt erneut laden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recharger le produit"
+          }
+        }
+      }
+    },
+    "Safety & Recovery": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik ve Kurtarma"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sicherheit & Wiederherstellung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sécurité et récupération"
+          }
+        }
+      }
+    },
+    "How Keptora Works": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keptora Nasıl Çalışır"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So funktioniert Keptora"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fonctionnement de Keptora"
           }
         }
       }

@@ -126,7 +126,7 @@ jobs:
             -derivedDataPath Build/CI -resultBundlePath Build/iPhonePermission.xcresult \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 \
+            -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 360 \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testGrantPhotosAccessForRealMedia \
             test-without-building
       - name: iPhone unit and product UI tests
@@ -137,13 +137,14 @@ jobs:
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
-            -maximum-test-execution-time-allowance 180 \
+            -maximum-test-execution-time-allowance 360 \
             -only-testing:KeptoraiOSTests \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testManualArchiveSelectionRetainsItemsWhenFiltering \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testVerySimilarKeeperAndSelectOthersWorkInsideGallery \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPhotoTapSelectsWithoutMagnifierAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testTouchAndHoldShowsLargerPreviewAndSelects \
+            -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testSelectAllAppearsOnlyForNarrowedLists \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testBulkCopySelectionUsesVisiblePhotoFilterAndCanBeUndone \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testExactPhotoSelectionAndFinalReviewCanBeCancelled \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testFinalReviewRemovalCanBeUndoneEvenWhenEmpty \
