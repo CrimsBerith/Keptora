@@ -16,16 +16,28 @@ enum MobileKeptoraDesign {
     static let canvas = Color(uiColor: .systemGroupedBackground)
     static let elevated = Color(uiColor: .secondarySystemGroupedBackground)
 
-    // Keptora aurora spectrum
-    static let accent   = Color(red: 0.34, green: 0.28, blue: 0.96)
+    // Keptora aurora spectrum.
+    // Text, icon and tint colors have a light and a dark value, each at least 4.5:1 against
+    // system and lightly tinted backgrounds (WCAG AA). Filled buttons with white labels use the
+    // fixed `…Fill` colors instead, which keep white text above 4.5:1 in both modes.
+    static let accent   = adaptive(light: (0.29, 0.22, 0.86), dark: (0.70, 0.67, 1.00))
+    static let accentFill = Color(red: 0.34, green: 0.28, blue: 0.96)
     static let violet   = Color(red: 0.58, green: 0.25, blue: 0.94)
     static let cyan     = Color(red: 0.08, green: 0.67, blue: 0.88)
     static let coral    = Color(red: 0.98, green: 0.39, blue: 0.47)
-    static let mint     = Color(red: 0.08, green: 0.64, blue: 0.46)
+    static let mint     = adaptive(light: (0.00, 0.42, 0.28), dark: (0.30, 0.85, 0.62))
     static let success  = mint
-    static let amber    = Color(red: 0.94, green: 0.58, blue: 0.12)
+    static let amber    = adaptive(light: (0.56, 0.30, 0.00), dark: (1.00, 0.72, 0.30))
     static let warning  = amber
-    static let danger   = Color(red: 0.92, green: 0.24, blue: 0.30)
+    static let danger   = adaptive(light: (0.70, 0.06, 0.12), dark: (1.00, 0.58, 0.58))
+    static let dangerFill = Color(red: 0.75, green: 0.08, blue: 0.14)
+
+    private static func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
+        Color(uiColor: UIColor { traits in
+            let value = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: value.0, green: value.1, blue: value.2, alpha: 1)
+        })
+    }
 
     // MARK: – Derived Glow & Subtle Accents
     static let accentGlow       = violet.opacity(0.30)
@@ -317,7 +329,7 @@ struct MobileActionButtonStyle: ButtonStyle {
 
 struct MobilePrimaryButtonStyle: ButtonStyle {
     var fillsWidth = false
-    var tint = MobileKeptoraDesign.accent
+    var tint = MobileKeptoraDesign.accentFill
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 

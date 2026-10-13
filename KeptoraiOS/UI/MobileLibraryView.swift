@@ -45,7 +45,7 @@ struct MobileScanSourcesSection: View {
                                 (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete"))
                                     .font(.caption).foregroundStyle(.secondary)
                                 Text(LocalizedStringKey(report.statusKey)).font(.caption)
-                                    .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
+                                    .foregroundStyle(report.error != nil || report.authorization == .limited ? MobileKeptoraDesign.warning : Color.secondary)
                             } else { Text("Loading item count…").font(.caption).foregroundStyle(.secondary) }
                         }
                         Spacer(minLength: 0)

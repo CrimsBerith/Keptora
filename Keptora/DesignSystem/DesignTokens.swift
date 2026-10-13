@@ -9,14 +9,25 @@ enum KeptoraDesign {
     static let compactRadius: CGFloat = 12
 
     // MARK: – Semantic colours (adaptive)
-    // Keptora aurora palette
-    static let accent   = Color(red: 0.34, green: 0.28, blue: 0.96)
+    // Keptora aurora palette. Text, icon and tint colors have a light and a dark value, each at
+    // least 4.5:1 against macOS window and control backgrounds (WCAG AA). Prominent buttons with
+    // white labels use the fixed `…Fill` colors.
+    static let accent   = adaptive(light: (0.29, 0.22, 0.86), dark: (0.74, 0.71, 1.00))
+    static let accentFill = Color(red: 0.34, green: 0.28, blue: 0.96)
     static let violet   = Color(red: 0.58, green: 0.25, blue: 0.94)
     static let cyan     = Color(red: 0.08, green: 0.67, blue: 0.88)
     static let coral    = Color(red: 0.98, green: 0.39, blue: 0.47)
-    static let success  = Color(red: 0.08, green: 0.64, blue: 0.46)
-    static let warning  = Color(red: 0.94, green: 0.58, blue: 0.12)
-    static let danger   = Color(red: 0.92, green: 0.24, blue: 0.30)
+    static let success  = adaptive(light: (0.00, 0.42, 0.28), dark: (0.30, 0.85, 0.62))
+    static let warning  = adaptive(light: (0.56, 0.30, 0.00), dark: (1.00, 0.72, 0.30))
+    static let danger   = adaptive(light: (0.70, 0.06, 0.12), dark: (1.00, 0.64, 0.64))
+    static let dangerFill = Color(red: 0.75, green: 0.08, blue: 0.14)
+
+    private static func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let value = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            return NSColor(srgbRed: value.0, green: value.1, blue: value.2, alpha: 1)
+        })
+    }
 
     // MARK: – Derived / glow
     static let accentGlow       = violet.opacity(0.30)

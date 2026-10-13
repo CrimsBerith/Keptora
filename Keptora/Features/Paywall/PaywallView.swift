@@ -60,7 +60,7 @@ struct PaywallView: View {
                             Label("StoreKit is using a placeholder product ID. Configure release identifiers before testing purchases.",
                                   systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(KeptoraDesign.warning)
                                 .frame(maxWidth: 590)
                         }
 #endif
@@ -128,7 +128,7 @@ struct PaywallView: View {
                 else if store.isLifetimeUnlocked { Text("Purchased") }
                 else { Text("Lifetime Product Unavailable") }
             }.frame(minWidth: 150, minHeight: 32)
-        }.buttonStyle(.borderedProminent).tint(KeptoraDesign.accent)
+        }.buttonStyle(.borderedProminent).tint(KeptoraDesign.accentFill)
             .disabled(store.isWorking || store.isLifetimeUnlocked || store.lifetimeProduct == nil)
     }
 

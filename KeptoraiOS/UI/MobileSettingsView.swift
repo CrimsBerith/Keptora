@@ -25,7 +25,7 @@ struct MobileSettingsView: View {
                     HStack(spacing: 12) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(purchase.isUnlocked ? MobileKeptoraDesign.brandGradient : LinearGradient(colors: [MobileKeptoraDesign.accent, MobileKeptoraDesign.violet], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .fill(purchase.isUnlocked ? MobileKeptoraDesign.brandGradient : LinearGradient(colors: [MobileKeptoraDesign.accentFill, MobileKeptoraDesign.violet], startPoint: .topLeading, endPoint: .bottomTrailing))
                             Image(systemName: purchase.isUnlocked ? "checkmark.seal.fill" : "sparkles")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(.white)

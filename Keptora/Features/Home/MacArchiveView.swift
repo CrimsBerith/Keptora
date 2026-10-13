@@ -42,7 +42,7 @@ struct MacScanSourcesSection: View {
                                     if let report {
                                         (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete")).monospacedDigit().foregroundStyle(.secondary)
                                         Text(LocalizedStringKey(report.statusKey)).font(.caption)
-                                            .foregroundStyle(report.error != nil || report.authorization == .limited ? Color.orange : Color.secondary)
+                                            .foregroundStyle(report.error != nil || report.authorization == .limited ? KeptoraDesign.warning : Color.secondary)
                                     } else { Text("Loading item count…").foregroundStyle(.secondary) }
                                 }
                                 Spacer(minLength: 0)
@@ -100,7 +100,7 @@ struct MacSourceSetupView: View {
                                 }
                             }
                             if archive.authorization == .limited {
-                                Text("Limited Photos access").foregroundStyle(.orange)
+                                Text("Limited Photos access").foregroundStyle(KeptoraDesign.warning)
                                 Button("Manage Access") { archive.openPhotosSettings() }
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -119,7 +119,7 @@ struct MacSourceSetupView: View {
                     }
                     Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.callout).foregroundStyle(.secondary)
                     Text("You can continue without access and add sources later.").font(.callout).foregroundStyle(.secondary)
-                    ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).foregroundStyle(.orange) }
+                    ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).foregroundStyle(KeptoraDesign.warning) }
                     }.disabled(controlsDisabled)
                 }.padding(24)
             }
@@ -268,7 +268,7 @@ struct MacArchiveView: View {
                     Button { archive.filterScopeMessage = nil } label: { Image(systemName: "xmark.circle").frame(width: 32, height: 32) }.help("Dismiss")
                 }.padding(.horizontal, 16)
             }
-            if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(.orange).padding(.horizontal, 16) }
+            if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(KeptoraDesign.warning).padding(.horizontal, 16) }
             if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
                 Button("Some sources have limited access. Manage Sources") { showAccessGuide = true }.font(.caption).padding(.bottom, 8)
             }
@@ -510,7 +510,7 @@ struct MacArchiveView: View {
                                 if let value = archive.qualityAssessments[item.id]?.findings.first { Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(.secondary) }
                                 if archive.decisions.protectedIDs.contains(item.id) { Label("Protected", systemImage: "lock.fill").font(.caption) }
                                 if let issue = archive.gallery.issuesByAsset[item.id] {
-                                    Label(LocalizedStringKey(issue.reason.titleKey), systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
+                                    Label(LocalizedStringKey(issue.reason.titleKey), systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(KeptoraDesign.warning)
                                 }
                                 if !groups.isEmpty { Text(groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }
                                 if kept { Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
@@ -722,7 +722,7 @@ struct MacManualSelectionSheet: View {
             Text("Review these items before removing them.").foregroundStyle(.secondary)
             if summary.personalItems > 0 { Label("Includes favorites, hidden, edited or shared items you selected manually.", systemImage: "exclamationmark.triangle") }
             if archive.exact.contains(where: { $0.assets.allSatisfy { reviewedIDs.contains($0.id) } }) {
-                Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle").foregroundStyle(KeptoraDesign.warning)
             }
         }
     }
@@ -767,7 +767,7 @@ struct MacManualSelectionSheet: View {
     private var removeButton: some View {
         Button(role: .destructive) { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
             label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)).frame(minHeight: 32) }
-            .buttonStyle(.borderedProminent).tint(.red).accessibilityIdentifier("mac.archive.review.remove")
+            .buttonStyle(.borderedProminent).tint(KeptoraDesign.dangerFill).accessibilityIdentifier("mac.archive.review.remove")
             .disabled(!archive.canRemoveSelection || needsReReview || reviewedItems.isEmpty || hasUnavailableSelection || (!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty))
     }
 }
@@ -778,13 +778,13 @@ struct MacManualHistoryView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Cleanup History").font(.title2.bold())
             if archive.busy { ProgressView(archive.status ?? L10n.tr("Restoring files…")) }
-            if let error = archive.error { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red) }
+            if let error = archive.error { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(KeptoraDesign.danger) }
             if !archive.connectionErrors.isEmpty { Button("Add Folders…") { archive.chooseFolder() }.disabled(archive.sourceControlsDisabled) }
             Text(L10n.format("Recovery storage: %@", ByteCountFormatter.string(fromByteCount: archive.history.reduce(0) { $0 + ($1.folderRecord?.recoveryBytes ?? 0) }, countStyle: .file))).font(.headline)
             Text("Recovery files stay on their original storage until you restore them. They do not free disk space.").font(.caption).foregroundStyle(.secondary)
             ForEach(archive.recoveryCatalogueIssues) { issue in
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("A recovery record could not be read", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Label("A recovery record could not be read", systemImage: "exclamationmark.triangle").foregroundStyle(KeptoraDesign.warning)
                     Text("The files were kept. Open the recovery folder to inspect this record.").font(.caption)
                     Button("Show Recovery Folder") { NSWorkspace.shared.activateFileViewerSelecting([issue.manifestURL.deletingLastPathComponent()]) }
                 }.padding(12)
