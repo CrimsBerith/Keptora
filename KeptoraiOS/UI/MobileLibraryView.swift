@@ -97,9 +97,17 @@ struct MobileSourceLibraryView: View {
                         if store.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
                     }
                     sourceSection.disabled(controlsDisabled)
-                    Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.").font(.footnote).foregroundStyle(.secondary)
                     if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(.secondary) }
                     privacyStrip
+                    // Background on access and cloud folders stays one tap away instead of filling the screen.
+                    DisclosureGroup("Details") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.")
+                            Text("Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library.")
+                            Text("Cloud providers may download files according to their own settings.")
+                            Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.")
+                        }.font(.footnote).foregroundStyle(.secondary).padding(.top, 6)
+                    }.font(.subheadline)
                 }
                 .padding(.horizontal, MobileKeptoraDesign.pagePadding)
                 .padding(.bottom, 24)
@@ -178,7 +186,6 @@ struct MobileSourceLibraryView: View {
             }
             if !store.connectedSources.isEmpty { MobileScanSourcesSection() }
 
-            Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.").font(.footnote).foregroundStyle(.secondary)
             if store.authorization == .limited, photosConnected {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
@@ -284,9 +291,6 @@ struct MobileSourceLibraryView: View {
                 )
             }
 
-            Text("Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library.")
-                .font(.footnote).foregroundStyle(.secondary)
-            Text("Cloud providers may download files according to their own settings.").font(.footnote).foregroundStyle(.secondary)
             ForEach(store.connectedFolders) { folder in
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) { connectedFolderControls(folder) }

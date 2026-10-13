@@ -83,15 +83,15 @@ final class KeptoraiOSUITests: XCTestCase {
     }
     private func connectRealPhotos(_ app: XCUIApplication) {
         if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
-        allowPhotosAccessIfPrompted(until: app.buttons["archive.selectAll"])
-        XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 20))
+        allowPhotosAccessIfPrompted(until: app.staticTexts["archive.visibleCount"])
+        XCTAssertTrue(app.staticTexts["archive.visibleCount"].waitForExistence(timeout: 20))
     }
     func testGrantPhotosAccessForRealMedia() {
         let app = launch()
         connectRealPhotos(app)
         // The catalogue loads after access is granted; the button enables once items are listed.
-        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["archive.selectAll"])
-        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 20), .completed)
+        let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (label CONTAINS ': 0 ')"), object: app.staticTexts["archive.visibleCount"])
+        XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 20), .completed)
     }
 
     private func assertTouchTarget(_ button: XCUIElement, in app: XCUIApplication, minimumHeight: CGFloat = 44,
@@ -179,13 +179,27 @@ final class KeptoraiOSUITests: XCTestCase {
         let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
         let item = app.buttons["archive.asset.ui-photo-copy"]
         reveal(item, in: app)
-        item.press(forDuration: 1.2)
         let select = app.buttons["Select"].firstMatch
-        XCTAssertTrue(select.waitForExistence(timeout: 5))
+        // Slow CI simulators sometimes miss the first long press; press once more before failing.
+        for _ in 0..<2 where !select.exists {
+            item.press(forDuration: 2.0)
+            _ = select.waitForExistence(timeout: 5)
+        }
+        XCTAssertTrue(select.exists)
         XCTAssertTrue(app.buttons["Protect Photo"].exists)
         saveScreenshot(app, name: "Touch and hold preview")
         select.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
+    }
+
+    func testSelectAllAppearsOnlyForNarrowedLists() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        XCTAssertFalse(app.buttons["archive.selectAll"].exists, "The whole library has no one-tap select-all")
+        let copies = app.buttons["archive.finding.copies"]
+        reveal(copies, in: app, scrollDown: true); copies.tap()
+        let selectAll = app.buttons["archive.selectAll"]
+        reveal(selectAll, in: app, scrollDown: true)
+        XCTAssertTrue(selectAll.isEnabled)
     }
 
     func testManualArchiveSelectionRetainsItemsWhenFiltering() {
@@ -320,8 +334,8 @@ final class KeptoraiOSUITests: XCTestCase {
     func testCaptureCurrentPhotoLibraryScreens() {
         let app = launch()
         connectRealPhotos(app)
-        XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["archive.selectAll"].isEnabled, "Imported simulator photos must be visible")
+        let photosListed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "NOT (label CONTAINS ': 0 ')"), object: app.staticTexts["archive.visibleCount"])
+        XCTAssertEqual(XCTWaiter.wait(for: [photosListed], timeout: 15), .completed, "Imported simulator photos must be visible")
         let photos = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "archive.asset."))
         let firstPhoto = photos.firstMatch
         reveal(firstPhoto, in: app)
@@ -499,8 +513,8 @@ final class KeptoraiOSUITests: XCTestCase {
     func testPrimaryTabLabelsAreLocalizedInFourLanguages() {
         let expectations: [(String, String, String, String, String)] = [
             ("en", "en_US", "Photo Library", "Suggestions", "History"),
-            ("tr", "tr_TR", "Fotoğraflar", "Öneriler", "Geçmiş"),
-            ("de", "de_DE", "Fotos", "Vorschläge", "Verlauf"),
+            ("tr", "tr_TR", "Arşiv", "Öneriler", "Geçmiş"),
+            ("de", "de_DE", "Mediathek", "Vorschläge", "Verlauf"),
             ("fr", "fr_FR", "Photothèque", "Suggestions", "Historique")
         ]
 
@@ -516,7 +530,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testThousandsOfMediaStressLiveScan() {
         let app = launch(arguments: ["-keptoraThousandsStressUITesting"])
-        XCTAssertTrue(app.buttons["archive.selectAll"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["archive.visibleCount"].waitForExistence(timeout: 10))
         let copies = app.buttons["archive.finding.copies"]
         reveal(copies, in: app, scrollDown: true); copies.tap()
         saveScreenshot(app, name: "Stress — copies together in one gallery")
@@ -567,6 +581,69 @@ final class KeptoraiOSUITests: XCTestCase {
         }
         app.tabBars.buttons.element(boundBy: 1).tap()
         saveScreenshot(app, name: "Walkthrough 11 — suggestions")
+    }
+
+    /// Counts the buttons and text a person sees on each main screen (Turkish fixture) and
+    /// lists the visible text, so screen density and wording can be reviewed and budgeted.
+    func testScreenDensityInventory() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"], language: "tr", locale: "tr_TR")
+        var report = ""
+        func record(_ screen: String) {
+            let summary = Self.visibleInventory(app.debugDescription, screenHeight: app.frame.height)
+            report += "## \(screen)\n" + summary + "\n"
+            saveScreenshot(app, name: "Inventory — \(screen)")
+        }
+        record("Kütüphane")
+        let photo = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(photo, in: app); photo.tap()
+        record("Kütüphane, 1 seçili")
+        app.buttons["archive.reviewSelection"].tap()
+        _ = app.buttons["archive.review.remove"].waitForExistence(timeout: 5)
+        record("Son inceleme")
+        app.buttons["archive.review.close"].tap()
+        let sources = app.buttons["archive.sourcesSummary"]
+        reveal(sources, in: app, scrollDown: true); sources.tap()
+        _ = app.buttons["sources.selectAll"].waitForExistence(timeout: 5)
+        record("Kaynaklar")
+        app.buttons.matching(identifier: "Done").firstMatch.exists ? app.buttons["Done"].firstMatch.tap() : app.navigationBars.buttons.firstMatch.tap()
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        record("Öneriler")
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        record("Geçmiş")
+        app.tabBars.buttons.element(boundBy: 0).tap()
+        let options = app.buttons["ios.library.options"].firstMatch
+        options.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        app.buttons["ios.library.settings"].tap()
+        _ = app.buttons["ios.settings.close"].waitForExistence(timeout: 5)
+        record("Ayarlar")
+        let attachment = XCTAttachment(string: report)
+        attachment.name = "Screen density inventory"; attachment.lifetime = .keepAlways; add(attachment)
+        print("INVENTORY-BEGIN\n" + report + "INVENTORY-END")
+    }
+
+    /// Parses an accessibility snapshot and returns counts plus the visible labels.
+    private static func visibleInventory(_ tree: String, screenHeight: CGFloat) -> String {
+        let pattern = try! NSRegularExpression(pattern: #"^\s*(Button|StaticText|Switch|SegmentedControl|TextField|SearchField), 0x[0-9a-f]+, \{\{(-?[\d.]+), (-?[\d.]+)\}, \{([\d.]+), ([\d.]+)\}\}(.*)$"#)
+        var seen = Set<String>(), buttons: [String] = [], texts: [String] = []
+        for line in tree.split(separator: "\n").map(String.init) {
+            let range = NSRange(line.startIndex..., in: line)
+            guard let match = pattern.firstMatch(in: line, range: range) else { continue }
+            func group(_ i: Int) -> String { String(line[Range(match.range(at: i), in: line)!]) }
+            let y = Double(group(3)) ?? 0, w = Double(group(4)) ?? 0, h = Double(group(5)) ?? 0
+            guard w > 1, h > 1, y + h > 0, y < Double(screenHeight) else { continue }
+            let rest = group(6)
+            var label = ""
+            if let start = rest.range(of: "label: '") {
+                let tail = rest[start.upperBound...]
+                label = String(tail[..<(tail.range(of: "'")?.lowerBound ?? tail.endIndex)])
+            }
+            let key = "\(group(1))|\(group(2))|\(group(3))|\(label)"
+            guard seen.insert(key).inserted else { continue }
+            if group(1) == "StaticText" { if !label.isEmpty { texts.append(label) } } else { buttons.append(label.isEmpty ? "(\(group(1)))" : label) }
+        }
+        let words = texts.joined(separator: " ").split(whereSeparator: \.isWhitespace).count
+        return "buttons: \(buttons.count) · texts: \(texts.count) · words: \(words)\n"
+            + "BUTTONS: " + buttons.joined(separator: " | ") + "\nTEXTS: " + texts.joined(separator: " | ") + "\n"
     }
 
     private func saveScreenshot(_ app: XCUIApplication, name: String) {

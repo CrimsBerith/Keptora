@@ -98,7 +98,7 @@ struct MobileSettingsView: View {
             }
 
             Section {
-                Label("Exact copies require SHA-256 byte-level proof.", systemImage: "checkmark.seal")
+                Label("Exact copies are confirmed byte by byte.", systemImage: "checkmark.seal")
                 Label("Similar photos are removed only when you select them.", systemImage: "hand.raised")
                 Label("Photos cleanup uses Apple's Recently Deleted flow.", systemImage: "photo.on.rectangle")
                 Label("Folder cleanup moves files to a recovery folder on the same storage.", systemImage: "shippingbox")

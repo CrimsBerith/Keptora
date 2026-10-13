@@ -41,7 +41,7 @@ final class MobilePurchaseController: ObservableObject {
         do {
             product = try await Product.products(for: [Self.productID]).first
             if product == nil {
-                statusMessage = L10n.tr("StoreKit product unavailable. Check internet connection and try again.")
+                statusMessage = L10n.tr("Keptora Pro is unavailable right now. Check your internet connection and try again.")
             }
         } catch {
             statusMessage = error.localizedDescription
