@@ -104,7 +104,7 @@ struct MobileHistoryView: View {
                                 } else if entry.restoredAt != nil {
                                     HStack(spacing: 6) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 13, weight: .bold))
+                                            .font(.subheadline.weight(.bold))
                                         Text("Restored")
                                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                     }

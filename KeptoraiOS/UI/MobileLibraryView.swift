@@ -367,7 +367,7 @@ struct MobileSourceLibraryView: View {
                 .frame(width: 32, height: 32)
             } else {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
         }

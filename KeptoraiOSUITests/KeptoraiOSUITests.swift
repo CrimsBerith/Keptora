@@ -653,6 +653,24 @@ final class KeptoraiOSUITests: XCTestCase {
             + "BUTTONS: " + buttons.joined(separator: " | ") + "\nTEXTS: " + texts.joined(separator: " | ") + "\n"
     }
 
+    /// Captures the main screens at the largest accessibility text size for manual review.
+    func testLargestTextSizeScreens() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"],
+                         language: "tr", locale: "tr_TR")
+        saveScreenshot(app, name: "AX5 1 — library")
+        let photo = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(photo, in: app); photo.tap()
+        saveScreenshot(app, name: "AX5 2 — selection")
+        app.buttons["archive.reviewSelection"].tap()
+        _ = app.buttons["archive.review.remove"].waitForExistence(timeout: 5)
+        saveScreenshot(app, name: "AX5 3 — review")
+        app.buttons["archive.review.close"].tap()
+        app.tabBars.buttons.element(boundBy: 1).tap()
+        saveScreenshot(app, name: "AX5 4 — suggestions")
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        saveScreenshot(app, name: "AX5 5 — history")
+    }
+
     private func saveScreenshot(_ app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)

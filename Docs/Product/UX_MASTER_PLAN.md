@@ -177,6 +177,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** Renk testi bütün çiftlerde eşikleri geçer; Accessibility Inspector denetiminde kontrast uyarısı yoktur.
 
+**Durum (13 Ekim):** Yapıldı (PR #22). Metin renkleri açık/karanlık için ayrı değerler aldı; beyaz yazılı butonlar sabit `accentFill` ve `dangerFill` kullanıyor; turuncu ve kırmızı sistem metin renkleri kaldırıldı. `ColorContrastTests` iki modda da 4.5:1 eşiğini doğruluyor.
+
 ### Paket D — Dynamic Type ve yazı (P1, S)
 
 **Kural:** Erişilebilirlik, tipografi.
@@ -185,6 +187,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 - Dosya adlarında ortadan kesme (`truncationMode(.middle)`), sayaçlarda `monospacedDigit`.
 
 **Kabul:** AX5 ve en küçük boyutta ekran görüntüleri incelenir; kesilme ve üst üste binme yoktur.
+
+**Durum (13 Ekim):** Yapıldı. `testLargestTextSizeScreens` Türkçe AX5 ekran görüntüleri alır. Bulunan ve düzeltilenler: "Kaynaklar" satırı kelime ortasından bölünüyordu (AX boyutunda dikey düzen); seçim çubuğu ekranı kaplıyor ve buton metinleri kesiliyordu (AX boyutunda "Geri Al", "Temizle", "1 seçili" ve ayrıntı satırları gizli); Öneriler'de uzun başlık ve kategori adları bölünüyordu (tekrarlayan başlık kaldırıldı, AX boyutunda ikon gizli). Metnin yanındaki ikonlar metin stiliyle büyüyor; inceleme listesinde dosya adları ortadan kısaltılıyor. Sabit kutulardaki dekoratif ikonlar bilinçli olarak sabit bırakıldı.
 
 ### Paket E — Galeri performansı (P1, M)
 
