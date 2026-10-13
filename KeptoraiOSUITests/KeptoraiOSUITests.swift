@@ -82,9 +82,14 @@ final class KeptoraiOSUITests: XCTestCase {
         }
     }
     private func connectRealPhotos(_ app: XCUIApplication) {
-        if app.buttons["library.source.photos"].exists { app.buttons["library.source.photos"].tap() }
-        allowPhotosAccessIfPrompted(until: app.staticTexts["archive.visibleCount"])
-        XCTAssertTrue(app.staticTexts["archive.visibleCount"].waitForExistence(timeout: 20))
+        let listed = app.staticTexts["archive.visibleCount"]
+        // A tap that lands while the app is still finishing launch can be ignored; try again.
+        for _ in 0..<3 where !listed.exists {
+            let open = app.buttons["library.source.photos"]
+            if open.exists && open.isHittable { open.tap() }
+            allowPhotosAccessIfPrompted(until: listed, timeout: 10)
+        }
+        XCTAssertTrue(listed.waitForExistence(timeout: 20))
     }
     func testGrantPhotosAccessForRealMedia() {
         let app = launch()
@@ -104,6 +109,8 @@ final class KeptoraiOSUITests: XCTestCase {
     }
 
     func testSelectionActionsHaveAccessibleTargetsAndDoNotOverlap() {
+        // Launches the app twice (standard and accessibility text sizes); CI simulators need more than 2 minutes.
+        executionTimeAllowance = 300
         for accessibleText in [false, true] {
             var arguments = ["-keptoraComprehensiveUITesting"]
             if accessibleText { arguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"] }
