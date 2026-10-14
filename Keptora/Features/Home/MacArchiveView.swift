@@ -151,9 +151,9 @@ struct MacSourceSetupView: View {
                 await archive.requestPhotosAccess(showError: false)
             }
         }
-        .alert("Something went wrong", isPresented: archive.errorBinding(for: .sources)) {
+        .alert(Text(archive.errorAlertParts.title), isPresented: archive.errorBinding(for: .sources)) {
             Button("OK", role: .cancel) { archive.error = nil }
-        } message: { Text(archive.error ?? "") }
+        } message: { if let detail = archive.errorAlertParts.detail { Text(detail) } }
     }
 }
 
@@ -742,9 +742,9 @@ struct MacManualSelectionSheet: View {
                 .accessibilityIdentifier("mac.archive.review.confirmRemoval")
             Button("Cancel", role: .cancel) { }
         } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }
-        .alert("Something went wrong", isPresented: archive.errorBinding(for: .review)) {
+        .alert(Text(archive.errorAlertParts.title), isPresented: archive.errorBinding(for: .review)) {
             Button("OK") { archive.error = nil }
-        } message: { Text(archive.error ?? "") }
+        } message: { if let detail = archive.errorAlertParts.detail { Text(detail) } }
     }
     private var hasUnavailableSelection: Bool {
         !archive.unresolvedSelectionIDs.intersection(archive.selection).isEmpty || archive.pendingSelection.contains { archive.selection.contains($0.id) }

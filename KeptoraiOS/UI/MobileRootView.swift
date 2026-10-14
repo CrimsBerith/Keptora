@@ -26,13 +26,13 @@ struct MobileRootView: View {
         .sheet(item: $store.modalRoute, onDismiss: { presentStartupIfNeeded() }) { route in
             MobileModalHost(route: route)
         }
-        .alert("Something went wrong", isPresented: Binding(
+        .alert(Text(store.errorAlertParts.title), isPresented: Binding(
             get: { store.errorMessage != nil },
             set: { if !$0 { store.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
-            Text(store.errorMessage ?? "")
+            if let detail = store.errorAlertParts.detail { Text(detail) }
         }
     }
 
@@ -73,13 +73,18 @@ private struct MobileModalHost: View {
                 NavigationStack { MobileSourceLibraryView(isStartupSetup: true) }
             }
         }
-        .alert("Something went wrong", isPresented: Binding(
+        .alert(Text(store.errorAlertParts.title), isPresented: Binding(
             get: { store.errorMessage != nil },
             set: { if !$0 { store.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
-            Text(store.errorMessage ?? "")
+            if let detail = store.errorAlertParts.detail { Text(detail) }
         }
     }
+}
+
+extension MobileKeptoraStore {
+    /// Error alerts lead with what happened (the message's first sentence) instead of a generic title.
+    var errorAlertParts: (title: String, detail: String?) { AlertText.split(errorMessage ?? "") }
 }

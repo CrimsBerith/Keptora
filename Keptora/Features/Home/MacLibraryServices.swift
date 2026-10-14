@@ -184,3 +184,8 @@ struct MacMainWindowMarker: NSViewRepresentable {
         override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); window?.identifier = MacWindowIdentity.main; window?.minSize = NSSize(width: 900, height: 650) }
     }
 }
+
+extension MacArchiveModel {
+    /// Error alerts lead with what happened (the message's first sentence) instead of a generic title.
+    var errorAlertParts: (title: String, detail: String?) { AlertText.split(error ?? "") }
+}

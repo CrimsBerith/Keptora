@@ -258,6 +258,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** Hata metinleri dört dilde; Reduce Motion açıkken kayma animasyonu yoktur (el ile kontrol).
 
+**Durum (14 Ekim):** Yapıldı. Hata uyarılarında genel başlık yerine mesajın ilk cümlesi başlık, kalanı açıklama oluyor (`AlertText.split`, iPhone ve Mac'te 6 uyarı, 4 birim testi). Mesajlar zaten dört dilde olduğundan başlık da dört dilde. iPhone ve Mac'teki bütün animasyonların Reduce Motion'a uyduğu doğrulandı; değişiklik gerekmedi. Ek olarak iPhone Ayarlar'da "Güvenlik ve Kurtarma" bölümü kaldırıldı (Keptora Nasıl Çalışır ile aynı bilgiyi tekrarlıyordu; Geçmiş zaten sekme), uzun iCloud cümlesi "iCloud orijinalleri: Yalnızca izin verirseniz" satırına indi.
+
 ### Paket K — Yerelleştirme kalitesi (P2, S)
 
 **Kural:** Yerelleştirme, tutarlılık.

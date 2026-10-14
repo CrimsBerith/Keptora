@@ -754,9 +754,9 @@ struct MobileSelectionReviewSheet: View {
             .onChange(of: reviewedItems) { _, _ in leaveLinkedFiles = false }
             .onAppear { if !captured { review = FrozenSelectionReview(store.librarySelection); captured = true } }
             .interactiveDismissDisabled(store.isCleaningUp)
-            .alert("Something went wrong", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
+            .alert(Text(store.errorAlertParts.title), isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") { store.errorMessage = nil }
-            } message: { Text(store.errorMessage ?? "") }
+            } message: { if let detail = store.errorAlertParts.detail { Text(detail) } }
             .alert("Remove selected items?", isPresented: $confirm) {
                 Button(role: .destructive) {
                     Task { completed = await store.cleanupLibrarySelection(expectedIDs: capturedIDs, reviewedAssets: reviewedItems, allowPartialFamilies: leaveLinkedFiles) }
