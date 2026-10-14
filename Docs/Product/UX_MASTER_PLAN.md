@@ -271,6 +271,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** Dört dilde ekran görüntülerinde kesilme yok; `Localizable.xcstrings` içinde `stale` anahtar kalmaz.
 
+**Durum (14 Ekim):** Yapıldı. Xcode'un derlemede çıkardığı metin listesi (`.stringsdata`) ile kaynak koddaki metinler birleştirilerek 1373 anahtardan kullanılmayan 929'u silindi (444 kaldı; dosya 856 KB → 306 KB). Ölçüm sırasında bulunanlar da düzeltildi: Mac ve iPhone paywall'ı kaldırılmış özellikleri ("Cleanup Plans", "Safety Plans") vaat ediyordu, artık Pro'nun gerçekten açtığı şeyi yazıyor ("Önerileri 100 öğe sınırı olmadan toplu seçin"); "1 Elemente entfernen", "Retirer 1 éléments", "Remove 1 Items" gibi tekil/çoğul hataları `L10n.plural` ve katalogdaki çoğul varyantlarıyla düzeldi (dört dilde birim testi); `testGermanAndFrenchScreens` ekran görüntülerinde kesilen Fransızca arama metni kısaltıldı ve "Saklama önerisi" rozetine iki satır verildi; iki indirme hatasının çevirisi eklendi. Ortak paketteki akıllı kategori, büyük video ve gizli belge motorları arayüzde kullanılmıyor; metinleri görünmediği için çevrilmedi, kodun silinmesi ayrı karar.
+
 ## 6. Sıra ve bağımlılıklar
 
 1. **Dalga 1 (P0):** L, M, C, A ve B'nin ilk kısmı tamamlandı (PR #21–#25). Kalan: Almanca hitap birliği, Ayarlar ekranının sadeleştirilmesi.

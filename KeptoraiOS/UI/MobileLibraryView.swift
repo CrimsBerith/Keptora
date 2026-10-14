@@ -42,7 +42,7 @@ struct MobileScanSourcesSection: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName).font(.subheadline.weight(.semibold))
                             if let report {
-                                (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete"))
+                                (report.error == nil ? Text(L10n.plural("%lld items", report.itemCount)) : Text("Count incomplete"))
                                     .font(.caption).foregroundStyle(.secondary)
                                 Text(LocalizedStringKey(report.statusKey)).font(.caption)
                                     .foregroundStyle(report.error != nil || report.authorization == .limited ? MobileKeptoraDesign.warning : Color.secondary)

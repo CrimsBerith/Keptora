@@ -66,7 +66,7 @@ struct MobileHistoryView: View {
                                     HStack(spacing: 5) {
                                         Image(systemName: "doc.on.doc")
                                             .font(.system(.caption2, design: .rounded).weight(.semibold))
-                                        Text(L10n.format("%lld items", entry.itemCount))
+                                        Text(L10n.plural("%lld items", entry.itemCount))
                                             .font(.system(.caption, design: .rounded).weight(.bold))
                                     }
                                     .padding(.horizontal, 9)

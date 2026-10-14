@@ -34,7 +34,8 @@ struct MobilePaywallView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 16) {
-                            feature("Unlimited exact-copy review", "infinity", MobileKeptoraDesign.violet)
+                            // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
+                            feature("Select suggestions in bulk without the 100-item limit", "infinity", MobileKeptoraDesign.violet)
                             Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
                         }
                         .keptoraPanel(tint: MobileKeptoraDesign.violet)

@@ -382,7 +382,7 @@ struct MobileLibraryView: View {
     }
     private var catalogueCount: some View {
         HStack {
-            Text(L10n.format("In this list: %lld items", visible.count))
+            Text(L10n.plural("In this list: %lld items", visible.count))
                 .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("archive.visibleCount")
             if store.isLoadingCatalogue { ProgressView() }
         }
@@ -577,7 +577,8 @@ struct MobileLibraryView: View {
             }
             if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
             if let keeperLabel {
-                Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).lineLimit(1).padding(4)
+                // Two lines: "Suggested Keep" and its translations do not fit one line in a 106-pt cell.
+                Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption2.weight(.semibold)).lineLimit(2).padding(4)
                     .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
             }
             Spacer()
@@ -745,7 +746,7 @@ struct MobileSelectionReviewSheet: View {
                     }
                     Button(role: .destructive) {
                         capturedIDs = Set(reviewedItems.map(\.id)); confirm = true
-                    } label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)) }
+                    } label: { Text(L10n.plural("Remove %lld Items", reviewedItems.count)) }
                         .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.dangerFill)).accessibilityIdentifier("archive.review.remove")
                         .disabled((!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty) || reviewedItems.isEmpty || hasUnavailableSelection || store.isCleaningUp || store.scanState.isScanning || store.isAnalyzing)
                     if store.scanState.isScanning || store.isAnalyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.footnote) }
@@ -765,7 +766,7 @@ struct MobileSelectionReviewSheet: View {
             .alert("Remove selected items?", isPresented: $confirm) {
                 Button(role: .destructive) {
                     Task { completed = await store.cleanupLibrarySelection(expectedIDs: capturedIDs, reviewedAssets: reviewedItems, allowPartialFamilies: leaveLinkedFiles) }
-                } label: { Text(L10n.format("Remove %lld Items", capturedIDs.count)) }
+                } label: { Text(L10n.plural("Remove %lld Items", capturedIDs.count)) }
                 Button("Cancel", role: .cancel) { }
             } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }
             .alert("Cleanup Completed", isPresented: $completed) {
