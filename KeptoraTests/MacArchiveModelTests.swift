@@ -28,6 +28,19 @@ final class MacArchiveModelTests: XCTestCase {
         XCTAssertEqual(model.gallery.membership[a.id]?.first?.kind, .exact)
         XCTAssertEqual(model.gallery.keeperBadges[a.id], "Suggested Keep")
     }
+    func testFirstScanStartsAfterSetupOnlyWhenThereAreNoResults() {
+        let model = MacArchiveModel(persistentSession: false), id = UUID().uuidString
+        let a = UniversalMediaAsset(id: id + "a", sourceID: LibrarySource.photos.id, reference: .photoLibrary(localIdentifier: id + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = a.with(id: id + "b", reference: .photoLibrary(localIdentifier: id + "b"), displayName: "b.jpg")
+        model.assets = [a, b]; model.photosConnected = true
+        model.exact = [.init(digest: id, assets: [a, b], keeperID: a.id)]
+        model.startFirstScanWhenReady()
+        XCTAssertFalse(model.analyzing, "Existing results are kept; no automatic rescan")
+        model.exact = []
+        model.startFirstScanWhenReady()
+        XCTAssertTrue(model.analyzing, "A fresh library starts its first scan without another click")
+        model.cancelAnalysis()
+    }
     func testThreeThousandItemProjectionIsReusedDuringSelectionAndProgress() {
         let model = MacArchiveModel(persistentSession: false); model.photosConnected = true
         model.assets = (0..<3_000).map { n in .init(id: "\(n)", sourceID: LibrarySource.photos.id,
