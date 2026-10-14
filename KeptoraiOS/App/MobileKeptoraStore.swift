@@ -78,10 +78,13 @@ final class MobileKeptoraStore: ObservableObject {
     #if DEBUG
     // Test fixtures use the same selection logic without exposing catalogue mutation in release builds.
     func replaceAssetsForTesting(_ items: [UniversalMediaAsset]) { assets = items }
+    func replaceSimilarityGroupsForTesting(_ groups: [UniversalSimilarityGroup]) { similarityGroups = groups }
     #endif
-    @Published var exactGroups: [UniversalExactGroup] = []
-    @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = []
-    @Published var similarVideoGroups: [UniversalSimilarityGroup] = []
+    @Published var exactGroups: [UniversalExactGroup] = [] { didSet { cachedReviewGroups = nil } }
+    @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = [] { didSet { cachedReviewGroups = nil } }
+    @Published var similarVideoGroups: [UniversalSimilarityGroup] = [] { didSet { cachedReviewGroups = nil } }
+    /// The gallery reads `reviewGroups` about ten times per redraw; build it once per change.
+    private var cachedReviewGroups: [LibraryReviewGroup]?
     @Published var similarityProgress: (processed: Int, total: Int)?
     @Published var videoSimilarityProgress: (processed: Int, total: Int)?
     @Published private(set) var skippedCloudItems = 0
@@ -212,7 +215,11 @@ final class MobileKeptoraStore: ObservableObject {
     }
     var unifiedAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters) }
     private var scanAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters, selectedSourceIDs: selectedSourceIDs) }
-    var reviewGroups: [LibraryReviewGroup] { LibraryReviewGroup.combined(exact: exactGroups, similar: similarityGroups + similarVideoGroups) }
+    var reviewGroups: [LibraryReviewGroup] {
+        if let cachedReviewGroups { return cachedReviewGroups }
+        let groups = LibraryReviewGroup.combined(exact: exactGroups, similar: similarityGroups + similarVideoGroups)
+        cachedReviewGroups = groups; return groups
+    }
     func sourceLabel(_ asset: UniversalMediaAsset) -> String {
         asset.sourceLabel(in: connectedSources)
     }
@@ -646,10 +653,10 @@ final class MobileKeptoraStore: ObservableObject {
                 }
                 let previousSelection = assets + pendingSelection
                 let previous = Dictionary(assets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-                if catalogue.contains(where: { item in previous[item.id]?.modificationDate != item.modificationDate }) || Set(previous.keys) != Set(catalogue.map(\.id)) {
-                    exactGroups = []; similarityGroups = []; similarVideoGroups = []; qualityAssessments = [:]; analysisIssues = []; sessionProgress = .init()
-                    scanFingerprintsByAssetID = [:]; scanState = .idle
-                }
+                let contentChanged = catalogue.contains(where: { item in previous[item.id]?.modificationDate != item.modificationDate }) || Set(previous.keys) != Set(catalogue.map(\.id))
+                // A new or edited photo only invalidates results that include changed items.
+                // Wiping everything made one screenshot during review erase the whole scan.
+                let unchangedIDs = LibraryCatalogueReconciliation.unchangedIDs(current: catalogue, previous: assets)
                 // PhotoKit catalogues carry no file sizes; the scan measures them. A Photos change
                 // notification reloads the catalogue, so keep sizes already known for unchanged items
                 // instead of showing "Zero KB" until the next scan.
@@ -660,6 +667,8 @@ final class MobileKeptoraStore: ObservableObject {
                     }
                     return withScannedByteCount(item)
                 }.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+                if unchangedIDs.count != catalogue.count || contentChanged { keepResults(for: unchangedIDs) }
+                if contentChanged { sessionProgress = .init(); scanState = .idle }
                 if selectedLibraryIDs.isEmpty {
                     if UserDefaults.standard.object(forKey: librarySelectionKey) == nil {
                         selectedLibraryIDs.formUnion(UserDefaults.standard.stringArray(forKey: "Keptora.ManualSelection.photos") ?? [])
@@ -695,7 +704,7 @@ final class MobileKeptoraStore: ObservableObject {
                 }
                 if photosConnected && photoObserver == nil {
                     photoObserver = MobilePhotoChangeObserver { [weak self] in
-                        Task { @MainActor in await self?.loadCatalogue() }
+                        Task { @MainActor in self?.photoLibraryDidChange() }
                     }
                 }
             } catch is CancellationError { }
@@ -703,6 +712,49 @@ final class MobileKeptoraStore: ObservableObject {
         }
         await catalogueTask?.value
         startPendingFirstScanIfReady()
+        resumePendingPhotoReload()
+    }
+
+    /// Drops analysis for items that changed or left the catalogue and rebases the rest
+    /// onto the reloaded items, keeping each group's keeper and strength.
+    func keepResults(for unchangedIDs: Set<String>) {
+        let current = Dictionary(assets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        func valid(_ items: [UniversalMediaAsset]) -> Bool { items.allSatisfy { unchangedIDs.contains($0.id) } }
+        exactGroups = exactGroups.filter { valid($0.assets) }.map {
+            UniversalExactGroup(digest: $0.digest, assets: $0.assets.map { current[$0.id] ?? $0 }, keeperID: $0.keeperID)
+        }
+        func rebase(_ groups: [UniversalSimilarityGroup]) -> [UniversalSimilarityGroup] {
+            groups.filter { valid($0.assets) }.map {
+                UniversalSimilarityGroup(id: $0.id, assets: $0.assets.map { current[$0.id] ?? $0 }, maximumDistance: $0.maximumDistance,
+                                         strength: $0.strength, mediaKind: $0.mediaKind, keeperID: $0.keeperID)
+            }
+        }
+        similarityGroups = rebase(similarityGroups); similarVideoGroups = rebase(similarVideoGroups)
+        qualityAssessments = qualityAssessments.filter { unchangedIDs.contains($0.key) }
+        analysisIssues = analysisIssues.filter { unchangedIDs.contains($0.assetID) }
+        scanFingerprintsByAssetID = scanFingerprintsByAssetID.filter { unchangedIDs.contains($0.key) }
+        skippedCloudItems = Set(analysisIssues.filter { $0.reason == .downloadRequired }.map(\.assetID)).count
+    }
+
+    // Photos posts change notifications in bursts (iCloud sync, edits, our own removals).
+    // Restarting the catalogue on each one could keep a large library loading forever,
+    // so changes are coalesced and wait until a scan, cleanup or load has finished.
+    private var photoReloadPending = false
+    private var photoReloadTask: Task<Void, Never>?
+    func photoLibraryDidChange() {
+        photoReloadPending = true
+        guard photoReloadTask == nil else { return }
+        photoReloadTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard let self else { return }
+            photoReloadTask = nil
+            guard photoReloadPending, !isLoadingCatalogue, !isCleaningUp, !scanState.isScanning, !isAnalyzing else { return }
+            photoReloadPending = false
+            await loadCatalogue()
+        }
+    }
+    private func resumePendingPhotoReload() {
+        if photoReloadPending { photoLibraryDidChange() }
     }
 
     @discardableResult
@@ -765,7 +817,7 @@ final class MobileKeptoraStore: ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = true
         scanTask = Task { [weak self] in
             guard let self else { return }
-            defer { if scanGeneration == generation { UIApplication.shared.isIdleTimerDisabled = false } }
+            defer { if scanGeneration == generation { UIApplication.shared.isIdleTimerDisabled = false; resumePendingPhotoReload() } }
             let checkpoint = await checkpointArchive.load(url: checkpointURL, ticket: checkpointTicket, sourceID: adapter.source.id, allowNetwork: allowNetwork)
             guard !Task.isCancelled, scanGeneration == generation else { return }
             let coordinator = LibraryAnalysisCoordinator { [weak self] update in
@@ -832,6 +884,7 @@ final class MobileKeptoraStore: ObservableObject {
             similarityProgress = nil; videoSimilarityProgress = nil
             currentGroupIndex = 0; currentSimilarityGroupIndex = 0
             clearScanCheckpoint(); saveLibrarySelection()
+            resumePendingPhotoReload()
         }
     }
     private func replaceIssues(_ stage: AnalysisStage, _ issues: [AnalysisIssue]) {
@@ -851,6 +904,7 @@ final class MobileKeptoraStore: ObservableObject {
         videoSimilarityProgress = nil
         clearScanCheckpoint()
         UIApplication.shared.isIdleTimerDisabled = false
+        resumePendingPhotoReload()
     }
 
     func suspendScanForBackground() {
@@ -940,7 +994,7 @@ final class MobileKeptoraStore: ObservableObject {
         guard !selection.isEmpty else { return false }
         isCleaningUp = true
         cleanupStatus = L10n.tr("Reviewing selected items…")
-        defer { isCleaningUp = false; cleanupStatus = nil }
+        defer { isCleaningUp = false; cleanupStatus = nil; resumePendingPhotoReload() }
         var completedIDs: Set<String> = []
         do {
             try LibraryRevisionValidator.validate(selection)
@@ -986,7 +1040,7 @@ final class MobileKeptoraStore: ObservableObject {
         }
     }
 
-    private func reconcileRemoved(_ removedIDs: Set<String>) {
+    func reconcileRemoved(_ removedIDs: Set<String>) {
         guard !removedIDs.isEmpty else { return }
         exactGroups = exactGroups.compactMap { group in
             let remaining = group.assets.filter { !removedIDs.contains($0.id) }
@@ -1002,6 +1056,7 @@ final class MobileKeptoraStore: ObservableObject {
                 id: group.id,
                 assets: remaining,
                 maximumDistance: group.maximumDistance,
+                strength: group.strength,
                 mediaKind: group.mediaKind,
                 keeperID: newKeeper
             )
@@ -1009,7 +1064,10 @@ final class MobileKeptoraStore: ObservableObject {
         similarityGroups = similarityGroups.compactMap { group in
             let remaining = group.assets.filter { !removedIDs.contains($0.id) }
             guard remaining.count > 1 else { return nil }
-            return UniversalSimilarityGroup(id: group.id, assets: remaining, maximumDistance: group.maximumDistance)
+            // Keep the chosen keeper and "very similar" strength; the plain initializer re-derives both.
+            let keeper = remaining.contains { $0.id == group.keeperID } ? group.keeperID : nil
+            return UniversalSimilarityGroup(id: group.id, assets: remaining, maximumDistance: group.maximumDistance,
+                                            strength: group.strength, mediaKind: group.mediaKind, keeperID: keeper)
         }
         assets.removeAll { removedIDs.contains($0.id) }
         pendingSelection.removeAll { removedIDs.contains($0.id) }
@@ -1123,7 +1181,7 @@ final class MobileKeptoraStore: ObservableObject {
     private func resetResults(clearCheckpoint shouldClearCheckpoint: Bool = true) {
         catalogueTask?.cancel(); catalogueGeneration = UUID(); isLoadingCatalogue = false
         scanGeneration = UUID()
-        photoObserver = nil
+        photoObserver = nil; photoReloadPending = false
         manualSelectionIsLoaded = false
         selectedLibraryIDs.removeAll()
         libraryCollectionSortBySize = false
