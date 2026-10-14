@@ -202,6 +202,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** 50.000 öğede kaydırmada takılma (hang) yok; seçim değişimi 100 ms altında; tarama sırasında galeri akıcı.
 
+**Durum (14 Ekim):** İlk adım yapıldı. `GalleryPerformanceTests`, 50.000 öğede görünen listenin (kapsam, filtre, sıralama, gruplama) bir kez hesaplanmasını ölçüyor: simulator'de ~28 ms. Bu liste bir ekran güncellemesinde 6–8 kez hesaplanıyordu (her dokunuşta ~0,2–0,6 sn); artık güncelleme başına bir kez hesaplanıyor. UI testleriyle yapılan süre ölçümü XCTest'in kendi yükünü (~1,5 sn) ölçtüğü için kullanılmadı. Kalan: gerçek cihazda 10.000+ fotoğrafla Instruments kaydı ve tarama ilerlemesinin galeriyi yeniden çizmemesi.
+
 ### Paket F — Daha kısa ilk kullanım (P1, M)
 
 **Kural:** İlk değer süresi, progressive disclosure.
