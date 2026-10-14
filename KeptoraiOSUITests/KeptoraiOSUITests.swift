@@ -728,6 +728,48 @@ final class KeptoraiOSUITests: XCTestCase {
         }
     }
 
+    /// App Store screenshots with real Photos content. Run on a 6.9" simulator that has the review
+    /// corpus in Photos and Photos access granted; it is not part of CI.
+    func testAppStoreScreenshotsWithRealPhotos() throws {
+        // Run with TEST_RUNNER_KEPTORA_STORE_SCREENSHOTS=1 on the prepared 6.9" simulator.
+        guard ProcessInfo.processInfo.environment["KEPTORA_STORE_SCREENSHOTS"] == "1" else { throw XCTSkip("Store screenshots run on request only") }
+        for (language, locale) in [("en", "en_US"), ("tr", "tr_TR")] {
+            let app = launch(language: language, locale: locale)
+            let listed = app.staticTexts["archive.visibleCount"]
+            if !listed.waitForExistence(timeout: 5) { connectRealPhotos(app) }
+            guard listed.waitForExistence(timeout: 15) else {
+                throw XCTSkip("Add the review corpus to this simulator's Photos first.")
+            }
+            let results = app.buttons["archive.results.copies"]
+            if !results.waitForExistence(timeout: 3) {
+                let scan = app.buttons["archive.scanAll"]
+                if scan.waitForExistence(timeout: 5) && scan.isEnabled { scan.tap() }
+                XCTAssertTrue(results.waitForExistence(timeout: 120), "The scan must find the corpus copies")
+            }
+            saveScreenshot(app, name: "\(language)_01_library")
+            results.tap()
+            let extra = app.buttons["archive.selectExtraCopies"]
+            reveal(extra, in: app); extra.tap()
+            // Let the button's label transition finish before capturing.
+            _ = app.staticTexts["archive.selectionCount"].waitForExistence(timeout: 2)
+            Thread.sleep(forTimeInterval: 1.0)
+            saveScreenshot(app, name: "\(language)_02_copies_selected")
+            let photo = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "archive.asset.")).firstMatch
+            reveal(photo, in: app)
+            photo.press(forDuration: 1.5)
+            _ = app.buttons["Protect Photo"].waitForExistence(timeout: 5)
+            saveScreenshot(app, name: "\(language)_03_preview")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+            let review = app.buttons["archive.reviewSelection"]
+            XCTAssertTrue(review.waitForExistence(timeout: 5)); review.tap()
+            _ = app.buttons["archive.review.remove"].waitForExistence(timeout: 5)
+            saveScreenshot(app, name: "\(language)_04_review")
+            app.buttons["archive.review.close"].tap()
+            app.buttons["archive.clearSelection"].tap()
+            app.terminate()
+        }
+    }
+
     private func saveScreenshot(_ app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)

@@ -791,7 +791,7 @@ struct MobileSelectionReviewSheet: View {
         HStack(alignment: .top, spacing: 12) {
             MobileAssetThumbnail(asset: asset, showsRetryButton: false).frame(width: 60, height: 60).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) {
-                Text(asset.displayName).lineLimit(2).truncationMode(.middle)
+                Text(asset.displayName).lineLimit(1).truncationMode(.middle)
                 Text(store.sourceLabel(asset)).font(.caption).foregroundStyle(.secondary)
                 if let date = asset.captureDateDescription { Text(date).font(.caption).foregroundStyle(.secondary) }
             }
@@ -800,8 +800,12 @@ struct MobileSelectionReviewSheet: View {
     private func excludeButton(_ asset: UniversalMediaAsset) -> some View {
         Button {
             if review.remove(asset.id) { store.replaceLibrarySelection(store.selectedLibraryIDs.subtracting([asset.id])) }
-        } label: { Label("Remove from selection", systemImage: "minus.circle") }
-            .buttonStyle(MobileActionButtonStyle()).accessibilityLabel("Remove from selection")
+        } label: {
+            // The standard iOS remove icon leaves the row's width to the file name.
+            Image(systemName: "minus.circle.fill").font(.title2).foregroundStyle(MobileKeptoraDesign.danger)
+                .frame(minWidth: 48, minHeight: 48).contentShape(Rectangle())
+        }
+            .buttonStyle(.plain).accessibilityLabel("Remove from selection")
             .accessibilityHint("This item will stay in your library.")
             .accessibilityIdentifier("archive.review.exclude." + asset.id)
     }

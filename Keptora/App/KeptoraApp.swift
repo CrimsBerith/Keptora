@@ -22,6 +22,16 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.showMainWindowIfNeeded()
         }
+        #if DEBUG
+        // App Store screenshots: a 1440 × 900 window captures at an accepted 16:10 size.
+        if LaunchArguments.contains("-keptoraStoreScreenshotWindow") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title == "Keptora" }) else { return }
+                window.setFrame(NSRect(origin: window.frame.origin, size: NSSize(width: 1440, height: 900)), display: true)
+                window.center()
+            }
+        }
+        #endif
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
