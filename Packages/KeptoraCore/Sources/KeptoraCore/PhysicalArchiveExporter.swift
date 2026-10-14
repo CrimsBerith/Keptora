@@ -3,8 +3,6 @@ import Foundation
 public struct PhysicalExportConfiguration: Sendable {
     public enum OrganizationStructure: String, Sendable, CaseIterable {
         case yearAndMonth = "year_and_month"             // 2026 / 08 / img.jpg
-        case yearAndCategory = "year_and_category"       // 2026 / Nature / img.jpg
-        case categoryOnly = "category_only"              // Documents / img.jpg
     }
     
     public enum TransferMode: String, Sendable, CaseIterable {
@@ -44,7 +42,6 @@ public enum PhysicalArchiveExporter: Sendable {
     
     public static func export(
         assets: [UniversalMediaAsset],
-        reports: [String: SmartCategorizationReport] = [:],
         config: PhysicalExportConfiguration,
         progress: @escaping @Sendable (PhysicalExportProgress) -> Void
     ) async throws {
@@ -75,16 +72,11 @@ public enum PhysicalArchiveExporter: Sendable {
             let date = asset.creationDate ?? Date()
             let yearStr = yearFormatter.string(from: date)
             let monthStr = monthFormatter.string(from: date)
-            let categoryStr = reports[asset.id]?.primaryCategory.displayName ?? "General"
             
             let targetSubdir: URL
             switch config.structure {
             case .yearAndMonth:
                 targetSubdir = config.destinationURL.appendingPathComponent(yearStr).appendingPathComponent(monthStr)
-            case .yearAndCategory:
-                targetSubdir = config.destinationURL.appendingPathComponent(yearStr).appendingPathComponent(categoryStr)
-            case .categoryOnly:
-                targetSubdir = config.destinationURL.appendingPathComponent(categoryStr)
             }
             
             try fileManager.createDirectory(at: targetSubdir, withIntermediateDirectories: true)
