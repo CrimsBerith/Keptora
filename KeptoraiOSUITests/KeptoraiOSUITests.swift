@@ -710,6 +710,24 @@ final class KeptoraiOSUITests: XCTestCase {
         saveScreenshot(app, name: "AX5 5 — history")
     }
 
+    /// German and French have the longest strings; capture the main screens for a truncation review.
+    func testGermanAndFrenchScreens() {
+        for (language, locale) in [("de", "de_DE"), ("fr", "fr_FR")] {
+            let app = launch(arguments: ["-keptoraComprehensiveUITesting"], language: language, locale: locale)
+            saveScreenshot(app, name: "\(language) 1 — library")
+            let photo = app.buttons["archive.asset.ui-photo-copy"]
+            reveal(photo, in: app); photo.tap()
+            saveScreenshot(app, name: "\(language) 2 — selection")
+            app.buttons["archive.reviewSelection"].tap()
+            _ = app.buttons["archive.review.remove"].waitForExistence(timeout: 5)
+            saveScreenshot(app, name: "\(language) 3 — review")
+            app.buttons["archive.review.close"].tap()
+            app.tabBars.buttons.element(boundBy: 1).tap()
+            saveScreenshot(app, name: "\(language) 4 — suggestions")
+            app.terminate()
+        }
+    }
+
     private func saveScreenshot(_ app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)

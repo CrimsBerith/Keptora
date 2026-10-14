@@ -40,7 +40,7 @@ struct MacScanSourcesSection: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName)
                                     if let report {
-                                        (report.error == nil ? Text(String(format: L10n.tr("%lld items"), report.itemCount)) : Text("Count incomplete")).monospacedDigit().foregroundStyle(.secondary)
+                                        (report.error == nil ? Text(L10n.plural("%lld items", report.itemCount)) : Text("Count incomplete")).monospacedDigit().foregroundStyle(.secondary)
                                         Text(LocalizedStringKey(report.statusKey)).font(.caption)
                                             .foregroundStyle(report.error != nil || report.authorization == .limited ? KeptoraDesign.warning : Color.secondary)
                                     } else { Text("Loading item count…").foregroundStyle(.secondary) }
@@ -570,7 +570,7 @@ struct MacArchiveView: View {
                 HStack(spacing: 12) { findingPicker.pickerStyle(.menu); Spacer(minLength: 8); scanControls }
             }
             HStack(spacing: 12) {
-                Text(L10n.format("In this list: %lld items", visible.count)).font(.subheadline.weight(.semibold)).accessibilityIdentifier("mac.archive.visibleCount")
+                Text(L10n.plural("In this list: %lld items", visible.count)).font(.subheadline.weight(.semibold)).accessibilityIdentifier("mac.archive.visibleCount")
                 Spacer(minLength: 8)
                 // Only for a narrowed list; in finding views it would also select the photos suggested to keep.
                 if finding == .all && (qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty) {
@@ -738,7 +738,7 @@ struct MacManualSelectionSheet: View {
                 outcome = result; review.discard(result.completedIDs); expectedIDs = Set(review.items.map(\.id))
                 if result.isComplete { dismiss() } else { needsReReview = true }
             } }
-                label: { Text(L10n.format("Remove %lld Items", expectedIDs.count)) }
+                label: { Text(L10n.plural("Remove %lld Items", expectedIDs.count)) }
                 .accessibilityIdentifier("mac.archive.review.confirmRemoval")
             Button("Cancel", role: .cancel) { }
         } message: { Text("Only the items listed here will be removed. Review the destination and recovery conditions before continuing.") }
@@ -802,7 +802,7 @@ struct MacManualSelectionSheet: View {
     }
     private var removeButton: some View {
         Button(role: .destructive) { expectedIDs = Set(reviewedItems.map(\.id)); confirm = true }
-            label: { Text(L10n.format("Remove %lld Items", reviewedItems.count)).frame(minHeight: 32) }
+            label: { Text(L10n.plural("Remove %lld Items", reviewedItems.count)).frame(minHeight: 32) }
             .buttonStyle(.borderedProminent).tint(KeptoraDesign.dangerFill).accessibilityIdentifier("mac.archive.review.remove")
             .disabled(!archive.canRemoveSelection || needsReReview || reviewedItems.isEmpty || hasUnavailableSelection || (!leaveLinkedFiles && !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty))
     }
@@ -837,7 +837,7 @@ struct MacManualHistoryView: View {
     private func historyDetails(_ entry: MacRecoveryEntry) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(entry.date.formatted()).font(.headline)
-            Text(L10n.format("%lld items", entry.folderRecord.map { $0.restoredAt == nil ? $0.movedCount : $0.operations.count } ?? entry.count))
+            Text(L10n.plural("%lld items", entry.folderRecord.map { $0.restoredAt == nil ? $0.movedCount : $0.operations.count } ?? entry.count))
             if let record = entry.folderRecord {
                 Text(L10n.format("Planned: %lld · In recovery: %lld · Needs attention: %lld", record.operations.count, record.movedCount, record.unresolvedCount)).font(.caption)
                 Text(ByteCountFormatter.string(fromByteCount: record.recoveryBytes, countStyle: .file)).font(.caption)

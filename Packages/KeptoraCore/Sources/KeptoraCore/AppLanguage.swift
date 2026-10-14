@@ -58,4 +58,11 @@ public enum L10n {
         let template = tr(formatKey)
         return String(format: template, locale: currentLocale, arguments: arguments)
     }
+
+    /// For keys with plural variations ("1 item" / "2 items"). `format` resolves the template without
+    /// the count, so the catalog's plural rules never apply; this looks the key up as a plural format.
+    public static func plural(_ key: String, _ count: Int, bundle: Bundle? = nil) -> String {
+        let template = localizedBundle(in: bundle ?? .main).localizedString(forKey: key, value: nil, table: nil)
+        return String.localizedStringWithFormat(template, count)
+    }
 }

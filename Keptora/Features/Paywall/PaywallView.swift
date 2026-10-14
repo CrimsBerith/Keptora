@@ -41,8 +41,8 @@ struct PaywallView: View {
 
                         // Feature list
                         VStack(alignment: .leading, spacing: 14) {
-                            feature("Unlimited exact-duplicate review decisions", image: "infinity")
-                            feature("Unlimited reversible Cleanup Plans", image: "arrow.uturn.backward.circle")
+                            // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
+                            feature("Select suggestions in bulk without the 100-item limit", image: "infinity")
                             Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
                         }
                         .padding(20)

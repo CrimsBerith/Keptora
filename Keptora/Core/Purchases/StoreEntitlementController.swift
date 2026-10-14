@@ -109,13 +109,6 @@ final class StoreEntitlementController: ObservableObject {
         }
     }
 
-    func authorizeSafetyPlan(assetIDs: [AssetID]) -> Bool {
-        guard accessPolicy.allowsSafetyPlan(assetIDs: assetIDs) else {
-            presentPaywall(.safetyPlan)
-            return false
-        }
-        return true
-    }
 
     func presentPaywall(_ reason: PaywallReason, host: PaywallHost = .main) {
         paywallHost = host

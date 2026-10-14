@@ -31,15 +31,15 @@ import SwiftUI
 
 enum PaywallReason: String, Identifiable, Sendable {
     case reviewLimit
-    case safetyPlan
     case settings
 
     var id: String { rawValue }
 
+    // Pro removes the 100-item limit on selecting suggestions in bulk; browsing, manual
+    // selection, removal and recovery are free. The copy must not promise more than that.
     var titleKey: LocalizedStringKey {
         switch self {
-        case .reviewLimit: return "Your free review is complete"
-        case .safetyPlan: return "Unlock unlimited Safety Plans"
+        case .reviewLimit: return "You’ve used the free suggestions"
         case .settings: return "Keptora Pro Lifetime"
         }
     }
@@ -47,18 +47,15 @@ enum PaywallReason: String, Identifiable, Sendable {
     var detailKey: LocalizedStringKey {
         switch self {
         case .reviewLimit:
-            return "You reviewed 100 unique recommendations. Unlock Keptora Pro to keep reviewing without limits."
-        case .safetyPlan:
-            return "This plan contains recommendations outside the free 100-review allowance. Pro keeps every future plan unlimited and reversible."
+            return "You selected 100 suggested items for free. Keptora Pro removes this limit. Manual selection, removal and recovery stay free."
         case .settings:
-            return "One purchase unlocks unlimited review decisions and Safety Plans on your supported Apple devices using the purchasing Apple Account."
+            return "One purchase removes the 100-item limit on selecting suggestions, on your Apple devices with the same Apple Account."
         }
     }
 
     var title: String {
         switch self {
-        case .reviewLimit: return L10n.tr("Your free review is complete")
-        case .safetyPlan: return L10n.tr("Unlock unlimited Safety Plans")
+        case .reviewLimit: return L10n.tr("You’ve used the free suggestions")
         case .settings: return L10n.tr("Keptora Pro Lifetime")
         }
     }
@@ -66,11 +63,9 @@ enum PaywallReason: String, Identifiable, Sendable {
     var detail: String {
         switch self {
         case .reviewLimit:
-            return L10n.tr("You reviewed 100 unique recommendations. Unlock Keptora Pro to keep reviewing without limits.")
-        case .safetyPlan:
-            return L10n.tr("This plan contains recommendations outside the free 100-review allowance. Pro keeps every future plan unlimited and reversible.")
+            return L10n.tr("You selected 100 suggested items for free. Keptora Pro removes this limit. Manual selection, removal and recovery stay free.")
         case .settings:
-            return L10n.tr("One purchase unlocks unlimited review decisions and Safety Plans on your supported Apple devices using the purchasing Apple Account.")
+            return L10n.tr("One purchase removes the 100-item limit on selecting suggestions, on your Apple devices with the same Apple Account.")
         }
     }
 }
