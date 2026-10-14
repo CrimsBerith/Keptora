@@ -238,6 +238,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** Mac UI testleri otomatik taramayı, sonuç özetini ve Space önizlemesini doğrular.
 
+**Durum (14 Ekim):** Kısmen yapıldı. Kurulum bitince ilk tarama kendiliğinden başlıyor (`testFirstScanStartsAfterSetupOnlyWhenThereAreNoResults`); tarama bitince "Fazla kopya: 3 · 3,3 MB" bağlantısı kopyalara götürüyor; "Bu Listeyi Seç" yalnızca daraltılmış listede; seçili bulgu tekrar çip olarak gösterilmiyor; "Tarama Seçenekleri" yalnızca atlanan iCloud öğesi varsa görünüyor; kurulum sayfası açıklamaları "Ayrıntılar" altında; seçim boşken sıfır sayılar ve boyut yazılmıyor. **Space önizlemesi yapılmadı:** Mac'te Space bugün seçimi değiştiriyor ve ipucu metninde de böyle anlatılıyor; önizlemeye vermek kullanıcı alışkanlığını bozar. Önizleme sağ tık menüsünde kalıyor; ⌘Y kısayolu ayrı karar olarak bırakıldı.
+
 ### Paket I — Bağlam içi yardım (P2, S)
 
 **Kural:** Yardım ve dokümantasyon, progressive disclosure.

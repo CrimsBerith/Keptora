@@ -882,6 +882,23 @@ final class MacArchiveModel: ObservableObject {
         guard !busy, !loading, !analyzing, !operations.isTerminating else { return }
         if pendingAccessRefresh { pendingAccessRefresh = false; Task { await refreshPhotosAccess() } }
         if pendingRefresh { refresh() }
+        startPendingFirstScanIfReady()
+    }
+
+    /// Set when the startup source setup finishes; the first scan starts once the catalogue has loaded.
+    private var startsScanWhenReady = false
+
+    /// First run: find copies right away instead of asking for another click.
+    func startFirstScanWhenReady() {
+        guard !connectedSources.isEmpty, !analyzing, exact.isEmpty, similar.isEmpty, qualityAssessments.isEmpty else { return }
+        startsScanWhenReady = true
+        startPendingFirstScanIfReady()
+    }
+
+    private func startPendingFirstScanIfReady() {
+        guard startsScanWhenReady, !pendingRefresh, canScanSelectedSources, !scopedAssets.isEmpty else { return }
+        startsScanWhenReady = false
+        analyze()
     }
     func contextChanged() { scheduleSave() }
     func openFinding(_ finding: LibraryFindingFilter = .all, quality: LibraryQualityFilter = .all) {
