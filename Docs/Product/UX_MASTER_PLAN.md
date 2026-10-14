@@ -319,3 +319,5 @@ Kodda ve repoda düzeltilebilenler düzeltildi. Aşağıdakiler bu repodan yapı
 3. **Yasal alanlar:** gizlilik politikasında yürürlük tarihi, geliştiricinin yasal adı ve gerekiyorsa posta adresi.
 4. **Almanca hitap birliği** (Paket M): anadili Almanca olan biri tarafından gözden geçirilmeli.
 5. **Cihazda kontrol:** VoiceOver ile baştan sona, StoreKit sandbox satın alma ve geri yükleme, 10.000+ fotoğraflık gerçek kütüphanede akıcılık.
+
+**Kod temizliği (14 Ekim):** Ortak paketteki, hiçbir ekrandan çağrılmayan analiz motorları silindi: `SmartCategorizationEngine` (kategori ve olay kümeleme), `HeavyMediaAnalyzer`, `PrivacyDocumentScanner` ve `ImageSharpnessEvaluator`. `VisualQualityEngine` benzerlik analizinde kullanıldığı için kalıyor. `PhysicalArchiveExporter` yalnızca yıl/ay düzenini tutuyor; kategori düzenleri silinen motora bağlıydı. Uygulamada görünen bir değişiklik yok.

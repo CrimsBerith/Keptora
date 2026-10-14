@@ -2,6 +2,7 @@
 
 > **Plan Adı:** Keptora Next-Gen Master Execution Plan  
 > **Tarih:** 2026-09-29  
+> **Güncel durum (2026-10-14):** Bu belgedeki `SmartCategorizationEngine`, `HeavyMediaAnalyzer` ve `PrivacyDocumentScanner` hiçbir ekrana bağlanmadı ve koddan silindi. Belge geçmiş kayıt olarak duruyor.  
 > **Durum:** Tüm Fazlar Tamamlandı (Faz 1 - 5 %100 Bitti & Doğrulandı)  
 > **Kapsam:** Çekirdek Yapay Zekâ Motorları · Tam Ekran Sinematik Viewer · Sağa/Sola Atarak Ayıklama (Card Swipe Studio) · Akıllı Sepetler · EXIF/Kamera Denetçisi · GPS/Tarih Onarıcı · Fiziksel Arşiv Dışa Aktarıcı · Downloads Klasör Watchdog · SQLite v5 · App Store Metadata  
 
