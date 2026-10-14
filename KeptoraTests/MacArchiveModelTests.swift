@@ -4,6 +4,20 @@ import KeptoraCore
 
 @MainActor
 final class MacArchiveModelTests: XCTestCase {
+    func testRemovingOneOfThreeCopiesKeepsTheRemainingPairAndKeeper() {
+        func item(_ id: String, _ bytes: Int64) -> UniversalMediaAsset {
+            UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: id, mediaKind: .image, byteCount: bytes)
+        }
+        let a = item("a", 1), b = item("b", 3), c = item("c", 2)
+        let exact = MacArchiveModel.removing(["c"], from: [UniversalExactGroup(digest: "d", assets: [a, b, c], keeperID: a.id),
+                                                           UniversalExactGroup(digest: "e", assets: [b, c], keeperID: b.id)])
+        XCTAssertEqual(exact.map(\.digest), ["d"])
+        XCTAssertEqual(exact.first?.keeperID, a.id)
+        let similar = MacArchiveModel.removing(["a"], from: [UniversalSimilarityGroup(id: "s", assets: [a, b, c], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: a.id)])
+        XCTAssertEqual(similar.first?.assets.count, 2)
+        XCTAssertEqual(similar.first?.strength, .verySimilar)
+    }
+
     func testProtectedPhotosRequireExplicitUnprotectForManualAndBulkSelection() {
         let model = MacArchiveModel(persistentSession: false)
         let photo = UniversalMediaAsset(id: UUID().uuidString, sourceID: "test", reference: .photoLibrary(localIdentifier: "a"), displayName: "a.jpg", mediaKind: .image)

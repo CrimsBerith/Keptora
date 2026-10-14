@@ -780,9 +780,9 @@ final class MacArchiveModel: ObservableObject {
             defer {
                 persistHistory()
                 assets.removeAll { completedIDs.contains($0.id) }
-                exact.removeAll { $0.assets.contains { completedIDs.contains($0.id) } }
-                similar.removeAll { $0.assets.contains { completedIDs.contains($0.id) } }
-                similarVideos.removeAll { $0.assets.contains { completedIDs.contains($0.id) } }
+                // Groups keep their remaining members so two copies left of three still show as copies.
+                exact = Self.removing(completedIDs, from: exact); similar = Self.removing(completedIDs, from: similar)
+                similarVideos = Self.removing(completedIDs, from: similarVideos)
                 selection.subtract(completedIDs)
             }
             if let batch = batches[LibrarySource.photos.id] {
@@ -843,6 +843,23 @@ final class MacArchiveModel: ObservableObject {
                 L10n.format("Moved: %lld items. Not moved: %lld items. See History for recovery.", completedIDs.count, snapshot.count - completedIDs.count) + "\n\n" + error.localizedDescription
             Task { refresh() }
             return false
+        }
+    }
+    static func removing(_ ids: Set<String>, from groups: [UniversalExactGroup]) -> [UniversalExactGroup] {
+        groups.compactMap { group in
+            let remaining = group.assets.filter { !ids.contains($0.id) }
+            guard remaining.count > 1 else { return nil }
+            let keeper = remaining.contains { $0.id == group.keeperID } ? group.keeperID : nil
+            return UniversalExactGroup(digest: group.digest, assets: remaining, keeperID: keeper)
+        }
+    }
+    static func removing(_ ids: Set<String>, from groups: [UniversalSimilarityGroup]) -> [UniversalSimilarityGroup] {
+        groups.compactMap { group in
+            let remaining = group.assets.filter { !ids.contains($0.id) }
+            guard remaining.count > 1 else { return nil }
+            let keeper = remaining.contains { $0.id == group.keeperID } ? group.keeperID : nil
+            return UniversalSimilarityGroup(id: group.id, assets: remaining, maximumDistance: group.maximumDistance,
+                                            strength: group.strength, mediaKind: group.mediaKind, keeperID: keeper)
         }
     }
     func restore(_ entry: MacRecoveryEntry) async {

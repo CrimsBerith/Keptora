@@ -279,58 +279,9 @@ final class MobileKeptoraStore: ObservableObject {
         DashboardSnapshot(scannedItems: assets.count, groups: exactGroups)
     }
 
-    var selectedSafeAssets: [UniversalMediaAsset] {
-        var unique: [String: UniversalMediaAsset] = [:]
-        for asset in exactGroups.flatMap(\.assets) where selectedAssetIDs.contains(asset.id) {
-            unique[asset.id] = asset
-        }
-        return Array(unique.values)
-    }
-
-    var selectedBytes: Int64 {
-        selectedSafeAssets.reduce(0) { $0 + ($1.byteCount ?? 0) }
-    }
-
-    var selectedSimilarVideoAssets: [UniversalMediaAsset] {
-        var unique: [String: UniversalMediaAsset] = [:]
-        for asset in similarVideoGroups.flatMap(\.assets)
-        where selectedSimilarVideoAssetIDs.contains(asset.id) {
-            unique[asset.id] = asset
-        }
-        return Array(unique.values)
-    }
-
-    var selectedSimilarVideoBytes: Int64 {
-        selectedSimilarVideoAssets.reduce(0) { $0 + ($1.byteCount ?? 0) }
-    }
-
     var hasSelectedKeeper: Bool {
-        exactGroups.contains { group in
-            selectedAssetIDs.contains(group.keeperID)
-        } || similarVideoGroups.contains { group in
-            selectedSimilarVideoAssetIDs.contains(group.keeperID)
-        }
-    }
-
-    var exactGroupsWithAllCopiesSelectedCount: Int {
-        exactGroups.filter { group in
-            !group.assets.isEmpty && group.assets.allSatisfy { selectedAssetIDs.contains($0.id) }
-        }.count
-    }
-
-    var similarVideoGroupsWithAllCopiesSelectedCount: Int {
-        similarVideoGroups.filter { group in
-            !group.assets.isEmpty && group.assets.allSatisfy { selectedSimilarVideoAssetIDs.contains($0.id) }
-        }.count
-    }
-
-    var hasAnyGroupWithAllCopiesSelected: Bool {
-        exactGroupsWithAllCopiesSelectedCount > 0 || similarVideoGroupsWithAllCopiesSelectedCount > 0
-    }
-
-    var currentGroup: UniversalExactGroup? {
-        guard exactGroups.indices.contains(currentGroupIndex) else { return nil }
-        return exactGroups[currentGroupIndex]
+        let exactSelection = selectedAssetIDs, videoSelection = selectedSimilarVideoAssetIDs
+        return exactGroups.contains { exactSelection.contains($0.keeperID) } || similarVideoGroups.contains { videoSelection.contains($0.keeperID) }
     }
 
     func connectPhotos() async {
@@ -946,35 +897,6 @@ final class MobileKeptoraStore: ObservableObject {
         return true
     }
 
-    @discardableResult
-    func selectAllSafeSimilarVideos(in group: UniversalSimilarityGroup? = nil, isUnlocked: Bool) -> Bool {
-        let groups = group.map { [$0] } ?? similarVideoGroups
-        let candidates = groups
-            .filter { $0.mediaKind == .video }
-            .flatMap(\.safeCandidates)
-        guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
-        selectedSimilarVideoAssetIDs.formUnion(candidates.map(\.id))
-        return true
-    }
-
-    @discardableResult
-    func toggleSimilarVideoSelection(
-        _ asset: UniversalMediaAsset,
-        in group: UniversalSimilarityGroup,
-        isUnlocked: Bool
-    ) -> Bool {
-        guard group.mediaKind == .video else { return true }
-        guard asset.id != group.keeperID, !asset.isProtectedFromGlobalSelection else {
-            errorMessage = L10n.tr("Use Library to select this item manually. Suggested cleanup keeps it out of bulk selection.")
-            return true
-        }
-        guard authorizeReview(assetIDs: [asset.id], isUnlocked: isUnlocked) else { return false }
-        if !selectedSimilarVideoAssetIDs.insert(asset.id).inserted {
-            selectedSimilarVideoAssetIDs.remove(asset.id)
-        }
-        return true
-    }
-
     func clearSimilarVideoSelection() {
         selectedSimilarVideoAssetIDs.removeAll()
     }
@@ -985,7 +907,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     private func executeCleanup(
         selection: [UniversalMediaAsset],
-        intent: PhotosRemovalIntent = .suggestedCopies,
+        intent: PhotosRemovalIntent,
         allowPartialFamilies: Bool = false,
         resolveFolderCandidates: () async throws -> [(asset: UniversalMediaAsset, expectedDigest: String)],
         onSuccess: () -> Void
@@ -998,7 +920,6 @@ final class MobileKeptoraStore: ObservableObject {
         var completedIDs: Set<String> = []
         do {
             try LibraryRevisionValidator.validate(selection)
-            if case .suggestedCopies = intent { try await verifyUnchanged(selection) }
             var candidates: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
             if selection.contains(where: { if case .file = $0.reference { return true }; return false }) {
                 candidates = try await resolveFolderCandidates()
@@ -1085,49 +1006,6 @@ final class MobileKeptoraStore: ObservableObject {
         }
         selectedAssetIDs.subtract(removedIDs)
         selectedSimilarVideoAssetIDs.subtract(removedIDs)
-    }
-
-    @discardableResult
-    func cleanupSelection() async -> Bool {
-        let selection = selectedSafeAssets
-        return await executeCleanup(
-            selection: selection,
-            resolveFolderCandidates: { [weak self] in
-                guard let self else { return [] }
-                let digestByAsset = Dictionary(self.exactGroups.flatMap { group in
-                    group.assets.map { ($0.id, group.digest) }
-                }, uniquingKeysWith: { first, _ in first })
-                return selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
-                    guard let digest = digestByAsset[asset.id] else { return nil }
-                    return (asset, digest)
-                }
-            },
-            onSuccess: { [weak self] in
-                self?.selectedAssetIDs.removeAll()
-            }
-        )
-    }
-
-    @discardableResult
-    func cleanupSimilarVideoSelection() async -> Bool {
-        let selection = selectedSimilarVideoAssets
-        return await executeCleanup(
-            selection: selection,
-            resolveFolderCandidates: { [weak self] in
-                guard let self else { return [] }
-                let candidates = selection.compactMap { asset -> (asset: UniversalMediaAsset, expectedDigest: String)? in
-                    guard let digest = self.scanFingerprintsByAssetID[asset.id]?.digest else { return nil }
-                    return (asset, digest)
-                }
-                guard candidates.count == selection.count else {
-                    throw UnifiedLibraryError.selectionChanged
-                }
-                return candidates
-            },
-            onSuccess: { [weak self] in
-                self?.selectedSimilarVideoAssetIDs.removeAll()
-            }
-        )
     }
 
     private static func isUserCancellation(_ error: Error) -> Bool {
@@ -1224,18 +1102,6 @@ final class MobileKeptoraStore: ObservableObject {
     private func withScannedByteCount(_ asset: UniversalMediaAsset) -> UniversalMediaAsset {
         guard let fingerprint = scanFingerprintsByAssetID[asset.id] else { return asset }
         return asset.with(byteCount: fingerprint.byteCount)
-    }
-
-    private func verifyUnchanged(_ selection: [UniversalMediaAsset]) async throws {
-        for asset in selection {
-            guard let expected = scanFingerprintsByAssetID[asset.id] else {
-                throw UnifiedLibraryError.selectionChanged
-            }
-            let fresh = try await unifiedAdapter.exactFingerprint(for: asset, allowNetwork: lastScanAllowedNetwork, progress: { _ in })
-            guard fresh == expected else {
-                throw UnifiedLibraryError.selectionChanged
-            }
-        }
     }
 
     private func seedVideoReviewForUITesting() {

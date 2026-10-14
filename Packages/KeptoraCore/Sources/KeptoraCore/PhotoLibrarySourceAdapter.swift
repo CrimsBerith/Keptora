@@ -71,6 +71,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
     public nonisolated let source = LibrarySource.photos
     public nonisolated let capabilities = PlatformCapabilities.photos
 
+    /// `PHAssetResource.assetResources(for:)` is the slow part of a catalogue load. Photos edits
+    /// update `modificationDate`, so an unchanged date means the file name and edit state are too.
+    private struct ResourceSummary { let modified: Date; let filename: String?; let hasAdjustments: Bool }
+    private var resourceSummaries: [String: ResourceSummary] = [:]
+
     public init() {}
 
     public func authorizationStatus() async -> SourceAuthorization {
@@ -96,13 +101,25 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let albumMemberships = Self.albumMemberships()
         var output: [UniversalMediaAsset] = []
         output.reserveCapacity(fetch.count)
+        // Rebuilt each load, so deleted items do not stay cached.
+        var summaries: [String: ResourceSummary] = [:]
+        summaries.reserveCapacity(fetch.count)
         for index in 0..<fetch.count {
             try Task.checkCancellation(); try await control?.waitIfPaused()
             let asset = fetch.object(at: index)
             guard asset.mediaType == .image || asset.mediaType == .video else { continue }
-            let resources = PHAssetResource.assetResources(for: asset)
-            let filename = Self.primaryResource(in: resources, mediaType: asset.mediaType)?.originalFilename
-                ?? resources.first?.originalFilename ?? (asset.mediaType == .video ? "Video_\(index + 1)" : "Photo_\(index + 1)")
+            let summary: ResourceSummary
+            if let modified = asset.modificationDate, let cached = resourceSummaries[asset.localIdentifier], cached.modified == modified {
+                summary = cached
+            } else {
+                let resources = PHAssetResource.assetResources(for: asset)
+                summary = ResourceSummary(modified: asset.modificationDate ?? .distantPast,
+                    filename: Self.primaryResource(in: resources, mediaType: asset.mediaType)?.originalFilename ?? resources.first?.originalFilename,
+                    hasAdjustments: resources.contains { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto || $0.type == .adjustmentBaseVideo })
+            }
+            // Without a modification date a change cannot be detected, so such items are never reused.
+            if asset.modificationDate != nil { summaries[asset.localIdentifier] = summary }
+            let filename = summary.filename ?? (asset.mediaType == .video ? "Video_\(index + 1)" : "Photo_\(index + 1)")
             // PhotoKit has no public size property. Unknown is honest; a completed
             // fingerprint supplies measured bytes without private KVC keys.
             let byteCount: Int64? = nil
@@ -121,7 +138,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
                     modificationDate: asset.modificationDate,
                     isFavorite: asset.isFavorite,
                     isHidden: asset.isHidden,
-                    hasAdjustments: resources.contains { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto || $0.type == .adjustmentBaseVideo },
+                    hasAdjustments: summary.hasAdjustments,
                     isSharedLibraryAsset: Self.isSharedAsset(asset),
                     hasAlbumMembership: !(albumMemberships[asset.localIdentifier] ?? []).isEmpty,
                     context: MediaContext(albums: albumMemberships[asset.localIdentifier] ?? [],
@@ -133,6 +150,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             if output.count % max(25, batchSize) == 0 { await onBatch(output) }
         }
         await onBatch(output)
+        resourceSummaries = summaries
         return output
     }
 
