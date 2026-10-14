@@ -5,6 +5,37 @@ import KeptoraCore
 @MainActor
 final class KeptoraiOSEdgeCaseTests: XCTestCase {
 
+    private func photo(_ id: String, bytes: Int64 = 1_000, modified: Double = 1_700_000_000) -> UniversalMediaAsset {
+        UniversalMediaAsset(id: id, sourceID: "photos", reference: .photoLibrary(localIdentifier: id), displayName: id + ".jpg",
+                            mediaKind: .image, byteCount: bytes, modificationDate: Date(timeIntervalSince1970: modified))
+    }
+
+    func testRemovingOneItemKeepsTheSimilarGroupsKeeperAndStrength() {
+        let store = MobileKeptoraStore(), ns = UUID().uuidString
+        let a = photo(ns + "a", bytes: 1_000), b = photo(ns + "b", bytes: 3_000), c = photo(ns + "c", bytes: 2_000)
+        store.replaceAssetsForTesting([a, b, c])
+        // The analyzer chose `a` although the default keeper order would prefer the larger `b`.
+        store.replaceSimilarityGroupsForTesting([UniversalSimilarityGroup(id: ns, assets: [a, b, c], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: a.id)])
+        store.reconcileRemoved([c.id])
+        XCTAssertEqual(store.similarityGroups.first?.keeperID, a.id)
+        XCTAssertEqual(store.similarityGroups.first?.strength, .verySimilar)
+        XCTAssertEqual(store.similarityGroups.first?.assets.count, 2)
+    }
+
+    func testCatalogueChangeKeepsResultsForUnchangedItems() {
+        let store = MobileKeptoraStore(), ns = UUID().uuidString
+        let a = photo(ns + "a"), b = photo(ns + "b"), c = photo(ns + "c"), d = photo(ns + "d")
+        store.replaceAssetsForTesting([a, b, c, d])
+        store.exactGroups = [UniversalExactGroup(digest: ns + "ab", assets: [a, b], keeperID: a.id),
+                             UniversalExactGroup(digest: ns + "cd", assets: [c, d], keeperID: c.id)]
+        store.replaceSimilarityGroupsForTesting([UniversalSimilarityGroup(id: ns, assets: [a, b], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: b.id)])
+        // `d` was edited; `a`, `b` and `c` did not change.
+        store.keepResults(for: [a.id, b.id, c.id])
+        XCTAssertEqual(store.exactGroups.map(\.digest), [ns + "ab"])
+        XCTAssertEqual(store.similarityGroups.first?.keeperID, b.id)
+        XCTAssertEqual(store.similarityGroups.first?.strength, .verySimilar)
+    }
+
     func testRepeatedKeeperAndProtectionActionsPreserveLastMeaningfulUndo() {
         let store = MobileKeptoraStore(), namespace = UUID().uuidString
         let a = UniversalMediaAsset(id: namespace + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: namespace + "a"), displayName: "a.jpg", mediaKind: .image)

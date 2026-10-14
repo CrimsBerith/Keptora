@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#endif
 
 /// Revision- and algorithm-scoped cache. Unknown revisions are never reused.
 public actor MediaFingerprintDiskCache {
@@ -57,13 +60,13 @@ public actor MediaFingerprintDiskCache {
                 ?? FileManager.default.temporaryDirectory
             let folder = base.appendingPathComponent("KeptoraCache", isDirectory: true)
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            self.cacheURL = folder.appendingPathComponent("media_fingerprints_v3.json")
+            self.cacheURL = folder.appendingPathComponent("media_fingerprints_v4.json")
         }
     }
     
     public func get(asset: UniversalMediaAsset, algorithm: String) -> CacheEntry? {
         ensureLoaded()
-        guard let key = MediaRevisionPolicy.key(for: asset, algorithm: algorithm) else { return nil }
+        guard let key = Self.storageKey(for: asset, algorithm: algorithm) else { return nil }
         return entries[key]
     }
     
@@ -73,7 +76,7 @@ public actor MediaFingerprintDiskCache {
         entry: CacheEntry
     ) {
         ensureLoaded()
-        guard let key = MediaRevisionPolicy.key(for: asset, algorithm: algorithm) else { return }
+        guard let key = Self.storageKey(for: asset, algorithm: algorithm) else { return }
         if let previous = entries[key] { currentCost -= cost(key: key, entry: previous) }
         entries[key] = entry
         currentCost += cost(key: key, entry: entry)
@@ -124,11 +127,25 @@ public actor MediaFingerprintDiskCache {
         }
     }
     
+    /// The revision key is about 1 KB of JSON per item. Storing its SHA-256 keeps the
+    /// same identity in 70 bytes, so the size budget holds more fingerprints.
+    static func storageKey(for asset: UniversalMediaAsset, algorithm: String) -> String? {
+        guard let key = MediaRevisionPolicy.key(for: asset, algorithm: algorithm) else { return nil }
+        #if canImport(CryptoKit)
+        return algorithm + ":" + SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
+        #else
+        return key
+        #endif
+    }
+
+    /// Evicts down to 90% of both limits in one pass. Evicting a single entry per store
+    /// re-sorted the whole cache on every write once it was full (about 1 ms per item).
     private func evictOldest() {
         guard entries.count > maxEntries || currentCost > maximumBytes else { return }
+        let entryTarget = maxEntries - maxEntries / 10, byteTarget = maximumBytes - maximumBytes / 10
         let sortedKeys = entries.sorted { $0.value.timestamp < $1.value.timestamp }
         for item in sortedKeys {
-            guard entries.count > maxEntries || currentCost > maximumBytes else { break }
+            guard entries.count > entryTarget || currentCost > byteTarget else { break }
             currentCost -= cost(key: item.key, entry: item.value)
             entries.removeValue(forKey: item.key)
             isDirty = true

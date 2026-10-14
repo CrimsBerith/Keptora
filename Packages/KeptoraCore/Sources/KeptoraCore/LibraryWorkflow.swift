@@ -170,6 +170,8 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
     private let adapters: [any SourceAdapter]
     public private(set) var coverage: [LibrarySourceCoverage] = []
     public private(set) var catalogue = LibrarySourceCatalogue()
+    private var partialItems: [String: [UniversalMediaAsset]] = [:]
+    private var lastPartialPublish = Date.distantPast
 
     public init(adapters: [any SourceAdapter], selectedSourceIDs: Set<String>? = nil) {
         let scoped = adapters.filter { selectedSourceIDs?.contains($0.source.id) ?? true }
@@ -187,7 +189,7 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
     public func enumerateAssets(control: LibraryAnalysisControl? = nil, onSourceBatch: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async throws -> [UniversalMediaAsset] {
         var items: [UniversalMediaAsset] = [], reports: [LibrarySourceCoverage] = []
         var batches: [String: [UniversalMediaAsset]] = [:]
-        coverage = []; catalogue = .init()
+        coverage = []; catalogue = .init(); partialItems = [:]; lastPartialPublish = .distantPast
         for adapter in adapters {
             try Task.checkCancellation(); try await control?.waitIfPaused()
             batches[adapter.source.id] = []
@@ -208,7 +210,7 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
                 reports.append(.init(source: adapter.source, authorization: auth, itemCount: batches[adapter.source.id]?.count ?? 0, error: warnings.isEmpty ? nil : warnings.joined(separator: "\n")))
             } catch is CancellationError { throw CancellationError() }
             catch {
-                let partial = catalogue.batches[adapter.source.id] ?? []
+                let partial = Self.uniqueReferences(partialItems[adapter.source.id] ?? [])
                 items.append(contentsOf: partial); batches[adapter.source.id] = partial
                 reports.append(.init(source: adapter.source, authorization: auth, itemCount: partial.count, error: error.localizedDescription))
             }
@@ -221,11 +223,18 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
     }
     private func publishPartial(_ items: [UniversalMediaAsset], source: LibrarySource, authorization: SourceAuthorization,
                                 receive: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async {
+        partialItems[source.id] = items
+        // Each partial sends the whole catalogue so far. Publishing every batch made a large
+        // library cost O(n²) here and on the receiver's main actor; a few updates a second
+        // keep the gallery filling without that cost. Each source's final batch always publishes.
+        let now = Date()
+        guard let receive, now.timeIntervalSince(lastPartialPublish) >= 0.3 else { return }
+        lastPartialPublish = now
         catalogue.merge(.init(batches: [source.id: Self.uniqueReferences(items)]))
         coverage.removeAll { $0.id == source.id }
         coverage.append(.init(source: source, authorization: authorization, itemCount: items.count, enumerationComplete: false))
         let all = adapters.flatMap { catalogue.batches[$0.source.id] ?? [] }
-        await receive?(Self.uniqueReferences(all), coverage, catalogue)
+        await receive(Self.uniqueReferences(all), coverage, catalogue)
     }
     /// An album or overlapping folder is another view of the same item. Separate
     /// file copies and Photos exports remain separate so cross-source copies exist.
