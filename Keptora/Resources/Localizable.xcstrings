@@ -34140,6 +34140,98 @@
           }
         }
       }
+    },
+    "See a photo larger": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotoğrafı büyük görün"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto größer ansehen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrandir une photo"
+          }
+        }
+      }
+    },
+    "Tap a photo to select it. Touch and hold to preview, select or protect it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçmek için fotoğrafa dokunun. Önizlemek, seçmek veya korumak için basılı tutun."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen Sie auf ein Foto, um es auszuwählen. Halten Sie es gedrückt, um es anzusehen, auszuwählen oder zu schützen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez une photo pour la sélectionner. Maintenez le doigt dessus pour l’afficher, la sélectionner ou la protéger."
+          }
+        }
+      }
+    },
+    "Undo any step": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Her adımı geri alın"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeden Schritt widerrufen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulez chaque étape"
+          }
+        }
+      }
+    },
+    "Undo brings back the previous selection, one step at a time.": {
+      "extractionState": "manual",
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geri Al, önceki seçimi adım adım geri getirir."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widerrufen stellt die vorherige Auswahl Schritt für Schritt wieder her."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler rétablit la sélection précédente, une étape à la fois."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

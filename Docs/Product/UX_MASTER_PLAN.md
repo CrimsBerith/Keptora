@@ -249,6 +249,8 @@ Büyüklükler: **S** birkaç saat, **M** bir gün, **L** birkaç gün.
 
 **Kabul:** İpuçları ilk kullanımda görünür, kapatılınca bir daha çıkmaz; UI testlerinde ipuçları kapalı başlatılır.
 
+**Durum (14 Ekim):** Yapıldı (yalnızca iPhone; TipKit macOS 14 ister, Mac uygulaması macOS 13'ü de destekliyor). Arşiv'deki kalıcı "Seçmek için dokunun, büyütmek için basılı tutun" satırı kapatılabilir bir ipucuna dönüştü. İlk seçimden sonra bu ipucu kalkıyor ve **Geri Al** butonunda balon ipucu çıkıyor; ekranda aynı anda tek ipucu oluyor. Planlanan üçüncü ipucu ("Bunu Sakla") ilk denemede iki ipucuyla fotoğrafları yine aşağı ittiği için çıkarıldı; buton ve "Saklama önerisi" rozeti zaten kendini anlatıyor. `testFirstUseTipsAppearOneAtATime` sırayı ve kalıcılığı doğruluyor; diğer UI testleri `-keptoraHideTips` ile ipuçsuz koşuyor.
+
 ### Paket J — Hata metinleri ve hareket (P2, S)
 
 **Kural:** Hata mesajları, Reduce Motion.

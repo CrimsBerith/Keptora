@@ -23,7 +23,7 @@ final class KeptoraiOSUITests: XCTestCase {
             "-AppleLanguages", "(\(language))",
             "-AppleLocale", locale,
             "-hasSeenMobileOnboarding", "YES", "-Keptora.SourceSetup.iOS.v1", "YES", "-Keptora.AppLanguage", "system",
-            "-Keptora.ScanSources.Excluded.iOS.v1", "()"
+            "-Keptora.ScanSources.Excluded.iOS.v1", "()", "-keptoraHideTips"
         ]
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 10))
@@ -149,7 +149,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles() {
         let app = XCUIApplication()
-        app.launchArguments = ["-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-hasSeenMobileOnboarding", "YES",
+        app.launchArguments = ["-keptoraHideTips", "-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-hasSeenMobileOnboarding", "YES",
             "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
         app.launch()
         XCTAssertTrue(app.staticTexts["Connect your library"].waitForExistence(timeout: 10))
@@ -221,6 +221,29 @@ final class KeptoraiOSUITests: XCTestCase {
         // Plan target: photos start in the upper half of the screen, not below the fold.
         XCTAssertLessThanOrEqual(firstPhoto.frame.minY, app.frame.height * 0.55, "First photo starts at \(firstPhoto.frame.minY) pt")
         XCTAssertTrue(firstPhoto.isHittable)
+    }
+
+    func testFirstUseTipsAppearOneAtATime() {
+        let app = XCUIApplication()
+        let base = ["-keptoraComprehensiveUITesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+                    "-hasSeenMobileOnboarding", "YES", "-Keptora.SourceSetup.iOS.v1", "YES", "-Keptora.AppLanguage", "system"]
+        app.launchArguments = base + ["-keptoraResetTips"]
+        app.launch()
+        let previewTip = app.staticTexts["See a photo larger"]
+        XCTAssertTrue(previewTip.waitForExistence(timeout: 10), "The preview tip replaces the permanent helper line")
+        XCTAssertFalse(app.staticTexts["Undo any step"].exists, "Only one tip at a time")
+        saveScreenshot(app, name: "First-use tip")
+        // The first selection retires the preview tip and makes the undo tip eligible.
+        let photo = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(photo, in: app); photo.tap()
+        XCTAssertTrue(previewTip.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Undo any step"].waitForExistence(timeout: 5))
+        saveScreenshot(app, name: "Undo tip")
+        app.terminate()
+        app.launchArguments = base
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.page.archive"].waitForExistence(timeout: 10))
+        XCTAssertFalse(previewTip.waitForExistence(timeout: 3), "A retired tip does not come back")
     }
 
     func testManualArchiveSelectionRetainsItemsWhenFiltering() {
@@ -566,7 +589,7 @@ final class KeptoraiOSUITests: XCTestCase {
     /// simulator Photos. Run after uninstalling the app so onboarding and the permission prompt appear.
     func testFreshInstallWalkthrough() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-keptoraHideTips"]
         app.launch()
         let next = app.buttons["ios.onboarding.continue"]
         guard next.waitForExistence(timeout: 10) else {
