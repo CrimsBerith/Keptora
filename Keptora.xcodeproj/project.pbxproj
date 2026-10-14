@@ -18,6 +18,7 @@
 		35659DEC6824D9D374A3D3BD /* AccessPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8E980E951F9FD5A36B3F0C /* AccessPolicy.swift */; };
 		36A166E3E139B8F1274C0E47 /* MacArchiveModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10202F33BF679EC811E40EC5 /* MacArchiveModel.swift */; };
 		45FFBA57CD959E38B3BBFE66 /* MobileArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAB7266C8270E5B171FB408 /* MobileArchiveView.swift */; };
+		49AEB0A7E1CB2BCDAF967591 /* MobileTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9C2BD72DE85B07B28F8DFD2 /* MobileTips.swift */; };
 		4A4070C26497EFCDD8E04818 /* Keptora.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 6761B45D22452CD3D24296FD /* Keptora.storekit */; };
 		4C157F45390FAEA89EB108FC /* KeptoraCore in Frameworks */ = {isa = PBXBuildFile; productRef = F58279EC9A31B8FEE2692ECE /* KeptoraCore */; };
 		584FBBA895C42A20D55F5D29 /* KeptoraiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311B4F566C0C3F84630B8205 /* KeptoraiOSApp.swift */; };
@@ -133,6 +134,7 @@
 		C6EFC8A41DCFA6F29EF6AFB9 /* DirectoryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryPicker.swift; sourceTree = "<group>"; };
 		C8C58F1AC3180E8D9825200A /* MobileKeptoraStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileKeptoraStore.swift; sourceTree = "<group>"; };
 		D2329B10C41146459D9F4F4F /* KeptoraiOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraiOSUITests.swift; sourceTree = "<group>"; };
+		D9C2BD72DE85B07B28F8DFD2 /* MobileTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileTips.swift; sourceTree = "<group>"; };
 		DAF74F5CC8839E3307733FF0 /* StoreKitEntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitEntitlementTests.swift; sourceTree = "<group>"; };
 		E1C3D5EB4BA07723F5267078 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		E902F7C94B03B002D8515AF5 /* MacArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveView.swift; sourceTree = "<group>"; };
@@ -221,6 +223,7 @@
 				11D09C4A20DA834789E9E33A /* MobilePaywallView.swift */,
 				4CAEA51DF0D5568AEFD0544A /* MobileRootView.swift */,
 				BE6B3E20A313AC590D81BFBC /* MobileSettingsView.swift */,
+				D9C2BD72DE85B07B28F8DFD2 /* MobileTips.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -673,6 +676,7 @@
 				FE90091F1F4A73526853D6DB /* MobilePurchaseController.swift in Sources */,
 				298791524DEA5B5174EE7F3D /* MobileRootView.swift in Sources */,
 				D9AD822D1748DA98FED51FC4 /* MobileSettingsView.swift in Sources */,
+				49AEB0A7E1CB2BCDAF967591 /* MobileTips.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

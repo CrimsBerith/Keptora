@@ -1,5 +1,6 @@
 import KeptoraCore
 import SwiftUI
+import TipKit
 
 struct MobileLibraryView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
@@ -218,9 +219,8 @@ struct MobileLibraryView: View {
             // Finding views have their own safe batch actions; selecting the whole list there would include keepers.
             if hasActiveFilters && finding == .all { selectListButton }
             attentionRows
-            if store.selectedLibraryIDs.isEmpty {
-                Text("Tap a photo to select it. Touch and hold to see it larger.").font(.caption).foregroundStyle(.secondary)
-            }
+            // Shown once and dismissible, instead of a helper line that never goes away.
+            TipView(PreviewPhotoTip())
         }
     }
 
@@ -509,7 +509,7 @@ struct MobileLibraryView: View {
         if kept { spoken.append(L10n.tr(String.LocalizationValue(keeperLabel))) }
         if store.decisions.protectedIDs.contains(asset.id) { spoken.append(L10n.tr("Protected")) }
         return VStack(spacing: 6) {
-            Button { store.toggleLibrarySelection(asset) } label: {
+            Button { MobileTips.recordSelectionChange(); store.toggleLibrarySelection(asset) } label: {
                 selectionThumbnail(asset, selected: selected, keeperLabel: kept ? keeperLabel : nil)
                     .contentShape(Rectangle())
             }
@@ -533,7 +533,11 @@ struct MobileLibraryView: View {
           }
         }.disabled(store.isCleaningUp)
             .contextMenu {
-                Button(selected ? "Deselect" : "Select", systemImage: selected ? "circle" : "checkmark.circle") { store.toggleLibrarySelection(asset) }
+                Button(selected ? "Deselect" : "Select", systemImage: selected ? "circle" : "checkmark.circle") {
+                    PreviewPhotoTip().invalidate(reason: .actionPerformed)
+                    MobileTips.recordSelectionChange()
+                    store.toggleLibrarySelection(asset)
+                }
                 Button(store.decisions.protectedIDs.contains(asset.id) ? "Unprotect Photo" : "Protect Photo",
                        systemImage: store.decisions.protectedIDs.contains(asset.id) ? "lock.open" : "lock") { store.toggleProtection(asset) }
                 ForEach(groups) { group in
@@ -651,8 +655,9 @@ struct MobileLibraryView: View {
     @ViewBuilder private var secondarySelectionButtons: some View {
         if store.canUndoLibrarySelection {
             // Short labels at accessibility text sizes so the bar does not cover the gallery or truncate.
-            Button { store.undoLibrarySelection() } label: { Text(typeSize.isAccessibilitySize ? LocalizedStringKey("Undo") : LocalizedStringKey("Undo Selection")) }
+            Button { UndoSelectionTip().invalidate(reason: .actionPerformed); store.undoLibrarySelection() } label: { Text(typeSize.isAccessibilitySize ? LocalizedStringKey("Undo") : LocalizedStringKey("Undo Selection")) }
                 .buttonStyle(MobileActionButtonStyle(fillsWidth: true)).accessibilityIdentifier("archive.undoSelection")
+                .popoverTip(UndoSelectionTip())
         }
         Button { store.replaceLibrarySelection([]) } label: { Text(typeSize.isAccessibilitySize ? LocalizedStringKey("Clear") : LocalizedStringKey("Clear All Selections")) }.buttonStyle(MobileActionButtonStyle(fillsWidth: true)).disabled(store.selectedLibraryIDs.isEmpty).accessibilityIdentifier("archive.clearSelection")
     }

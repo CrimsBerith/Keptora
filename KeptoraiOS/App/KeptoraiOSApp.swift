@@ -8,6 +8,8 @@ struct KeptoraiOSApp: App {
     @StateObject private var purchase = MobilePurchaseController()
     @AppStorage("Keptora.AppLanguage") private var selectedLanguage = AppLanguage.system.rawValue
 
+    init() { MobileTips.configure() }
+
     private var activeLocale: Locale {
         AppLanguage(rawValue: selectedLanguage)?.locale ?? .current
     }
