@@ -650,7 +650,16 @@ final class MobileKeptoraStore: ObservableObject {
                     exactGroups = []; similarityGroups = []; similarVideoGroups = []; qualityAssessments = [:]; analysisIssues = []; sessionProgress = .init()
                     scanFingerprintsByAssetID = [:]; scanState = .idle
                 }
-                assets = catalogue.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+                // PhotoKit catalogues carry no file sizes; the scan measures them. A Photos change
+                // notification reloads the catalogue, so keep sizes already known for unchanged items
+                // instead of showing "Zero KB" until the next scan.
+                assets = catalogue.map { item in
+                    guard item.byteCount == nil else { return item }
+                    if let known = previous[item.id], known.modificationDate == item.modificationDate, let bytes = known.byteCount {
+                        return item.with(byteCount: bytes)
+                    }
+                    return withScannedByteCount(item)
+                }.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
                 if selectedLibraryIDs.isEmpty {
                     if UserDefaults.standard.object(forKey: librarySelectionKey) == nil {
                         selectedLibraryIDs.formUnion(UserDefaults.standard.stringArray(forKey: "Keptora.ManualSelection.photos") ?? [])

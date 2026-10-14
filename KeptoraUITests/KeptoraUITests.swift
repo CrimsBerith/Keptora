@@ -49,6 +49,62 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertFalse(app.buttons["mac.sourceSetup.continue"].waitForExistence(timeout: 2))
     }
 
+    /// App Store screenshots with the fictional review corpus. Copies the photos into the sandboxed
+    /// app's fixture folder before launch (the fixture keeps existing files), then captures a 1440 × 900 window.
+    /// Not part of CI.
+    func testAppStoreScreenshotsWithCorpus() throws {
+        // Run with TEST_RUNNER_KEPTORA_STORE_SCREENSHOTS=1.
+        guard ProcessInfo.processInfo.environment["KEPTORA_STORE_SCREENSHOTS"] == "1" else { throw XCTSkip("Store screenshots run on request only") }
+        let corpus = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("AppStore/Generated/Keptora_Review_Corpus")
+        let container = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers/com.alfagolab.keptora/Data/tmp")
+        guard FileManager.default.fileExists(atPath: corpus.path) else { throw XCTSkip("Review corpus not found") }
+        for language in ["en", "tr"] {
+            let fixtureID = UUID().uuidString
+            let root = container.appendingPathComponent("KeptoraMacUI-" + fixtureID)
+            let camera = root.appendingPathComponent("Camera"), files = root.appendingPathComponent("Files")
+            for folder in [camera, files] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+            let placements: [(String, URL)] = [
+                ("Exact/Family_Original.jpg", camera), ("Exact/Beach_Original.jpg", camera), ("Similar/Sunset_1.jpg", camera),
+                ("Similar/Sunset_2.jpg", camera), ("Similar/Sunset_3.jpg", camera), ("Families/DSC_0001.jpg", camera),
+                ("Exact/Poster.png", camera), ("Exact/Family_Copy_1.jpg", files), ("Exact/Family_Copy_2.jpg", files),
+                ("Exact/Beach_Copy.jpg", files), ("Exact/Poster copy.png", files), ("Families/DSC_0001_Edit.jpg", files)
+            ]
+            for (path, folder) in placements {
+                let source = corpus.appendingPathComponent(path)
+                try? FileManager.default.copyItem(at: source, to: folder.appendingPathComponent(source.lastPathComponent))
+            }
+            let app = XCUIApplication()
+            app.launchArguments = ["-portfolioUITesting", "-keptoraUnifiedMacUITesting", "-keptoraPhotosDeniedUITesting",
+                                   "-keptoraStoreScreenshotWindow", "-AppleLanguages", "(\(language))", "-Keptora.AppLanguage", language]
+            app.launchEnvironment["KEPTORA_MAC_FIXTURE_ID"] = fixtureID
+            app.launch(); app.activate()
+            let window = app.windows.firstMatch
+            XCTAssertTrue(window.waitForExistence(timeout: 15))
+            let scan = app.buttons["mac.archive.scanAll"]
+            XCTAssertTrue(scan.waitForExistence(timeout: 15)); waitForEnabled(scan); scan.click()
+            let results = app.buttons["mac.archive.results.copies"]
+            XCTAssertTrue(results.waitForExistence(timeout: 120))
+            Thread.sleep(forTimeInterval: 1.5)
+            saveWindowShot(window, name: "\(language)_01_library")
+            results.click()
+            let extra = app.buttons["mac.archive.selectExtraCopies"]
+            XCTAssertTrue(extra.waitForExistence(timeout: 10)); waitForEnabled(extra); extra.click()
+            Thread.sleep(forTimeInterval: 1.0)
+            saveWindowShot(window, name: "\(language)_02_copies_selected")
+            app.buttons["mac.archive.reviewSelection"].click()
+            XCTAssertTrue(app.buttons["mac.archive.review.remove"].waitForExistence(timeout: 5))
+            Thread.sleep(forTimeInterval: 1.0)
+            saveWindowShot(window, name: "\(language)_03_review")
+            app.typeKey(.escape, modifierFlags: [])
+            app.terminate()
+        }
+    }
+    private func saveWindowShot(_ window: XCUIElement, name: String) {
+        let shot = XCTAttachment(screenshot: window.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+    }
+
     private func launchUnifiedMacFixture(conflict: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-portfolioUITesting", "-keptoraUnifiedMacUITesting", "-keptoraPhotosDeniedUITesting", "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
