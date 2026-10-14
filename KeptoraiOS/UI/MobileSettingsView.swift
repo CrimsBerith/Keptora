@@ -89,34 +89,8 @@ struct MobileSettingsView: View {
                         .font(.system(.footnote, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
-                Label("iCloud originals are never downloaded until you approve a network scan.", systemImage: "icloud.and.arrow.down")
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
             } header: {
                 Text("Photos Access")
-                    .font(MobileKeptoraDesign.labelFont)
-            }
-
-            Section {
-                Label("Exact copies are confirmed byte by byte.", systemImage: "checkmark.seal")
-                Label("Similar photos are removed only when you select them.", systemImage: "hand.raised")
-                Label("Photos cleanup uses Apple's Recently Deleted flow.", systemImage: "photo.on.rectangle")
-                Label("Folder cleanup moves files to a recovery folder on the same storage.", systemImage: "shippingbox")
-                Button {
-                    dismiss()
-                    store.selectedTab = .history
-                } label: {
-                    HStack {
-                        Label("View History & Recovery", systemImage: "clock.arrow.circlepath")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .accessibilityIdentifier("ios.settings.history")
-            } header: {
-                Text("Safety & Recovery")
                     .font(MobileKeptoraDesign.labelFont)
             }
 
@@ -124,6 +98,8 @@ struct MobileSettingsView: View {
                 LabeledContent(L10n.tr("Photo upload")) { Text(L10n.tr("Never")) }
                 LabeledContent(L10n.tr("Account")) { Text(L10n.tr("Not required")) }
                 LabeledContent(L10n.tr("Analytics")) { Text(L10n.tr("None")) }
+                // Replaces a long sentence in Photos Access; how removal and recovery work is in "How Keptora Works".
+                LabeledContent(L10n.tr("iCloud originals")) { Text(L10n.tr("Only when you allow")) }
                 Link(L10n.tr("Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
                     .accessibilityIdentifier("ios.settings.privacy")
                 Link(L10n.tr("Support"), destination: AppStoreConfiguration.supportURL)

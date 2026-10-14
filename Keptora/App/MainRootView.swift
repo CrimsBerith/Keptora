@@ -103,12 +103,12 @@ struct MainRootView: View {
             if phase != .active { Task { await archive.flushState() } }
             else if startupSourcesPrepared { Task { await archive.refreshPhotosAccess() } }
         }
-        .alert("Something went wrong", isPresented: archive.errorBinding(for: .main)) {
+        .alert(Text(archive.errorAlertParts.title), isPresented: archive.errorBinding(for: .main)) {
             if archive.canRepairPersistence {
                 Button("Save Current Session") { Task { await archive.repairPersistence() } }
             }
             Button("OK", role: .cancel) { archive.error = nil }
-        } message: { Text(archive.error ?? "") }
+        } message: { if let detail = archive.errorAlertParts.detail { Text(detail) } }
     }
 
     private func presentStartupIfNeeded() {
