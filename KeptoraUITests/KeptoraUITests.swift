@@ -102,7 +102,13 @@ final class KeptoraUITests: XCTestCase {
         }
     }
     private func saveWindowShot(_ window: XCUIElement, name: String) {
-        let shot = XCTAttachment(screenshot: window.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+        let image = window.screenshot()
+        let shot = XCTAttachment(screenshot: image); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+        // Also write the PNG next to the other store assets so it can be uploaded without exporting the xcresult.
+        let output = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("AppStore/Screenshots/Mac/Raw")
+        try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        try? image.pngRepresentation.write(to: output.appendingPathComponent(name + ".png"))
     }
 
     private func launchUnifiedMacFixture(conflict: Bool = false) -> XCUIApplication {

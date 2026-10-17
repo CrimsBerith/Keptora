@@ -3,17 +3,17 @@
   "nonRenewingSubscriptions": [],
   "products": [
     {
-      "displayPrice": "24.99",
+      "displayPrice": "19.99",
       "familyShareable": false,
       "internalID": "KEPTORA_PRO_LIFETIME",
       "localizations": [
         {
-          "description": "Unlock unlimited review decisions and reversible Safety Plans after the first 100 free reviews.",
+          "description": "Unlimited suggested selections on iPhone and Mac.",
           "displayName": "Keptora Pro Lifetime",
           "locale": "en_US"
         },
         {
-          "description": "İlk 100 ücretsiz incelemeden sonra sınırsız kararları ve geri alınabilir Güvenlik Planlarını açın.",
+          "description": "iPhone ve Mac'te sınırsız önerilen toplu seçim.",
           "displayName": "Keptora Pro Ömür Boyu",
           "locale": "tr_TR"
         }

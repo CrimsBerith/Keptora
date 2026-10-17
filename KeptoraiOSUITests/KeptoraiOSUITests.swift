@@ -761,8 +761,14 @@ final class KeptoraiOSUITests: XCTestCase {
             saveScreenshot(app, name: "\(language)_03_preview")
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
             let review = app.buttons["archive.reviewSelection"]
-            XCTAssertTrue(review.waitForExistence(timeout: 5)); review.tap()
-            _ = app.buttons["archive.review.remove"].waitForExistence(timeout: 5)
+            XCTAssertTrue(review.waitForExistence(timeout: 5))
+            let remove = app.buttons["archive.review.remove"]
+            // A context-menu dismissal can consume the first tap on a smaller display.
+            for _ in 0..<2 where !remove.exists {
+                review.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                _ = remove.waitForExistence(timeout: 5)
+            }
+            XCTAssertTrue(remove.exists, "Capture the final review only after it opens")
             saveScreenshot(app, name: "\(language)_04_review")
             app.buttons["archive.review.close"].tap()
             app.buttons["archive.clearSelection"].tap()

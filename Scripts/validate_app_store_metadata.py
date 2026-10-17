@@ -11,8 +11,8 @@ errors = []
 release = data.get('release', {})
 if release.get('marketing_version') != '1.0.0':
     errors.append('release marketing version must be 1.0.0')
-if str(release.get('build_number')) != '182':
-    errors.append('release build number must be 182')
+if str(release.get('build_number')) != '183':
+    errors.append('release build number must be 183')
 if release.get('release_mode') != 'manual':
     errors.append('release mode must be manual')
 if release.get('minimum_macos') != '13.0':

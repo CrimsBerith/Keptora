@@ -20,9 +20,9 @@ mac_info = plistlib.loads((ROOT / "Keptora/Resources/Info.plist").read_bytes())
 ios_info = plistlib.loads((ROOT / "KeptoraiOS/Resources/Info.plist").read_bytes())
 
 need(metadata.get("release", {}).get("marketing_version") == "1.0.0", "metadata version must be 1.0.0")
-need(str(metadata.get("release", {}).get("build_number")) == "182", "metadata build must be 182")
+need(str(metadata.get("release", {}).get("build_number")) == "183", "metadata build must be 183")
 need('MARKETING_VERSION: 1.0.0' in spec, "Xcode spec version must be 1.0.0")
-need('CURRENT_PROJECT_VERSION: "182"' in spec, "Xcode spec build must be 182")
+need('CURRENT_PROJECT_VERSION: "183"' in spec, "Xcode spec build must be 183")
 need('deploymentTarget: "17.0"' in spec, "iOS minimum must be 17.0")
 need('TARGETED_DEVICE_FAMILY: "1"' in spec, "iOS target must be iPhone-only for 1.0")
 need("KeptoraiOS" in project and "KeptoraiOSTests" in project and "KeptoraiOSUITests" in project, "iOS app/test targets missing")
@@ -68,17 +68,29 @@ if catalog_path.exists():
     need(catalog.get("sourceLanguage") == "en", "shared catalog source language must be English")
     # Validate every retained key. Swift package and dynamic localization keys can
     # be marked stale by Xcode extraction while still being used at runtime.
+    def units(localization):
+        # A localization is either a plain stringUnit or plural/device variations.
+        if "stringUnit" in localization:
+            return [localization["stringUnit"]]
+        found = []
+        for variation in localization.get("variations", {}).values():
+            for case in variation.values():
+                found.extend(units(case))
+        return found
+
     for key, entry in retained.items():
-        source = entry.get("localizations", {}).get("en", {}).get("stringUnit", {}).get("value", key)
+        en_units = units(entry.get("localizations", {}).get("en", {}))
+        source = str(en_units[-1].get("value", key)) if en_units else key
         source_placeholders = sorted(placeholder_pattern.findall(source))
         for lang in ("tr", "de", "fr"):
-            unit = entry.get("localizations", {}).get(lang, {}).get("stringUnit", {})
-            value = str(unit.get("value", ""))
-            need(unit.get("state") == "translated" and bool(value.strip()), f"{lang} translation missing or empty: {key}")
-            need(sorted(placeholder_pattern.findall(value)) == source_placeholders, f"{lang} placeholder mismatch: {key}")
-            need(value.count("\n") == source.count("\n"), f"{lang} unexpected line break: {key}")
-            if not joined_placeholder_pattern.search(source):
-                need(not joined_placeholder_pattern.search(value), f"{lang} placeholder joined to a word: {key}")
+            lang_units = units(entry.get("localizations", {}).get(lang, {})) or [{}]
+            for unit in lang_units:
+                value = str(unit.get("value", ""))
+                need(unit.get("state") == "translated" and bool(value.strip()), f"{lang} translation missing or empty: {key}")
+                need(sorted(placeholder_pattern.findall(value)) == source_placeholders, f"{lang} placeholder mismatch: {key}")
+                need(value.count("\n") == source.count("\n"), f"{lang} unexpected line break: {key}")
+                if not joined_placeholder_pattern.search(source):
+                    need(not joined_placeholder_pattern.search(value), f"{lang} placeholder joined to a word: {key}")
 
 shipping_ui = "\n".join(
     path.read_text(errors="ignore")

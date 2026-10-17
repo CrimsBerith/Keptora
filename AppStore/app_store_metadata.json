@@ -2,7 +2,7 @@
   "schema_version": 2,
   "release": {
     "marketing_version": "1.0.0",
-    "build_number": "182",
+    "build_number": "183",
     "release_mode": "manual",
     "minimum_macos": "13.0",
     "minimum_ios": "17.0",
@@ -28,7 +28,7 @@
       "free_tier": "Browsing, scanning, manual selection, removal and recovery; suggested batch selection for the first 100 items",
       "iap_type": "Non-consumable lifetime unlock",
       "planned_us_price": "$24.99",
-      "planned_launch_price": "$19.99 for the first 14 days",
+      "planned_launch_price": "$19.99",
       "family_sharing": "Disabled for 1.0.0",
       "subscription": false
     }
