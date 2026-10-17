@@ -5,6 +5,43 @@ import KeptoraCore
 @MainActor
 final class KeptoraiOSEdgeCaseTests: XCTestCase {
 
+    func testRecoveryReloadShowsCorruptRecordBesideHealthyRecordAndClearsWarningAfterRepair() async throws {
+        let defaults = UserDefaults.standard
+        let historyKey = AppStorageKeys.iOSCleanupHistory
+        let previousHistory = defaults.object(forKey: historyKey)
+        defer {
+            if let previousHistory { defaults.set(previousHistory, forKey: historyKey) }
+            else { defaults.removeObject(forKey: historyKey) }
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("recoverable photo".utf8).write(to: root.appendingPathComponent("photo.jpg"))
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let assets = try await adapter.enumerateAssets()
+        let selections = try await LibraryCleanupPreflight().prepare(assets, adapter: adapter)
+        let record = try await FolderQuarantineExecutor().quarantine(root: root, selections: selections)
+        let corruptID = UUID()
+        let corruptDirectory = root.appendingPathComponent(".Keptora Quarantine/\(corruptID.uuidString)")
+        try FileManager.default.createDirectory(at: corruptDirectory, withIntermediateDirectories: true)
+        let manifest = corruptDirectory.appendingPathComponent("recovery.json")
+        try Data("broken manifest".utf8).write(to: manifest)
+
+        let store = MobileKeptoraStore()
+        store.connectLocalFolderForTesting(root)
+        await store.loadCatalogue()
+        XCTAssertNil(store.catalogueError)
+        XCTAssertEqual(store.recoveryCatalogueIssues.map(\.manifestURL), [manifest])
+        XCTAssertTrue(store.history.contains { $0.id == record.id })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.operations[0].quarantineURL.path))
+
+        let repaired = FolderQuarantineRecord(id: corruptID, sourceRoot: root, operations: [])
+        try JSONEncoder().encode(repaired).write(to: manifest, options: .atomic)
+        await store.loadCatalogue()
+        XCTAssertTrue(store.recoveryCatalogueIssues.isEmpty)
+        XCTAssertTrue(store.history.contains { $0.id == record.id })
+    }
+
     private func photo(_ id: String, bytes: Int64 = 1_000, modified: Double = 1_700_000_000) -> UniversalMediaAsset {
         UniversalMediaAsset(id: id, sourceID: "photos", reference: .photoLibrary(localIdentifier: id), displayName: id + ".jpg",
                             mediaKind: .image, byteCount: bytes, modificationDate: Date(timeIntervalSince1970: modified))

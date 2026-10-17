@@ -1,6 +1,6 @@
 # Keptora Support
 
-Publish this page at the final support URL after replacing placeholders.
+Support for Keptora on iPhone (iOS 17 or later) and Mac (macOS 13 or later).
 
 ## Contact
 

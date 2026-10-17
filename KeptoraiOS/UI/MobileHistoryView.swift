@@ -9,7 +9,23 @@ struct MobileHistoryView: View {
     var body: some View {
         ZStack {
             MobileAuroraBackground()
-            Group {
+            VStack(spacing: 0) {
+                if !store.recoveryCatalogueIssues.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("A recovery record could not be read", systemImage: "exclamationmark.triangle")
+                            .font(.headline)
+                        Text("The files were kept. Open the recovery folder to inspect this record.")
+                            .font(.footnote)
+                        Button("Retry") { Task { await store.loadCatalogue() } }
+                            .buttonStyle(.bordered)
+                            .disabled(store.isLoadingCatalogue)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(MobileKeptoraDesign.amber.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal)
+                    .accessibilityIdentifier("ios.history.recoveryWarning")
+                }
                 if store.history.isEmpty {
                     ContentUnavailableView {
                         Label("No cleanup history", systemImage: "clock.badge.checkmark")

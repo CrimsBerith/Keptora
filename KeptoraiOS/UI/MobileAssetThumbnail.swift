@@ -27,15 +27,24 @@ struct MobileAssetThumbnail: View {
             } else if !didFinish {
                 ProgressView()
             } else {
-                VStack(spacing: 6) {
-                    Image(systemName: "photo.badge.exclamationmark").font(.title2)
-                    Text(needsDownload ? LocalizedStringKey("Cloud original needs download") : LocalizedStringKey("Preview unavailable")).font(.caption2).multilineTextAlignment(.center)
-                    if showsRetryButton {
-                        Button { Task { didFinish = false; await load(); didFinish = true } } label: {
-                            Text("Retry").font(.caption).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                GeometryReader { geometry in
+                    let compact = geometry.size.width < 120 || geometry.size.height < 120
+                    VStack(spacing: 6) {
+                        Image(systemName: "photo.badge.exclamationmark").font(.system(size: compact ? 20 : 28))
+                        if !compact {
+                            Text(unavailableLabel).font(.caption2).multilineTextAlignment(.center)
+                            if showsRetryButton {
+                                Button { Task { didFinish = false; await load(); didFinish = true } } label: {
+                                    Text("Retry").font(.caption).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                                }
+                            }
                         }
                     }
-                }.foregroundStyle(.secondary).padding(4)
+                    .foregroundStyle(.secondary)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .accessibilityElement(children: compact ? .ignore : .contain)
+                    .accessibilityLabel(unavailableLabel)
+                }
             }
         }
         .clipped()
@@ -44,6 +53,10 @@ struct MobileAssetThumbnail: View {
             await load()
             if !Task.isCancelled { didFinish = true }
         }
+    }
+
+    private var unavailableLabel: LocalizedStringKey {
+        needsDownload ? "Cloud original needs download" : "Preview unavailable"
     }
 
     private var cacheKey: String {

@@ -2,8 +2,8 @@
   "schema_version": 2,
   "release": {
     "marketing_version": "1.0.0",
-    "build_number": "183",
-    "release_mode": "manual",
+    "build_number": "184",
+    "release_mode": "automatic",
     "minimum_macos": "13.0",
     "minimum_ios": "17.0",
     "platforms": [
@@ -11,7 +11,8 @@
       "iPhone"
     ],
     "supported_architectures": [
-      "arm64"
+      "arm64",
+      "x86_64"
     ],
     "iap_family_sharing": false,
     "status": "release-candidate"

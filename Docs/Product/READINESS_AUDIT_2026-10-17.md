@@ -1,5 +1,7 @@
 # Keptora yayın hazırlık denetimi — 17 Ekim 2026
 
+18 Ekim güncellemesi: Bu dosya ilk denetimin tarihsel kaydıdır. Uygulanan düzeltmeler, build 184 ve yeni test kanıtları [düzeltme raporunda](READINESS_FIXES_2026-10-18.md).
+
 Sonuç: %100 hazır olduğu doğrulanmadı. iPhone, Mac ve Pro ürünü Apple inceleme kuyruğunda; yerel yayın/test zincirinde yeniden üretilen açıklar var. Aşağıdaki bulguların tümü üretim uygulamasının çöktüğü anlamına gelmez: ürün davranışı, test yapılandırması, dağıtım ve kabul kanıtları ayrı değerlendirilmiştir.
 
 ## Denetlenen durum

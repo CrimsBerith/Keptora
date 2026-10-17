@@ -83,6 +83,14 @@ jobs:
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacSearchDoesNotLoseSelectionOrHijackTextUndo \
             -only-testing:KeptoraUITests/KeptoraUITests/testUnifiedMacGallerySupportsMultiStepKeyboardUndoRedo \
             -only-testing:KeptoraUITests/KeptoraUITests/testSettingsWindowOffersLanguagePurchasesAndSupport test
+      - name: Optimized macOS unit and StoreKit tests
+        run: |
+          python3 Scripts/run_bounded.py --timeout 600 --log Build/mac-release-testing.log -- \
+            xcodebuild -project Keptora.xcodeproj -scheme Keptora -configuration ReleaseTesting \
+            -destination 'platform=macOS' -derivedDataPath Build/CI \
+            -resultBundlePath Build/MacReleaseTesting.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -parallel-testing-enabled NO -only-testing:KeptoraTests test
       - name: Native 2000 / 3000 item measurement
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_items != '0')
         env:
@@ -160,6 +168,14 @@ jobs:
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testCaptureCurrentPhotoLibraryScreens \
             -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testPrimaryTabLabelsAreLocalizedInFourLanguages \
             test-without-building
+      - name: Optimized iPhone unit and recovery regression tests
+        run: |
+          python3 Scripts/run_bounded.py --timeout 600 --log Build/ios-release-testing.log -- \
+            xcodebuild -project Keptora.xcodeproj -scheme KeptoraiOS -configuration ReleaseTesting \
+            -destination "platform=iOS Simulator,id=$KEPTORA_SIMULATOR_ID" -derivedDataPath Build/CI \
+            -resultBundlePath Build/iPhoneReleaseTesting.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            -parallel-testing-enabled NO -only-testing:KeptoraiOSTests test
       - name: Export iPhone screenshots and diagnostics
         if: always()
         run: |

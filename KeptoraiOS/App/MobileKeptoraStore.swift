@@ -75,10 +75,17 @@ final class MobileKeptoraStore: ObservableObject {
     @Published private(set) var authorization: SourceAuthorization = .notDetermined
     @Published var scanState: ScanState = .idle
     @Published private(set) var assets: [UniversalMediaAsset] = []
-    #if DEBUG
+    #if DEBUG || KEPTORA_TESTING
     // Test fixtures use the same selection logic without exposing catalogue mutation in release builds.
     func replaceAssetsForTesting(_ items: [UniversalMediaAsset]) { assets = items }
     func replaceSimilarityGroupsForTesting(_ groups: [UniversalSimilarityGroup]) { similarityGroups = groups }
+    func connectLocalFolderForTesting(_ url: URL) {
+        let adapter = FolderSourceAdapter(rootURL: url, cleanupAvailable: true)
+        folderScopes[adapter.source.id] = url
+        folderAdapters[adapter.source.id] = adapter
+        connectedFolders = [adapter.source]
+        source = .folder(url)
+    }
     #endif
     @Published var exactGroups: [UniversalExactGroup] = [] { didSet { cachedReviewGroups = nil } }
     @Published private(set) var similarityGroups: [UniversalSimilarityGroup] = [] { didSet { cachedReviewGroups = nil } }
@@ -89,6 +96,7 @@ final class MobileKeptoraStore: ObservableObject {
     @Published var videoSimilarityProgress: (processed: Int, total: Int)?
     @Published private(set) var skippedCloudItems = 0
     @Published private(set) var history: [CleanupHistoryEntry] = []
+    @Published private(set) var recoveryCatalogueIssues: [FolderRecoveryIssue] = []
     @Published private(set) var hasScanCheckpoint = false
     @Published private(set) var reviewedAssetIDs: Set<String> = []
     @Published private(set) var isCleaningUp = false
@@ -616,7 +624,7 @@ final class MobileKeptoraStore: ObservableObject {
                     if let known = previous[item.id], known.modificationDate == item.modificationDate, let bytes = known.byteCount {
                         return item.with(byteCount: bytes)
                     }
-                    return withScannedByteCount(item)
+                    return self.withScannedByteCount(item)
                 }.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
                 if unchangedIDs.count != catalogue.count || contentChanged { keepResults(for: unchangedIDs) }
                 if contentChanged { sessionProgress = .init(); scanState = .idle }
@@ -638,11 +646,13 @@ final class MobileKeptoraStore: ObservableObject {
                 }
                 manualSelectionIsLoaded = true
                 reconcileLibrarySelection(previous: previousSelection)
+                var recoveryIssues: [FolderRecoveryIssue] = []
                 for connected in connectedFolders {
                     guard let root = folderScopes[connected.id] else { continue }
-                    let records = try await folderCleanup.recoveryRecords(root: root)
+                    let recovery = try await folderCleanup.recoveryCatalogue(root: root)
                     guard !Task.isCancelled, catalogueGeneration == generation else { return }
-                    for record in records {
+                    recoveryIssues.append(contentsOf: recovery.issues)
+                    for record in recovery.records {
                         if let index = history.firstIndex(where: { $0.id == record.id }) {
                             history[index].folderRecord = record; history[index].restoredAt = record.restoredAt; history[index].sourceBookmark = folderBookmarks[connected.id]
                             continue
@@ -653,6 +663,7 @@ final class MobileKeptoraStore: ObservableObject {
                     }
                     persistHistory()
                 }
+                recoveryCatalogueIssues = recoveryIssues
                 if photosConnected && photoObserver == nil {
                     photoObserver = MobilePhotoChangeObserver { [weak self] in
                         Task { @MainActor in self?.photoLibraryDidChange() }
@@ -1068,6 +1079,7 @@ final class MobileKeptoraStore: ObservableObject {
         libraryCollectionTitle = nil
         scanTask?.cancel()
         assets = []
+        recoveryCatalogueIssues = []
         exactGroups = []
         similarityGroups = []
         similarVideoGroups = []

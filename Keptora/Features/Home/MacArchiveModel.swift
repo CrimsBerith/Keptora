@@ -376,7 +376,7 @@ final class MacArchiveModel: ObservableObject {
         self.cleanupPreflight = cleanupPreflight
         self.folders = folderCleanup
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory
-        #if DEBUG
+        #if DEBUG || KEPTORA_TESTING
         let testRoot = LaunchArguments.contains("-keptoraUnifiedMacUITesting") ? FileManager.default.temporaryDirectory.appendingPathComponent("KeptoraMacUI-" + (ProcessInfo.processInfo.environment["KEPTORA_MAC_FIXTURE_ID"] ?? UUID().uuidString)) : nil
         fixtureRoot = testRoot
         #else
@@ -418,7 +418,7 @@ final class MacArchiveModel: ObservableObject {
     func restoreConnections(loadSources: Bool = true) async {
         guard !connectionsRestored else { return }
         connectionsRestored = true
-        #if DEBUG
+        #if DEBUG || KEPTORA_TESTING
         if let fixtureRoot {
             do { try installUnifiedFixture(at: fixtureRoot); repositoryLoaded = true; persistenceHealth = .healthy; archivedSelectionLoaded = true; updateConnections(); refresh() }
             catch { self.error = error.localizedDescription }
@@ -881,7 +881,7 @@ final class MacArchiveModel: ObservableObject {
                 throw UniversalScanError.cleanupNotPermitted(L10n.tr("Another operation is using this storage. Wait for it to finish or cancel its scan."))
             }
             lease = acquired
-            #if DEBUG
+            #if DEBUG || KEPTORA_TESTING
             if LaunchArguments.contains("-keptoraRestoreConflictUITesting"), let original = record.operations.first?.originalURL {
                 try Data("Occupied original — must not be overwritten".utf8).write(to: original)
             }
@@ -1063,7 +1063,7 @@ final class MacArchiveModel: ObservableObject {
         guard let record = entry.folderRecord else { return }
         NSWorkspace.shared.activateFileViewerSelecting([record.sourceRoot.appendingPathComponent(".Keptora Quarantine").appendingPathComponent(record.id.uuidString)])
     }
-    #if DEBUG
+    #if DEBUG || KEPTORA_TESTING
     private func installUnifiedFixture(at root: URL) throws {
         let first = root.appendingPathComponent("Camera"), second = root.appendingPathComponent("Files")
         for folder in [first, second] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
