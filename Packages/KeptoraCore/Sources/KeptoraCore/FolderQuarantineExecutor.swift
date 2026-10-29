@@ -4,9 +4,12 @@ public actor FolderQuarantineExecutor {
     private var verified: [URL: (LibraryFileRevision, UniversalExactFingerprint)] = [:]
     private let beforeRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
     private let afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
+    private let beforeQuarantineMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
     public init(beforeRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil,
-                afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil) {
+                afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil,
+                beforeQuarantineMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil) {
         self.beforeRestoreMove = beforeRestoreMove; self.afterRestoreMove = afterRestoreMove
+        self.beforeQuarantineMove = beforeQuarantineMove
     }
 
     public func preflight(root: URL) -> Bool {
@@ -71,6 +74,7 @@ public actor FolderQuarantineExecutor {
                     at: operation.quarantineURL.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
+                try await beforeQuarantineMove?(operation, index)
                 let beforeMove = try await StreamingSHA256.file(at: operation.originalURL, progress: { _ in })
                 try validateReviewed([reviewedAssets[index]])
                 guard beforeMove.digest == operation.expectedDigest else {

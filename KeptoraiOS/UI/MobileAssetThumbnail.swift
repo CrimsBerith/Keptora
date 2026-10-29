@@ -40,7 +40,7 @@ struct MobileAssetThumbnail: View {
                             }
                         }
                     }
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .accessibilityElement(children: compact ? .ignore : .contain)
                     .accessibilityLabel(unavailableLabel)
@@ -59,8 +59,8 @@ struct MobileAssetThumbnail: View {
         needsDownload ? "Cloud original needs download" : "Preview unavailable"
     }
 
-    private var cacheKey: String {
-        "\(asset.id)_\(asset.modificationDate?.timeIntervalSince1970 ?? 0)_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
+    var cacheKey: String {
+        "\(asset.id)_\(asset.modificationDate?.timeIntervalSince1970 ?? 0)_\(asset.fileRevision?.physicalIdentity ?? "")_\(asset.fileRevision?.changeToken ?? "")_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
     }
 
     private func load() async {
@@ -156,7 +156,7 @@ struct MobileAssetPreview: View {
                 .frame(width: 340, height: 340)
             VStack(alignment: .leading, spacing: 3) {
                 Text(asset.displayName).font(.subheadline.weight(.semibold)).lineLimit(1)
-                Text(details).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                Text(details).font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk).lineLimit(2)
             }
             .padding(12)
             .frame(width: 340, alignment: .leading)

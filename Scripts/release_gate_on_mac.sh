@@ -6,7 +6,7 @@ cd "$ROOT"
 PYTHON="${PYTHON:-python3}"
 command -v xcodebuild >/dev/null || { echo 'xcodebuild not found' >&2; exit 69; }
 # Each run owns its output; never delete existing archives or test evidence.
-OUTPUT="${RELEASE_OUTPUT_ROOT:-$ROOT/ValidationArtifacts/Mac/run-$(date +%Y%m%d-%H%M%S)}"
+OUTPUT="${RELEASE_OUTPUT_ROOT:-$ROOT/ValidationArtifacts/Mac/run-$(date +%Y%m%d-%H%M%S)-$$}"
 mkdir -p "$OUTPUT"
 OUTPUT="$(cd "$OUTPUT" && pwd)"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$OUTPUT/DerivedData}"
@@ -14,6 +14,13 @@ IOS_SIMULATOR_ID="${IOS_SIMULATOR_ID:-$(xcrun simctl list devices available -j |
 IOS_DESTINATION="platform=iOS Simulator,id=$IOS_SIMULATOR_ID"
 EXPORT_OPTIONS_PLIST="${EXPORT_OPTIONS_PLIST:-$ROOT/Release/ExportOptions-AppStore.plist}"
 [[ -f "$EXPORT_OPTIONS_PLIST" ]] || { echo "Missing export options: $EXPORT_OPTIONS_PLIST" >&2; exit 69; }
+"$PYTHON" - "$EXPORT_OPTIONS_PLIST" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], 'rb') as source:
+    options = plistlib.load(source)
+if options.get('destination', 'export') != 'export':
+    raise SystemExit('This gate only creates local exports. Use export options with destination=export.')
+PY
 run_xcode() {
   local label="$1"
   shift
@@ -31,8 +38,10 @@ run_xcode mac-unit "${common[@]}" -scheme Keptora -configuration ReleaseTesting 
   -destination 'platform=macOS' "${tests[@]}" -only-testing:KeptoraTests \
   -resultBundlePath "$OUTPUT/MacTests.xcresult" test
 # Native PhotoKit integration tests require actual imported media and permission.
-KEPTORA_SIMULATOR_ID="$IOS_SIMULATOR_ID" KEPTORA_DERIVED_DATA_PATH="$DERIVED_DATA_PATH" \
-  KEPTORA_TEST_CONFIGURATION=ReleaseTesting bash Scripts/prepare_photo_cleaner_simulator.sh > "$OUTPUT/simulator-setup.log" 2>&1
+"$PYTHON" Scripts/run_bounded.py --timeout "${XCODE_GATE_TIMEOUT_SECONDS:-1200}" \
+  --log "$OUTPUT/simulator-setup.log" -- env KEPTORA_SIMULATOR_ID="$IOS_SIMULATOR_ID" \
+  KEPTORA_DERIVED_DATA_PATH="$DERIVED_DATA_PATH" KEPTORA_TEST_CONFIGURATION=ReleaseTesting \
+  bash Scripts/prepare_photo_cleaner_simulator.sh
 run_xcode ios-permission "${common[@]}" -scheme KeptoraiOS -configuration ReleaseTesting \
   -destination "$IOS_DESTINATION" "${tests[@]}" \
   -only-testing:KeptoraiOSUITests/KeptoraiOSUITests/testGrantPhotosAccessForRealMedia \

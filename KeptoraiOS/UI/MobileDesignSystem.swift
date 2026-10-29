@@ -12,7 +12,8 @@ enum MobileKeptoraDesign {
 
     // MARK: – Semantic Palette (Matching macOS Cullora Aurora)
     static let ink = Color(uiColor: .label)
-    static let secondaryInk = Color(uiColor: .secondaryLabel)
+    // Opaque secondary text stays legible on tinted panels as well as plain system surfaces.
+    static let secondaryInk = adaptive(light: (0.34, 0.34, 0.38), dark: (0.76, 0.76, 0.80))
     static let canvas = Color(uiColor: .systemGroupedBackground)
     static let elevated = Color(uiColor: .secondarySystemGroupedBackground)
 
@@ -277,7 +278,7 @@ struct MobileMetricTile: View {
                 
                 Text(title)
                     .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     .lineLimit(1)
             }
         }

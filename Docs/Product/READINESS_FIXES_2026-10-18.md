@@ -1,5 +1,7 @@
 # Keptora hazırlık düzeltmeleri — 18 Ekim 2026
 
+Sonraki genişletilmiş denetim, yeni veri/işlem regresyonları ve build 185: [ikinci kalite raporu](PROFESSIONAL_QA_2026-10-18.md). Bu dosya 184 çalışmasının tarihsel kaydıdır.
+
 Yerel aday: **1.0.0 (184)**. Önceki 183 hazırlıkları `d9fce0e` commitinde değiştirilmeden saklandı. Düzeltmeler `codex/keptora-readiness-fixes` dalında; `main` ve gönderilmiş mağaza build'i değiştirilmedi.
 
 ## Kapatılan bulgular

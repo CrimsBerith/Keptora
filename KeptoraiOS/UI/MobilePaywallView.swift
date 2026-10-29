@@ -26,17 +26,17 @@ struct MobilePaywallView: View {
                         VStack(spacing: 6) {
                             Text("Keptora Pro")
                                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                                .foregroundStyle(MobileKeptoraDesign.brandGradient)
+                                .foregroundStyle(MobileKeptoraDesign.accent)
 
                             Text("One purchase. No subscription.")
                                 .font(.system(.title3, design: .rounded).weight(.medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         }
 
                         VStack(alignment: .leading, spacing: 16) {
                             // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
                             feature("Select suggestions in bulk without the 100-item limit", "infinity", MobileKeptoraDesign.violet)
-                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
+                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         }
                         .keptoraPanel(tint: MobileKeptoraDesign.violet)
 
@@ -81,7 +81,7 @@ struct MobilePaywallView: View {
                             if let status = purchase.statusMessage {
                                 Text(status)
                                     .font(.system(.footnote, design: .rounded))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                                     .multilineTextAlignment(.center)
                                     .accessibilityIdentifier("ios.paywall.status")
                             }

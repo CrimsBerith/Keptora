@@ -29,7 +29,7 @@ struct PaywallView: View {
                                 .font(KeptoraDesign.titleFont)
                             Text(store.paywallReason.detailKey)
                                 .font(.title3)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(KeptoraDesign.secondaryInk)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 560)
                         }
@@ -37,13 +37,13 @@ struct PaywallView: View {
                         // One-time callout
                         (Text("One-time purchase.").fontWeight(.semibold) + Text(" No subscription, ever."))
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
 
                         // Feature list
                         VStack(alignment: .leading, spacing: 14) {
                             // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
                             feature("Select suggestions in bulk without the 100-item limit", image: "infinity")
-                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
+                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
                         }
                         .padding(20)
                         .frame(maxWidth: 590, alignment: .leading)
@@ -53,7 +53,7 @@ struct PaywallView: View {
                         // Trial label
                         Text(store.trialLabel)
                             .font(.callout.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
 
 #if DEBUG
                         if store.requiresProductConfiguration {
@@ -68,7 +68,7 @@ struct PaywallView: View {
                         if let statusMessage = store.statusMessage {
                             Text(statusMessage)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(KeptoraDesign.secondaryInk)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 590)
                         }
@@ -96,7 +96,7 @@ struct PaywallView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(KeptoraDesign.secondaryInk)
                     .frame(width: 32, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain)

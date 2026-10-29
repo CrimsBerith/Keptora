@@ -21,6 +21,7 @@ enum KeptoraDesign {
     static let warning  = adaptive(light: (0.56, 0.30, 0.00), dark: (1.00, 0.72, 0.30))
     static let danger   = adaptive(light: (0.70, 0.06, 0.12), dark: (1.00, 0.64, 0.64))
     static let dangerFill = Color(red: 0.75, green: 0.08, blue: 0.14)
+    static let secondaryInk = adaptive(light: (0.34, 0.34, 0.38), dark: (0.76, 0.76, 0.80))
 
     private static func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in

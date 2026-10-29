@@ -766,6 +766,15 @@ final class MacArchiveModel: ObservableObject {
             lastCleanupOutcome = .init(requestedIDs: expectedIDs, completedIDs: completedIDs, failedIDs: attemptedIDs.subtracting(completedIDs))
             busy = false; status = nil; operations.release(lease); drainRefresh()
         }
+        // Error handling may discover moved files after compensation fails.
+        // Reconcile only after that handler updates completedIDs and history.
+        defer {
+            persistHistory()
+            assets.removeAll { completedIDs.contains($0.id) }
+            exact = Self.removing(completedIDs, from: exact); similar = Self.removing(completedIDs, from: similar)
+            similarVideos = Self.removing(completedIDs, from: similarVideos)
+            selection.subtract(completedIDs)
+        }
         do {
             try await saveStateNow()
             try LibraryRevisionValidator.validate(snapshot)
@@ -776,14 +785,6 @@ final class MacArchiveModel: ObservableObject {
                       id == "folder:" + LibraryFileIdentity.key(for: root), await folders.preflight(root: root) else { throw UniversalScanError.sourcePermissionDenied }
                 let candidates = try await cleanupPreflight.prepare(batch, adapter: folder, reviewedFingerprints: fingerprints)
                 prepared[id] = candidates
-            }
-            defer {
-                persistHistory()
-                assets.removeAll { completedIDs.contains($0.id) }
-                // Groups keep their remaining members so two copies left of three still show as copies.
-                exact = Self.removing(completedIDs, from: exact); similar = Self.removing(completedIDs, from: similar)
-                similarVideos = Self.removing(completedIDs, from: similarVideos)
-                selection.subtract(completedIDs)
             }
             if let batch = batches[LibrarySource.photos.id] {
                 attemptedIDs.formUnion(batch.map(\.id))

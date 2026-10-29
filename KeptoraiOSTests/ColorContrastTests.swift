@@ -11,6 +11,7 @@ final class ColorContrastTests: XCTestCase {
 
     func testTextColorsMeetAAOnSystemAndTintedBackgrounds() {
         let textColors: [(String, Color)] = [
+            ("secondaryInk", MobileKeptoraDesign.secondaryInk),
             ("accent", MobileKeptoraDesign.accent),
             ("danger", MobileKeptoraDesign.danger),
             ("success", MobileKeptoraDesign.success),

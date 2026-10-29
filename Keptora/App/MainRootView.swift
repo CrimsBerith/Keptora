@@ -32,6 +32,8 @@ struct MainRootView: View {
                 proFooter
             }
             .background(KeptoraSidebarBackdrop())
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Workspace")
             .navigationSplitViewColumnWidth(min: 184, ideal: 208, max: 232)
         } detail: {
             ZStack {
@@ -83,6 +85,7 @@ struct MainRootView: View {
         .frame(minWidth: 900, minHeight: 650)
         .background(MacMainWindowMarker())
         .accessibilityElement(children: .contain)
+        .accessibilityLabel("Keptora")
         .accessibilityIdentifier("keptora.root")
         .sheet(isPresented: store.paywallBinding(for: .main)) {
             PaywallView().environmentObject(store)
@@ -126,10 +129,10 @@ struct MainRootView: View {
                 Text("KEPTORA")
                     .font(.system(.headline, design: .rounded).weight(.bold))
                     .tracking(1.5)
-                    .foregroundStyle(KeptoraDesign.accentGradient)
+                    .foregroundStyle(KeptoraDesign.accent)
                 Text("Photo & video intelligence")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(KeptoraDesign.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -144,7 +147,7 @@ struct MainRootView: View {
                 .textCase(.uppercase)
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .tracking(1.2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(KeptoraDesign.secondaryInk)
                 .padding(.horizontal, 18)
                 .padding(.bottom, 2)
                 .padding(.top, 10)

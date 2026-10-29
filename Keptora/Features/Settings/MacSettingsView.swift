@@ -29,7 +29,7 @@ struct MacSettingsView: View {
                         .accessibilityIdentifier("mac.settings.restorePurchases")
                 }
                 if let status = store.statusMessage {
-                    Text(status).font(.footnote).foregroundStyle(.secondary)
+                    Text(status).font(.footnote).foregroundStyle(KeptoraDesign.secondaryInk)
                 }
             }
 
@@ -58,7 +58,7 @@ struct MacSettingsView: View {
                     Button("Copy Diagnostics") { archive.copyDiagnostics(); copiedDiagnostics = archive.error == nil }
                 }
                 Text(copiedDiagnostics ? "Diagnostics copied." : "Diagnostics contain counts and app state only. Photos, file names and paths are not included.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                    .font(.footnote).foregroundStyle(KeptoraDesign.secondaryInk)
                 LabeledContent("Version", value: appVersionLabel)
             }
         }

@@ -6,6 +6,30 @@ final class KeptoraUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testAccessibilityAuditLibraryAndRemovalReview() throws {
+        guard ProcessInfo.processInfo.environment["KEPTORA_ACCESSIBILITY_AUDIT"] == "1" else {
+            throw XCTSkip("Full accessibility diagnostics: run with TEST_RUNNER_KEPTORA_ACCESSIBILITY_AUDIT=1")
+        }
+        guard #available(macOS 14.0, *) else { throw XCTSkip("Accessibility audits require macOS 14 or later") }
+        continueAfterFailure = true
+        let app = launchUnifiedMacFixture()
+        try audit(app)
+        let asset = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.asset.")).firstMatch
+        XCTAssertTrue(asset.waitForExistence(timeout: 10))
+        asset.click()
+        app.buttons["mac.archive.reviewSelection"].click()
+        XCTAssertTrue(app.staticTexts["Review Selection"].waitForExistence(timeout: 5))
+        try audit(app)
+    }
+
+    @available(macOS 14.0, *)
+    private func audit(_ app: XCUIApplication) throws {
+        try app.performAccessibilityAudit { issue in
+            print("AXISSUE: \(issue.compactDescription) | \(issue.element?.debugDescription ?? "No element")")
+            return false
+        }
+    }
+
     private func launchSelectionFixture(language: String = "en", locale: String = "en_US") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [

@@ -174,7 +174,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     private let photosAdapter = PhotoLibrarySourceAdapter()
     private let scanner = UniversalExactScanner()
-    private let folderCleanup = FolderQuarantineExecutor()
+    private let folderCleanup: FolderQuarantineExecutor
     private let similarityAnalyzer = VisualSimilarityAnalyzer()
     private let videoSimilarityAnalyzer = VideoSimilarityAnalyzer()
     @Published private(set) var connectedFolders: [LibrarySource] = []
@@ -249,7 +249,8 @@ final class MobileKeptoraStore: ObservableObject {
     private let freeReviewLimit = AppStoreConfiguration.freeReviewLimit
     private var lastProgressUpdateTime = Date.distantPast
 
-    init() {
+    init(folderCleanup: FolderQuarantineExecutor = .init()) {
+        self.folderCleanup = folderCleanup
         if LaunchArguments.contains(LaunchArguments.resetSourceSetupUITesting) {
             UserDefaults.standard.removeObject(forKey: AppStorageKeys.iOSSourceSetupCompleted)
         }
@@ -545,6 +546,10 @@ final class MobileKeptoraStore: ObservableObject {
 
     func toggleLibrarySelection(_ asset: UniversalMediaAsset) {
         guard !isCleaningUp else { return }
+        guard !decisions.protectedIDs.contains(asset.id) else {
+            errorMessage = L10n.tr("Unprotect these photos before selecting them for removal.")
+            return
+        }
         var ids = selectedLibraryIDs
         if !ids.insert(asset.id).inserted { ids.remove(asset.id) }
         replaceLibrarySelection(ids)
@@ -553,10 +558,17 @@ final class MobileKeptoraStore: ObservableObject {
         replaceLibrarySelection(selectedLibraryIDs.union(items.map(\.id)))
     }
     func replaceLibrarySelection(_ ids: Set<String>) {
-        guard !isCleaningUp, ids != selectedLibraryIDs else { return }
+        let permitted = ids.subtracting(decisions.protectedIDs)
+        guard !isCleaningUp, permitted != selectedLibraryIDs else { return }
         rememberLibrarySelection()
-        selectedLibraryIDs = ids
+        selectedLibraryIDs = permitted
         saveLibrarySelection()
+    }
+    func unprotectAndSelect(_ asset: UniversalMediaAsset) {
+        guard !isCleaningUp else { return }
+        var updated = decisions
+        if updated.protectedIDs.contains(asset.id) { updated.toggleProtection(asset.id) }
+        applyLibraryDecisions(updated, selection: selectedLibraryIDs.union([asset.id]))
     }
     private func rememberLibrarySelection() {
         selectionUndo = (selectedLibraryIDs, decisions); canUndoLibrarySelection = true
@@ -730,6 +742,10 @@ final class MobileKeptoraStore: ObservableObject {
         }
         let snapshot = librarySelection
         guard snapshot.count == expectedIDs.count else { return false }
+        guard decisions.protectedIDs.intersection(expectedIDs).isEmpty else {
+            errorMessage = L10n.tr("Unprotect these photos before selecting them for removal.")
+            return false
+        }
         if let reviewedAssets, Set(snapshot) != Set(reviewedAssets) {
             errorMessage = L10n.tr("Your selection changed. Review it again before removing items."); return false
         }
@@ -929,6 +945,9 @@ final class MobileKeptoraStore: ObservableObject {
         cleanupStatus = L10n.tr("Reviewing selected items…")
         defer { isCleaningUp = false; cleanupStatus = nil; resumePendingPhotoReload() }
         var completedIDs: Set<String> = []
+        // Run after error reconciliation too: a failed compensation can leave verified
+        // files in recovery even though the overall request did not complete.
+        defer { reconcileRemoved(completedIDs); persistHistory() }
         do {
             try LibraryRevisionValidator.validate(selection)
             var candidates: [(asset: UniversalMediaAsset, expectedDigest: String)] = []
@@ -944,7 +963,6 @@ final class MobileKeptoraStore: ObservableObject {
                     throw UniversalScanError.cleanupNotPermitted("Review the selection again before cleanup.")
                 }
             }
-            defer { reconcileRemoved(completedIDs); persistHistory() }
             if let photosBatch = batches[LibrarySource.photos.id] {
                 let ids = photosBatch.compactMap { item -> String? in if case .photoLibrary(let id) = item.reference { return id }; return nil }
                 guard ids.count == photosBatch.count else { throw UniversalScanError.unsupportedReference }
@@ -964,6 +982,18 @@ final class MobileKeptoraStore: ObservableObject {
             onSuccess()
             return true
         } catch {
+            if let partial = error as? FolderCleanupFailure {
+                let record = partial.record
+                let movedPaths = Set(record.operations.filter { $0.state == .moved }.map(\.originalURL))
+                completedIDs.formUnion(selection.filter {
+                    if case .file(let url) = $0.reference { return movedPaths.contains(url) }
+                    return false
+                }.map(\.id))
+                let sourceID = "folder:" + LibraryFileIdentity.key(for: record.sourceRoot)
+                history.insert(CleanupHistoryEntry(id: record.id, kind: .folderQuarantine, createdAt: record.createdAt,
+                    itemCount: record.movedCount, byteCount: record.recoveryBytes, folderRecord: record,
+                    restoredAt: record.restoredAt, sourceBookmark: folderBookmarks[sourceID]), at: 0)
+            }
             guard !Self.isUserCancellation(error) || !completedIDs.isEmpty else { return false }
             errorMessage = completedIDs.isEmpty ? error.localizedDescription :
                 L10n.format("Moved: %lld items. Not moved: %lld items. See History for recovery.", completedIDs.count, selection.count - completedIDs.count) + "\n\n" + error.localizedDescription

@@ -47,6 +47,7 @@
 		A12D04F6278CD5C6F5B44DB4 /* MobileHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69676A4C411DD7EE8237095 /* MobileHistoryView.swift */; };
 		A58610C59A1A9391201AD72F /* KeptoraiOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */; };
 		A6B806F9159AA81178505422 /* MacLibraryServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = B914D27DB91D8CEC081BEBF3 /* MacLibraryServices.swift */; };
+		C0F142BDD318CB4C648130BF /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */; };
 		C52A7D1EF462E27AC235B5AC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AE1278DFA4EA6E22DB0E92C /* InfoPlist.strings */; };
 		D0FD1B7E2BAC4FBB6C274EED /* MacSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAD7FDB8D10D1183CC7707C9 /* MacSettingsView.swift */; };
 		D5A0B7F9001D6CD469E8CBA2 /* AccessPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDD9ADD26E13E7AA556A098 /* AccessPolicyTests.swift */; };
@@ -119,6 +120,7 @@
 		7C45ED0F97908516DA693A50 /* KeptoraiOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KeptoraiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81E19EA94178B31F1612EB08 /* SidebarRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarRoute.swift; sourceTree = "<group>"; };
 		91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
 		9AAB7266C8270E5B171FB408 /* MobileArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileArchiveView.swift; sourceTree = "<group>"; };
 		A644FBE542DB8CB11EDBA79E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA8A8F7F6BE81F610420897D /* Keptora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keptora.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -382,6 +384,7 @@
 				3E3BD3F0BFD823252D556F91 /* KeptoraiOSEdgeCaseTests.swift */,
 				FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */,
 				613069B0E9EE5A3652896BEB /* PluralLocalizationTests.swift */,
+				97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */,
 			);
 			path = KeptoraiOSTests;
 			sourceTree = "<group>";
@@ -660,6 +663,7 @@
 				E403676CFC405153B3C2020B /* KeptoraiOSEdgeCaseTests.swift in Sources */,
 				A58610C59A1A9391201AD72F /* KeptoraiOSTests.swift in Sources */,
 				EB732CAE33C12DCE937C88A7 /* PluralLocalizationTests.swift in Sources */,
+				C0F142BDD318CB4C648130BF /* ThumbnailCacheTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -742,7 +746,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 185;
 				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -857,7 +861,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 185;
 				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -944,7 +948,7 @@
 				CODE_SIGN_ENTITLEMENTS = KeptoraiOS/Resources/KeptoraiOS.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 185;
 				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KeptoraiOS/Resources/Info.plist;
@@ -1176,7 +1180,7 @@
 				CODE_SIGN_ENTITLEMENTS = KeptoraiOS/Resources/KeptoraiOS.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 185;
 				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KeptoraiOS/Resources/Info.plist;
@@ -1207,7 +1211,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 185;
 				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1319,7 +1323,7 @@
 				CODE_SIGN_ENTITLEMENTS = KeptoraiOS/Resources/KeptoraiOS.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 185;
 				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KeptoraiOS/Resources/Info.plist;

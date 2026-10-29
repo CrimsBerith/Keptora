@@ -13,6 +13,68 @@ final class KeptoraiOSUITests: XCTestCase {
         hierarchy.name = "Failed iPhone app hierarchy"; hierarchy.lifetime = .keepAlways; add(hierarchy)
     }
 
+    func testAccessibilityAuditLibraryAndRemovalReview() throws {
+        try requireAccessibilityAudit()
+        continueAfterFailure = true
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        try audit(app)
+        let photo = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(photo, in: app)
+        photo.tap()
+        app.buttons["archive.reviewSelection"].tap()
+        XCTAssertTrue(app.buttons["archive.review.remove"].waitForExistence(timeout: 5))
+        try audit(app)
+    }
+
+    func testAccessibilityAuditHistorySettingsAndPro() throws {
+        try requireAccessibilityAudit()
+        continueAfterFailure = true
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.page.history"].waitForExistence(timeout: 5))
+        try audit(app)
+        app.tabBars.buttons.element(boundBy: 0).tap()
+        app.buttons["ios.library.options"].tap()
+        app.buttons["ios.library.settings"].tap()
+        XCTAssertTrue(app.buttons["ios.settings.close"].waitForExistence(timeout: 5))
+        try audit(app)
+        app.buttons["ios.settings.showPaywall"].tap()
+        XCTAssertTrue(app.buttons["ios.paywall.close"].waitForExistence(timeout: 5))
+        try audit(app)
+    }
+
+    private func audit(_ app: XCUIApplication) throws {
+        try app.performAccessibilityAudit { issue in
+            print("AXISSUE: \(issue.compactDescription) | \(issue.element?.debugDescription ?? "No element")")
+            return false
+        }
+    }
+
+    private func requireAccessibilityAudit() throws {
+        guard ProcessInfo.processInfo.environment["KEPTORA_ACCESSIBILITY_AUDIT"] == "1" else {
+            throw XCTSkip("Full accessibility diagnostics: run with TEST_RUNNER_KEPTORA_ACCESSIBILITY_AUDIT=1")
+        }
+    }
+
+    func testProtectedPhotoRequiresExplicitUnprotectBeforeSelection() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        let photo = app.buttons["archive.asset.ui-photo-copy"]
+        reveal(photo, in: app)
+        photo.press(forDuration: 1)
+        XCTAssertTrue(app.buttons["Protect Photo"].waitForExistence(timeout: 5))
+        app.buttons["Protect Photo"].tap()
+        photo.tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5))
+        app.alerts.buttons["OK"].tap()
+        XCTAssertTrue(!app.buttons["archive.reviewSelection"].exists || !app.buttons["archive.reviewSelection"].isEnabled)
+        photo.press(forDuration: 1)
+        XCTAssertTrue(app.buttons["Unprotect and Select"].waitForExistence(timeout: 5))
+        app.buttons["Unprotect and Select"].tap()
+        XCTAssertTrue(app.buttons["archive.reviewSelection"].isEnabled)
+        app.buttons["archive.undoSelection"].tap()
+        XCTAssertTrue(!app.buttons["archive.reviewSelection"].exists || !app.buttons["archive.reviewSelection"].isEnabled)
+    }
+
     private func launch(
         arguments: [String] = [],
         language: String = "en",
@@ -707,6 +769,9 @@ final class KeptoraiOSUITests: XCTestCase {
         app.tabBars.buttons.element(boundBy: 1).tap()
         saveScreenshot(app, name: "AX5 4 — suggestions")
         app.tabBars.buttons.element(boundBy: 2).tap()
+        let heading = app.staticTexts["ios.history.title.00000000-0000-0000-0000-000000000101"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(heading.frame.width, app.frame.width * 0.7, "Large text titles need the full card width, without a scaled decorative icon beside them")
         saveScreenshot(app, name: "AX5 5 — history")
     }
 

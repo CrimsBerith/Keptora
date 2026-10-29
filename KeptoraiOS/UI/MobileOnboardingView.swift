@@ -112,7 +112,7 @@ struct MobileOnboardingView: View {
                                 Text(step.subtitle)
                                     .font(.system(.body, design: .rounded))
                                     .multilineTextAlignment(.center)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                                     .padding(.horizontal, 28)
                                     .fixedSize(horizontal: false, vertical: true)
                             }

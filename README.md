@@ -8,6 +8,8 @@ Photos removals use the system confirmation and Recently Deleted. Folder files m
 
 See the [delivery report](Docs/Product/DELIVERY_REPORT.md), [UI/UX audit](Docs/Product/UI_UX_AUDIT.md), [product plan](Docs/Product/PHOTO_CLEANER_PLAN.md), and [new artwork](Docs/Product/ARTWORK.md).
 
+Latest native quality audit: [18 October 2026](Docs/Product/PROFESSIONAL_QA_2026-10-18.md). Functional test results, full accessibility diagnostics and physical-device acceptance are reported separately.
+
 ## Development checks
 
 ```sh
