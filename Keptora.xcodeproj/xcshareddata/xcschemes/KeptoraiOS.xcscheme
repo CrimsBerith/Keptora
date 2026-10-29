@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1430"
-   version = "1.3">
+   version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES">
+      buildImplicitDependencies = "YES"
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -15,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "52F628AD7A77DA2698CFB27A"
-               BuildableName = "Keptora.app"
+               BuildableName = "KeptoraiOS.app"
                BlueprintName = "KeptoraiOS"
                ReferencedContainer = "container:Keptora.xcodeproj">
             </BuildableReference>
@@ -54,12 +55,13 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "52F628AD7A77DA2698CFB27A"
-            BuildableName = "Keptora.app"
+            BuildableName = "KeptoraiOS.app"
             BlueprintName = "KeptoraiOS"
             ReferencedContainer = "container:Keptora.xcodeproj">
          </BuildableReference>
@@ -77,7 +79,8 @@
             </BuildableReference>
          </TestableReference>
          <TestableReference
-            skipped = "NO">
+            skipped = "NO"
+            parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "55660543026B6BEF237FCE22"
@@ -87,6 +90,8 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -103,11 +108,13 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "52F628AD7A77DA2698CFB27A"
-            BuildableName = "Keptora.app"
+            BuildableName = "KeptoraiOS.app"
             BlueprintName = "KeptoraiOS"
             ReferencedContainer = "container:Keptora.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
       <StoreKitConfigurationFileReference
          identifier = "../../Keptora/Resources/Keptora.storekit">
       </StoreKitConfigurationFileReference>
@@ -123,11 +130,13 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "52F628AD7A77DA2698CFB27A"
-            BuildableName = "Keptora.app"
+            BuildableName = "KeptoraiOS.app"
             BlueprintName = "KeptoraiOS"
             ReferencedContainer = "container:Keptora.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

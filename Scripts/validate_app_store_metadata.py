@@ -9,8 +9,8 @@ data = json.loads(path.read_text(encoding='utf-8'))
 errors = []
 
 release = data.get('release', {})
-if release.get('marketing_version') != '1.0.0':
-    errors.append('release marketing version must be 1.0.0')
+if release.get('marketing_version') not in {'1.0.0', '1.0.1'}:
+    errors.append('release marketing version must be 1.0.0 or 1.0.1')
 build_number = str(release.get('build_number', ''))
 if not build_number.isascii() or not build_number.isdigit() or int(build_number) < 1:
     errors.append('release build number must be a positive integer')
