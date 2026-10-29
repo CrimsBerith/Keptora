@@ -53,11 +53,10 @@
     "support": "https://alfagolab.com/keptora/support",
     "marketing": "https://alfagolab.com/keptora"
   },
-  "release_placeholders": [
-    "Legal entity name",
-    "Support email",
-    "Bundle identifier",
-    "Development Team ID",
-    "Final trademark/domain clearance"
-  ]
+  "review_contact": {
+    "first_name": "Kagan Kartal",
+    "last_name": "Babahan",
+    "email": "support@alfagolab.com",
+    "phone": "+905308282598"
+  }
 }

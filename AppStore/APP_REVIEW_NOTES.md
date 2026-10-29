@@ -52,10 +52,10 @@ Keptora is a universal iPhone and Mac photo and video cleaner. People browse the
 - Family Sharing: disabled.
 - Restore Purchases is available on the Pro screen and in Settings on both platforms.
 
-## Owner-supplied submission fields still required
+## Review contact
 
-- Review contact name, email and phone.
-- Signed Mac/iPhone archive validation, TestFlight build, IAP review screenshot and final localized screenshots.
-
-Support: `https://alfagolab.com/keptora/support`
-Privacy: `https://alfagolab.com/keptora/privacy`
+- Name: Kagan Kartal Babahan
+- Email: support@alfagolab.com
+- Phone: +905308282598
+- Support: https://alfagolab.com/keptora/support
+- Privacy: https://alfagolab.com/keptora/privacy
