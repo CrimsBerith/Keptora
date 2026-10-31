@@ -76,7 +76,7 @@ private struct BenchmarkReport: Codable {
     let warm: BenchmarkPass
     let peakResidentBytes: Int64
     let os: String
-    let note = "Generated local JPEG corpus. Real-photo precision, cloud downloads, scrolling, energy and heat require device acceptance."
+    var note = "Generated local JPEG corpus. Real-photo precision, cloud downloads, scrolling, energy and heat require device acceptance."
 }
 private actor BenchmarkRecorder {
     private let started = Date()

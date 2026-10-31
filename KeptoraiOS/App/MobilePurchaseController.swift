@@ -23,7 +23,7 @@ final class MobilePurchaseController: ObservableObject {
                     await self.refreshEntitlement()
                     await transaction.finish()
                 case .unverified(let transaction, let error):
-                    self.statusMessage = L10n.tr("Unverified transaction: \(error.localizedDescription)")
+                    self.statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
                     await transaction.finish()
                 }
             }
@@ -33,6 +33,7 @@ final class MobilePurchaseController: ObservableObject {
     deinit { updatesTask?.cancel() }
 
     func refresh() async {
+        guard !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
         statusMessage = nil
@@ -40,15 +41,18 @@ final class MobilePurchaseController: ObservableObject {
         await refreshEntitlement()
         do {
             product = try await Product.products(for: [Self.productID]).first
-            if product == nil {
+            if product == nil && !isUnlocked {
                 statusMessage = L10n.tr("Keptora Pro is unavailable right now. Check your internet connection and try again.")
             }
         } catch {
-            statusMessage = error.localizedDescription
+            if !isUnlocked {
+                statusMessage = error.localizedDescription
+            }
         }
     }
 
     func purchase() async {
+        guard !isWorking else { return }
         guard let product, !isUnlocked else { return }
         isWorking = true
         defer { isWorking = false }
@@ -60,7 +64,7 @@ final class MobilePurchaseController: ObservableObject {
                 await transaction.finish()
                 statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
             case .success(.unverified(let transaction, let error)):
-                statusMessage = L10n.tr("Unverified transaction: \(error.localizedDescription)")
+                statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
                 await transaction.finish()
             case .pending:
                 statusMessage = L10n.tr("Purchase is pending approval.")
@@ -75,9 +79,18 @@ final class MobilePurchaseController: ObservableObject {
     }
 
     func restore() async {
+        guard !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
         statusMessage = nil
+
+        // Check local cached entitlements first
+        await refreshEntitlement()
+        if isUnlocked {
+            statusMessage = L10n.tr("Purchase restored.")
+            return
+        }
+
         do {
             try await AppStore.sync()
             await refreshEntitlement()

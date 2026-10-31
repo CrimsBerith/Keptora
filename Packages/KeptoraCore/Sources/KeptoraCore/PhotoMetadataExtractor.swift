@@ -1,3 +1,31 @@
+
+private enum DateParsingCache {
+    private static let lock = NSLock()
+    private static let offsetFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy:MM:dd HH:mm:ssXXXXX"
+        return f
+    }()
+    private static let standardFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    static func parse(dateString: String, offset: String?) -> Date? {
+        lock.lock()
+        defer { lock.unlock() }
+        if let offset {
+            return offsetFormatter.date(from: dateString + offset)
+        } else {
+            return standardFormatter.date(from: dateString)
+        }
+    }
+}
+
 @preconcurrency import ImageIO
 import CoreGraphics
 import Foundation
@@ -101,10 +129,13 @@ public enum PhotoMetadataExtractor: Sendable {
     
     /// Extracts detailed EXIF, TIFF, and GPS metadata directly from a file URL.
     public static func extract(from fileURL: URL) -> DetailedPhotoMetadata {
-        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else {
-            return DetailedPhotoMetadata()
+        autoreleasepool {
+            let options = [kCGImageSourceShouldCache: false] as CFDictionary
+            guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, options) else {
+                return DetailedPhotoMetadata()
+            }
+            return extract(from: source)
         }
-        return extract(from: source)
     }
     
     /// Extracts detailed metadata from an existing CGImageSource.
@@ -147,17 +178,8 @@ public enum PhotoMetadataExtractor: Sendable {
         var dateCaptured: Date? = nil
         let dateString = (exif[kCGImagePropertyExifDateTimeOriginal] as? String) ?? (tiff[kCGImagePropertyTIFFDateTime] as? String)
         if let dateString {
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
             let offset = exif["OffsetTimeOriginal" as CFString] as? String
-            if let offset {
-                formatter.dateFormat = "yyyy:MM:dd HH:mm:ssXXXXX"
-                dateCaptured = formatter.date(from: dateString + offset)
-            } else {
-                formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-                formatter.timeZone = TimeZone(secondsFromGMT: 0)
-                dateCaptured = formatter.date(from: dateString)
-            }
+            dateCaptured = DateParsingCache.parse(dateString: dateString, offset: offset)
         }
         
         // Parse GPS

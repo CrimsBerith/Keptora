@@ -16,6 +16,16 @@
           "description": "iPhone ve Mac'te sınırsız önerilen toplu seçim.",
           "displayName": "Keptora Pro Ömür Boyu",
           "locale": "tr_TR"
+        },
+        {
+          "description": "Unbegrenzte empfohlene Massenauswahl auf iPhone und Mac.",
+          "displayName": "Keptora Pro Lebenslang",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Sélection par lot suggérée illimitée sur iPhone et Mac.",
+          "displayName": "Keptora Pro À Vie",
+          "locale": "fr_FR"
         }
       ],
       "productID": "com.keptora.app.pro.lifetime",

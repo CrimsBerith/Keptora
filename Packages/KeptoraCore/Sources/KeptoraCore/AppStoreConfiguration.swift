@@ -12,13 +12,17 @@ public enum AppStoreConfiguration {
         return fallbackLifetimeProductID
     }
 
+    private static func safeURL(string: String) -> URL {
+        URL(string: string) ?? URL(fileURLWithPath: "/")
+    }
+
     public static var privacyPolicyURL: URL {
         if let configured = Bundle.main.object(forInfoDictionaryKey: "APP_PRIVACY_POLICY_URL") as? String,
            let url = URL(string: configured),
            url.scheme == "https", !(url.host?.isEmpty ?? true) {
             return url
         }
-        return URL(string: "https://alfagolab.com/keptora/privacy")!
+        return safeURL(string: "https://alfagolab.com/keptora/privacy")
     }
 
     public static var supportURL: URL {
@@ -27,7 +31,7 @@ public enum AppStoreConfiguration {
            url.scheme == "https", !(url.host?.isEmpty ?? true) {
             return url
         }
-        return URL(string: "https://alfagolab.com/keptora/support")!
+        return safeURL(string: "https://alfagolab.com/keptora/support")
     }
 
     public static var termsOfUseURL: URL {
@@ -36,7 +40,7 @@ public enum AppStoreConfiguration {
            url.scheme == "https", !(url.host?.isEmpty ?? true) {
             return url
         }
-        return URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+        return safeURL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
     }
 
     public static var marketingURL: URL {
@@ -45,6 +49,6 @@ public enum AppStoreConfiguration {
            url.scheme == "https", !(url.host?.isEmpty ?? true) {
             return url
         }
-        return URL(string: "https://alfagolab.com/keptora")!
+        return safeURL(string: "https://alfagolab.com/keptora")
     }
 }

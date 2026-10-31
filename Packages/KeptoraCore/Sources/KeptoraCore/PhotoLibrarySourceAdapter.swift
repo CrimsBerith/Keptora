@@ -425,14 +425,20 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 #else
                         let cgImage = Self.orientedPreview(image)
 #endif
-                        if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                        if (info?[PHImageResultIsDegradedKey] as? Bool) == true {
+                            if !allowNetwork {
+                                if let cgImage {
+                                    singleShot.resume(returning: cgImage)
+                                } else {
+                                    singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
+                                }
+                            }
+                            return
+                        }
                         if let cgImage {
                             singleShot.resume(returning: cgImage)
                         } else {
-                            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                            if !isDegraded {
-                                singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(asset.displayName))
-                            }
+                            singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(asset.displayName))
                         }
                     }
                 }
@@ -632,6 +638,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 import CoreImage
 import UIKit
 private extension PhotoLibrarySourceAdapter {
+    private static let sharedCIContext = CIContext(options: [
+        .useSoftwareRenderer: false,
+        .priorityRequestLow: true
+    ])
+
     static func orientedPreview(_ image: UIImage?) -> CGImage? {
         guard let image, let cg = image.cgImage else { return nil }
         guard image.imageOrientation != .up else { return cg }
@@ -648,7 +659,7 @@ private extension PhotoLibrarySourceAdapter {
         @unknown default: orientation = 1
         }
         let oriented = CIImage(cgImage: cg).oriented(forExifOrientation: orientation)
-        return CIContext().createCGImage(oriented, from: oriented.extent)
+        return sharedCIContext.createCGImage(oriented, from: oriented.extent)
     }
 }
 #endif

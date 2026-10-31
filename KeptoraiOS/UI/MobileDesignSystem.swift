@@ -27,6 +27,7 @@ enum MobileKeptoraDesign {
     static let cyan     = Color(red: 0.08, green: 0.67, blue: 0.88)
     static let coral    = Color(red: 0.98, green: 0.39, blue: 0.47)
     static let mint     = adaptive(light: (0.00, 0.42, 0.28), dark: (0.30, 0.85, 0.62))
+    static let mintFill = Color(red: 0.05, green: 0.50, blue: 0.35)
     static let success  = mint
     static let amber    = adaptive(light: (0.56, 0.30, 0.00), dark: (1.00, 0.72, 0.30))
     static let warning  = amber
@@ -328,6 +329,44 @@ struct MobileActionButtonStyle: ButtonStyle {
     }
 }
 
+/// Refined Frosted-Glass action button for secondary mobile actions.
+struct MobileSleekActionButtonStyle: ButtonStyle {
+    var fillsWidth = false
+    var tint: Color = MobileKeptoraDesign.accent
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(isEnabled ? tint : Color.secondary.opacity(0.6))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
+                   maxWidth: fillsWidth ? .infinity : nil,
+                   minHeight: MobileKeptoraDesign.minimumTouchTarget)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(tint.opacity(configuration.isPressed ? 0.16 : 0.08))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.35), tint.opacity(0.20)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .opacity(isEnabled ? 1 : 0.45)
+            .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
+    }
+}
+
 struct MobilePrimaryButtonStyle: ButtonStyle {
     var fillsWidth = false
     var tint = MobileKeptoraDesign.accentFill
@@ -390,26 +429,10 @@ struct MobilePillBadge: View {
     }
 }
 
-// MARK: – Motion (Reduce Motion aware)
-
-private struct MobileKeptoraAnimationModifier<Value: Equatable>: ViewModifier {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let animation: Animation
-    let value: Value
-
-    func body(content: Content) -> some View {
-        content.animation(reduceMotion ? nil : animation, value: value)
-    }
-}
 
 // MARK: – Panel Modifier
 
 extension View {
-    /// Like `.animation(_:value:)`, but disabled when the user turned on Reduce Motion.
-    func keptoraAnimation<Value: Equatable>(_ animation: Animation, value: Value) -> some View {
-        modifier(MobileKeptoraAnimationModifier(animation: animation, value: value))
-    }
-
     func keptoraPanel(tint: Color = MobileKeptoraDesign.accent) -> some View {
         padding(18)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -425,7 +448,6 @@ extension View {
                         lineWidth: 1
                     )
             }
-            .shadow(color: tint.opacity(0.09), radius: 22, y: 10)
-            .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
+            .shadow(color: tint.opacity(0.08), radius: 14, y: 6)
     }
 }

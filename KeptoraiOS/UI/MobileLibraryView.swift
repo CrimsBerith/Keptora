@@ -70,8 +70,22 @@ struct MobileScanSourcesSection: View {
                     .font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk).padding(.top, 6)
                 Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk).padding(.top, 6)
             }
-        }.padding(14)
-            .background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: Color.black.opacity(0.03), radius: 10, y: 4)
     }
 }
 
@@ -178,15 +192,14 @@ struct MobileSourceLibraryView: View {
                         subtitle: photosConnected ? Text("Connected") : Text("Photos and videos on this device"),
                         image: "photo.on.rectangle.angled",
                         selected: photosConnected,
-                        tint: MobileKeptoraDesign.coral
+                        tint: MobileKeptoraDesign.accent
                     )
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("library.source.photos")
             }
-            if !store.connectedSources.isEmpty { MobileScanSourcesSection() }
 
-            if store.authorization == .limited, photosConnected {
+            if store.authorization == .limited {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         Image(systemName: "photo.badge.exclamationmark")

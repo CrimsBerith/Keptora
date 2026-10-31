@@ -198,6 +198,7 @@ struct MacArchiveView: View {
     }
     @FocusState private var searchFocused: Bool
     @State private var restoredPosition = false
+    @State private var comparingGroup: LibraryReviewGroup?
     var body: some View {
         VStack(spacing: 0) {
             fixedControls
@@ -206,17 +207,17 @@ struct MacArchiveView: View {
                 ScrollView { catalogueContent }.coordinateSpace(name: "mac-gallery")
                     .background(GeometryReader { geometry in
                         Color.clear.onAppear { galleryColumns = max(1, Int((geometry.size.width - 28) / 172)) }
-                            .onChange(of: geometry.size.width) { width in galleryColumns = max(1, Int((width - 28) / 172)) }
+                            .onChange(of: geometry.size.width) { _, width in galleryColumns = max(1, Int((width - 28) / 172)) }
                     })
                     .onAppear { restorePosition(proxy) }
-                    .onChange(of: archive.loading) { loading in if !loading { restorePosition(proxy) } }
-                    .onChange(of: archive.assets.count) { _ in restorePosition(proxy) }
+                    .onChange(of: archive.loading) { _, loading in if !loading { restorePosition(proxy) } }
+                    .onChange(of: archive.assets.count) { restorePosition(proxy) }
                     .onPreferenceChange(MacGalleryPositions.self) { positions in
                         if let first = positions.filter({ $0.value >= 0 }).min(by: { $0.value < $1.value }), archive.scrollAnchorID != first.key {
                             archive.recordScrollAnchor(first.key)
                         }
                     }
-                    .onChange(of: keyboardFocus) { id in archive.recordFocus(id); if let id { proxy.scrollTo(id, anchor: .center) } }
+                    .onChange(of: keyboardFocus) { _, id in archive.recordFocus(id); if let id { proxy.scrollTo(id, anchor: .center) } }
             }
             if !archive.selection.isEmpty || archive.canUndoSelection || archive.canRedoSelection {
                 Divider()
@@ -247,23 +248,59 @@ struct MacArchiveView: View {
         .accessibilityIdentifier("mac.page.archive")
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
         .sheet(item: $inspected) { item in
-            VStack(spacing: 14) {
-                MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork).frame(minWidth: 600, minHeight: 420)
-                Text(item.displayName).font(.headline)
-                Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-                if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
-                if let date = item.captureDateDescription { Text(date) }
-                if let context = item.context, let camera = context.camera { Text(camera) }
-                if let location = item.context?.location { Text(String(format: "%.5f, %.5f", location.latitude, location.longitude)) }
-                HStack { Button("Close") { inspected = nil }; Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) } }
-            }.padding(20)
+            ScrollView {
+                VStack(spacing: 14) {
+                    MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork)
+                        .frame(minWidth: 520, minHeight: 380)
+                    Text(item.displayName)
+                        .font(.headline)
+                        .truncationMode(.middle)
+                        .lineLimit(1)
+                    Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                    if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
+                    if let date = item.captureDateDescription { Text(date) }
+                    if let context = item.context, let camera = context.camera { Text(camera) }
+                    if let location = item.context?.location {
+                        HStack {
+                            Image(systemName: "location.fill").foregroundStyle(KeptoraDesign.accent)
+                            Text(String(format: "%.5f, %.5f", location.latitude, location.longitude))
+                            if case .file(let url) = item.reference {
+                                Button("Strip Location for Privacy") {
+                                    try? MetadataDoctorEngine.stripLocationData(from: url, destinationURL: url)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                        }
+                    }
+                    if item.context?.captureDate == nil, let inferred = MetadataDoctorEngine.inferDateFromFilename(item.displayName) {
+                        HStack {
+                            Image(systemName: "calendar.badge.clock").foregroundStyle(KeptoraDesign.accent)
+                            Text(L10n.format("Inferred Date: %@", DateFormatter.localizedString(from: inferred, dateStyle: .medium, timeStyle: .short)))
+                                .font(.caption)
+                        }
+                    }
+                    HStack(spacing: 12) {
+                        Button("Close") { inspected = nil }
+                            .keyboardShortcut(.cancelAction)
+                        Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) }
+                            .buttonStyle(.borderedProminent)
+                    }
+                }
+                .padding(20)
+            }
+            .frame(minWidth: 560, idealWidth: 640, minHeight: 480, maxHeight: 680)
         }
-        .onChange(of: inspected?.id) { _ in previewNetwork = false }
+        .sheet(item: $comparingGroup) { group in
+            SideBySideCompareView(group: group, isPresented: $comparingGroup)
+                .environmentObject(archive)
+        }
+        .onChange(of: inspected?.id) { previewNetwork = false }
         .sheet(isPresented: $showAccessGuide) { MacSourceSetupView().environmentObject(archive) }
         .confirmationDialog("Download cloud originals?", isPresented: $cloudScan) {
             Button("Download and Scan") { archive.analyze(allowNetwork: true) }
         } message: { Text("This may use network data and device storage. You can cancel the scan at any time.") }
-        .onChange(of: archive.scanSourceSelection) { _ in finding = .all; albumID = ""; media = 0; search = "" }
+        .onChange(of: archive.scanSourceSelection) { finding = .all; albumID = ""; media = 0; search = "" }
     }
     private var fixedControls: some View {
         VStack(spacing: 0) {
@@ -293,7 +330,7 @@ struct MacArchiveView: View {
             if archive.assets.isEmpty && !archive.loading {
                 VStack(spacing: 16) {
                     Image("onboarding_privacy").resizable().scaledToFit().frame(maxWidth: 520).clipShape(RoundedRectangle(cornerRadius: 22)).accessibilityHidden(true)
-                    Text("Your photos. Your choice.").font(.largeTitle.bold())
+                    Text("Your Photos").font(.largeTitle.bold())
                     Text("Open Photos or a folder. Select any photo or video without waiting for duplicate analysis.").foregroundStyle(KeptoraDesign.secondaryInk)
                 }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -464,6 +501,13 @@ struct MacArchiveView: View {
             else if remaining == 0 { Text("Others Selected") }
             else { Text(L10n.format("Select Others (%lld)", remaining)) }
         }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.others.\(group.id)")
+        Button {
+            comparingGroup = group
+        } label: {
+            Label("Compare", systemImage: "square.split.2x1")
+        }
+        .disabled(group.assets.count < 2)
+        .accessibilityIdentifier("mac.archive.compare.\(group.id)")
         Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
     }
     private func selectByClick(_ item: UniversalMediaAsset) {
@@ -560,7 +604,7 @@ struct MacArchiveView: View {
                     Picker("Album", selection: contextBinding(\.albumID)) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }
                     Picker("Quality", selection: qualityBinding) {
                         ForEach(LibraryQualityFilter.allCases) { filter in
-                            Text(L10n.format("%@ (%lld)", L10n.tr(String.LocalizationValue(filter.titleKey)), archive.gallery.qualityCounts[filter] ?? 0)).tag(filter)
+                            Text(verbatim: "\(L10n.tr(String.LocalizationValue(filter.titleKey))) (\(archive.gallery.qualityCounts[filter] ?? 0))").tag(filter)
                         }
                     }
                 }.accessibilityIdentifier("mac.archive.filters")
@@ -570,7 +614,11 @@ struct MacArchiveView: View {
                 HStack(spacing: 12) { findingPicker.pickerStyle(.menu); Spacer(minLength: 8); scanControls }
             }
             HStack(spacing: 12) {
-                Text(L10n.plural("In this list: %lld items", visible.count)).font(.subheadline.weight(.semibold)).accessibilityIdentifier("mac.archive.visibleCount")
+                Text(L10n.plural("In this list: %lld items", visible.count))
+                    .font(.subheadline.weight(.semibold))
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: visible.count)
+                    .accessibilityIdentifier("mac.archive.visibleCount")
                 Spacer(minLength: 8)
                 // Only for a narrowed list; in finding views it would also select the photos suggested to keep.
                 if finding == .all && (qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty) {
@@ -728,7 +776,7 @@ struct MacManualSelectionSheet: View {
                 VStack(alignment: .leading, spacing: 8) { secondaryReviewActions; removeButton }
             }
         }.controlSize(.large).padding(24).frame(minWidth: 480, idealWidth: 650, minHeight: 480, idealHeight: 650).interactiveDismissDisabled(archive.busy)
-        .onChange(of: reviewedItems) { _ in leaveLinkedFiles = false }
+        .onChange(of: reviewedItems) { leaveLinkedFiles = false }
         .onAppear { if !captured { review = FrozenSelectionReview(archive.selected); captured = true } }
         .onAppear { archive.presentationOwner = .review }
         .onDisappear { archive.closePresentation() }

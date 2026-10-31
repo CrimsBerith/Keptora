@@ -25,6 +25,9 @@ struct MacGalleryContext: Codable, Equatable, Sendable {
     var albumID = ""
     var focusedID: String?
     var scrollID: String?
+    var screenshotsOnly: Bool? = false
+
+    var isScreenshotsOnly: Bool { screenshotsOnly ?? false }
 }
 
 struct MacLibraryState: Codable, Sendable {
@@ -46,6 +49,7 @@ struct MacSavedAnalysis: Codable, Sendable {
     var exact: [UniversalExactGroup]
     var similar: [UniversalSimilarityGroup]
     var videos: [UniversalSimilarityGroup]
+    var burstGroups: [BurstSequenceGroup]?
     var quality: [String: QualityAssessment]
     var progress: AnalysisSessionProgress
     var checkpoint: UniversalScanCheckpoint?
@@ -96,6 +100,14 @@ final class MacArchiveModel: ObservableObject {
                 do { try await Task.sleep(nanoseconds: 120_000_000) } catch { return }
                 guard let self else { return }; self.objectWillChange.send(); self.appliedSearch = value; self.cachedProjection = nil
             }
+        }
+    }
+    static func removing(_ ids: Set<String>, from groups: [BurstSequenceGroup]) -> [BurstSequenceGroup] {
+        groups.compactMap { group in
+            let remaining = group.assets.filter { !ids.contains($0.id) }
+            guard remaining.count > 1 else { return nil }
+            let keeper = remaining.contains { $0.id == group.keeperID } ? group.keeperID : (remaining.first?.id ?? "")
+            return BurstSequenceGroup(id: group.id, assets: remaining, keeperID: keeper, timeSpanSeconds: group.timeSpanSeconds)
         }
     }
     private var navigationScrollID: String?
@@ -158,6 +170,7 @@ final class MacArchiveModel: ObservableObject {
     @Published var history: [MacRecoveryEntry] = []
     @Published var exact: [UniversalExactGroup] = [] { didSet { invalidateGroups() } }
     @Published var similarVideos: [UniversalSimilarityGroup] = [] { didSet { invalidateGroups() } }
+    @Published var burstGroups: [BurstSequenceGroup] = [] { didSet { invalidateGroups() } }
     @Published var coverage: [LibrarySourceCoverage] = [] { didSet { invalidateScope() } }
     @Published var connectionErrors: [String] = []
     @Published var connectedFolders: [LibrarySource] = [] { didSet { invalidateScope() } }
@@ -193,7 +206,7 @@ final class MacArchiveModel: ObservableObject {
     private func scanSourcesChanged() {
         invalidateScope()
         checkpoint = nil; analysisPaused = false; scheduleSave()
-        exact = []; similar = []; similarVideos = []; qualityAssessments = [:]; analysisIssues = []; analysisFailures = [:]; sessionProgress = .init(); skippedCloudItems = 0; skippedPreviews = 0
+        exact = []; similar = []; similarVideos = []; burstGroups = []; qualityAssessments = [:]; analysisIssues = []; analysisFailures = [:]; sessionProgress = .init(); skippedCloudItems = 0; skippedPreviews = 0
     }
     private var connectedAdapters: [any SourceAdapter] {
         var values: [any SourceAdapter] = []
@@ -208,7 +221,7 @@ final class MacArchiveModel: ObservableObject {
     private var scanAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters, selectedSourceIDs: selectedSourceIDs) }
     var reviewGroups: [LibraryReviewGroup] {
         if let cachedReviewGroups { return cachedReviewGroups }
-        let groups = LibraryReviewGroup.combined(exact: exact, similar: similar + similarVideos)
+        let groups = LibraryReviewGroup.combined(exact: exact, similar: similar + similarVideos, bursts: burstGroups)
         cachedReviewGroups = groups; return groups
     }
     func sourceLabel(_ item: UniversalMediaAsset) -> String {
@@ -442,7 +455,7 @@ final class MacArchiveModel: ObservableObject {
                     let cache = try await analysisRepository.load()
                     analysisSequence = await analysisRepository.nextSequence()
                     if let value = cache.value {
-                        assets = value.assets; exact = value.exact; similar = value.similar; similarVideos = value.videos
+                        assets = value.assets; exact = value.exact; similar = value.similar; similarVideos = value.videos; burstGroups = value.burstGroups ?? []
                         qualityAssessments = value.quality; sessionProgress = value.progress; fingerprints = value.fingerprints ?? [:]
                         restoreSavedIssues(value)
                         checkpoint = value.checkpoint; checkpointConfiguration = value.configuration; checkpointSources = value.sources
@@ -586,8 +599,8 @@ final class MacArchiveModel: ObservableObject {
             defer { if generation == current { loading = false }; operations.release(lease); drainRefresh() }
             do {
                 authorization = await photos.authorizationStatus()
-                let catalogue = try await adapter.enumerateAssets(onSourceBatch: { [weak self] items, reports, catalogue in
-                    await self?.receiveAnalysis(.catalogue(items, reports, catalogue), generation: current)
+                let catalogue = try await adapter.enumerateAssets(onSourceBatch: { items, reports, catalogue in
+                    await self.receiveAnalysis(.catalogue(items, reports, catalogue), generation: current)
                 })
                 guard !Task.isCancelled, generation == current else { return }
                 let reports = await adapter.coverage
@@ -631,7 +644,8 @@ final class MacArchiveModel: ObservableObject {
                 }
                 persistHistory()
                 if photosConnected && observer == nil {
-                    observer = MacArchivePhotoObserver { [weak self] in Task { @MainActor in self?.refresh() } }
+                    let model = self
+                    observer = MacArchivePhotoObserver { [weak model] in Task { @MainActor in model?.refresh() } }
                 }
             } catch is CancellationError { }
             catch { if generation == current { self.error = error.localizedDescription } }
@@ -654,17 +668,17 @@ final class MacArchiveModel: ObservableObject {
         let session = analysisSession, control = analysisSession.control, resumeCheckpoint = checkpoint
         analysisPaused = false; lastAnalysisAllowedNetwork = allowNetwork
         analyzing = true; sessionProgress = .init(); analysisIssues = []; analysisFailures = [:]; qualityAssessments = [:]
-        exact = []; similar = []; similarVideos = []; fingerprints = [:]
+        exact = []; similar = []; similarVideos = []; burstGroups = []; fingerprints = [:]
         status = L10n.tr("Loading sources"); analysisProcessed = 0; analysisTotal = scopedAssets.count
         let adapter = scanAdapter
         task = Task {
             defer { if generation == current { analyzing = false; status = nil; scheduleSave(); scheduleAnalysisSave() }; operations.release(lease); drainRefresh() }
-            let coordinator = LibraryAnalysisCoordinator { [weak self] update in await self?.receiveAnalysis(update, generation: current) }
+            let coordinator = LibraryAnalysisCoordinator { update in await self.receiveAnalysis(update, generation: current) }
             do {
                 try await coordinator.run(adapter: adapter, allowNetwork: allowNetwork, configuration: configuration, control: control,
-                    checkpoint: resumeCheckpoint, checkpointUpdate: { [weak self] value in
+                    checkpoint: resumeCheckpoint, checkpointUpdate: { value in
                         session.capture(value)
-                        Task { @MainActor in guard let self, self.generation == current, !self.discardScanCheckpoint, !self.sessionProgress.isComplete else { return }; self.checkpoint = value; self.scheduleAnalysisSave() }
+                        Task { @MainActor in guard self.generation == current, !self.discardScanCheckpoint, !self.sessionProgress.isComplete else { return }; self.checkpoint = value; self.scheduleAnalysisSave() }
                     })
                 if generation == current { checkpoint = nil }
             }
@@ -702,6 +716,7 @@ final class MacArchiveModel: ObservableObject {
             guard sessionProgress.stages[.photos]?.isTerminal != true else { return }
             qualityAssessments = quality; replaceIssues(.photos, issues)
         case .videos(let groups, let issues): similarVideos = groups; replaceIssues(.videos, issues)
+        case .bursts(let bursts): burstGroups = bursts; invalidateGroups()
         case .metrics(let stage, let metrics): workMetrics[stage] = metrics
         case .failure(let stage, let message): analysisFailures[stage] = message; if error == nil { error = message }
         case .finished(let progress): sessionProgress = progress; checkpoint = nil
@@ -773,7 +788,12 @@ final class MacArchiveModel: ObservableObject {
             assets.removeAll { completedIDs.contains($0.id) }
             exact = Self.removing(completedIDs, from: exact); similar = Self.removing(completedIDs, from: similar)
             similarVideos = Self.removing(completedIDs, from: similarVideos)
+            burstGroups = Self.removing(completedIDs, from: burstGroups)
             selection.subtract(completedIDs)
+            if !completedIDs.isEmpty {
+                selectionSession.reset()
+                updateUndoAvailability()
+            }
         }
         do {
             try await saveStateNow()
@@ -797,7 +817,14 @@ final class MacArchiveModel: ObservableObject {
                 do {
                     try await photos.deleteSelectedAssets(localIdentifiers: ids, intent: .manualSelection, reviewedAssets: batch)
                 } catch {
-                    if let index = history.firstIndex(where: { $0.id == receiptID }) { history[index].operationState = .failed }
+                    let ns = error as NSError
+                    let isUserCancelled = (ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError) ||
+                                          (ns.domain == "PHPhotosErrorDomain" && ns.code == 3072)
+                    if isUserCancelled {
+                        history.removeAll { $0.id == receiptID }
+                    } else if let index = history.firstIndex(where: { $0.id == receiptID }) {
+                        history[index].operationState = .failed
+                    }
                     throw error
                 }
                 if let index = history.firstIndex(where: { $0.id == receiptID }) { history[index].operationState = .moved }
@@ -839,7 +866,12 @@ final class MacArchiveModel: ObservableObject {
                     folderRecord: record, bookmark: sourceID.flatMap { bookmarks[$0] }, isPhotos: false), at: 0)
             }
             let ns = error as NSError
-            if ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError && completedIDs.isEmpty { return false }
+            let isUserCancelled = (ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError) ||
+                                  (ns.domain == "PHPhotosErrorDomain" && ns.code == 3072)
+            if isUserCancelled {
+                history.removeAll { $0.operationState == .planned }
+                if completedIDs.isEmpty { return false }
+            }
             self.error = completedIDs.isEmpty ? error.localizedDescription :
                 L10n.format("Moved: %lld items. Not moved: %lld items. See History for recovery.", completedIDs.count, snapshot.count - completedIDs.count) + "\n\n" + error.localizedDescription
             Task { refresh() }
@@ -866,17 +898,23 @@ final class MacArchiveModel: ObservableObject {
     func restore(_ entry: MacRecoveryEntry) async {
         guard canRemoveSelection, var record = entry.folderRecord, record.restoredAt == nil else { return }
         var lease: LibraryOperationCoordinator.Lease?
+        var recoveryScope: URL?
         busy = true; status = L10n.tr("Restoring files…")
-        defer { busy = false; status = nil; if let lease { operations.release(lease) }; refresh() }
+        defer {
+            recoveryScope?.stopAccessingSecurityScopedResource()
+            busy = false
+            status = nil
+            if let lease { operations.release(lease) }
+            refresh()
+        }
         do {
-            var recoveryScope: URL?
             if let bookmark = entry.bookmark {
                 var stale = false
-                let url = try URL(resolvingBookmarkData: bookmark, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale)
+                let url = try URL(resolvingBookmarkData: bookmark, options: [.withSecurityScope, .withoutImplicitStartAccessing], relativeTo: nil, bookmarkDataIsStale: &stale)
                 guard url.startAccessingSecurityScopedResource() else { throw UniversalScanError.sourcePermissionDenied }
-                recoveryScope = url; record = try record.rebased(to: url)
+                recoveryScope = url
+                record = try record.rebased(to: url)
             }
-            defer { recoveryScope?.stopAccessingSecurityScopedResource() }
             var resources = operationResources; resources.insert(LibraryFileIdentity.volumeKey(for: record.sourceRoot))
             guard let acquired = operations.acquire(resources, mode: .write) else {
                 throw UniversalScanError.cleanupNotPermitted(L10n.tr("Another operation is using this storage. Wait for it to finish or cancel its scan."))
@@ -999,7 +1037,7 @@ final class MacArchiveModel: ObservableObject {
     private func flushAnalysisCache() async {
         guard persistentSession, analysisCacheDirty else { return }
         analysisCacheDirty = false; analysisSequence += 1
-        let value = MacSavedAnalysis(assets: assets, exact: exact, similar: similar, videos: similarVideos,
+        let value = MacSavedAnalysis(assets: assets, exact: exact, similar: similar, videos: similarVideos, burstGroups: burstGroups,
             quality: qualityAssessments, progress: sessionProgress, checkpoint: checkpoint,
             configuration: checkpointConfiguration, sources: checkpointSources, fingerprints: fingerprints,
             issues: analysisIssues, failedStages: AnalysisStage.allCases.filter { analysisFailures[$0] != nil })

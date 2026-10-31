@@ -20,12 +20,12 @@ struct MobileAssetThumbnail: View {
             Color(uiColor: .tertiarySystemFill)
             if let image {
                 if contentMode == .fit {
-                    Image(uiImage: image).resizable().scaledToFit()
+                    Image(uiImage: image).resizable().scaledToFit().transition(.opacity)
                 } else {
-                    Image(uiImage: image).resizable().scaledToFill()
+                    Image(uiImage: image).resizable().scaledToFill().transition(.opacity)
                 }
             } else if !didFinish {
-                ProgressView()
+                Color(uiColor: .secondarySystemFill)
             } else {
                 GeometryReader { geometry in
                     let compact = geometry.size.width < 120 || geometry.size.height < 120
@@ -60,11 +60,12 @@ struct MobileAssetThumbnail: View {
     }
 
     var cacheKey: String {
-        "\(asset.id)_\(asset.modificationDate?.timeIntervalSince1970 ?? 0)_\(asset.fileRevision?.physicalIdentity ?? "")_\(asset.fileRevision?.changeToken ?? "")_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
+        let stamp = asset.modificationDate?.timeIntervalSince1970 ?? asset.creationDate?.timeIntervalSince1970 ?? 0
+        return "\(asset.id)_\(stamp)_\(asset.fileRevision?.physicalIdentity ?? "")_\(asset.fileRevision?.changeToken ?? "")_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
     }
 
     private func load() async {
-        if asset.modificationDate != nil, let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
+        if let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
             self.image = cached
             return
         }
@@ -90,14 +91,16 @@ struct MobileAssetThumbnail: View {
             } else {
                 let work = Task.detached(priority: .utility) { () -> UIImage? in
                     try? await MediaWorkGate.thumbnails.withPermit {
-                    guard !Task.isCancelled else { return nil as UIImage? }
-                    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-                          let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                            kCGImageSourceCreateThumbnailFromImageAlways: true,
-                            kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 64),
-                            kCGImageSourceCreateThumbnailWithTransform: true
-                          ] as CFDictionary) else { return nil }
-                    return UIImage(cgImage: cgImage)
+                        guard !Task.isCancelled else { return nil as UIImage? }
+                        return autoreleasepool {
+                            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                                  let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                    kCGImageSourceThumbnailMaxPixelSize: max(Int(pixelSize), 64),
+                                    kCGImageSourceCreateThumbnailWithTransform: true
+                                  ] as CFDictionary) else { return nil }
+                            return UIImage(cgImage: cgImage)
+                        }
                     }
                 }
                 loadedImage = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
@@ -111,6 +114,7 @@ struct MobileAssetThumbnail: View {
             // otherwise fast scrolling queues up hundreds of decodes.
             loadedImage = await withTaskCancellationHandler {
                 await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
+                    request.setContinuation(continuation)
                     let options = PHImageRequestOptions()
                     options.deliveryMode = .highQualityFormat
                     options.resizeMode = .fast
@@ -138,7 +142,7 @@ struct MobileAssetThumbnail: View {
         }
 
         if let loadedImage, !Task.isCancelled {
-            if asset.modificationDate != nil { MobileThumbnailCache.shared.setImage(loadedImage, forKey: cacheKey) }
+            MobileThumbnailCache.shared.setImage(loadedImage, forKey: cacheKey)
             self.image = loadedImage
         }
     }
@@ -176,10 +180,24 @@ struct MobileAssetPreview: View {
 final class MobileThumbnailCache: @unchecked Sendable {
     static let shared = MobileThumbnailCache()
     private let cache = NSCache<NSString, UIImage>()
+    private var memoryObserver: (any NSObjectProtocol)?
 
     private init() {
         cache.totalCostLimit = 64 * 1024 * 1024 // 64 MB
         cache.countLimit = 250
+        memoryObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.cache.removeAllObjects()
+        }
+    }
+
+    deinit {
+        if let memoryObserver {
+            NotificationCenter.default.removeObserver(memoryObserver)
+        }
     }
 
     func image(forKey key: String) -> UIImage? {
@@ -187,7 +205,7 @@ final class MobileThumbnailCache: @unchecked Sendable {
     }
 
     func setImage(_ image: UIImage, forKey key: String) {
-        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? Int(image.size.width * image.scale * image.size.height * image.scale * 4)
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? max(Int(image.size.width * image.scale * image.size.height * image.scale * 4), 1024)
         cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 }
@@ -199,15 +217,36 @@ private final class PhotoImageRequest: @unchecked Sendable {
     private var requestID = PHInvalidImageRequestID
     private var didResume = false
     private var wasCancelled = false
+    private var continuation: CheckedContinuation<UIImage?, Never>?
+
+    func setContinuation(_ continuation: CheckedContinuation<UIImage?, Never>) {
+        lock.lock()
+        self.continuation = continuation
+        let cancelNow = wasCancelled && !didResume
+        if cancelNow { didResume = true }
+        lock.unlock()
+        if cancelNow { continuation.resume(returning: nil) }
+    }
 
     func setID(_ id: PHImageRequestID) {
-        lock.lock(); requestID = id; let cancelNow = wasCancelled; lock.unlock()
+        lock.lock()
+        requestID = id
+        let cancelNow = wasCancelled
+        lock.unlock()
         if cancelNow { PHImageManager.default().cancelImageRequest(id) }
     }
 
     func cancel() {
-        lock.lock(); wasCancelled = true; let id = requestID; lock.unlock()
-        if id != PHInvalidImageRequestID { PHImageManager.default().cancelImageRequest(id) }
+        lock.lock()
+        wasCancelled = true
+        let id = requestID
+        let cont = didResume ? nil : continuation
+        didResume = true
+        lock.unlock()
+        if id != PHInvalidImageRequestID {
+            PHImageManager.default().cancelImageRequest(id)
+        }
+        cont?.resume(returning: nil)
     }
 
     func resumeOnce(_ body: () -> Void) {
@@ -223,5 +262,168 @@ extension UniversalMediaAsset {
     var formattedDuration: String {
         let value = max(0, Int((duration ?? 0).rounded()))
         return String(format: "%d:%02d", value / 60, value % 60)
+    }
+}
+
+struct MobileFullAssetViewer: View {
+    let asset: UniversalMediaAsset
+    let sourceLabel: String
+    var isSelected: Bool
+    var onToggleSelection: () -> Void
+    var onDismiss: () -> Void
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+
+                    MobileAssetThumbnail(
+                        asset: asset,
+                        pixelSize: 2048,
+                        contentMode: .fit,
+                        allowNetwork: true,
+                        showsRetryButton: true
+                    )
+                    .offset(offset)
+                    .scaleEffect(scale)
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                let delta = value / lastScale
+                                lastScale = value
+                                scale = min(max(scale * delta, 1.0), 4.0)
+                            }
+                            .onEnded { _ in
+                                lastScale = 1.0
+                                if scale < 1.05 {
+                                    withAnimation(.spring()) {
+                                        scale = 1.0
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    }
+                                }
+                            }
+                    )
+                    .simultaneousGesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if scale > 1.05 {
+                                    offset = CGSize(
+                                        width: lastOffset.width + value.translation.width,
+                                        height: lastOffset.height + value.translation.height
+                                    )
+                                }
+                            }
+                            .onEnded { _ in
+                                if scale > 1.05 {
+                                    lastOffset = offset
+                                } else {
+                                    withAnimation(.spring()) {
+                                        offset = .zero
+                                        lastOffset = .zero
+                                    }
+                                }
+                            }
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation(.spring()) {
+                            if scale > 1.2 {
+                                scale = 1.0
+                                offset = .zero
+                                lastOffset = .zero
+                            } else {
+                                scale = 2.5
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    VStack(spacing: 8) {
+                        if dynamicTypeSize.isAccessibilitySize {
+                            VStack(alignment: .leading, spacing: 10) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(asset.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                    Text(details)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.white.opacity(0.85))
+                                }
+                                selectionButton
+                            }
+                        } else {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(asset.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                    Text(details)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.white.opacity(0.85))
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                selectionButton
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(.ultraThinMaterial)
+                }
+            }
+            .navigationTitle(asset.displayName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizedStringKey("Done")) {
+                        onDismiss()
+                    }
+                    .foregroundStyle(.white)
+                }
+            }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+    }
+
+    @ViewBuilder
+    private var selectionButton: some View {
+        Button {
+            onToggleSelection()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Text(isSelected ? LocalizedStringKey("Selected") : LocalizedStringKey("Select"))
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
+            .background(isSelected ? MobileKeptoraDesign.accentFill : Color.white.opacity(0.25), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .accessibilityLabel(isSelected ? L10n.tr("Deselect Photo") : L10n.tr("Select Photo"))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var details: String {
+        var parts = [sourceLabel]
+        if let date = asset.captureDateDescription { parts.append(date) }
+        if asset.mediaKind == .video { parts.append(asset.formattedDuration) }
+        if let bytes = asset.byteCount { parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) }
+        return parts.joined(separator: " · ")
     }
 }

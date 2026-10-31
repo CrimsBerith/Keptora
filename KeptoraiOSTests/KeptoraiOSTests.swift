@@ -56,8 +56,9 @@ final class KeptoraiOSTests: XCTestCase {
     func testRealPhotoLibraryDuplicateScanningOnSimulator() async throws {
         let adapter = PhotoLibrarySourceAdapter()
         let auth = await adapter.authorizationStatus()
-        XCTAssertTrue(auth == .authorized || auth == .limited, "Grant Photos access before running the real-media integration test.")
-        guard auth == .authorized || auth == .limited else { return }
+        guard auth == .authorized || auth == .limited else {
+            throw XCTSkip("Grant Photos access before running the real-media integration test.")
+        }
         let assets = try await adapter.enumerateAssets()
         XCTAssertGreaterThanOrEqual(assets.count, 5, "Simulator should contain the imported sample assets.")
         

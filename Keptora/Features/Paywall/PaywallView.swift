@@ -35,8 +35,9 @@ struct PaywallView: View {
                         }
 
                         // One-time callout
-                        (Text("One-time purchase.").fontWeight(.semibold) + Text(" No subscription, ever."))
+                        Text("One purchase · No subscription")
                             .font(.callout)
+                            .fontWeight(.semibold)
                             .foregroundStyle(KeptoraDesign.secondaryInk)
 
                         // Feature list
@@ -124,7 +125,7 @@ struct PaywallView: View {
         Button { Task { await store.purchaseLifetime() } } label: {
             Group {
                 if store.isWorking { ProgressView().controlSize(.small) }
-                else if let product = store.lifetimeProduct { Text("Unlock for \(product.displayPrice)") }
+                else if let product = store.lifetimeProduct { Text(L10n.format("Unlock for %@", product.displayPrice)) }
                 else if store.isLifetimeUnlocked { Text("Purchased") }
                 else { Text("Lifetime Product Unavailable") }
             }.frame(minWidth: 150, minHeight: 32)

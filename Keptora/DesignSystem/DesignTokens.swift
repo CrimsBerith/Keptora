@@ -167,12 +167,20 @@ struct PremiumCard<Content: View>: View {
     var body: some View {
         content
             .padding(20)
-            .background(KeptoraDesign.elevated.opacity(reduceTransparency ? 1 : 0.96), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
+            .background(reduceTransparency ? AnyShapeStyle(KeptoraDesign.elevated) : AnyShapeStyle(.ultraThinMaterial), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
+            .background(KeptoraDesign.elevated.opacity(reduceTransparency ? 1 : 0.72), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.35), Color.primary.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             }
-            .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
+            .shadow(color: .black.opacity(0.04), radius: 8, y: 3)
     }
 }
 

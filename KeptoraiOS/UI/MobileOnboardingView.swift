@@ -25,7 +25,7 @@ struct MobileOnboardingView: View {
         ),
         OnboardingStep(
             id: 1,
-            title: "Every Photo. Your Choice.",
+            title: "Total Control",
             subtitle: "See related photos together. Tap to select, choose what to keep, and review before removing anything.",
             icon: "checkmark.seal.fill",
             tint: MobileKeptoraDesign.accent
@@ -50,11 +50,11 @@ struct MobileOnboardingView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 24)).frame(maxWidth: .infinity).accessibilityHidden(true)
-                    Text("Every Photo. Your Choice.").font(.system(.largeTitle, design: .rounded).weight(.bold))
+                    Text("Total Control").font(.system(.largeTitle, design: .rounded).weight(.bold))
                     VStack(alignment: .leading, spacing: 14) {
-                        welcomeRow("lock.shield.fill", "Your photos stay on this device.", tint: MobileKeptoraDesign.mint)
-                        welcomeRow("checkmark.circle.fill", "You choose what to remove and review it first.", tint: MobileKeptoraDesign.accent)
-                        welcomeRow("arrow.uturn.backward.circle.fill", "Removed items can be recovered.", tint: MobileKeptoraDesign.danger)
+                        welcomeRow("lock.shield.fill", "On-Device Privacy", tint: MobileKeptoraDesign.mint)
+                        welcomeRow("checkmark.circle.fill", "Review Before Removing", tint: MobileKeptoraDesign.accent)
+                        welcomeRow("arrow.uturn.backward.circle.fill", "Recoverable Anytime", tint: MobileKeptoraDesign.danger)
                     }
                 }
                 .padding(24)

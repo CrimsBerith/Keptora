@@ -30,4 +30,15 @@ final class PluralLocalizationTests: XCTestCase {
         XCTAssertEqual(plural("In this list: %lld items", 8, in: "de"), "In dieser Liste: 8 Elemente")
         XCTAssertEqual(plural("In this list: %lld items", 1, in: "fr"), "Dans cette liste : 1 élément")
     }
+
+    func testActiveFilterCountUsesSingularAndPlural() {
+        XCTAssertEqual(plural("%lld active filters", 1, in: "en"), "1 active filter")
+        XCTAssertEqual(plural("%lld active filters", 3, in: "en"), "3 active filters")
+        XCTAssertEqual(plural("%lld active filters", 1, in: "de"), "1 aktiver Filter")
+        XCTAssertEqual(plural("%lld active filters", 3, in: "de"), "3 aktive Filter")
+        XCTAssertEqual(plural("%lld active filters", 1, in: "fr"), "1 filtre actif")
+        XCTAssertEqual(plural("%lld active filters", 3, in: "fr"), "3 filtres actifs")
+        XCTAssertEqual(plural("%lld active filters", 1, in: "tr"), "1 etkin filtre")
+        XCTAssertEqual(plural("%lld active filters", 3, in: "tr"), "3 etkin filtre")
+    }
 }

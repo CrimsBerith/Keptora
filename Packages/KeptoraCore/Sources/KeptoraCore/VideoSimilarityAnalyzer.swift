@@ -135,14 +135,16 @@ public actor VideoSimilarityAnalyzer {
     }
 
     private func featurePrint(_ image: CGImage) -> VNFeaturePrintObservation? {
-        let request = VNGenerateImageFeaturePrintRequest()
-        request.revision = VNGenerateImageFeaturePrintRequestRevision1
-        request.imageCropAndScaleOption = .scaleFit
-        do {
-            try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
-            return request.results?.first as? VNFeaturePrintObservation
-        } catch {
-            return nil
+        autoreleasepool {
+            let request = VNGenerateImageFeaturePrintRequest()
+            request.revision = VNGenerateImageFeaturePrintRequestRevision1
+            request.imageCropAndScaleOption = .scaleFit
+            do {
+                try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
+                return request.results?.first as? VNFeaturePrintObservation
+            } catch {
+                return nil
+            }
         }
     }
 

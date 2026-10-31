@@ -146,16 +146,23 @@ public actor LibrarySelectionArchive {
 }
 
 public enum LibraryFindingFilter: String, Codable, CaseIterable, Sendable, Identifiable {
-    case all, copies, verySimilar, review
+    case all, copies, verySimilar, bursts, review
     public var id: String { rawValue }
     public var titleKey: String {
-        switch self { case .all: return "All Items"; case .copies: return "Exact Copies"; case .verySimilar: return "Very Similar"; case .review: return "Worth Reviewing" }
+        switch self {
+        case .all: return "All Items"
+        case .copies: return "Exact Copies"
+        case .verySimilar: return "Very Similar"
+        case .bursts: return "Rapid Bursts"
+        case .review: return "Worth Reviewing"
+        }
     }
     public func ids(groups: [LibraryReviewGroup], quality: [String: QualityAssessment]) -> Set<String>? {
         switch self {
         case .all: return nil
         case .copies: return Set(groups.filter { $0.kind == .exact }.flatMap { $0.assets.map(\.id) })
         case .verySimilar: return Set(groups.filter { $0.kind == .verySimilar }.flatMap { $0.assets.map(\.id) })
+        case .bursts: return Set(groups.filter { $0.kind == .burst }.flatMap { $0.assets.map(\.id) })
         case .review: return Set(quality.filter { $0.value.needsReview }.keys).union(groups.filter { $0.kind == .similar }.flatMap { $0.assets.map(\.id) })
         }
     }

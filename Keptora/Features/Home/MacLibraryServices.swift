@@ -124,6 +124,7 @@ struct MacGalleryProjection {
         let qualityIDs = (context.quality ?? .all).ids(quality: quality, issues: issues)
         visible = assets.filter { item in
             (findingIDs?.contains(item.id) ?? true) && (qualityIDs?.contains(item.id) ?? true) &&
+            (!context.isScreenshotsOnly || item.context?.isScreenshot == true) &&
             (context.media == 0 || (context.media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (context.albumID.isEmpty || item.context?.albums.contains { $0.id == context.albumID } == true) &&
             (search.isEmpty || item.displayName.localizedCaseInsensitiveContains(search))

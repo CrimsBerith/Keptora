@@ -156,14 +156,23 @@ public actor UniversalExactScanner {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
             let sig: String
-            if let byteCount = asset.byteCount, byteCount > 0 {
+            if let byteCount = asset.byteCount, byteCount == 0 {
+                // 0-byte placeholder files must never be grouped as duplicate copies of one another
+                sig = "zero:\(asset.id)"
+            } else if let byteCount = asset.byteCount, byteCount > 0 {
                 sig = "s:\(byteCount)"
             } else if let prior = resumableEntries[asset.id],
                       (prior.fingerprint.byteCount > 0 || (prior.fingerprintedAsset.byteCount ?? 0) > 0) {
-                let b = prior.fingerprint.byteCount > 0 ? prior.fingerprint.byteCount : prior.fingerprintedAsset.byteCount!
+                let b = prior.fingerprint.byteCount > 0 ? prior.fingerprint.byteCount : (prior.fingerprintedAsset.byteCount ?? 0)
                 sig = "s:\(b)"
-            } else if let queried = await adapter.assetByteCount(for: asset), queried > 0 {
-                sig = "s:\(queried)"
+            } else if let queried = await adapter.assetByteCount(for: asset) {
+                if queried == 0 {
+                    sig = "zero:\(asset.id)"
+                } else if queried > 0 {
+                    sig = "s:\(queried)"
+                } else {
+                    sig = "d:\(asset.mediaKind.rawValue):\(asset.pixelWidth)x\(asset.pixelHeight):\(Int(asset.duration ?? 0))"
+                }
             } else {
                 sig = "d:\(asset.mediaKind.rawValue):\(asset.pixelWidth)x\(asset.pixelHeight):\(Int(asset.duration ?? 0))"
             }
@@ -283,8 +292,12 @@ enum StreamingSHA256 {
         // Task.detached does not inherit cancellation, so forward it explicitly; otherwise
         // cancelling a scan would keep hashing a multi-gigabyte file to the end.
         let work = Task.detached(priority: .utility) { () -> UniversalExactFingerprint in
-            let values = try url.resourceValues(forKeys: [.isRegularFileKey])
+            let keys: Set<URLResourceKey> = [.isRegularFileKey, .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey]
+            let values = try url.resourceValues(forKeys: keys)
             guard values.isRegularFile == true else { throw UniversalScanError.inaccessibleAsset(url.lastPathComponent) }
+            if values.isUbiquitousItem == true, values.ubiquitousItemDownloadingStatus == .notDownloaded {
+                throw UniversalScanError.networkRequired(url.lastPathComponent)
+            }
             let handle = try FileHandle(forReadingFrom: url)
             defer { try? handle.close() }
             var hasher = SHA256()

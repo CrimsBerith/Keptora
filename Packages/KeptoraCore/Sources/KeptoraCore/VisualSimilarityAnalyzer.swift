@@ -33,6 +33,8 @@ public actor VisualSimilarityAnalyzer {
         var locationIndex: [String: Set<Int>] = [:]
         var descriptors: [String: (feature: VNFeaturePrintObservation?, hash: UInt64)] = [:]
         var qualityByAssetID: [String: VisualQualityReport] = [:]
+        var lastFindingsEmitTime = Date()
+        var lastGroupsEmitTime = Date()
 
         for (index, asset) in candidates.enumerated() {
             try await control?.waitIfPaused()
@@ -45,7 +47,11 @@ public actor VisualSimilarityAnalyzer {
                 skippedPreviewCount += 1
                 issues.append(.init(asset: asset, stage: .photos, error: error))
                 qualityAssessments[asset.id] = .unavailable
-                if index % 50 == 0 { findings(qualityAssessments, issues) }
+                let now = Date()
+            if (index % 50 == 0 && now.timeIntervalSince(lastFindingsEmitTime) >= 0.8) || index == candidates.count - 1 {
+                lastFindingsEmitTime = now
+                findings(qualityAssessments, issues)
+            }
                 continue
             }
             let feature = value.feature, hash = value.hash
@@ -54,7 +60,11 @@ public actor VisualSimilarityAnalyzer {
                 sharpnessScore: Float(value.quality.detailScore), exposureScore: Float(value.quality.exposureScore),
                 faceScore: 0, formatBonus: 0, compositeScore: Float(value.quality.score ?? 0), badges: [], assessment: value.quality)
             qualityAssessments[asset.id] = value.quality
-            if index % 50 == 0 { findings(qualityAssessments, issues) }
+            let now = Date()
+            if (index % 50 == 0 && now.timeIntervalSince(lastFindingsEmitTime) >= 0.8) || index == candidates.count - 1 {
+                lastFindingsEmitTime = now
+                findings(qualityAssessments, issues)
+            }
             if !similarityEnabled { continue }
             
             var bestIndex: Int?
@@ -136,7 +146,10 @@ public actor VisualSimilarityAnalyzer {
                 if let burst = asset.context?.burstID { burstIndex[burst, default: []].insert(newIndex) }
                 if let key = locationKeys.first { locationIndex[key, default: []].insert(newIndex) }
             }
-            if index % 50 == 0 { groupsUpdate(Self.groups(clusters, qualityByAssetID: qualityByAssetID)) }
+            if (index % 50 == 0 && now.timeIntervalSince(lastGroupsEmitTime) >= 1.2) || index == candidates.count - 1 {
+                lastGroupsEmitTime = now
+                groupsUpdate(Self.groups(clusters, qualityByAssetID: qualityByAssetID))
+            }
         }
 
         progress(candidates.count, candidates.count)

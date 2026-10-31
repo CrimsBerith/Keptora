@@ -14,7 +14,9 @@ struct MainRootView: View {
     @State private var startupSourcesPrepared = false
     @State private var showSourceSetup = false
 
-    private let primaryRoutes: [SidebarRoute] = [.archive, .history]
+    private let libraryRoutes: [SidebarRoute] = [.archive]
+    private let cleanupRoutes: [SidebarRoute] = [.exact, .similar, .bursts, .screenshots, .videos, .review]
+    private let activityRoutes: [SidebarRoute] = [.history]
 
     var body: some View {
         NavigationSplitView {
@@ -22,7 +24,9 @@ struct MainRootView: View {
                 brandHeader
 
                 VStack(alignment: .leading, spacing: 2) {
-                    sidebarSection("Workspace", routes: primaryRoutes)
+                    sidebarSection("Library", routes: libraryRoutes)
+                    sidebarSection("Smart Cleanup", routes: cleanupRoutes)
+                    sidebarSection("Activity", routes: activityRoutes)
 
                     Spacer(minLength: 0)
                 }
@@ -99,6 +103,7 @@ struct MainRootView: View {
             presentStartupIfNeeded()
         }
         .keptoraOnChange(of: sourceSetupCompleted) { _ in presentStartupIfNeeded() }
+        .keptoraOnChange(of: navigation.selectedRoute) { newRoute in applyRoute(newRoute) }
         .onAppear {
             archive.undoManager = undoManager
         }
@@ -178,7 +183,20 @@ struct MainRootView: View {
                 Text(route.title)
                     .font(.system(.body, design: .rounded).weight(isSelected ? .semibold : .medium))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Spacer()
+                if let count = routeBadgeCount(route) {
+                    Text(verbatim: "\(count)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isSelected ? Color.white : KeptoraDesign.secondaryInk)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(
+                            isSelected ? Color.white.opacity(0.2) : Color.primary.opacity(0.06),
+                            in: Capsule()
+                        )
+                }
                 if isSelected {
                     Circle()
                         .fill(KeptoraDesign.cyan)
@@ -205,7 +223,66 @@ struct MainRootView: View {
         .buttonStyle(.plain)
         .onHover { hoveredRoute = $0 ? route : nil }
         .accessibilityIdentifier("mac.sidebar.\(route.rawValue)")
+        .accessibilityLabel(Text(routeBadgeCount(route).map { "\(route.localizedTitle), \($0) items" } ?? route.localizedTitle))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func routeBadgeCount(_ route: SidebarRoute) -> Int? {
+        switch route {
+        case .archive:
+            return archive.scopedAssets.count > 0 ? archive.scopedAssets.count : nil
+        case .exact:
+            let count = archive.gallery.findingCounts[.copies] ?? 0
+            return count > 0 ? count : nil
+        case .similar:
+            let count = archive.gallery.findingCounts[.verySimilar] ?? 0
+            return count > 0 ? count : nil
+        case .bursts:
+            let count = archive.gallery.findingCounts[.bursts] ?? 0
+            return count > 0 ? count : nil
+        case .screenshots:
+            let count = archive.scopedAssets.filter { $0.context?.isScreenshot == true }.count
+            return count > 0 ? count : nil
+        case .videos:
+            let count = archive.scopedAssets.filter { $0.mediaKind == .video }.count
+            return count > 0 ? count : nil
+        case .review:
+            let count = archive.gallery.findingCounts[.review] ?? 0
+            return count > 0 ? count : nil
+        case .history:
+            return archive.history.count > 0 ? archive.history.count : nil
+        }
+    }
+
+    private func applyRoute(_ route: SidebarRoute) {
+        archive.galleryContext.screenshotsOnly = (route == .screenshots)
+        switch route {
+        case .archive:
+            archive.galleryContext.finding = .all
+            archive.galleryContext.media = 0
+            archive.galleryContext.search = ""
+            archive.contextChanged()
+        case .exact:
+            archive.openFinding(.copies)
+        case .similar:
+            archive.openFinding(.verySimilar)
+        case .bursts:
+            archive.openFinding(.bursts)
+        case .screenshots:
+            archive.galleryContext.search = ""
+            archive.galleryContext.media = 0
+            archive.galleryContext.finding = .all
+            archive.contextChanged()
+        case .videos:
+            archive.galleryContext.search = ""
+            archive.galleryContext.media = 2
+            archive.galleryContext.finding = .all
+            archive.contextChanged()
+        case .review:
+            archive.openFinding(.review)
+        case .history:
+            break
+        }
     }
 
     @ViewBuilder
@@ -240,8 +317,10 @@ struct MainRootView: View {
     @ViewBuilder
     private var routeDetail: some View {
         switch navigation.selectedRoute {
-        case .archive: MacArchiveView()
-        case .history: CombinedCleanupHistoryView()
+        case .archive, .exact, .similar, .bursts, .screenshots, .videos, .review:
+            MacArchiveView()
+        case .history:
+            CombinedCleanupHistoryView()
         }
     }
 }

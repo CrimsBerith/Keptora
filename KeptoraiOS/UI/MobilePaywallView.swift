@@ -28,7 +28,7 @@ struct MobilePaywallView: View {
                                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
                                 .foregroundStyle(MobileKeptoraDesign.accent)
 
-                            Text("One purchase. No subscription.")
+                            Text("One purchase · No subscription")
                                 .font(.system(.title3, design: .rounded).weight(.medium))
                                 .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         }
@@ -47,8 +47,10 @@ struct MobilePaywallView: View {
                                 Group {
                                     if purchase.isWorking {
                                         ProgressView().tint(.white)
+                                    } else if purchase.isUnlocked {
+                                        Text("Purchased")
                                     } else if let product = purchase.product {
-                                        Text("Unlock for \(product.displayPrice)")
+                                        Text(L10n.format("Unlock for %@", product.displayPrice))
                                     } else {
                                         Text("Product unavailable")
                                     }
@@ -56,7 +58,7 @@ struct MobilePaywallView: View {
                                 .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(MobilePrimaryButtonStyle())
-                            .disabled(purchase.product == nil || purchase.isWorking)
+                            .disabled(purchase.product == nil || purchase.isWorking || purchase.isUnlocked)
                             .accessibilityIdentifier("ios.paywall.purchase")
 
                             if purchase.product == nil && !purchase.isUnlocked {
@@ -106,6 +108,7 @@ struct MobilePaywallView: View {
                         .accessibilityIdentifier("ios.paywall.close")
                 }
             }
+            .interactiveDismissDisabled(purchase.isWorking)
             .onChange(of: purchase.isUnlocked) { _, unlocked in
                 if unlocked { dismiss() }
             }
@@ -144,5 +147,35 @@ struct MobilePaywallView: View {
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .foregroundStyle(.primary)
         }
+    }
+}
+
+private struct MobilePaywallShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1.0
+    var isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if isEnabled {
+                    GeometryReader { geo in
+                        LinearGradient(
+                            colors: [.clear, Color.white.opacity(0.24), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .rotationEffect(.degrees(25))
+                        .offset(x: phase * (geo.size.width + 120))
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .allowsHitTesting(false)
+                }
+            }
+            .onAppear {
+                guard isEnabled else { return }
+                withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false).delay(0.6)) {
+                    phase = 1.6
+                }
+            }
     }
 }
