@@ -1,13 +1,19 @@
-# Keptora 1.0 Universal Release Status — App Store Ready
+# Keptora 1.0 Universal Release Status — LIVE on App Store (macOS & iOS)
 
-Güncellendi: 2026-09-24 (Tam Bağımsız Derin Denetim Tamamlandı)
+Güncellendi: 3 Kasım 2026 (macOS ve iOS App Store'da Yayında)
 
 ## 1. Uygulama Kimliği & Geliştirici Yapılandırması (Doğrulandı)
 
 - **Platform:** macOS 13.0+ & iOS 17.0+ (Evrensel Tek Kimlik)
+- **App ID (adamId):** `6815902595`
 - **Bundle Identifier:** `com.alfagolab.keptora` (Hem Mac hem iOS için eşitlendi)
 - **Development Team:** `ZSRUTGX74S` (KAGAN KARTAL BABAHAN)
-- **Sürüm / Derleme:** `1.0.0 (182)`
+- **Sürüm / Derleme:** `1.0.1 (186)`
+- **Yayın Durumu:**
+  - **macOS:** 🟢 Yayında (Ready for Distribution)
+  - **iOS:** 🟢 Yayında (Ready for Distribution / Review Completed)
+  - **IAP (`com.keptora.app.pro.lifetime`):** 🟢 Onaylandı (Approved)
+- **App Store URL:** `https://apps.apple.com/us/app/keptora/id6815902595`
 - **Hedef Cihaz Ailesi:** Apple Silicon Mac (arm64) & iPhone (1320x2868 / 1290x2796 ekranlar)
 - **Şifreleme İhracat Uyumluluğu:** `ITSAppUsesNonExemptEncryption = false` (Her iki Info.plist'te tanımlandı)
 
