@@ -148,13 +148,23 @@ public actor UniversalExactScanner {
         // Exact duplicates must have identical byte count (or matching media metadata if size is unknown).
         // Assets with unique signatures cannot be duplicates and do not need full SHA-256 data hashing.
         var assetSignatures: [String: String] = [:]
+        var assetDimSignatures: [String: String] = [:]
         var signatureCounts: [String: Int] = [:]
-        var unknownKinds: Set<UniversalMediaKind> = []
+        var dimCounts: [String: Int] = [:]
+        var dimHasUnknownByteCount: Set<String> = []
+        var unknownDimensionKinds: Set<UniversalMediaKind> = []
         let kindCounts = Dictionary(grouping: assets, by: \.mediaKind).mapValues(\.count)
 
         for asset in assets {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
+            let hasUnknownDim = asset.pixelWidth == 0 || asset.pixelHeight == 0
+            if hasUnknownDim { unknownDimensionKinds.insert(asset.mediaKind) }
+
+            let dimSig = "d:\(asset.mediaKind.rawValue):\(asset.pixelWidth)x\(asset.pixelHeight):\(Int(asset.duration ?? 0))"
+            assetDimSignatures[asset.id] = dimSig
+            dimCounts[dimSig, default: 0] += 1
+
             let sig: String
             if let byteCount = asset.byteCount, byteCount == 0 {
                 // 0-byte placeholder files must never be grouped as duplicate copies of one another
@@ -171,14 +181,16 @@ public actor UniversalExactScanner {
                 } else if queried > 0 {
                     sig = "s:\(queried)"
                 } else {
-                    sig = "d:\(asset.mediaKind.rawValue):\(asset.pixelWidth)x\(asset.pixelHeight):\(Int(asset.duration ?? 0))"
+                    sig = dimSig
                 }
             } else {
-                sig = "d:\(asset.mediaKind.rawValue):\(asset.pixelWidth)x\(asset.pixelHeight):\(Int(asset.duration ?? 0))"
+                sig = dimSig
             }
             assetSignatures[asset.id] = sig
             signatureCounts[sig, default: 0] += 1
-            if sig.hasPrefix("d:") { unknownKinds.insert(asset.mediaKind) }
+            if sig.hasPrefix("d:") {
+                dimHasUnknownByteCount.insert(dimSig)
+            }
         }
 
         // Phase 2: Processing and hashing candidate assets.
@@ -192,10 +204,22 @@ public actor UniversalExactScanner {
             }
 
             let sig = assetSignatures[asset.id] ?? "unknown"
-            // Unknown Photos sizes cannot exclude same-byte files in another
-            // source. Dimensions are metadata, not proof of distinct bytes.
-            let isCandidate = fingerprintAllAssets || (signatureCounts[sig] ?? 0) > 1 ||
-                (unknownKinds.contains(asset.mediaKind) && (kindCounts[asset.mediaKind] ?? 0) > 1)
+            let dimSig = assetDimSignatures[asset.id] ?? ""
+            let hasUnknownDim = asset.pixelWidth == 0 || asset.pixelHeight == 0
+            let hasKindWithUnknownDims = unknownDimensionKinds.contains(asset.mediaKind) && (kindCounts[asset.mediaKind] ?? 0) > 1
+
+            let isCandidate: Bool
+            if fingerprintAllAssets {
+                isCandidate = true
+            } else if sig.hasPrefix("zero:") {
+                isCandidate = false
+            } else if sig.hasPrefix("s:") {
+                isCandidate = (signatureCounts[sig] ?? 0) > 1 ||
+                              dimHasUnknownByteCount.contains(dimSig) ||
+                              (hasUnknownDim && !dimHasUnknownByteCount.isEmpty)
+            } else {
+                isCandidate = (dimCounts[dimSig] ?? 0) > 1 || hasKindWithUnknownDims
+            }
 
             // Replay from prior checkpoint if valid and revision matches
             if let prior = resumableEntries[asset.id], Self.sameRevision(asset, prior.sourceAsset) {

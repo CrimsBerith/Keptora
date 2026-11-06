@@ -4,6 +4,7 @@ import SwiftUI
 struct MobilePaywallView: View {
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         NavigationStack {
@@ -20,7 +21,7 @@ struct MobilePaywallView: View {
                                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                                     .stroke(MobileKeptoraDesign.borderGradient, lineWidth: 1)
                             }
-                            .shadow(color: MobileKeptoraDesign.accentGlow, radius: 20, y: 8)
+                            .shadow(color: reduceTransparency ? .clear : MobileKeptoraDesign.accentGlow, radius: 20, y: 8)
                             .accessibilityHidden(true)
 
                         VStack(spacing: 6) {
@@ -58,6 +59,7 @@ struct MobilePaywallView: View {
                                 .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(MobilePrimaryButtonStyle())
+                            .modifier(MobilePaywallShimmer(isEnabled: !purchase.isUnlocked && !purchase.isWorking && purchase.product != nil))
                             .disabled(purchase.product == nil || purchase.isWorking || purchase.isUnlocked)
                             .accessibilityIdentifier("ios.paywall.purchase")
 
@@ -142,6 +144,10 @@ struct MobilePaywallView: View {
                     .foregroundStyle(tint)
             }
             .frame(width: featureIconBoxSize, height: featureIconBoxSize)
+            .overlay {
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .stroke(tint.opacity(0.25), lineWidth: 0.8)
+            }
 
             Text(title)
                 .font(.system(.body, design: .rounded).weight(.medium))

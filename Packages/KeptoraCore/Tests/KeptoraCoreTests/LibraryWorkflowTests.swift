@@ -321,6 +321,15 @@ final class LibraryWorkflowTests: XCTestCase {
         let result = try await UniversalExactScanner().scan(adapter: adapter, allowNetwork: false, progress: { _, _, _ in })
         XCTAssertTrue(result.groups.isEmpty)
     }
+    func testDistinctDimensionAssetsPrunedWithoutHashing() async throws {
+        let photo1 = asset("p1").with(sourceID: LibrarySource.photos.id, pixelWidth: 1920, pixelHeight: 1080)
+        let photo2 = asset("p2").with(sourceID: LibrarySource.photos.id, pixelWidth: 800, pixelHeight: 600)
+        let adapter = UnifiedLibraryAdapter(adapters: [WorkflowSource(source: .photos, items: [photo1, photo2])])
+        let result = try await UniversalExactScanner().scan(adapter: adapter, allowNetwork: false, fingerprintAllAssets: false, progress: { _, _, _ in })
+        XCTAssertTrue(result.groups.isEmpty)
+        XCTAssertTrue(result.fingerprintsByAssetID["p1"]?.digest.hasPrefix("unique:") == true)
+        XCTAssertTrue(result.fingerprintsByAssetID["p2"]?.digest.hasPrefix("unique:") == true)
+    }
     #endif
 }
 

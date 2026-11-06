@@ -165,7 +165,8 @@ struct MobileAssetPreview: View {
             .padding(12)
             .frame(width: 340, alignment: .leading)
         }
-        .background(Color(uiColor: .systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .keptoraMobileGlass(cornerRadius: 18)
     }
 
     private var details: String {
@@ -255,13 +256,6 @@ private final class PhotoImageRequest: @unchecked Sendable {
         didResume = true
         lock.unlock()
         if shouldResume { body() }
-    }
-}
-
-extension UniversalMediaAsset {
-    var formattedDuration: String {
-        let value = max(0, Int((duration ?? 0).rounded()))
-        return String(format: "%d:%02d", value / 60, value % 60)
     }
 }
 
@@ -381,6 +375,14 @@ struct MobileFullAssetViewer: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                     .background(.ultraThinMaterial)
+                    .overlay(alignment: .top) {
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.28), Color.white.opacity(0.04)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .frame(height: 1)
+                    }
                 }
             }
             .navigationTitle(asset.displayName)

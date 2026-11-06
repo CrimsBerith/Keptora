@@ -25,7 +25,10 @@ struct MacPhotosThumbnail: View {
                 else { Image(nsImage: image).resizable().scaledToFill() }
             } else if !finished { ProgressView() }
             else { Label("Preview unavailable", systemImage: asset.mediaKind == .video ? "video.slash" : "photo").font(.caption).foregroundStyle(.secondary) }
-        }.clipped().task(id: cacheKey) { await load() }
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .clipped()
+        .task(id: cacheKey) { await load() }
     }
     private func load() async {
         image = nil; finished = false

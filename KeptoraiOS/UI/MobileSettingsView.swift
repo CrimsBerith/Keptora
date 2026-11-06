@@ -78,6 +78,7 @@ struct MobileSettingsView: View {
                     .font(MobileKeptoraDesign.labelFont)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow(tint: MobileKeptoraDesign.accent)
 
             Section {
                 LabeledContent("Permission", value: permissionLabel)
@@ -95,6 +96,7 @@ struct MobileSettingsView: View {
                     .font(MobileKeptoraDesign.labelFont)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 LabeledContent(L10n.tr("Photo upload")) { Text(L10n.tr("Never")) }
@@ -113,6 +115,7 @@ struct MobileSettingsView: View {
                     .font(MobileKeptoraDesign.labelFont)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 Picker("Language", selection: $selectedLanguage) {
@@ -126,6 +129,7 @@ struct MobileSettingsView: View {
                     .font(MobileKeptoraDesign.labelFont)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 Button(role: .destructive) {
@@ -164,6 +168,7 @@ struct MobileSettingsView: View {
                     .font(MobileKeptoraDesign.labelFont)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 Button {
@@ -188,6 +193,7 @@ struct MobileSettingsView: View {
                     .font(MobileKeptoraDesign.labelFont)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
         }
         .scrollContentBackground(.hidden)
         .background(MobileAuroraBackground())

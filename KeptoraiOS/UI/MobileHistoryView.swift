@@ -22,8 +22,8 @@ struct MobileHistoryView: View {
                             .disabled(store.isLoadingCatalogue)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(MobileKeptoraDesign.amber.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(16)
+                    .keptoraMobileGlass(cornerRadius: 16, tint: MobileKeptoraDesign.amber)
                     .padding(.horizontal)
                     .accessibilityIdentifier("ios.history.recoveryWarning")
                 }
@@ -65,6 +65,10 @@ struct MobileHistoryView: View {
                                             .accessibilityHidden(true)
                                     }
                                     .frame(width: iconBoxSize, height: iconBoxSize)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(historyTint(entry).opacity(0.25), lineWidth: 0.8)
+                                    }
                                   }
 
                                     VStack(alignment: .leading, spacing: 3) {
@@ -162,7 +166,7 @@ struct MobileHistoryView: View {
                 }
             }
         }
-        .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? L10n.tr("Restoring files…")).padding(22).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
+        .overlay { if store.isCleaningUp { ProgressView(store.cleanupStatus ?? L10n.tr("Restoring files…")).padding(22).keptoraMobileGlass(cornerRadius: 18, tint: MobileKeptoraDesign.accent) } }
         .disabled(store.isCleaningUp)
         .navigationTitle("History")
         .accessibilityIdentifier("ios.page.history")

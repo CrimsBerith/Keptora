@@ -72,20 +72,7 @@ struct MobileScanSourcesSection: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        }
-        .shadow(color: Color.black.opacity(0.03), radius: 10, y: 4)
+        .keptoraMobileGlass(cornerRadius: 18, tint: MobileKeptoraDesign.accent)
     }
 }
 
@@ -111,6 +98,9 @@ struct MobileSourceLibraryView: View {
                         if store.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
                     }
                     sourceSection.disabled(controlsDisabled)
+                    if !store.connectedSources.isEmpty {
+                        MobileScanSourcesSection()
+                    }
                     if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk) }
                     privacyStrip
                     // Background on access and cloud folders stays one tap away instead of filling the screen.
@@ -143,7 +133,16 @@ struct MobileSourceLibraryView: View {
                     .disabled(store.isRequestingPhotosAccess)
                     .accessibilityIdentifier("ios.sourceSetup.continue")
                 }
-                .padding().background(.regularMaterial)
+                .padding()
+                .background(.ultraThinMaterial)
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 1)
+                }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("ios.sourceSetup.actions")
             }
@@ -234,14 +233,7 @@ struct MobileSourceLibraryView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(MobileKeptoraDesign.amber.opacity(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(MobileKeptoraDesign.amber.opacity(0.3), lineWidth: 0.8)
-                        )
-                )
+                .keptoraMobileGlass(cornerRadius: 14, tint: MobileKeptoraDesign.amber)
             }
 
             if store.authorization == .denied || store.authorization == .restricted {
@@ -294,14 +286,7 @@ struct MobileSourceLibraryView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(MobileKeptoraDesign.danger.opacity(0.08))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(MobileKeptoraDesign.danger.opacity(0.2), lineWidth: 0.8)
-                        )
-                )
+                .keptoraMobileGlass(cornerRadius: 14, tint: MobileKeptoraDesign.danger)
             }
 
             ForEach(store.connectedFolders) { folder in
@@ -385,21 +370,7 @@ struct MobileSourceLibraryView: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous))
-        .background(
-            selected ? tint.opacity(0.08) : Color(uiColor: .secondarySystemGroupedBackground).opacity(0.70),
-            in: RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous)
-                .stroke(
-                    selected
-                    ? LinearGradient(colors: [tint, MobileKeptoraDesign.violet], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    : LinearGradient(colors: [Color.white.opacity(0.32), Color.primary.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: selected ? 1.5 : 1
-                )
-        }
-        .shadow(color: selected ? tint.opacity(0.18) : Color.black.opacity(0.03), radius: 16, y: 7)
+        .keptoraMobileGlass(cornerRadius: MobileKeptoraDesign.cardRadius, tint: tint, isSelected: selected)
         .contentShape(Rectangle())
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -423,11 +394,6 @@ struct MobileSourceLibraryView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .background(MobileKeptoraDesign.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(MobileKeptoraDesign.accent.opacity(0.18), lineWidth: 1)
-        }
+        .keptoraMobileGlass(cornerRadius: 16, tint: MobileKeptoraDesign.accent)
     }
 }

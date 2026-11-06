@@ -753,15 +753,26 @@ final class MacArchiveModel: ObservableObject {
         }
         else { analyze(allowNetwork: checkpoint?.allowNetwork ?? lastAnalysisAllowedNetwork) }
     }
-    func removeSelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false) async -> Bool {
-        await removeSelectionOutcome(expectedIDs: expectedIDs, reviewedAssets: reviewedAssets, allowPartialFamilies: allowPartialFamilies).isComplete
+    func removalIntent(for snapshot: [UniversalMediaAsset]) -> PhotosRemovalIntent {
+        if snapshot.contains(where: \.isProtectedFromGlobalSelection) {
+            return .manualSelection
+        }
+        let suggestedIDs = Set(exactSuggestionCandidates().map(\.id))
+        let snapshotIDs = Set(snapshot.map(\.id))
+        if !snapshotIDs.isEmpty && snapshotIDs.isSubset(of: suggestedIDs) {
+            return .suggestedCopies
+        }
+        return .manualSelection
     }
-    func removeSelectionOutcome(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false) async -> LibraryCleanupOutcome {
+    func removeSelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false, intent: PhotosRemovalIntent? = nil) async -> Bool {
+        await removeSelectionOutcome(expectedIDs: expectedIDs, reviewedAssets: reviewedAssets, allowPartialFamilies: allowPartialFamilies, intent: intent).isComplete
+    }
+    func removeSelectionOutcome(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false, intent: PhotosRemovalIntent? = nil) async -> LibraryCleanupOutcome {
         lastCleanupOutcome = .init(requestedIDs: expectedIDs)
-        _ = await performRemoval(expectedIDs: expectedIDs, reviewedAssets: reviewedAssets, allowPartialFamilies: allowPartialFamilies)
+        _ = await performRemoval(expectedIDs: expectedIDs, reviewedAssets: reviewedAssets, allowPartialFamilies: allowPartialFamilies, intent: intent)
         return lastCleanupOutcome ?? .init(requestedIDs: expectedIDs)
     }
-    private func performRemoval(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]?, allowPartialFamilies: Bool) async -> Bool {
+    private func performRemoval(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]?, allowPartialFamilies: Bool, intent: PhotosRemovalIntent? = nil) async -> Bool {
         guard canRemoveSelection else { return false }
         guard selection == expectedIDs else {
             error = L10n.tr("Your selection changed. Review it again before removing items."); return false
@@ -814,8 +825,9 @@ final class MacArchiveModel: ObservableObject {
                 history.insert(MacRecoveryEntry(id: receiptID, date: Date(), count: batch.count, bytes: MediaSelectionSummary(batch).knownBytes,
                     folderRecord: nil, bookmark: nil, isPhotos: true, operationState: .planned), at: 0)
                 try await saveStateNow()
+                let effectiveIntent = intent ?? removalIntent(for: snapshot)
                 do {
-                    try await photos.deleteSelectedAssets(localIdentifiers: ids, intent: .manualSelection, reviewedAssets: batch)
+                    try await photos.deleteSelectedAssets(localIdentifiers: ids, intent: effectiveIntent, reviewedAssets: batch)
                 } catch {
                     let ns = error as NSError
                     let isUserCancelled = (ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError) ||

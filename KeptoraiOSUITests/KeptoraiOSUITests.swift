@@ -518,7 +518,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testVideoSelectionUsesSameGalleryAndBasket() {
         let app = launch(arguments: ["-keptoraVideoReviewUITesting"])
-        app.segmentedControls.buttons["Videos"].tap()
+        selectMediaTypeFilter("Videos", in: app)
         let copy = app.buttons["archive.asset.ui-exact-copy"]
         reveal(copy, in: app); copy.tap()
         XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 3))
@@ -932,5 +932,23 @@ final class KeptoraiOSUITests: XCTestCase {
         saveScreenshot(app, name: "04_iPhone_Related_Photos")
         app.tabBars.buttons.element(boundBy: 2).tap()
         saveScreenshot(app, name: "05_iPhone_History")
+    }
+
+    func testCaptureEnglishPaywallScreenshot() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting", "-keptoraPhotosDeniedUITesting"], language: "en", locale: "en_US")
+        let options = app.buttons["ios.library.options"].firstMatch
+        if options.waitForExistence(timeout: 8) {
+            options.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            let settings = app.buttons["ios.library.settings"].firstMatch
+            if settings.waitForExistence(timeout: 5) {
+                settings.tap()
+                let showPaywall = app.buttons["ios.settings.showPaywall"].firstMatch
+                if showPaywall.waitForExistence(timeout: 5) {
+                    showPaywall.tap()
+                    _ = app.buttons["ios.paywall.close"].waitForExistence(timeout: 5)
+                    saveScreenshot(app, name: "en_05_pro_lifetime")
+                }
+            }
+        }
     }
 }

@@ -49,6 +49,8 @@ struct MobileLibraryFilterCriteria: Equatable {
 // MARK: – Liquid Glass Filter Button
 
 struct LiquidGlassFilterButton: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     let activeFilterCount: Int
     let action: () -> Void
 
@@ -77,20 +79,35 @@ struct LiquidGlassFilterButton: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.35), Color.white.opacity(0.08)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    )
-                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+                if reduceTransparency {
+                    Capsule()
+                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(
+                                    colorScheme == .dark ? Color.white.opacity(0.28) : Color.black.opacity(0.18),
+                                    lineWidth: 1
+                                )
+                        )
+                } else {
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [
+                                            colorScheme == .dark ? Color.white.opacity(0.35) : Color.white.opacity(0.70),
+                                            colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.03)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+                }
             }
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget, minHeight: MobileKeptoraDesign.minimumTouchTarget)
             .contentShape(Rectangle())
@@ -115,6 +132,8 @@ struct MobileLibraryFilterSheet: View {
     let reviewGroups: [LibraryReviewGroup]
     let qualityAssessments: [String: QualityAssessment]
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var draft: MobileLibraryFilterCriteria = MobileLibraryFilterCriteria()
 
@@ -141,15 +160,15 @@ struct MobileLibraryFilterSheet: View {
                                     .padding(.vertical, 8)
                                     .background(
                                         draft.finding == option
-                                            ? AnyShapeStyle(MobileKeptoraDesign.accent.opacity(0.18))
-                                            : AnyShapeStyle(.ultraThinMaterial),
+                                            ? AnyShapeStyle(MobileKeptoraDesign.accent.opacity(reduceTransparency ? 0.28 : 0.18))
+                                            : (reduceTransparency ? AnyShapeStyle(Color(uiColor: .secondarySystemGroupedBackground)) : AnyShapeStyle(.ultraThinMaterial)),
                                         in: Capsule()
                                     )
                                     .overlay(
                                         Capsule().stroke(
                                             draft.finding == option
-                                                ? MobileKeptoraDesign.accent
-                                                : Color.white.opacity(0.30),
+                                                ? AnyShapeStyle(MobileKeptoraDesign.accent)
+                                                : (reduceTransparency ? AnyShapeStyle(Color.secondary.opacity(0.35)) : AnyShapeStyle(Color.white.opacity(colorScheme == .dark ? 0.30 : 0.65))),
                                             lineWidth: 1
                                         )
                                     )
@@ -163,6 +182,7 @@ struct MobileLibraryFilterSheet: View {
                         .padding(.vertical, 4)
                     }
                 }
+                .mobileGlassRow()
 
                 Section(header: Text(L10n.tr("Media Type"))) {
                     Picker("Media type", selection: $draft.media) {
@@ -172,6 +192,7 @@ struct MobileLibraryFilterSheet: View {
                     }
                     .pickerStyle(.segmented)
                 }
+                .mobileGlassRow()
 
                 if !albums.isEmpty {
                     Section(header: Text("Album")) {
@@ -182,6 +203,7 @@ struct MobileLibraryFilterSheet: View {
                             }
                         }
                     }
+                    .mobileGlassRow()
                 }
 
                 Section(header: Text(L10n.tr("Options"))) {
@@ -205,6 +227,7 @@ struct MobileLibraryFilterSheet: View {
                         Text("Month").tag(2)
                     }
                 }
+                .mobileGlassRow()
 
                 Section(header: Text("Date Range")) {
                     Toggle("Filter by Date", isOn: $draft.dateRangeEnabled)
@@ -213,6 +236,7 @@ struct MobileLibraryFilterSheet: View {
                         DatePicker("To", selection: $draft.toDate, in: draft.fromDate..., displayedComponents: .date)
                     }
                 }
+                .mobileGlassRow()
 
                 Section {
                     Button(role: .destructive) {
@@ -226,7 +250,10 @@ struct MobileLibraryFilterSheet: View {
                     }
                     .accessibilityIdentifier("archive.resetFilters")
                 }
+                .mobileGlassRow()
             }
+            .scrollContentBackground(.hidden)
+            .background(MobileAuroraBackground())
             .navigationTitle(L10n.tr("Filters"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -436,6 +463,8 @@ struct MobileLibraryView: View {
                         Button("Reset Filters") { resetFilters() }.buttonStyle(MobileSleekActionButtonStyle(tint: MobileKeptoraDesign.accent)).accessibilityIdentifier("archive.resetFilters")
                     }
                 }
+            } else if filterCriteria.finding != .all {
+                unifiedReviewGallery
             } else if filterCriteria.smartOrder {
                 smartBlocksGallery
             } else {
@@ -445,7 +474,29 @@ struct MobileLibraryView: View {
     }
 
     private var galleryColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 106), spacing: 4)]
+        [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 106), spacing: 4, alignment: .top)]
+    }
+
+    @ViewBuilder private var unifiedReviewGallery: some View {
+        var membership: [String: [LibraryReviewGroup]] = [:]
+        let _ = {
+            for group in store.reviewGroups {
+                for asset in group.assets {
+                    membership[asset.id, default: []].append(group)
+                }
+            }
+        }()
+        let keeperBadges = store.decisions.keeperBadgeKeys(in: store.reviewGroups)
+        let blocks = LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
+        let orderedAssets = blocks.flatMap(\.assets)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(LocalizedStringKey(filterCriteria.finding.titleKey)).font(.headline)
+            LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
+                ForEach(orderedAssets) { asset in
+                    cell(asset, groups: membership[asset.id] ?? [], keeperBadge: keeperBadges[asset.id]).id(asset.id)
+                }
+            }.scrollTargetLayout()
+        }
     }
 
     @ViewBuilder private var smartBlocksGallery: some View {
@@ -457,7 +508,7 @@ struct MobileLibraryView: View {
             let keeperBadges = store.decisions.keeperBadgeKeys(in: block.groups)
             VStack(alignment: .leading, spacing: 10) {
                 Text(LocalizedStringKey(block.titleKey)).font(.headline)
-                LazyVGrid(columns: galleryColumns, spacing: 4) {
+                LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
                     ForEach(block.assets) { asset in
                         cell(asset, groups: membership[asset.id] ?? [], keeperBadge: keeperBadges[asset.id]).id(asset.id)
                     }
@@ -472,7 +523,7 @@ struct MobileLibraryView: View {
     @ViewBuilder private var dateSectionsGallery: some View {
         ForEach(sections, id: \.date) { section in
             sectionHeader(section)
-            LazyVGrid(columns: galleryColumns, spacing: 4) {
+            LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
                 ForEach(section.assets) { asset in cell(asset).id(asset.id) }
             }.scrollTargetLayout()
         }
@@ -570,20 +621,7 @@ struct MobileLibraryView: View {
             }
         }
         .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.35), Color.white.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        }
-        .shadow(color: Color.black.opacity(0.03), radius: 10, y: 4)
+        .keptoraMobileGlass(cornerRadius: 16, tint: MobileKeptoraDesign.accent)
     }
 
     private var scanResults: some View {
@@ -847,18 +885,20 @@ struct MobileLibraryView: View {
                 Button {
                     store.keep(asset, in: groups)
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 3) {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 8, weight: .bold))
                         Text("Keep This")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .foregroundStyle(MobileKeptoraDesign.mint)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                     .background(.ultraThinMaterial, in: Capsule())
                     .overlay(Capsule().stroke(MobileKeptoraDesign.mint.opacity(0.35), lineWidth: 0.8))
-                    .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget, minHeight: MobileKeptoraDesign.minimumTouchTarget)
+                    .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -868,6 +908,9 @@ struct MobileLibraryView: View {
             }
         }
         .aspectRatio(1, contentMode: .fit)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipped()
         .disabled(store.isCleaningUp)
         .contextMenu {
             Button(LocalizedStringKey("View Large"), systemImage: "arrow.up.left.and.arrow.down.right") {
@@ -933,19 +976,14 @@ struct MobileLibraryView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(MobileKeptoraDesign.warning.opacity(0.35), lineWidth: 1)
-        )
+        .keptoraMobileGlass(cornerRadius: 16, tint: MobileKeptoraDesign.warning)
     }
 
     private func selectionThumbnail(_ asset: UniversalMediaAsset, selected: Bool, keeperLabel: String?) -> some View {
         let isKeeper = keeperLabel != nil
         return ZStack(alignment: .bottomTrailing) {
             Color(uiColor: .secondarySystemFill)
-            MobileAssetThumbnail(asset: asset, contentMode: .fit, showsRetryButton: false)
+            MobileAssetThumbnail(asset: asset, contentMode: .fill, showsRetryButton: false)
                 .accessibilityHidden(true)
                 .overlay(selected ? Color.black.opacity(0.28) : .clear)
                 .allowsHitTesting(false)
@@ -975,8 +1013,8 @@ struct MobileLibraryView: View {
             if let keeperLabel {
                 Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
                     .font(.caption2.weight(.semibold))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .padding(4)
                     .foregroundStyle(.white)
                     .background(MobileKeptoraDesign.mintFill.opacity(0.94), in: RoundedRectangle(cornerRadius: 4))
@@ -987,8 +1025,12 @@ struct MobileLibraryView: View {
 
     private func thumbnailSelectionIndicator(_ asset: UniversalMediaAsset, selected: Bool) -> some View {
         HStack {
-            if asset.isFavorite { Image(systemName: "heart.fill") }
-            if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
+            if asset.isFavorite || asset.mediaKind == .video {
+                HStack(spacing: 4) {
+                    if asset.isFavorite { Image(systemName: "heart.fill") }
+                    if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
+                }
+            }
             Spacer()
             Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
                 .foregroundStyle(selected ? MobileKeptoraDesign.accent : .white)
@@ -1108,6 +1150,8 @@ struct MobileSelectionReviewSheet: View {
     @EnvironmentObject private var store: MobileKeptoraStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
     @State private var confirm = false
     @State private var capturedIDs: Set<String> = []
     @State private var completed = false
@@ -1135,6 +1179,8 @@ struct MobileSelectionReviewSheet: View {
                         Label("Every item in a known duplicate group is selected.", systemImage: "exclamationmark.triangle")
                     }
                 }
+                .mobileGlassRow()
+
                 if hasUnavailableSelection {
                     Section("Unavailable Selected Items") {
                         Text("Reconnect unavailable sources or remove their items from your selection.")
@@ -1143,14 +1189,18 @@ struct MobileSelectionReviewSheet: View {
                             store.discardPendingSelection()
                         }.buttonStyle(MobileSleekActionButtonStyle(tint: MobileKeptoraDesign.danger))
                     }
+                    .mobileGlassRow(tint: MobileKeptoraDesign.danger)
                 }
+
                 if !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty {
                     Section("Linked Files") {
                         Text("Linked files remain outside your selection. Review them before removing this photo.")
                         ForEach(LibraryFileFamilies.omittedCompanions(for: reviewedItems), id: \.self) { url in Text(url.lastPathComponent).font(.caption) }
                         Toggle("Remove only my selected items and leave linked files in place", isOn: $leaveLinkedFiles)
                     }
+                    .mobileGlassRow()
                 }
+
                 Section("Selected Items") {
                     Text("Removing an item from this list keeps it in your library.").font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(MobileKeptoraDesign.secondaryInk) }
@@ -1158,6 +1208,8 @@ struct MobileSelectionReviewSheet: View {
                         reviewRow(asset)
                     }
                 }
+                .mobileGlassRow()
+
                 Section("Removal by Source") {
                     ForEach(store.connectedSources) { source in
                         let items = reviewedItems.filter { $0.sourceID == source.id }
@@ -1172,7 +1224,10 @@ struct MobileSelectionReviewSheet: View {
                         Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     }
                 }
+                .mobileGlassRow()
             }
+            .scrollContentBackground(.hidden)
+            .background(MobileAuroraBackground())
             .disabled(store.isCleaningUp)
             .navigationTitle("Review Selection").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() }.disabled(store.isCleaningUp).accessibilityIdentifier("archive.review.close") } }
@@ -1199,10 +1254,16 @@ struct MobileSelectionReviewSheet: View {
                     }
                 }
                 .padding(16)
-                .background(.ultraThinMaterial)
+                .background {
+                    if reduceTransparency {
+                        Color(uiColor: .systemBackground)
+                    } else {
+                        Rectangle().fill(.ultraThinMaterial)
+                    }
+                }
                 .overlay(alignment: .top) {
                     LinearGradient(
-                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.04)],
+                        colors: [Color.white.opacity(colorScheme == .dark ? 0.28 : 0.60), Color.white.opacity(0.04)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -1356,20 +1417,7 @@ struct MobileCleanupHubView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-            .shadow(color: Color.black.opacity(0.03), radius: 8, y: 3)
+            .keptoraMobileGlass(cornerRadius: 18, tint: MobileKeptoraDesign.accent)
         }.buttonStyle(.plain).disabled(store.isCleaningUp || items.isEmpty).accessibilityIdentifier("cleanup.collection." + title)
     }
 }

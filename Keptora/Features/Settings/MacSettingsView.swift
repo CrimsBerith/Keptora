@@ -21,8 +21,14 @@ struct MacSettingsView: View {
                 }
                 HStack {
                     if !store.isLifetimeUnlocked {
-                        Button("View Keptora Pro") { store.presentPaywall(.settings, host: .settings) }
-                            .accessibilityIdentifier("mac.settings.showPaywall")
+                        Button {
+                            store.presentPaywall(.settings, host: .settings)
+                        } label: {
+                            Label("View Keptora Pro", systemImage: "sparkles")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(KeptoraDesign.accentFill)
+                        .accessibilityIdentifier("mac.settings.showPaywall")
                     }
                     Button("Restore Purchases") { Task { await store.restorePurchases() } }
                         .disabled(store.isWorking)
@@ -63,8 +69,10 @@ struct MacSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         .frame(width: 480)
         .fixedSize(horizontal: false, vertical: true)
+        .background(KeptoraBackdrop())
         .sheet(isPresented: store.paywallBinding(for: .settings)) {
             PaywallView().environmentObject(store)
         }

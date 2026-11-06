@@ -3,6 +3,8 @@ import SwiftUI
 
 struct MainRootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var navigation: MacNavigation
     @EnvironmentObject private var store: StoreEntitlementController
@@ -209,14 +211,18 @@ struct MainRootView: View {
             .padding(.vertical, 5)
             .background(
                 isSelected
-                    ? KeptoraDesign.accent.opacity(0.13)
-                    : (isHovered ? Color.primary.opacity(0.04) : Color.clear),
+                    ? (reduceTransparency ? KeptoraDesign.accent.opacity(0.24) : KeptoraDesign.accent.opacity(0.16))
+                    : (isHovered ? (reduceTransparency ? Color.secondary.opacity(0.14) : Color.primary.opacity(0.06)) : Color.clear),
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .keptoraAnimation(KeptoraDesign.animFast, value: isHovered)
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? KeptoraDesign.accent.opacity(0.20) : Color.clear)
+                    .stroke(
+                        sidebarBorder(isSelected: isSelected, isHovered: isHovered),
+                        lineWidth: isSelected ? 1.5 : 1.0
+                    )
+                    .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
         }
@@ -225,6 +231,21 @@ struct MainRootView: View {
         .accessibilityIdentifier("mac.sidebar.\(route.rawValue)")
         .accessibilityLabel(Text(routeBadgeCount(route).map { "\(route.localizedTitle), \($0) items" } ?? route.localizedTitle))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func sidebarBorder(isSelected: Bool, isHovered: Bool) -> AnyShapeStyle {
+        if reduceTransparency {
+            if isSelected { return AnyShapeStyle(KeptoraDesign.accent) }
+            if isHovered { return AnyShapeStyle(colorScheme == .dark ? Color.white.opacity(0.35) : Color.black.opacity(0.22)) }
+            return AnyShapeStyle(Color.clear)
+        }
+        if isSelected {
+            return AnyShapeStyle(LinearGradient(colors: [KeptoraDesign.cyan.opacity(0.65), KeptoraDesign.accent.opacity(0.40)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        if isHovered {
+            return AnyShapeStyle(LinearGradient(colors: [Color.white.opacity(colorScheme == .dark ? 0.24 : 0.60), Color.white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        return AnyShapeStyle(Color.clear)
     }
 
     private func routeBadgeCount(_ route: SidebarRoute) -> Int? {
@@ -260,7 +281,6 @@ struct MainRootView: View {
         case .archive:
             archive.galleryContext.finding = .all
             archive.galleryContext.media = 0
-            archive.galleryContext.search = ""
             archive.contextChanged()
         case .exact:
             archive.openFinding(.copies)
@@ -287,31 +307,38 @@ struct MainRootView: View {
 
     @ViewBuilder
     private var proFooter: some View {
-        Divider()
-        if store.isLifetimeUnlocked {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundStyle(KeptoraDesign.success)
-                Text("Keptora Pro")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(KeptoraDesign.success)
+        VStack(spacing: 0) {
+            Divider().opacity(0.5)
+            if store.isLifetimeUnlocked {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(KeptoraDesign.success)
+                    Text("Keptora Pro")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(KeptoraDesign.success)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Button {
+                    store.presentPaywall(.settings)
+                } label: {
+                    Label("Unlock Keptora Pro", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(KeptoraDesign.accentFill)
+                .controlSize(.regular)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .accessibilityIdentifier("mac.paywall.open")
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            Button {
-                store.presentPaywall(.settings)
-            } label: {
-                Label("Unlock Keptora Pro", systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(KeptoraDesign.accentFill)
-            .controlSize(.regular)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .accessibilityIdentifier("mac.paywall.open")
         }
+        .background(
+            reduceTransparency
+                ? AnyShapeStyle(KeptoraDesign.elevated)
+                : AnyShapeStyle(.ultraThinMaterial.opacity(0.4))
+        )
     }
 
     @ViewBuilder

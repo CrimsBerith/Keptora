@@ -130,7 +130,7 @@ public actor MediaFingerprintDiskCache {
     /// The revision key is about 1 KB of JSON per item. Storing its SHA-256 keeps the
     /// same identity in 70 bytes, so the size budget holds more fingerprints.
     static func storageKey(for asset: UniversalMediaAsset, algorithm: String) -> String? {
-        guard let key = MediaRevisionPolicy.key(for: asset, algorithm: algorithm) else { return nil }
+        guard let key = MediaRevisionPolicy.fingerprintKey(for: asset, algorithm: algorithm) else { return nil }
         #if canImport(CryptoKit)
         return algorithm + ":" + SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
         #else

@@ -101,18 +101,40 @@ final class MobileKeptoraStore: ObservableObject {
     @Published private(set) var hasScanCheckpoint = false
     @Published private(set) var reviewedAssetIDs: Set<String> = []
     @Published private(set) var isCleaningUp = false
+    var exactAssetIDs: Set<String> {
+        var ids = Set<String>()
+        for group in exactGroups {
+            for asset in group.assets {
+                ids.insert(asset.id)
+            }
+        }
+        return ids
+    }
     var selectedAssetIDs: Set<String> {
-        get { selectedLibraryIDs.intersection(exactGroups.flatMap { $0.assets.map(\.id) }) }
+        get { selectedLibraryIDs.intersection(exactAssetIDs) }
         set {
-            selectedLibraryIDs.subtract(exactGroups.flatMap { $0.assets.map(\.id) })
-            selectedLibraryIDs.formUnion(newValue); saveLibrarySelection()
+            let exactIDs = exactAssetIDs
+            selectedLibraryIDs.subtract(exactIDs)
+            selectedLibraryIDs.formUnion(newValue)
+            saveLibrarySelection()
         }
     }
+    var similarVideoAssetIDs: Set<String> {
+        var ids = Set<String>()
+        for group in similarVideoGroups {
+            for asset in group.assets {
+                ids.insert(asset.id)
+            }
+        }
+        return ids
+    }
     var selectedSimilarVideoAssetIDs: Set<String> {
-        get { selectedLibraryIDs.intersection(similarVideoGroups.flatMap { $0.assets.map(\.id) }) }
+        get { selectedLibraryIDs.intersection(similarVideoAssetIDs) }
         set {
-            selectedLibraryIDs.subtract(similarVideoGroups.flatMap { $0.assets.map(\.id) })
-            selectedLibraryIDs.formUnion(newValue); saveLibrarySelection()
+            let videoIDs = similarVideoAssetIDs
+            selectedLibraryIDs.subtract(videoIDs)
+            selectedLibraryIDs.formUnion(newValue)
+            saveLibrarySelection()
         }
     }
     @Published var currentGroupIndex = 0
@@ -735,8 +757,20 @@ final class MobileKeptoraStore: ObservableObject {
         if photoReloadPending { photoLibraryDidChange() }
     }
 
+    func removalIntent(for snapshot: [UniversalMediaAsset]) -> PhotosRemovalIntent {
+        if snapshot.contains(where: \.isProtectedFromGlobalSelection) {
+            return .manualSelection
+        }
+        let suggestedIDs = Set(exactSuggestionCandidates().map(\.id))
+        let snapshotIDs = Set(snapshot.map(\.id))
+        if !snapshotIDs.isEmpty && snapshotIDs.isSubset(of: suggestedIDs) {
+            return .suggestedCopies
+        }
+        return .manualSelection
+    }
+
     @discardableResult
-    func cleanupLibrarySelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false) async -> Bool {
+    func cleanupLibrarySelection(expectedIDs: Set<String>, reviewedAssets: [UniversalMediaAsset]? = nil, allowPartialFamilies: Bool = false, intent: PhotosRemovalIntent? = nil) async -> Bool {
         guard selectedLibraryIDs == expectedIDs else {
             errorMessage = L10n.tr("Your selection changed. Review it again before removing items.")
             return false
@@ -753,8 +787,9 @@ final class MobileKeptoraStore: ObservableObject {
         if let reviewedAssets, Set(snapshot) != Set(reviewedAssets) {
             errorMessage = L10n.tr("Your selection changed. Review it again before removing items."); return false
         }
+        let effectiveIntent = intent ?? removalIntent(for: snapshot)
         return await executeCleanup(selection: snapshot,
-            intent: .manualSelection, allowPartialFamilies: allowPartialFamilies,
+            intent: effectiveIntent, allowPartialFamilies: allowPartialFamilies,
             resolveFolderCandidates: { [weak self] in
                 guard let self else { return [] }
                 let adapter = unifiedAdapter
@@ -927,7 +962,7 @@ final class MobileKeptoraStore: ObservableObject {
     @discardableResult
     func selectAssets(_ candidates: [UniversalMediaAsset], isUnlocked: Bool) -> Bool {
         guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
-        selectedAssetIDs.formUnion(candidates.map(\.id))
+        selectedLibraryIDs.formUnion(candidates.map(\.id))
         saveLibrarySelection()
         return true
     }

@@ -322,6 +322,10 @@ public struct LibraryReviewGroup: Identifiable, Sendable {
 }
 
 extension UniversalMediaAsset {
+    public var formattedDuration: String {
+        let value = max(0, Int((duration ?? 0).rounded()))
+        return String(format: "%d:%02d", value / 60, value % 60)
+    }
     public func sourceBadgeKey(in sources: [LibrarySource]) -> String {
         if case .photoLibrary = reference { return "Photos" }
         return sources.first(where: { $0.id == sourceID })?.kind == .fileProvider || requiresNetwork ? "Cloud Files" : "Files"

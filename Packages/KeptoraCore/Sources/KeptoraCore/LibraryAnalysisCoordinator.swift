@@ -86,7 +86,7 @@ public actor LibraryAnalysisCoordinator {
         do {
             let scanner = UniversalExactScanner()
             let result = try await scanner.scan(adapter: adapter, allowNetwork: allowNetwork,
-                fingerprintAllAssets: true, preloadedAssets: assets, resuming: checkpoint, control: control,
+                fingerprintAllAssets: false, preloadedAssets: assets, resuming: checkpoint, control: control,
                 checkpointInterval: configuration.checkpointInterval, checkpointUpdate: checkpointUpdate, groupsUpdate: { groups in Task { await self.exactGroups(groups) } }) { done, total, _ in
                     Task { await self.progress(.exact, done: done, total: total) }
                 }

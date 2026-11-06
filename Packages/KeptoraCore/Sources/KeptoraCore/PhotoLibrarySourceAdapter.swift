@@ -461,17 +461,16 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             throw UniversalScanError.cleanupNotPermitted("Some Photos items changed after review. Scan again before cleanup.")
         }
         if case .suggestedCopies = intent {
-        var protectedNames: [String] = []
-        let albumMemberIDs = Self.albumMemberIdentifiers()
-        fetched.enumerateObjects { asset, _, _ in
-            let resources = PHAssetResource.assetResources(for: asset)
-            if asset.isFavorite || asset.isHidden || Self.isSharedAsset(asset) || albumMemberIDs.contains(asset.localIdentifier) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
-                protectedNames.append(resources.first?.originalFilename ?? asset.localIdentifier)
+            var protectedNames: [String] = []
+            fetched.enumerateObjects { asset, _, _ in
+                let resources = PHAssetResource.assetResources(for: asset)
+                if asset.isFavorite || asset.isHidden || Self.isSharedAsset(asset) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
+                    protectedNames.append(resources.first?.originalFilename ?? asset.localIdentifier)
+                }
             }
-        }
-        guard protectedNames.isEmpty else {
-            throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
-        }
+            guard protectedNames.isEmpty else {
+                throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
+            }
         }
         if let reviewedAssets {
             let reviewedIDs = Set(reviewedAssets.compactMap { item -> String? in

@@ -49,24 +49,44 @@ struct MobileOnboardingView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 24)).frame(maxWidth: .infinity).accessibilityHidden(true)
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(MobileKeptoraDesign.borderGradient, lineWidth: 1)
+                        }
+                        .shadow(color: MobileKeptoraDesign.accentGlow, radius: 18, y: 6)
+                        .frame(maxWidth: .infinity).accessibilityHidden(true)
                     Text("Total Control").font(.system(.largeTitle, design: .rounded).weight(.bold))
                     VStack(alignment: .leading, spacing: 14) {
                         welcomeRow("lock.shield.fill", "On-Device Privacy", tint: MobileKeptoraDesign.mint)
                         welcomeRow("checkmark.circle.fill", "Review Before Removing", tint: MobileKeptoraDesign.accent)
                         welcomeRow("arrow.uturn.backward.circle.fill", "Recoverable Anytime", tint: MobileKeptoraDesign.danger)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .keptoraPanel(tint: MobileKeptoraDesign.accent)
                 }
                 .padding(24)
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Button { finishOnboarding() } label: {
-                Text("Get Started").font(.system(.headline, design: .rounded).weight(.bold)).frame(maxWidth: .infinity)
+            VStack {
+                Button { finishOnboarding() } label: {
+                    Text("Get Started").font(.system(.headline, design: .rounded).weight(.bold)).frame(maxWidth: .infinity)
+                }
+                .buttonStyle(MobilePrimaryButtonStyle())
+                .accessibilityIdentifier("ios.onboarding.continue")
             }
-            .buttonStyle(MobilePrimaryButtonStyle())
-            .accessibilityIdentifier("ios.onboarding.continue")
-            .padding(.horizontal, 24).padding(.bottom, 16)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(.ultraThinMaterial)
+            .overlay(alignment: .top) {
+                LinearGradient(
+                    colors: [Color.white.opacity(0.28), Color.white.opacity(0.04)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(height: 1)
+            }
         }
     }
 
@@ -101,6 +121,11 @@ struct MobileOnboardingView: View {
                             Image(["onboarding_privacy", "onboarding_proof", "onboarding_restore"][step.id])
                                 .resizable().scaledToFit().frame(maxHeight: 270)
                                 .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 24)
+                                        .stroke(MobileKeptoraDesign.borderGradient, lineWidth: 1)
+                                }
+                                .shadow(color: step.tint.opacity(0.25), radius: 18, y: 6)
                                 .padding(.horizontal, 24).accessibilityHidden(true)
 
                             VStack(spacing: 12) {

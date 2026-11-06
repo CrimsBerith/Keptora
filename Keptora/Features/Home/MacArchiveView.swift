@@ -63,6 +63,7 @@ struct MacScanSourcesSection: View {
                 Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
             }.padding(6).frame(maxWidth: .infinity, alignment: .leading)
         }
+        .groupBoxStyle(KeptoraGlassGroupBoxStyle(tint: KeptoraDesign.accent))
     }
 }
 
@@ -70,74 +71,106 @@ struct MacSourceSetupView: View {
     var isStartupSetup = false
     @EnvironmentObject private var archive: MacArchiveModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(AppStorageKeys.macSourceSetupCompleted) private var sourceSetupCompleted = false
     private var controlsDisabled: Bool { archive.sourceControlsDisabled }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    MacSessionHealthBanner()
-                    Group {
-                    Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
-                        .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
-                    Text("Connect your library").font(.title.bold())
-                    Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(KeptoraDesign.secondaryInk)
-                    if archive.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
-                    if !archive.connectedSources.isEmpty { MacScanSourcesSection() }
-                    GroupBox {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label("Photos", systemImage: "photo.on.rectangle.angled").font(.headline)
-                            if archive.photosConnected { Label("Photos Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
-                            else if archive.authorization == .notDetermined {
-                                Button("Connect Photos") { archive.connectPhotos() }
-                            } else {
-                                Text(archive.authorization == .unavailable ? LocalizedStringKey("Photos is not available on this device.") : (archive.authorization == .restricted ? LocalizedStringKey("Access is restricted on this device.") : LocalizedStringKey("Photos access disabled")))
-                                if archive.authorization == .denied {
-                                    Button { archive.openPhotosSettings() } label: { Text("Open Settings").frame(minHeight: 32) }
-                                        .accessibilityIdentifier("mac.sourceSetup.openSettings")
+        ZStack {
+            KeptoraBackdrop()
+
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        MacSessionHealthBanner()
+                        Group {
+                        Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
+                                    .allowsHitTesting(false)
+                            }
+                            .shadow(color: reduceTransparency ? .clear : KeptoraDesign.accentGlow, radius: 16, y: 6)
+                            .accessibilityHidden(true)
+                        Text("Connect your library").font(.title.bold())
+                        Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(KeptoraDesign.secondaryInk)
+                        if archive.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
+                        if !archive.connectedSources.isEmpty { MacScanSourcesSection() }
+                        GroupBox {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label("Photos", systemImage: "photo.on.rectangle.angled").font(.headline)
+                                if archive.photosConnected { Label("Photos Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
+                                else if archive.authorization == .notDetermined {
+                                    Button("Connect Photos") { archive.connectPhotos() }
+                                } else {
+                                    Text(archive.authorization == .unavailable ? LocalizedStringKey("Photos is not available on this device.") : (archive.authorization == .restricted ? LocalizedStringKey("Access is restricted on this device.") : LocalizedStringKey("Photos access disabled")))
+                                    if archive.authorization == .denied {
+                                        Button { archive.openPhotosSettings() } label: { Text("Open Settings").frame(minHeight: 32) }
+                                            .accessibilityIdentifier("mac.sourceSetup.openSettings")
+                                    }
                                 }
-                            }
-                            if archive.authorization == .limited {
-                                Text("Limited Photos access").foregroundStyle(KeptoraDesign.warning)
-                                Button("Manage Access") { archive.openPhotosSettings() }
-                            }
-                        }.frame(maxWidth: .infinity, alignment: .leading)
+                                if archive.authorization == .limited {
+                                    Text("Limited Photos access").foregroundStyle(KeptoraDesign.warning)
+                                    Button("Manage Access") { archive.openPhotosSettings() }
+                                }
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .groupBoxStyle(KeptoraGlassGroupBoxStyle(tint: KeptoraDesign.accent))
+                        GroupBox {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label("Files & cloud folders", systemImage: "folder.badge.plus").font(.headline)
+                                ForEach(archive.connectedFolders) { folder in
+                                    HStack { Label(folder.displayName, systemImage: "checkmark.circle"); Spacer(); Button("Disconnect") { archive.disconnectFolder(folder.id) } }
+                                }
+                                Button { archive.chooseFolder() } label: { Text("Add Folders…").frame(minHeight: 32) }
+                                    .accessibilityIdentifier("mac.sourceSetup.folders")
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .groupBoxStyle(KeptoraGlassGroupBoxStyle(tint: KeptoraDesign.cyan))
+                        Text("You can continue without access and add sources later.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
+                        // Background on access and cloud folders stays one click away instead of filling the sheet.
+                        DisclosureGroup("Details") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.")
+                                Text("Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable.")
+                                Text("Cloud providers may download files according to their own settings.")
+                                Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.")
+                            }.font(.callout).foregroundStyle(KeptoraDesign.secondaryInk).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                        }
+                        ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).foregroundStyle(KeptoraDesign.warning) }
+                        }.disabled(controlsDisabled)
+                    }.padding(24)
+                }
+                Divider()
+                HStack {
+                    Spacer()
+                    Button {
+                        if isStartupSetup { sourceSetupCompleted = true; archive.startFirstScanWhenReady() }
+                        dismiss()
+                    } label: { Text(isStartupSetup ? LocalizedStringKey("Continue to Library") : LocalizedStringKey("Done")).frame(minHeight: 32) }
+                        .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(archive.isRequestingPhotosAccess)
+                        .accessibilityIdentifier("mac.sourceSetup.continue")
+                }
+                .padding(18)
+                .background {
+                    if reduceTransparency {
+                        KeptoraDesign.canvas
+                    } else {
+                        Rectangle().fill(.ultraThinMaterial)
                     }
-                    GroupBox {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label("Files & cloud folders", systemImage: "folder.badge.plus").font(.headline)
-                            ForEach(archive.connectedFolders) { folder in
-                                HStack { Label(folder.displayName, systemImage: "checkmark.circle"); Spacer(); Button("Disconnect") { archive.disconnectFolder(folder.id) } }
-                            }
-                            Button { archive.chooseFolder() } label: { Text("Add Folders…").frame(minHeight: 32) }
-                                .accessibilityIdentifier("mac.sourceSetup.folders")
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    Text("You can continue without access and add sources later.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
-                    // Background on access and cloud folders stays one click away instead of filling the sheet.
-                    DisclosureGroup("Details") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Full Photos access includes iCloud Photos. Limited access shows only the items you approve.")
-                            Text("Choose Pictures, Downloads, iCloud Drive or another cloud folder. Keptora remembers folders you approve; other apps' private storage is unavailable.")
-                            Text("Cloud providers may download files according to their own settings.")
-                            Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.")
-                        }.font(.callout).foregroundStyle(KeptoraDesign.secondaryInk).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
-                    }
-                    ForEach(Array(archive.connectionErrors.enumerated()), id: \.offset) { entry in Text(entry.element).foregroundStyle(KeptoraDesign.warning) }
-                    }.disabled(controlsDisabled)
-                }.padding(24)
+                }
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(colorScheme == .dark ? 0.28 : 0.60), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 1)
+                    .allowsHitTesting(false)
+                }
             }
-            Divider()
-            HStack {
-                Spacer()
-                Button {
-                    if isStartupSetup { sourceSetupCompleted = true; archive.startFirstScanWhenReady() }
-                    dismiss()
-                } label: { Text(isStartupSetup ? LocalizedStringKey("Continue to Library") : LocalizedStringKey("Done")).frame(minHeight: 32) }
-                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(archive.isRequestingPhotosAccess)
-                    .accessibilityIdentifier("mac.sourceSetup.continue")
-            }.padding(18)
         }
         .controlSize(.large)
         .frame(minWidth: 480, idealWidth: 650, maxWidth: 800, minHeight: 480, idealHeight: 600, maxHeight: 800)
@@ -159,6 +192,8 @@ struct MacSourceSetupView: View {
 
 struct MacArchiveView: View {
     @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
     private var search: String {
         get { archive.galleryContext.search }
         nonmutating set { archive.galleryContext.search = newValue; archive.contextChanged() }
@@ -220,7 +255,6 @@ struct MacArchiveView: View {
                     .onChange(of: keyboardFocus) { _, id in archive.recordFocus(id); if let id { proxy.scrollTo(id, anchor: .center) } }
             }
             if !archive.selection.isEmpty || archive.canUndoSelection || archive.canRedoSelection {
-                Divider()
                 VStack(alignment: .leading, spacing: 12) {
                     let summary = MediaSelectionSummary(archive.selected)
                     VStack(alignment: .leading) {
@@ -237,57 +271,86 @@ struct MacArchiveView: View {
                     }
                     if let status = archive.status { HStack { ProgressView().controlSize(.small); Text(status).font(.caption) } }
                     selectionActions
-                }.padding(16).disabled(archive.busy || archive.loading)
+                }
+                .padding(16)
+                .background {
+                    if reduceTransparency {
+                        KeptoraDesign.canvas
+                    } else {
+                        Rectangle().fill(.ultraThinMaterial)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(colorScheme == .dark ? 0.32 : 0.65), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 1)
+                    .allowsHitTesting(false)
+                }
+                .shadow(color: reduceTransparency ? .clear : Color.black.opacity(0.06), radius: 10, y: -3)
+                .disabled(archive.busy || archive.loading)
             }
         }
         .controlSize(.large)
-        .background(KeptoraDesign.canvas)
+        .background(Color.clear)
         .background(MacGalleryKeyboardMonitor(selectAll: { archive.selectItems(visible) }, find: { searchFocused = true },
             undo: { archive.undoSelection() }, redo: { archive.redoSelection() }))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mac.page.archive")
         .sheet(isPresented: $showPlan) { MacManualSelectionSheet().environmentObject(archive) }
         .sheet(item: $inspected) { item in
-            ScrollView {
-                VStack(spacing: 14) {
-                    MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork)
-                        .frame(minWidth: 520, minHeight: 380)
-                    Text(item.displayName)
-                        .font(.headline)
-                        .truncationMode(.middle)
-                        .lineLimit(1)
-                    Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-                    if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
-                    if let date = item.captureDateDescription { Text(date) }
-                    if let context = item.context, let camera = context.camera { Text(camera) }
-                    if let location = item.context?.location {
-                        HStack {
-                            Image(systemName: "location.fill").foregroundStyle(KeptoraDesign.accent)
-                            Text(String(format: "%.5f, %.5f", location.latitude, location.longitude))
-                            if case .file(let url) = item.reference {
-                                Button("Strip Location for Privacy") {
-                                    try? MetadataDoctorEngine.stripLocationData(from: url, destinationURL: url)
+            ZStack {
+                KeptoraBackdrop()
+
+                ScrollView {
+                    VStack(spacing: 14) {
+                        MacPhotosThumbnail(asset: item, pixelSize: 1600, fit: true, allowNetwork: previewNetwork)
+                            .frame(minWidth: 520, minHeight: 380)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
+                                    .allowsHitTesting(false)
+                            }
+                        Text(item.displayName)
+                            .font(.headline)
+                            .truncationMode(.middle)
+                            .lineLimit(1)
+                        Text(archive.sourceLabel(item)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                        if !previewNetwork && (item.requiresNetwork || { if case .photoLibrary = item.reference { return true }; return false }()) { Button("Download Preview from iCloud") { previewNetwork = true } }
+                        if let date = item.captureDateDescription { Text(date) }
+                        if let context = item.context, let camera = context.camera { Text(camera) }
+                        if let location = item.context?.location {
+                            HStack {
+                                Image(systemName: "location.fill").foregroundStyle(KeptoraDesign.accent)
+                                Text(String(format: "%.5f, %.5f", location.latitude, location.longitude))
+                                if case .file(let url) = item.reference {
+                                    Button("Strip Location for Privacy") {
+                                        try? MetadataDoctorEngine.stripLocationData(from: url, destinationURL: url)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
                                 }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
                             }
                         }
-                    }
-                    if item.context?.captureDate == nil, let inferred = MetadataDoctorEngine.inferDateFromFilename(item.displayName) {
-                        HStack {
-                            Image(systemName: "calendar.badge.clock").foregroundStyle(KeptoraDesign.accent)
-                            Text(L10n.format("Inferred Date: %@", DateFormatter.localizedString(from: inferred, dateStyle: .medium, timeStyle: .short)))
-                                .font(.caption)
+                        if item.context?.captureDate == nil, let inferred = MetadataDoctorEngine.inferDateFromFilename(item.displayName) {
+                            HStack {
+                                Image(systemName: "calendar.badge.clock").foregroundStyle(KeptoraDesign.accent)
+                                Text(L10n.format("Inferred Date: %@", DateFormatter.localizedString(from: inferred, dateStyle: .medium, timeStyle: .short)))
+                                    .font(.caption)
+                            }
+                        }
+                        HStack(spacing: 12) {
+                            Button("Close") { inspected = nil }
+                                .keyboardShortcut(.cancelAction)
+                            Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) }
+                                .buttonStyle(.borderedProminent)
                         }
                     }
-                    HStack(spacing: 12) {
-                        Button("Close") { inspected = nil }
-                            .keyboardShortcut(.cancelAction)
-                        Button(archive.selection.contains(item.id) ? "Deselect" : "Select") { archive.toggleSelection(item) }
-                            .buttonStyle(.borderedProminent)
-                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
             .frame(minWidth: 560, idealWidth: 640, minHeight: 480, maxHeight: 680)
         }
@@ -317,6 +380,13 @@ struct MacArchiveView: View {
             if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(KeptoraDesign.warning).padding(.horizontal, 16) }
             if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
                 Button("Some sources have limited access. Manage Sources") { showAccessGuide = true }.font(.caption).padding(.bottom, 8)
+            }
+        }
+        .background {
+            if reduceTransparency {
+                KeptoraDesign.canvas
+            } else {
+                Rectangle().fill(.ultraThinMaterial)
             }
         }
     }
@@ -384,29 +454,27 @@ struct MacArchiveView: View {
                             }.padding(30)
                         }
                     }
-                    if smartOrder {
-                        let candidatesByGroup = archive.gallery.candidates
-                        let visibleIDs = Set(visible.map(\.id))
-                        let blocks = archive.gallery.blocks
-                        LazyVStack(alignment: .leading, spacing: 16) {
-                            ForEach(blocks) { block in
-                                let membership = archive.gallery.membership
-                                let keeperBadges = archive.gallery.keeperBadges
-                                Text(LocalizedStringKey(block.titleKey)).font(.headline)
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
-                                    ForEach(block.assets) { item in archiveCell(item, groups: membership[item.id] ?? [], keeperBadge: keeperBadges[item.id]) }
-                                }
-                                ForEach(block.groups) { group in
-                                    groupActions(group, candidates: (candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) }, itemCount: group.assets.filter { visibleIDs.contains($0.id) }.count)
+                    if archive.galleryContext.finding == .copies {
+                        VStack(alignment: .leading, spacing: 14) {
+                            exactBatchSelection
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                                ForEach(orderedVisible) { item in
+                                    archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
                                 }
                             }
                         }.padding(20)
+                    } else if smartOrder {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                            ForEach(orderedVisible) { item in
+                                archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
+                            }
+                        }.padding(20)
                     } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
-                        ForEach(visible) { item in
-                            archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
-                        }
-                    }.padding(20)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                            ForEach(visible) { item in
+                                archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
+                            }
+                        }.padding(20)
                     }
                 }.disabled(archive.busy)
 
@@ -530,59 +598,148 @@ struct MacArchiveView: View {
         keyboardFocus = next.id
     }
     private func resetFilters() { media = 0; albumID = ""; search = ""; finding = .all; smartOrder = true; archive.galleryContext.quality = .all; archive.filterScopeMessage = nil }
+    private func thumbnailCard(_ item: UniversalMediaAsset, selected: Bool, kept: Bool, keeperLabel: String) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            MacPhotosThumbnail(asset: item)
+                .frame(height: 150)
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .clipped()
+            if selected {
+                Color.black.opacity(0.28)
+            }
+            VStack {
+                HStack {
+                    Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources))
+                        .font(.caption2.weight(.semibold)).lineLimit(1)
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5))
+                    Spacer(minLength: 0)
+                    if kept {
+                        Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
+                            .font(.caption2.weight(.semibold)).lineLimit(1)
+                            .padding(.horizontal, 6).padding(.vertical, 3)
+                            .foregroundStyle(.white).background(KeptoraDesign.accentFill, in: RoundedRectangle(cornerRadius: 5))
+                    } else if archive.decisions.protectedIDs.contains(item.id) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption.weight(.semibold))
+                            .padding(5).foregroundStyle(.white).background(.black.opacity(0.78), in: Circle())
+                    }
+                }
+                Spacer(minLength: 0)
+                HStack {
+                    if item.isFavorite || item.mediaKind == .video {
+                        HStack(spacing: 4) {
+                            if item.isFavorite {
+                                Image(systemName: "heart.fill").font(.caption).foregroundStyle(.pink)
+                            }
+                            if item.mediaKind == .video {
+                                Label(item.formattedDuration, systemImage: "play.fill")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: archive.decisions.protectedIDs.contains(item.id) ? "lock.fill" : (selected ? "checkmark.circle.fill" : "circle"))
+                        .font(.title3)
+                        .foregroundStyle(selected ? KeptoraDesign.accent : .white)
+                }
+            }
+            .padding(6)
+        }
+        .frame(height: 150)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+    }
     private func archiveCell(_ item: UniversalMediaAsset, groups: [LibraryReviewGroup] = [], keeperBadge: String? = nil) -> some View {
         let selected = archive.selection.contains(item.id)
         let kept = !selected && keeperBadge != nil
         let keeperLabel = keeperBadge ?? "Suggested Keep"
-        return VStack(alignment: .leading, spacing: 8) {
-                                Button { selectByClick(item) } label: {
-                                    MacPhotosThumbnail(asset: item).frame(height: 160).clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .accessibilityHidden(true)
-                                        .overlay(selected ? Color.black.opacity(0.28) : .clear, in: RoundedRectangle(cornerRadius: 12))
-                                        .overlay(alignment: .topLeading) {
-                                            Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources)).font(.caption.weight(.semibold)).lineLimit(1)
-                                                .padding(6).foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5)).padding(6)
-                                        }.overlay(alignment: .bottomTrailing) {
-                                            Image(systemName: archive.decisions.protectedIDs.contains(item.id) ? "lock.fill" : (selected ? "checkmark.circle.fill" : "circle")).font(.title2)
-                                                .foregroundStyle(selected ? KeptoraDesign.accent : .white).padding(8)
-                                        }
-                                        .contentShape(Rectangle())
-                                }.buttonStyle(.plain).accessibilityLabel(item.displayName + ", " + archive.sourceLabel(item))
-                                    .accessibilityValue(Text(verbatim: ([L10n.tr(selected ? "Selected" : "Not selected")] + groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) } + (archive.qualityAssessments[item.id]?.findings.map { L10n.tr(String.LocalizationValue($0.titleKey)) } ?? [])).joined(separator: ", ")))
-                                    .accessibilityHint("Click or press Space to change selection. Shift selects a range.").accessibilityAddTraits(selected ? .isSelected : [])
-                                    .accessibilityIdentifier("mac.archive.asset.\(item.id)")
-                                    .focusable()
-                                    .focused($keyboardFocus, equals: item.id)
-                                    .onMoveCommand { moveFocus($0) }
-                                HStack {
-                                    Text(item.displayName).lineLimit(1)
-                                    Spacer()
+        return VStack(alignment: .leading, spacing: 6) {
+            Button { selectByClick(item) } label: {
+                thumbnailCard(item, selected: selected, kept: kept, keeperLabel: keeperLabel)
+            }
+            .buttonStyle(.plain)
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+            .accessibilityLabel(item.displayName + ", " + archive.sourceLabel(item))
+            .accessibilityValue(Text(verbatim: ([L10n.tr(selected ? "Selected" : "Not selected")] + groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) } + (archive.qualityAssessments[item.id]?.findings.map { L10n.tr(String.LocalizationValue($0.titleKey)) } ?? [])).joined(separator: ", ")))
+            .accessibilityHint("Click or press Space to change selection. Shift selects a range.").accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityIdentifier("mac.archive.asset.\(item.id)")
+            .focused($keyboardFocus, equals: item.id)
+            .onMoveCommand { moveFocus($0) }
 
-                                }
-                                if let date = item.captureDateDescription { Text(date).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
-                                if let value = archive.qualityAssessments[item.id]?.findings.first { Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
-                                if archive.decisions.protectedIDs.contains(item.id) { Label("Protected", systemImage: "lock.fill").font(.caption) }
-                                if let issue = archive.gallery.issuesByAsset[item.id] {
-                                    Label(LocalizedStringKey(issue.reason.titleKey), systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(KeptoraDesign.warning)
-                                }
-                                if !groups.isEmpty { Text(groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) }.joined(separator: " · ")).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
-                                if kept { Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill").font(.caption).foregroundStyle(KeptoraDesign.accent) }
-                                if let findings = archive.qualityAssessments[item.id]?.findings, findings.count > 1 {
-                                    Menu {
-                                        ForEach(Array(findings.dropFirst()), id: \.rawValue) { finding in Label(LocalizedStringKey(finding.titleKey), systemImage: finding.symbol) }
-                                    } label: { Text(L10n.format("More Findings (%lld)", findings.count - 1)) }.font(.caption)
-                                }
-                                if item.isFavorite { Label("Favorite", systemImage: "heart.fill").font(.caption) }
-                                if !groups.isEmpty {
-                                    Button("Keep This") { archive.keep(item, in: groups) }.disabled(archive.analyzing)
-                                        .accessibilityIdentifier("mac.archive.keep.\(item.id)")
-                                }
-                            }
-                            .padding(10).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(archive.selection.contains(item.id) ? KeptoraDesign.accent : .clear, lineWidth: 2))
-                            .id(item.id)
-                            .background(GeometryReader { geometry in Color.clear.preference(key: MacGalleryPositions.self, value: [item.id: geometry.frame(in: .named("mac-gallery")).minY]) })
-                            .contextMenu {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(item.displayName)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 4)
+                    if let bytes = item.byteCount {
+                        Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                            .font(.caption2)
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
+                            .monospacedDigit()
+                    }
+                }
+                HStack(spacing: 6) {
+                    if let date = item.captureDateDescription {
+                        Text(date).font(.caption2).foregroundStyle(KeptoraDesign.secondaryInk).lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    if let value = archive.qualityAssessments[item.id]?.findings.first {
+                        Label(LocalizedStringKey(value.titleKey), systemImage: value.symbol)
+                            .font(.caption2).foregroundStyle(KeptoraDesign.secondaryInk).lineLimit(1)
+                    }
+                }
+                if let issue = archive.gallery.issuesByAsset[item.id] {
+                    Label(LocalizedStringKey(issue.reason.titleKey), systemImage: "exclamationmark.triangle")
+                        .font(.caption2).foregroundStyle(KeptoraDesign.warning).lineLimit(1)
+                }
+                if !groups.isEmpty {
+                    Text(groups.map { L10n.tr(String.LocalizationValue($0.titleKey)) }.joined(separator: " · "))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(KeptoraDesign.secondaryInk)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: 6) {
+                    if !groups.isEmpty && !kept {
+                        Button("Keep This") { archive.keep(item, in: groups) }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(archive.analyzing)
+                            .accessibilityIdentifier("mac.archive.keep.\(item.id)")
+                    } else if kept {
+                        Text("Suggested Keep")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(KeptoraDesign.accent)
+                    }
+                    Spacer(minLength: 0)
+                    if let firstGroup = groups.first, firstGroup.assets.count > 1 {
+                        Button {
+                            comparingGroup = firstGroup
+                        } label: {
+                            Image(systemName: "square.split.2x1")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Compare Group")
+                        .accessibilityLabel("Compare Group")
+                        .accessibilityIdentifier("mac.archive.compare.\(item.id)")
+                    }
+                }
+                .frame(minHeight: 24)
+            }
+        }
+        .padding(10)
+        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .keptoraGlass(cornerRadius: 16, tint: selected ? KeptoraDesign.accent : nil, isSelected: selected)
+        .id(item.id)
+        .background(GeometryReader { geometry in Color.clear.preference(key: MacGalleryPositions.self, value: [item.id: geometry.frame(in: .named("mac-gallery")).minY]) })
+        .contextMenu {
                                 if case .file(let url) = item.reference { Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }
                                 if archive.decisions.protectedIDs.contains(item.id) { Button("Unprotect and Select") { archive.unprotectAndSelect(item) } }
                                 else { Button(selected ? "Deselect" : "Select") { archive.toggleSelection(item) } }
@@ -693,7 +850,18 @@ struct MacArchiveView: View {
         Button(action: remove) {
             HStack { Text(title).multilineTextAlignment(.leading); Spacer(minLength: 4); Image(systemName: "xmark.circle.fill") }
                 .font(.caption.weight(.semibold)).padding(8).frame(minWidth: 32, minHeight: 32)
-                .background(KeptoraDesign.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8)).contentShape(RoundedRectangle(cornerRadius: 8))
+                .background(KeptoraDesign.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(
+                            reduceTransparency
+                                ? AnyShapeStyle(KeptoraDesign.accent.opacity(0.40))
+                                : AnyShapeStyle(LinearGradient(colors: [Color.white.opacity(colorScheme == .dark ? 0.30 : 0.65), KeptoraDesign.accent.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing)),
+                            lineWidth: 0.8
+                        )
+                        .allowsHitTesting(false)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 8))
         }.buttonStyle(.plain).accessibilityLabel(Text(L10n.format("Remove Filter: %@", title)))
             .accessibilityIdentifier("mac.archive.filter.remove." + id)
     }
@@ -711,71 +879,80 @@ struct MacManualSelectionSheet: View {
     @State private var needsReReview = false
     private var reviewedItems: [UniversalMediaAsset] { review.items }
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Review Selection").font(.title.bold())
-            List {
-                Section { reviewSummary }
-                Section("Removal by Source") {
-                    ForEach(archive.connectedSources) { source in
-                        let items = reviewedItems.filter { $0.sourceID == source.id }
-                        if !items.isEmpty {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(source.localizedScanTitle + " · " + items.count.formatted())
-                                Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-                                if source.kind == .photos { Text("Changes to iCloud Photos sync across your devices.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
-                                else { Text("Files stay recoverable on the same storage; space is not freed yet.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
+        ZStack {
+            KeptoraBackdrop()
+
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Review Selection").font(.title.bold())
+                List {
+                    Section { reviewSummary }
+                    Section("Removal by Source") {
+                        ForEach(archive.connectedSources) { source in
+                            let items = reviewedItems.filter { $0.sourceID == source.id }
+                            if !items.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(source.localizedScanTitle + " · " + items.count.formatted())
+                                    Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder")).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                                    if source.kind == .photos { Text("Changes to iCloud Photos sync across your devices.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
+                                    else { Text("Files stay recoverable on the same storage; space is not freed yet.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
+                                }
+                            }
+                        }
+                        Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                    }
+                    Section {
+                        DisclosureGroup("Recovery Details") {
+                            Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
+                        }
+                    }
+                    if hasUnavailableSelection {
+                        Section("Unavailable Selected Items") {
+                            Text("Reconnect unavailable sources or remove their items from your selection.")
+                            Button("Remove Unavailable Items from Selection") {
+                                review.discard(Set(archive.pendingSelection.map(\.id)).union(archive.unresolvedSelectionIDs))
+                                archive.discardPendingSelection()
                             }
                         }
                     }
-                    Text("Moves in connected cloud folders may sync to other devices.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-                }
-                Section {
-                    DisclosureGroup("Recovery Details") {
-                        Text("Photos items move to Recently Deleted and iCloud changes sync across devices. Files move to a recovery folder on the same storage; this does not free disk space. Completed steps appear in History if cleanup stops partway.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
-                    }
-                }
-                if hasUnavailableSelection {
-                    Section("Unavailable Selected Items") {
-                        Text("Reconnect unavailable sources or remove their items from your selection.")
-                        Button("Remove Unavailable Items from Selection") {
-                            review.discard(Set(archive.pendingSelection.map(\.id)).union(archive.unresolvedSelectionIDs))
-                            archive.discardPendingSelection()
+                    if !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty {
+                        Section("Linked Files") {
+                            Text("Linked files remain outside your selection. Review them before removing this photo.")
+                            ForEach(LibraryFileFamilies.omittedCompanions(for: reviewedItems), id: \.self) { url in Text(url.lastPathComponent).font(.caption) }
+                            Toggle("Remove only my selected items and leave linked files in place", isOn: $leaveLinkedFiles)
                         }
                     }
-                }
-                if !LibraryFileFamilies.omittedCompanions(for: reviewedItems).isEmpty {
-                    Section("Linked Files") {
-                        Text("Linked files remain outside your selection. Review them before removing this photo.")
-                        ForEach(LibraryFileFamilies.omittedCompanions(for: reviewedItems), id: \.self) { url in Text(url.lastPathComponent).font(.caption) }
-                        Toggle("Remove only my selected items and leave linked files in place", isOn: $leaveLinkedFiles)
+                    Section("Selected Items") {
+                        Text("Removing an item from this list keeps it in your library.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
+                        if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(KeptoraDesign.secondaryInk) }
+                        ForEach(reviewedItems) { item in reviewRow(item) }
                     }
                 }
-                Section("Selected Items") {
-                    Text("Removing an item from this list keeps it in your library.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
-                    if reviewedItems.isEmpty { Text("No items selected.").foregroundStyle(KeptoraDesign.secondaryInk) }
-                    ForEach(reviewedItems) { item in reviewRow(item) }
+                .scrollContentBackground(.hidden)
+                .disabled(archive.busy || !archive.canEditLibrary)
+                Text(L10n.format("Selected items: %lld", reviewedItems.count)).font(.headline)
+                if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
+                if let outcome, !outcome.isComplete {
+                    Text(L10n.format("Moved: %lld · Failed: %lld · Not attempted: %lld", outcome.completedIDs.count, outcome.failedIDs.count, outcome.notAttemptedIDs.count)).font(.callout)
+                    Text("Check the remaining items before trying again. Completed items have left this review.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                    Button("Review Remaining Items Again") {
+                        review = FrozenSelectionReview(archive.selected); expectedIDs = Set(review.items.map(\.id))
+                        leaveLinkedFiles = false; needsReReview = false
+                    }.disabled(!archive.canEditLibrary || archive.busy || archive.loading || archive.analyzing)
+                        .accessibilityIdentifier("mac.archive.review.remaining")
                 }
-            }.disabled(archive.busy || !archive.canEditLibrary)
-            Text(L10n.format("Selected items: %lld", reviewedItems.count)).font(.headline)
-            if archive.busy { ProgressView(archive.status ?? L10n.tr("Removing selected items…")) }
-            if let outcome, !outcome.isComplete {
-                Text(L10n.format("Moved: %lld · Failed: %lld · Not attempted: %lld", outcome.completedIDs.count, outcome.failedIDs.count, outcome.notAttemptedIDs.count)).font(.callout)
-                Text("Check the remaining items before trying again. Completed items have left this review.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-                Button("Review Remaining Items Again") {
-                    review = FrozenSelectionReview(archive.selected); expectedIDs = Set(review.items.map(\.id))
-                    leaveLinkedFiles = false; needsReReview = false
-                }.disabled(!archive.canEditLibrary || archive.busy || archive.loading || archive.analyzing)
-                    .accessibilityIdentifier("mac.archive.review.remaining")
+                if archive.loading || archive.analyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
+                if !archive.busy && !archive.loading && !archive.analyzing && archive.cleanupStorageIsBusy {
+                    Text("Another operation is using this storage. Wait for it to finish or cancel its scan.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { secondaryReviewActions; Spacer(minLength: 12); removeButton }
+                    VStack(alignment: .leading, spacing: 8) { secondaryReviewActions; removeButton }
+                }
             }
-            if archive.loading || archive.analyzing { Text("Wait for analysis to finish or cancel it before cleanup.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
-            if !archive.busy && !archive.loading && !archive.analyzing && archive.cleanupStorageIsBusy {
-                Text("Another operation is using this storage. Wait for it to finish or cancel its scan.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-            }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { secondaryReviewActions; Spacer(minLength: 12); removeButton }
-                VStack(alignment: .leading, spacing: 8) { secondaryReviewActions; removeButton }
-            }
-        }.controlSize(.large).padding(24).frame(minWidth: 480, idealWidth: 650, minHeight: 480, idealHeight: 650).interactiveDismissDisabled(archive.busy)
+            .controlSize(.large)
+            .padding(24)
+        }
+        .frame(minWidth: 480, idealWidth: 650, minHeight: 480, idealHeight: 650).interactiveDismissDisabled(archive.busy)
         .onChange(of: reviewedItems) { leaveLinkedFiles = false }
         .onAppear { if !captured { review = FrozenSelectionReview(archive.selected); captured = true } }
         .onAppear { archive.presentationOwner = .review }
@@ -872,14 +1049,18 @@ struct MacManualHistoryView: View {
                     Label("A recovery record could not be read", systemImage: "exclamationmark.triangle").foregroundStyle(KeptoraDesign.warning)
                     Text("The files were kept. Open the recovery folder to inspect this record.").font(.caption)
                     Button("Show Recovery Folder") { NSWorkspace.shared.activateFileViewerSelecting([issue.manifestURL.deletingLastPathComponent()]) }
-                }.padding(12)
+                }
+                .padding(12)
+                .keptoraGlass(cornerRadius: 14, tint: KeptoraDesign.warning)
             }
             if archive.history.isEmpty { Text("No manual cleanup history yet.").foregroundStyle(KeptoraDesign.secondaryInk) }
             ForEach(archive.history) { entry in
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) { historyDetails(entry); Spacer(minLength: 12); recoveryAction(entry) }
                     VStack(alignment: .leading, spacing: 12) { historyDetails(entry); recoveryAction(entry) }
-                }.padding(16).background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+                }
+                .padding(16)
+                .keptoraGlass(cornerRadius: 16, tint: entry.isPhotos ? KeptoraDesign.coral : KeptoraDesign.cyan)
             }
         }.controlSize(.large).padding(20).task { await archive.verifyRecoveryCatalogue() }
     }

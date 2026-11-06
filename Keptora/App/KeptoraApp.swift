@@ -53,8 +53,16 @@ private final class KeptoraAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showMainWindowIfNeeded() {
-        if let window = NSApp.windows.first(where: { $0.identifier == MacWindowIdentity.main }) {
+        if let window = NSApp.windows.first(where: { $0.identifier == MacWindowIdentity.main || ($0.isVisible && $0.title == "Keptora") }) {
             window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        if NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) }) {
+            return
+        }
+        if let fallback = fallbackWindow, fallback.isVisible {
+            fallback.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }

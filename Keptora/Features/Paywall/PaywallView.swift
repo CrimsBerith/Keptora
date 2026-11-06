@@ -4,9 +4,13 @@ import SwiftUI
 struct PaywallView: View {
     @EnvironmentObject private var store: StoreEntitlementController
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
+            KeptoraBackdrop()
+
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 20) {
@@ -19,8 +23,9 @@ struct PaywallView: View {
                             .overlay {
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
+                                    .allowsHitTesting(false)
                             }
-                            .shadow(color: KeptoraDesign.accentGlow, radius: 22, y: 8)
+                            .shadow(color: reduceTransparency ? .clear : KeptoraDesign.accentGlow, radius: 22, y: 8)
                             .accessibilityHidden(true)
 
                         // Headline
@@ -48,8 +53,7 @@ struct PaywallView: View {
                         }
                         .padding(20)
                         .frame(maxWidth: 590, alignment: .leading)
-                        .background(KeptoraDesign.quiet,
-                                    in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
+                        .keptoraGlass(cornerRadius: KeptoraDesign.cardRadius, tint: KeptoraDesign.violet)
 
                         // Trial label
                         Text(store.trialLabel)
@@ -90,15 +94,36 @@ struct PaywallView: View {
                     }
                 }.controlSize(.large)
                 .padding(18)
+                .background {
+                    if reduceTransparency {
+                        KeptoraDesign.canvas
+                    } else {
+                        Rectangle().fill(.ultraThinMaterial)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(colorScheme == .dark ? 0.28 : 0.60), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 1)
+                    .allowsHitTesting(false)
+                }
             }
 
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(KeptoraDesign.secondaryInk)
-                    .frame(width: 32, height: 32).contentShape(Rectangle())
+                    .frame(width: 28, height: 28)
+                    .background(
+                        reduceTransparency ? Color.secondary.opacity(0.18) : Color.white.opacity(0.12),
+                        in: Circle()
+                    )
+                    .overlay(Circle().stroke(Color.white.opacity(0.20), lineWidth: 1).allowsHitTesting(false))
             }
             .buttonStyle(.plain)
             .padding(14)

@@ -80,21 +80,36 @@ public struct AnalysisSessionProgress: Codable, Sendable {
 
 /// Persistent evidence is usable only when the source exposes a meaningful revision.
 public enum MediaRevisionPolicy {
-    public static func key(for asset: UniversalMediaAsset, algorithm: String) -> String? {
+    public static func key(for asset: UniversalMediaAsset, algorithm: String, stripNonIntrinsic: Bool = false) -> String? {
         guard let modified = asset.modificationDate, modified.timeIntervalSince1970.isFinite else { return nil }
         switch asset.reference {
-        case .file: guard let bytes = asset.byteCount, bytes >= 0, asset.fileRevision != nil else { return nil }
+        case .file:
+            if !stripNonIntrinsic {
+                guard let bytes = asset.byteCount, bytes >= 0, asset.fileRevision != nil else { return nil }
+            } else {
+                guard asset.fileRevision != nil else { return nil }
+            }
         case .photoLibrary: break
         }
         // JSON keeps subsecond precision; include all resource/selection-relevant metadata.
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         var revision = asset.with(sourceID: "", requiresNetwork: false)
+        if stripNonIntrinsic {
+            revision = revision.with(
+                byteCount: .some(nil),
+                isFavorite: false,
+                hasAlbumMembership: false
+            )
+        }
         // An overlapping root is a route, not a different content revision.
         if case .file(let url) = revision.reference {
             revision = revision.with(reference: .file(url.standardizedFileURL.resolvingSymlinksInPath()))
         }
         guard let data = try? encoder.encode(revision) else { return nil }
         return algorithm + ":" + data.base64EncodedString()
+    }
+    public static func fingerprintKey(for asset: UniversalMediaAsset, algorithm: String) -> String? {
+        key(for: asset, algorithm: algorithm, stripNonIntrinsic: true)
     }
     public static func same(_ lhs: UniversalMediaAsset, _ rhs: UniversalMediaAsset, algorithm: String) -> Bool {
         guard let a = key(for: lhs, algorithm: algorithm), let b = key(for: rhs, algorithm: algorithm) else { return false }

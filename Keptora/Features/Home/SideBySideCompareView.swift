@@ -3,6 +3,7 @@ import KeptoraCore
 
 struct SideBySideCompareView: View {
     @EnvironmentObject private var archive: MacArchiveModel
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     let group: LibraryReviewGroup
     @Binding var isPresented: LibraryReviewGroup?
 
@@ -39,20 +40,30 @@ struct SideBySideCompareView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerBar
-            Divider()
-            comparisonContent
-                .padding(16)
-            if assets.count > 2 {
+        ZStack {
+            KeptoraBackdrop()
+
+            VStack(spacing: 0) {
+                headerBar
                 Divider()
-                assetThumbnailStrip
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                comparisonContent
+                    .padding(16)
+                if assets.count > 2 {
+                    Divider()
+                    assetThumbnailStrip
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background {
+                            if reduceTransparency {
+                                KeptoraDesign.canvas
+                            } else {
+                                Rectangle().fill(.ultraThinMaterial)
+                            }
+                        }
+                }
             }
         }
         .frame(minWidth: 850, minHeight: 620)
-        .background(KeptoraDesign.canvas)
     }
 
     private var headerBar: some View {
@@ -85,31 +96,36 @@ struct SideBySideCompareView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+        .background {
+            if reduceTransparency {
+                KeptoraDesign.canvas
+            } else {
+                Rectangle().fill(.ultraThinMaterial)
+            }
+        }
     }
 
     private var comparisonContent: some View {
         HStack(spacing: 16) {
             if let leftAsset {
                 assetComparisonPane(asset: leftAsset, isLeft: true)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(focusedPane == .left ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
-                    )
+                    .padding(12)
+                    .keptoraGlass(cornerRadius: 16, tint: KeptoraDesign.accent, isSelected: focusedPane == .left)
                     .onTapGesture { focusedPane = .left }
             }
             Divider()
             if let rightAsset {
                 assetComparisonPane(asset: rightAsset, isLeft: false)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(focusedPane == .right ? Color.purple.opacity(0.6) : Color.clear, lineWidth: 2)
-                    )
+                    .padding(12)
+                    .keptoraGlass(cornerRadius: 16, tint: KeptoraDesign.violet, isSelected: focusedPane == .right)
                     .onTapGesture { focusedPane = .right }
             } else {
                 Text("No second item to compare")
                     .font(.callout)
                     .foregroundStyle(KeptoraDesign.secondaryInk)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(12)
+                    .keptoraGlass(cornerRadius: 16)
             }
         }
     }
@@ -155,7 +171,7 @@ struct SideBySideCompareView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
 
-            metadataCard(for: asset, other: isLeft ? rightAsset : leftAsset)
+            metadataCard(for: asset, other: isLeft ? rightAsset : leftAsset, isLeft: isLeft)
 
             HStack(spacing: 10) {
                 Button {
@@ -177,7 +193,7 @@ struct SideBySideCompareView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func metadataCard(for asset: UniversalMediaAsset, other: UniversalMediaAsset?) -> some View {
+    private func metadataCard(for asset: UniversalMediaAsset, other: UniversalMediaAsset?, isLeft: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(asset.displayName)
@@ -253,7 +269,7 @@ struct SideBySideCompareView: View {
             }
         }
         .padding(10)
-        .background(KeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 8))
+        .keptoraGlass(cornerRadius: 10, tint: isLeft ? KeptoraDesign.accent : KeptoraDesign.violet)
     }
 
     private var assetThumbnailStrip: some View {

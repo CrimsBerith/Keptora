@@ -94,34 +94,61 @@ struct KeptoraGlow: View {
 }
 
 struct KeptoraBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 KeptoraDesign.canvas
-                KeptoraGlow(color: KeptoraDesign.violet.opacity(0.13), diameter: min(proxy.size.width * 0.62, 720))
-                    .offset(x: proxy.size.width * 0.30, y: -proxy.size.height * 0.35)
-                KeptoraGlow(color: KeptoraDesign.cyan.opacity(0.10), diameter: min(proxy.size.width * 0.52, 600))
-                    .offset(x: -proxy.size.width * 0.34, y: proxy.size.height * 0.34)
+                if !reduceTransparency {
+                    LinearGradient(
+                        colors: [
+                            KeptoraDesign.accent.opacity(colorScheme == .dark ? 0.07 : 0.03),
+                            Color.clear,
+                            KeptoraDesign.cyan.opacity(colorScheme == .dark ? 0.05 : 0.02)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    KeptoraGlow(color: KeptoraDesign.violet.opacity(colorScheme == .dark ? 0.18 : 0.12), diameter: min(proxy.size.width * 0.68, 760))
+                        .offset(x: proxy.size.width * 0.32, y: -proxy.size.height * 0.35)
+                    KeptoraGlow(color: KeptoraDesign.cyan.opacity(colorScheme == .dark ? 0.14 : 0.09), diameter: min(proxy.size.width * 0.56, 640))
+                        .offset(x: -proxy.size.width * 0.35, y: proxy.size.height * 0.34)
+                    KeptoraGlow(color: KeptoraDesign.coral.opacity(colorScheme == .dark ? 0.08 : 0.05), diameter: min(proxy.size.width * 0.45, 480))
+                        .offset(x: proxy.size.width * 0.18, y: proxy.size.height * 0.12)
+                }
             }
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+        .allowsHitTesting(false)
     }
 }
 
 struct KeptoraSidebarBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     var body: some View {
-        LinearGradient(
-            colors: [
-                KeptoraDesign.accent.opacity(0.12),
-                KeptoraDesign.violet.opacity(0.06),
-                Color.clear
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .background(.bar)
+        ZStack {
+            if reduceTransparency {
+                KeptoraDesign.elevated
+            } else {
+                LinearGradient(
+                    colors: [
+                        KeptoraDesign.accent.opacity(colorScheme == .dark ? 0.15 : 0.08),
+                        KeptoraDesign.violet.opacity(colorScheme == .dark ? 0.09 : 0.04),
+                        Color.clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .background(.ultraThinMaterial)
+            }
+        }
         .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 
@@ -154,33 +181,162 @@ struct ArchivePlateShape: InsettableShape {
     }
 }
 
+// MARK: - Glassmorphism System
+
+struct KeptoraGlassModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var cornerRadius: CGFloat = KeptoraDesign.cardRadius
+    var tint: Color? = nil
+    var isSelected: Bool = false
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                if reduceTransparency {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(isSelected ? KeptoraDesign.accent.opacity(0.18) : KeptoraDesign.elevated)
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(
+                                colorScheme == .dark
+                                    ? Color.white.opacity(isSelected ? 0.08 : 0.03)
+                                    : Color.white.opacity(isSelected ? 0.52 : 0.38)
+                            )
+
+                        if let tint {
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .fill(tint.opacity(isSelected ? 0.16 : 0.05))
+                        } else if isSelected {
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .fill(KeptoraDesign.accent.opacity(0.12))
+                        }
+                    }
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        borderShapeStyle,
+                        lineWidth: isSelected ? 1.5 : 1.0
+                    )
+                    .allowsHitTesting(false)
+            }
+            .shadow(
+                color: shadowColor,
+                radius: isSelected ? 14 : 9,
+                x: 0,
+                y: isSelected ? 5 : 3
+            )
+    }
+
+    private var borderShapeStyle: AnyShapeStyle {
+        if reduceTransparency {
+            if isSelected {
+                return AnyShapeStyle((tint ?? KeptoraDesign.accent))
+            }
+            return AnyShapeStyle(colorScheme == .dark ? Color.white.opacity(0.32) : Color.black.opacity(0.20))
+        }
+        return AnyShapeStyle(borderGradient)
+    }
+
+    private var borderGradient: LinearGradient {
+        if isSelected {
+            return LinearGradient(
+                colors: [
+                    (tint ?? KeptoraDesign.accent).opacity(0.90),
+                    KeptoraDesign.violet.opacity(0.75),
+                    (tint ?? KeptoraDesign.cyan).opacity(0.55)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
+        if colorScheme == .dark {
+            return LinearGradient(
+                colors: [
+                    Color.white.opacity(0.32),
+                    (tint ?? KeptoraDesign.cyan).opacity(0.18),
+                    Color.white.opacity(0.04),
+                    Color.white.opacity(0.10)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            return LinearGradient(
+                colors: [
+                    Color.white.opacity(0.78),
+                    (tint ?? KeptoraDesign.accent).opacity(0.20),
+                    Color.white.opacity(0.15),
+                    Color.black.opacity(0.03)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    private var shadowColor: Color {
+        if reduceTransparency {
+            return .clear
+        }
+        if isSelected {
+            return (tint ?? KeptoraDesign.accent).opacity(colorScheme == .dark ? 0.28 : 0.16)
+        }
+        return Color.black.opacity(colorScheme == .dark ? 0.22 : 0.05)
+    }
+}
+
+struct KeptoraGlassGroupBoxStyle: GroupBoxStyle {
+    var tint: Color? = nil
+    var cornerRadius: CGFloat = 16
+
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            configuration.label
+                .font(.headline)
+            configuration.content
+        }
+        .padding(14)
+        .keptoraGlass(cornerRadius: cornerRadius, tint: tint)
+    }
+}
+
+extension View {
+    /// Applies a refined frosted-glass surface with specular rim lighting, ambient shadow, and accessibility fallback.
+    func keptoraGlass(
+        cornerRadius: CGFloat = KeptoraDesign.cardRadius,
+        tint: Color? = nil,
+        isSelected: Bool = false
+    ) -> some View {
+        modifier(KeptoraGlassModifier(cornerRadius: cornerRadius, tint: tint, isSelected: isSelected))
+    }
+}
+
 // MARK: - Reusable Components
 
 struct PremiumCard<Content: View>: View {
+    var cornerRadius: CGFloat = KeptoraDesign.cardRadius
+    var tint: Color? = nil
     private let content: Content
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    init(@ViewBuilder content: () -> Content) {
+    init(cornerRadius: CGFloat = KeptoraDesign.cardRadius, tint: Color? = nil, @ViewBuilder content: () -> Content) {
+        self.cornerRadius = cornerRadius
+        self.tint = tint
         self.content = content()
     }
 
     var body: some View {
         content
             .padding(20)
-            .background(reduceTransparency ? AnyShapeStyle(KeptoraDesign.elevated) : AnyShapeStyle(.ultraThinMaterial), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
-            .background(KeptoraDesign.elevated.opacity(reduceTransparency ? 1 : 0.72), in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.35), Color.primary.opacity(0.06)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-            .shadow(color: .black.opacity(0.04), radius: 8, y: 3)
+            .keptoraGlass(cornerRadius: cornerRadius, tint: tint)
     }
 }
 
@@ -198,11 +354,16 @@ struct MetricTile: View {
     }
 
     var body: some View {
-        PremiumCard {
+        PremiumCard(cornerRadius: 18, tint: tint) {
             VStack(alignment: .leading, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(tint.opacity(0.13))
+                        .fill(tint.opacity(0.14))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(tint.opacity(0.25), lineWidth: 0.8)
+                                .allowsHitTesting(false)
+                        }
                     Image(systemName: systemImage)
                         .font(.title3.weight(.semibold))
                         .symbolRenderingMode(.hierarchical)
@@ -215,7 +376,7 @@ struct MetricTile: View {
                     .minimumScaleFactor(0.75)
                 Text(title)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(KeptoraDesign.secondaryInk)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -321,6 +482,7 @@ struct KeptoraLogoMark: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 96 * s, style: .continuous)
                         .stroke(Color.white.opacity(0.62), lineWidth: max(0.5, 16 * s))
+                        .allowsHitTesting(false)
                 }
                 .frame(width: 380 * s, height: 380 * s)
                 .rotationEffect(.degrees(-8))
@@ -351,6 +513,7 @@ struct KeptoraLogoMark: View {
         .overlay {
             RoundedRectangle(cornerRadius: corner, style: .continuous)
                 .stroke(Color.white.opacity(0.28), lineWidth: max(0.5, size * 0.003))
+                .allowsHitTesting(false)
         }
         .shadow(color: KeptoraDesign.violet.opacity(showsShadow ? 0.32 : 0), radius: size * 0.20, y: size * 0.08)
         .accessibilityHidden(true)
