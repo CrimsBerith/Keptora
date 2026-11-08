@@ -163,7 +163,11 @@ final class MacArchiveModel: ObservableObject {
     @Published var filterScopeMessage: String?
     func errorBinding(for owner: MacLibraryPresentation) -> Binding<Bool> {
         Binding(get: { self.error != nil && self.errorOwner == owner && self.presentationOwner == owner }, set: { value in
-            if !value && self.errorOwner == owner { self.error = nil }
+            if !value && self.errorOwner == owner {
+                DispatchQueue.main.async {
+                    self.error = nil
+                }
+            }
         })
     }
     func closePresentation() { presentationOwner = .main; if error != nil { errorOwner = .main } }

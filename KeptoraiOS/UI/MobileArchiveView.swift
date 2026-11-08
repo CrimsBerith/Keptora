@@ -1316,7 +1316,7 @@ struct MobileSelectionReviewSheet: View {
             .onChange(of: reviewedItems) { _, _ in leaveLinkedFiles = false }
             .onAppear { if !captured { review = FrozenSelectionReview(store.librarySelection); captured = true } }
             .interactiveDismissDisabled(store.isCleaningUp)
-            .alert(Text(store.errorAlertParts.title), isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
+            .alert(Text(store.errorAlertParts.title), isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { DispatchQueue.main.async { store.errorMessage = nil } } })) {
                 Button("OK") { store.errorMessage = nil }
             } message: { if let detail = store.errorAlertParts.detail { Text(detail) } }
             .alert("Remove selected items?", isPresented: $confirm) {
