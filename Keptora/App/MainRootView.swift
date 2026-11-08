@@ -25,6 +25,10 @@ struct MainRootView: View {
             VStack(spacing: 0) {
                 brandHeader
 
+                proHeader
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 6)
+
                 VStack(alignment: .leading, spacing: 2) {
                     sidebarSection("Library", routes: libraryRoutes)
                     sidebarSection("Smart Cleanup", routes: cleanupRoutes)
@@ -32,10 +36,8 @@ struct MainRootView: View {
 
                     Spacer(minLength: 0)
                 }
-                .padding(.top, 8)
+                .padding(.top, 4)
                 .padding(.horizontal, 9)
-
-                proFooter
             }
             .background(KeptoraSidebarBackdrop())
             .accessibilityElement(children: .contain)
@@ -306,39 +308,74 @@ struct MainRootView: View {
     }
 
     @ViewBuilder
-    private var proFooter: some View {
-        VStack(spacing: 0) {
-            Divider().opacity(0.5)
-            if store.isLifetimeUnlocked {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(KeptoraDesign.success)
+    private var proHeader: some View {
+        if store.isLifetimeUnlocked {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(KeptoraDesign.success)
+                VStack(alignment: .leading, spacing: 1) {
                     Text("Keptora Pro")
-                        .font(.caption.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.bold))
                         .foregroundStyle(KeptoraDesign.success)
+                    Text("Lifetime Unlocked")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(KeptoraDesign.secondaryInk)
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Button {
-                    store.presentPaywall(.settings)
-                } label: {
-                    Label("Unlock Keptora Pro", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(KeptoraDesign.accentFill)
-                .controlSize(.regular)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .accessibilityIdentifier("mac.paywall.open")
+                Spacer()
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(KeptoraDesign.success.opacity(0.08))
+            )
+            .accessibilityIdentifier("mac.pro.unlockedBadge")
+        } else {
+            Button {
+                store.presentPaywall(.settings)
+            } label: {
+                HStack(spacing: 8) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(KeptoraDesign.iconGradient)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 26, height: 26)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Unlock Keptora Pro")
+                            .font(.system(.subheadline, design: .rounded).weight(.bold))
+                            .foregroundStyle(.primary)
+                        Text("Unlimited cleanup & tools")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(KeptoraDesign.secondaryInk)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            reduceTransparency
+                                ? AnyShapeStyle(KeptoraDesign.elevated)
+                                : AnyShapeStyle(.ultraThinMaterial.opacity(0.6))
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(KeptoraDesign.borderGradient, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("mac.paywall.open")
         }
-        .background(
-            reduceTransparency
-                ? AnyShapeStyle(KeptoraDesign.elevated)
-                : AnyShapeStyle(.ultraThinMaterial.opacity(0.4))
-        )
     }
 
     @ViewBuilder

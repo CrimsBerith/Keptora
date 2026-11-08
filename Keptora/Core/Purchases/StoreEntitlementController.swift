@@ -32,11 +32,16 @@ final class StoreEntitlementController: ObservableObject {
                 guard let self else { return }
                 switch result {
                 case .verified(let transaction):
-                    await self.refreshEntitlement()
-                    await transaction.finish()
-                    if self.isLifetimeUnlocked {
-                        self.isShowingPaywall = false
+                    if transaction.productID == Self.lifetimeProductID {
+                        if transaction.revocationDate != nil {
+                            self.isLifetimeUnlocked = false
+                        } else {
+                            self.isLifetimeUnlocked = true
+                            self.isShowingPaywall = false
+                        }
                     }
+                    await transaction.finish()
+                    await self.refreshEntitlement()
                 case .unverified(let transaction, let error):
                     self.statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
                     await transaction.finish()
@@ -162,10 +167,13 @@ final class StoreEntitlementController: ObservableObject {
             switch try await lifetimeProduct.purchase() {
             case .success(let verification):
                 let transaction = try verified(verification)
-                await refreshEntitlement()
+                if transaction.productID == Self.lifetimeProductID && transaction.revocationDate == nil {
+                    isLifetimeUnlocked = true
+                    isShowingPaywall = false
+                }
                 await transaction.finish()
+                await refreshEntitlement()
                 statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
-                isShowingPaywall = false
             case .pending:
                 statusMessage = L10n.tr("Purchase is pending approval.")
             case .userCancelled:
@@ -206,13 +214,21 @@ final class StoreEntitlementController: ObservableObject {
 
     private func refreshEntitlement() async {
         var unlocked = false
+        var hasRevocation = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
-            guard transaction.productID == Self.lifetimeProductID,
-                  transaction.revocationDate == nil else { continue }
-            unlocked = true
+            guard transaction.productID == Self.lifetimeProductID else { continue }
+            if transaction.revocationDate != nil {
+                hasRevocation = true
+            } else {
+                unlocked = true
+            }
         }
-        isLifetimeUnlocked = unlocked
+        if hasRevocation {
+            isLifetimeUnlocked = false
+        } else if unlocked {
+            isLifetimeUnlocked = true
+        }
     }
 
     private func verified<T>(_ result: VerificationResult<T>) throws -> T {

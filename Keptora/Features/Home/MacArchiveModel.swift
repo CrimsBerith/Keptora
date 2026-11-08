@@ -219,6 +219,9 @@ final class MacArchiveModel: ObservableObject {
     }
     var adapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters) }
     private var scanAdapter: UnifiedLibraryAdapter { UnifiedLibraryAdapter(adapters: connectedAdapters, selectedSourceIDs: selectedSourceIDs) }
+    var isExactAnalyzing: Bool {
+        analyzing && sessionProgress.stages[.exact]?.isTerminal != true
+    }
     var reviewGroups: [LibraryReviewGroup] {
         if let cachedReviewGroups { return cachedReviewGroups }
         let groups = LibraryReviewGroup.combined(exact: exact, similar: similar + similarVideos, bursts: burstGroups)

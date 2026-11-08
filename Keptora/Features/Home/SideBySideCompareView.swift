@@ -47,12 +47,15 @@ struct SideBySideCompareView: View {
                 headerBar
                 Divider()
                 comparisonContent
-                    .padding(16)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 16)
                 if assets.count > 2 {
-                    Divider()
+                    Divider().opacity(0.6)
                     assetThumbnailStrip
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.top, 10)
+                        .padding(.bottom, 14)
                         .background {
                             if reduceTransparency {
                                 KeptoraDesign.canvas
@@ -189,6 +192,7 @@ struct SideBySideCompareView: View {
                 }
                 .buttonStyle(.bordered)
             }
+            .padding(.bottom, 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

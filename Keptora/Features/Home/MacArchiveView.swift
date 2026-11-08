@@ -143,7 +143,6 @@ struct MacSourceSetupView: View {
                         }.disabled(controlsDisabled)
                     }.padding(24)
                 }
-                Divider()
                 HStack {
                     Spacer()
                     Button {
@@ -153,7 +152,9 @@ struct MacSourceSetupView: View {
                         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(archive.isRequestingPhotosAccess)
                         .accessibilityIdentifier("mac.sourceSetup.continue")
                 }
-                .padding(18)
+                .padding(.horizontal, 22)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
                 .background {
                     if reduceTransparency {
                         KeptoraDesign.canvas
@@ -190,6 +191,7 @@ struct MacSourceSetupView: View {
     }
 }
 
+@MainActor
 struct MacArchiveView: View {
     @EnvironmentObject private var archive: MacArchiveModel
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -272,7 +274,9 @@ struct MacArchiveView: View {
                     if let status = archive.status { HStack { ProgressView().controlSize(.small); Text(status).font(.caption) } }
                     selectionActions
                 }
-                .padding(16)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 18)
                 .background {
                     if reduceTransparency {
                         KeptoraDesign.canvas
@@ -370,16 +374,16 @@ struct MacArchiveView: View {
             HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
                 .padding(.horizontal, 16).padding(.top, 10)
             filters
-            if finding == .copies { exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 8) }
+            if finding == .copies { exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 12) }
             if let message = archive.filterScopeMessage {
                 HStack(alignment: .top) {
                     Text(message).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
                     Button { archive.filterScopeMessage = nil } label: { Image(systemName: "xmark.circle").frame(width: 32, height: 32) }.help("Dismiss")
-                }.padding(.horizontal, 16)
+                }.padding(.horizontal, 16).padding(.bottom, 6)
             }
-            if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(KeptoraDesign.warning).padding(.horizontal, 16) }
+            if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(KeptoraDesign.warning).padding(.horizontal, 16).padding(.bottom, 6) }
             if archive.coverage.contains(where: { $0.error != nil }) || !archive.connectionErrors.isEmpty {
-                Button("Some sources have limited access. Manage Sources") { showAccessGuide = true }.font(.caption).padding(.bottom, 8)
+                Button("Some sources have limited access. Manage Sources") { showAccessGuide = true }.font(.caption).padding(.bottom, 12)
             }
         }
         .background {
@@ -455,12 +459,9 @@ struct MacArchiveView: View {
                         }
                     }
                     if archive.galleryContext.finding == .copies {
-                        VStack(alignment: .leading, spacing: 14) {
-                            exactBatchSelection
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
-                                ForEach(orderedVisible) { item in
-                                    archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
-                                }
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                            ForEach(orderedVisible) { item in
+                                archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
                             }
                         }.padding(20)
                     } else if smartOrder {
@@ -512,8 +513,9 @@ struct MacArchiveView: View {
     private var selectionActions: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 12) { secondarySelectionActions; Spacer(minLength: 12); reviewSelectionButton }
-            VStack(alignment: .leading, spacing: 8) { secondarySelectionActions; reviewSelectionButton }
+            VStack(alignment: .leading, spacing: 10) { secondarySelectionActions; reviewSelectionButton }
         }
+        .padding(.top, 2)
     }
     private var secondarySelectionActions: some View {
         ViewThatFits(in: .horizontal) {
@@ -550,7 +552,7 @@ struct MacArchiveView: View {
                     Text("Items suggested to keep and protected items stay unselected.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
                 }.padding(.bottom, 8)
             }
-        }.disabled(archive.busy || archive.loading || archive.analyzing)
+        }.disabled(archive.busy || archive.loading || archive.isExactAnalyzing)
     }
     private func groupActions(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset], itemCount: Int) -> some View {
         let remaining = candidates.filter { !archive.selection.contains($0.id) }.count
@@ -807,7 +809,7 @@ struct MacArchiveView: View {
             } else if archive.sessionProgress.isComplete {
                 scanResults
             }
-        }.padding(12).disabled(archive.busy)
+        }.padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 14).disabled(archive.busy)
     }
     @ViewBuilder private var scanControls: some View {
         if archive.analyzing && !archive.analysisPaused {
@@ -946,11 +948,14 @@ struct MacManualSelectionSheet: View {
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) { secondaryReviewActions; Spacer(minLength: 12); removeButton }
-                    VStack(alignment: .leading, spacing: 8) { secondaryReviewActions; removeButton }
+                    VStack(alignment: .leading, spacing: 10) { secondaryReviewActions; removeButton }
                 }
+                .padding(.top, 4)
             }
             .controlSize(.large)
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 24)
         }
         .frame(minWidth: 480, idealWidth: 650, minHeight: 480, idealHeight: 650).interactiveDismissDisabled(archive.busy)
         .onChange(of: reviewedItems) { leaveLinkedFiles = false }

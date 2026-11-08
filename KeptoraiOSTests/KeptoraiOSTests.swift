@@ -75,4 +75,12 @@ final class KeptoraiOSTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(group.assets.count, 2, "Duplicate groups must contain at least 2 assets.")
         }
     }
+
+    func testMobilePurchaseControllerInitialStateAndProductID() {
+        let controller = MobilePurchaseController()
+        XCTAssertEqual(MobilePurchaseController.productID, AppStoreConfiguration.defaultLifetimeProductID)
+        XCTAssertFalse(MobilePurchaseController.productID.isEmpty)
+        XCTAssertNil(controller.product)
+        XCTAssertFalse(controller.isWorking)
+    }
 }

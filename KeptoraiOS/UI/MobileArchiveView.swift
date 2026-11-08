@@ -376,6 +376,42 @@ struct MobileLibraryView: View {
                 } label: { Image(systemName: "ellipsis.circle").frame(minWidth: 44, minHeight: 44) }
                 .accessibilityLabel("Library options").accessibilityIdentifier("ios.library.options")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                if purchase.isUnlocked {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(MobileKeptoraDesign.accent)
+                        Text("PRO")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(MobileKeptoraDesign.accent)
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(MobileKeptoraDesign.accent.opacity(0.12), in: Capsule())
+                    .accessibilityLabel("Keptora Pro Unlocked")
+                    .accessibilityIdentifier("ios.topbar.proBadge")
+                } else {
+                    Button {
+                        store.present(.paywall)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12, weight: .bold))
+                            Text("PRO")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 6)
+                        .background(MobileKeptoraDesign.brandGradient, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .accessibilityLabel("Unlock Keptora Pro")
+                    .accessibilityIdentifier("ios.topbar.proButton")
+                }
+            }
         }
         .safeAreaInset(edge: .bottom) {
             if !store.selectedLibraryIDs.isEmpty || store.canUndoLibrarySelection {
@@ -478,6 +514,8 @@ struct MobileLibraryView: View {
     }
 
     @ViewBuilder private var unifiedReviewGallery: some View {
+        let candidatesByGroup = store.decisions.candidatesByGroup(store.reviewGroups)
+        let visibleIDs = Set(visible.map(\.id))
         var membership: [String: [LibraryReviewGroup]] = [:]
         let _ = {
             for group in store.reviewGroups {
@@ -489,6 +527,7 @@ struct MobileLibraryView: View {
         let keeperBadges = store.decisions.keeperBadgeKeys(in: store.reviewGroups)
         let blocks = LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
         let orderedAssets = blocks.flatMap(\.assets)
+        let groups = blocks.flatMap(\.groups)
         VStack(alignment: .leading, spacing: 10) {
             Text(LocalizedStringKey(filterCriteria.finding.titleKey)).font(.headline)
             LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
@@ -496,6 +535,9 @@ struct MobileLibraryView: View {
                     cell(asset, groups: membership[asset.id] ?? [], keeperBadge: keeperBadges[asset.id]).id(asset.id)
                 }
             }.scrollTargetLayout()
+            ForEach(groups) { group in
+                groupActions(group, candidates: (candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) }, itemCount: group.assets.filter { visibleIDs.contains($0.id) }.count)
+            }
         }
     }
 

@@ -20,8 +20,15 @@ final class MobilePurchaseController: ObservableObject {
                 guard let self else { return }
                 switch update {
                 case .verified(let transaction):
-                    await self.refreshEntitlement()
+                    if transaction.productID == Self.productID {
+                        if transaction.revocationDate != nil {
+                            self.isUnlocked = false
+                        } else {
+                            self.isUnlocked = true
+                        }
+                    }
                     await transaction.finish()
+                    await self.refreshEntitlement()
                 case .unverified(let transaction, let error):
                     self.statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
                     await transaction.finish()
@@ -60,8 +67,11 @@ final class MobilePurchaseController: ObservableObject {
         do {
             switch try await product.purchase() {
             case .success(.verified(let transaction)):
-                await refreshEntitlement()
+                if transaction.productID == Self.productID && transaction.revocationDate == nil {
+                    isUnlocked = true
+                }
                 await transaction.finish()
+                await refreshEntitlement()
                 statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
             case .success(.unverified(let transaction, let error)):
                 statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
@@ -104,12 +114,20 @@ final class MobilePurchaseController: ObservableObject {
 
     private func refreshEntitlement() async {
         var unlocked = false
+        var hasRevocation = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result,
-                  transaction.productID == Self.productID,
-                  transaction.revocationDate == nil else { continue }
-            unlocked = true
+                  transaction.productID == Self.productID else { continue }
+            if transaction.revocationDate != nil {
+                hasRevocation = true
+            } else {
+                unlocked = true
+            }
         }
-        isUnlocked = unlocked
+        if hasRevocation {
+            isUnlocked = false
+        } else if unlocked {
+            isUnlocked = true
+        }
     }
 }
