@@ -274,7 +274,7 @@ struct MacArchiveView: View {
             if let message = archive.filterScopeMessage {
                 HStack(alignment: .top) {
                     Text(message).font(.caption).foregroundStyle(.secondary)
-                    Button { archive.filterScopeMessage = nil } label: { Image(systemName: "xmark.circle").frame(width: 32, height: 32) }.help("Dismiss")
+                    Button { archive.filterScopeMessage = nil } label: { Image(systemName: "xmark.circle").frame(width: 32, height: 32) }.help("Dismiss").accessibilityLabel("Dismiss")
                 }.padding(.horizontal, 16)
             }
             if let message = archive.analysisCacheMessage { Text(message).font(.caption).foregroundStyle(KeptoraDesign.warning).padding(.horizontal, 16) }
@@ -356,7 +356,7 @@ struct MacArchiveView: View {
                                 let membership = archive.gallery.membership
                                 let keeperBadges = archive.gallery.keeperBadges
                                 Text(LocalizedStringKey(block.titleKey)).font(.headline)
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12, alignment: .top)], spacing: 12) {
                                     ForEach(block.assets) { item in archiveCell(item, groups: membership[item.id] ?? [], keeperBadge: keeperBadges[item.id]) }
                                 }
                                 ForEach(block.groups) { group in
@@ -365,7 +365,7 @@ struct MacArchiveView: View {
                             }
                         }.padding(20)
                     } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12)], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 250), spacing: 12, alignment: .top)], spacing: 12) {
                         ForEach(visible) { item in
                             archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
                         }
