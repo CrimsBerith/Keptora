@@ -1,11 +1,11 @@
-# Release Blockers — Keptora 1.0.2 (188)
+# Release Blockers — Keptora 1.0.3 (189)
 
 ## Status update (2026-11-09)
 
 - Resolved #1: macOS and iOS Debug + Release builds compile; KeptoraTests (32), KeptoraCore (127, 1 benchmark skipped) and KeptoraiOSTests (27/28; the real-Photos integration test needs simulator Photos access) pass.
 - Resolved #2: team `ZSRUTGX74S`, bundle `com.alfagolab.keptora`, product `com.keptora.app.pro.lifetime`.
 - Resolved #3 (URLs): marketing, privacy and support pages are live on alfagolab.com; support lists `support@alfagolab.com`.
-- Version raised to 1.0.2 (188) because 1.0.1 (186) / 1.0.2 (187) archives already exist.
+- Version raised to 1.0.3 (189): App Store Connect has already approved 1.0.2 on iOS and macOS.
 - StoreKit product descriptions now match the paywall (Pro removes the 100-item bulk suggestion limit). Mirror them in App Store Connect.
 - Remaining blockers are App Store Connect setup, device/sandbox QA, screenshots, archive validation and submission.
 
