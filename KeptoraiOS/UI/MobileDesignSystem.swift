@@ -12,7 +12,8 @@ enum MobileKeptoraDesign {
 
     // MARK: – Semantic Palette (Matching macOS Keptora Aurora)
     static let ink = Color(uiColor: .label)
-    static let secondaryInk = Color(uiColor: .secondaryLabel)
+    // Opaque secondary text stays legible on tinted panels as well as plain system surfaces.
+    static let secondaryInk = adaptive(light: (0.34, 0.34, 0.38), dark: (0.76, 0.76, 0.80))
     static let canvas = Color(uiColor: .systemGroupedBackground)
     static let elevated = Color(uiColor: .secondarySystemGroupedBackground)
 
@@ -26,6 +27,7 @@ enum MobileKeptoraDesign {
     static let cyan     = Color(red: 0.08, green: 0.67, blue: 0.88)
     static let coral    = Color(red: 0.98, green: 0.39, blue: 0.47)
     static let mint     = adaptive(light: (0.00, 0.42, 0.28), dark: (0.30, 0.85, 0.62))
+    static let mintFill = Color(red: 0.05, green: 0.50, blue: 0.35)
     static let success  = mint
     static let amber    = adaptive(light: (0.56, 0.30, 0.00), dark: (1.00, 0.72, 0.30))
     static let warning  = amber
@@ -109,16 +111,21 @@ enum MobileKeptoraDesign {
 // MARK: – Ambient Aurora Mesh Background
 
 struct MobileAuroraBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 MobileKeptoraDesign.pageGradient
-                glow(MobileKeptoraDesign.violet.opacity(0.14), max(proxy.size.width * 0.95, 340))
-                    .offset(x: proxy.size.width * 0.38, y: -proxy.size.height * 0.34)
-                glow(MobileKeptoraDesign.cyan.opacity(0.11), max(proxy.size.width * 0.85, 300))
-                    .offset(x: -proxy.size.width * 0.40, y: proxy.size.height * 0.32)
-                glow(MobileKeptoraDesign.coral.opacity(0.07), max(proxy.size.width * 0.65, 240))
-                    .offset(x: proxy.size.width * 0.20, y: proxy.size.height * 0.15)
+                if !reduceTransparency {
+                    glow(MobileKeptoraDesign.violet.opacity(colorScheme == .dark ? 0.18 : 0.12), max(proxy.size.width * 0.95, 340))
+                        .offset(x: proxy.size.width * 0.38, y: -proxy.size.height * 0.34)
+                    glow(MobileKeptoraDesign.cyan.opacity(colorScheme == .dark ? 0.15 : 0.09), max(proxy.size.width * 0.85, 300))
+                        .offset(x: -proxy.size.width * 0.40, y: proxy.size.height * 0.32)
+                    glow(MobileKeptoraDesign.coral.opacity(colorScheme == .dark ? 0.09 : 0.06), max(proxy.size.width * 0.65, 240))
+                        .offset(x: proxy.size.width * 0.20, y: proxy.size.height * 0.15)
+                }
             }
         }
         .ignoresSafeArea()
@@ -215,28 +222,141 @@ private struct MobileCheckShape: Shape {
     }
 }
 
+// MARK: – Glassmorphism System
+
+struct MobileGlassModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var cornerRadius: CGFloat = MobileKeptoraDesign.cardRadius
+    var tint: Color = MobileKeptoraDesign.accent
+    var isSelected: Bool = false
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                if reduceTransparency {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(isSelected ? tint.opacity(0.18) : Color(uiColor: .secondarySystemGroupedBackground))
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(
+                                colorScheme == .dark
+                                    ? Color.white.opacity(isSelected ? 0.08 : 0.03)
+                                    : Color.white.opacity(isSelected ? 0.50 : 0.35)
+                            )
+
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(tint.opacity(isSelected ? 0.14 : 0.04))
+                    }
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        borderShapeStyle,
+                        lineWidth: isSelected ? 1.5 : 1.0
+                    )
+                    .allowsHitTesting(false)
+            }
+            .shadow(
+                color: shadowColor,
+                radius: isSelected ? 16 : 10,
+                x: 0,
+                y: isSelected ? 6 : 3
+            )
+    }
+
+    private var borderShapeStyle: AnyShapeStyle {
+        if reduceTransparency {
+            if isSelected {
+                return AnyShapeStyle(tint)
+            }
+            return AnyShapeStyle(colorScheme == .dark ? Color.white.opacity(0.35) : Color.black.opacity(0.20))
+        }
+        if isSelected {
+            return AnyShapeStyle(selectedBorder)
+        }
+        return AnyShapeStyle(specularBorder)
+    }
+
+    private var shadowColor: Color {
+        if reduceTransparency {
+            return .clear
+        }
+        if isSelected {
+            return tint.opacity(colorScheme == .dark ? 0.28 : 0.16)
+        }
+        return Color.black.opacity(colorScheme == .dark ? 0.20 : 0.04)
+    }
+
+    private var specularBorder: LinearGradient {
+        if colorScheme == .dark {
+            return LinearGradient(
+                colors: [
+                    Color.white.opacity(0.30),
+                    tint.opacity(0.20),
+                    Color.white.opacity(0.04),
+                    Color.white.opacity(0.10)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            return LinearGradient(
+                colors: [
+                    Color.white.opacity(0.70),
+                    tint.opacity(0.22),
+                    Color.white.opacity(0.15),
+                    Color.black.opacity(0.03)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    private var selectedBorder: LinearGradient {
+        LinearGradient(
+            colors: [tint, MobileKeptoraDesign.violet, tint.opacity(0.60)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
+extension View {
+    /// Applies a refined frosted-glass surface with specular rim lighting, ambient shadow, and accessibility fallback.
+    func keptoraMobileGlass(
+        cornerRadius: CGFloat = MobileKeptoraDesign.cardRadius,
+        tint: Color = MobileKeptoraDesign.accent,
+        isSelected: Bool = false
+    ) -> some View {
+        modifier(MobileGlassModifier(cornerRadius: cornerRadius, tint: tint, isSelected: isSelected))
+    }
+}
+
 // MARK: – Reusable Premium Glassmorphic Card
 
 struct MobilePremiumCard<Content: View>: View {
     var tint: Color = MobileKeptoraDesign.accent
+    var cornerRadius: CGFloat = MobileKeptoraDesign.cardRadius
     private let content: Content
 
-    init(tint: Color = MobileKeptoraDesign.accent, @ViewBuilder content: () -> Content) {
+    init(tint: Color = MobileKeptoraDesign.accent, cornerRadius: CGFloat = MobileKeptoraDesign.cardRadius, @ViewBuilder content: () -> Content) {
         self.tint = tint
+        self.cornerRadius = cornerRadius
         self.content = content()
     }
 
     var body: some View {
         content
             .padding(18)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous))
-            .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.82), in: RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous)
-                    .stroke(MobileKeptoraDesign.borderGradient, lineWidth: 1)
-            }
-            .shadow(color: tint.opacity(0.09), radius: 22, y: 10)
-            .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
+            .keptoraMobileGlass(cornerRadius: cornerRadius, tint: tint)
     }
 }
 
@@ -262,6 +382,10 @@ struct MobileMetricTile: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(tint.opacity(0.14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(tint.opacity(0.26), lineWidth: 0.8)
+                    }
                 Image(systemName: systemImage)
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     .foregroundStyle(tint)
@@ -274,29 +398,16 @@ struct MobileMetricTile: View {
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
-                
+
                 Text(title)
                     .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     .lineLimit(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .background(tint.opacity(0.04), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.35), tint.opacity(0.24)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        }
-        .shadow(color: tint.opacity(0.08), radius: 14, y: 6)
+        .keptoraMobileGlass(cornerRadius: 18, tint: tint)
         .accessibilityElement(children: .combine)
     }
 }
@@ -308,6 +419,8 @@ struct MobileActionButtonStyle: ButtonStyle {
     var fillsWidth = false
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeBody(configuration: Configuration) -> some View {
         let tint = configuration.role == .destructive ? MobileKeptoraDesign.danger : MobileKeptoraDesign.accent
@@ -320,8 +433,76 @@ struct MobileActionButtonStyle: ButtonStyle {
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
                    maxWidth: fillsWidth ? .infinity : nil,
                    minHeight: MobileKeptoraDesign.minimumTouchTarget)
-            .background(tint.opacity(configuration.isPressed ? 0.18 : 0.09), in: RoundedRectangle(cornerRadius: 12))
-            .contentShape(RoundedRectangle(cornerRadius: 12))
+            .background(
+                tint.opacity(configuration.isPressed ? 0.18 : 0.09),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(
+                        reduceTransparency
+                            ? AnyShapeStyle(tint.opacity(0.35))
+                            : AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(colorScheme == .dark ? 0.28 : 0.65),
+                                        tint.opacity(0.20)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            ),
+                        lineWidth: 1
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .opacity(isEnabled ? 1 : 0.45)
+            .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
+    }
+}
+
+/// Refined Frosted-Glass action button for secondary mobile actions.
+struct MobileSleekActionButtonStyle: ButtonStyle {
+    var fillsWidth = false
+    var tint: Color = MobileKeptoraDesign.accent
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(isEnabled ? tint : Color.secondary.opacity(0.6))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
+                   maxWidth: fillsWidth ? .infinity : nil,
+                   minHeight: MobileKeptoraDesign.minimumTouchTarget)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(tint.opacity(configuration.isPressed ? 0.18 : 0.09))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(
+                        reduceTransparency
+                            ? AnyShapeStyle(tint.opacity(0.40))
+                            : AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(colorScheme == .dark ? 0.32 : 0.70),
+                                        tint.opacity(0.22)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            ),
+                        lineWidth: 1
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .opacity(isEnabled ? 1 : 0.45)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
     }
@@ -332,6 +513,7 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
     var tint = MobileKeptoraDesign.accentFill
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -348,15 +530,19 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
+                        reduceTransparency
+                            ? AnyShapeStyle(Color.white.opacity(0.60))
+                            : AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            ),
                         lineWidth: 1
                     )
             }
-            .shadow(color: tint.opacity(isEnabled ? (configuration.isPressed ? 0.15 : 0.24) : 0), radius: 8, y: 3)
+            .shadow(color: reduceTransparency ? .clear : tint.opacity(isEnabled ? (configuration.isPressed ? 0.15 : 0.24) : 0), radius: 8, y: 3)
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.98 : 1.0))
             .opacity(isEnabled ? (configuration.isPressed ? 0.92 : 1.0) : 0.45)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
@@ -389,42 +575,62 @@ struct MobilePillBadge: View {
     }
 }
 
-// MARK: – Motion (Reduce Motion aware)
 
-private struct MobileKeptoraAnimationModifier<Value: Equatable>: ViewModifier {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let animation: Animation
-    let value: Value
+// MARK: – Panel Modifier & GroupBox
 
-    func body(content: Content) -> some View {
-        content.animation(reduceMotion ? nil : animation, value: value)
+struct MobileGlassGroupBoxStyle: GroupBoxStyle {
+    var tint: Color = MobileKeptoraDesign.accent
+
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            configuration.label
+                .font(.headline)
+            configuration.content
+        }
+        .padding(16)
+        .keptoraMobileGlass(cornerRadius: MobileKeptoraDesign.cardRadius, tint: tint)
     }
 }
 
-// MARK: – Panel Modifier
-
 extension View {
-    /// Like `.animation(_:value:)`, but disabled when the user turned on Reduce Motion.
-    func keptoraAnimation<Value: Equatable>(_ animation: Animation, value: Value) -> some View {
-        modifier(MobileKeptoraAnimationModifier(animation: animation, value: value))
-    }
-
     func keptoraPanel(tint: Color = MobileKeptoraDesign.accent) -> some View {
         padding(18)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.82), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.40), tint.opacity(0.30), Color.primary.opacity(0.04)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
+            .keptoraMobileGlass(cornerRadius: 22, tint: tint)
+    }
+}
+
+// MARK: – Glass List/Form Row Background
+
+struct MobileGlassListRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    var tint: Color? = nil
+
+    var body: some View {
+        if reduceTransparency {
+            Color(uiColor: .secondarySystemGroupedBackground)
+        } else {
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                Rectangle()
+                    .fill(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.04)
+                            : Color.white.opacity(0.48)
                     )
+                if let tint {
+                    Rectangle()
+                        .fill(tint.opacity(0.08))
+                }
             }
-            .shadow(color: tint.opacity(0.09), radius: 22, y: 10)
-            .shadow(color: Color.black.opacity(0.04), radius: 8, y: 3)
+        }
+    }
+}
+
+extension View {
+    /// Applies a translucent frosted-glass material to List and Form rows with accessibility fallback.
+    func mobileGlassRow(tint: Color? = nil) -> some View {
+        listRowBackground(MobileGlassListRow(tint: tint))
     }
 }

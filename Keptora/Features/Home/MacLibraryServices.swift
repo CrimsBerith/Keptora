@@ -124,6 +124,7 @@ struct MacGalleryProjection {
         let qualityIDs = (context.quality ?? .all).ids(quality: quality, issues: issues)
         visible = assets.filter { item in
             (findingIDs?.contains(item.id) ?? true) && (qualityIDs?.contains(item.id) ?? true) &&
+            (!context.isScreenshotsOnly || item.context?.isScreenshot == true) &&
             (context.media == 0 || (context.media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (context.albumID.isEmpty || item.context?.albums.contains { $0.id == context.albumID } == true) &&
             (search.isEmpty || item.displayName.localizedCaseInsensitiveContains(search))
@@ -171,8 +172,13 @@ struct MacSessionHealthBanner: View {
                 Button(archive.persistenceHealth == .unreadable ? "Preserve Original and Save Current Session" : "Retry Saving") {
                     Task { await archive.repairPersistence() }
                 }.disabled(!archive.canRepairPersistence).accessibilityIdentifier("mac.session.repair")
-            }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Color.orange.opacity(0.12))
-                .accessibilityIdentifier("mac.session.health")
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .keptoraGlass(cornerRadius: 14, tint: KeptoraDesign.warning)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .accessibilityIdentifier("mac.session.health")
         }
     }
 }

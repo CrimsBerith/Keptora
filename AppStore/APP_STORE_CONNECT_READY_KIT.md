@@ -153,7 +153,7 @@ Demo Instructions:
 - Review exact duplicates; notice the keeper is locked and protected.
 - Review Safety Plan and commit to test local quarantine.
 
-Contact: support@alfagolab.com
+Contact: Kagan Kartal Babahan, support@alfagolab.com, +905308282598
 ```
 
 ---

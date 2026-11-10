@@ -28,6 +28,7 @@
 		62CE9E044EB575414420EC26 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */; };
 		62F08545038D1C5B36609E57 /* MobileLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F70571F43303158A051682 /* MobileLibraryView.swift */; };
 		6663D6780AC1C1B7725B6048 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A644FBE542DB8CB11EDBA79E /* Assets.xcassets */; };
+		715A33693093EEB400DA09FE /* SideBySideCompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715A33683093EEB400DA09FE /* SideBySideCompareView.swift */; };
 		74A040452123E3960456BF4A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A644FBE542DB8CB11EDBA79E /* Assets.xcassets */; };
 		75B3BC8F3596780C3CA05CCC /* SidebarRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81E19EA94178B31F1612EB08 /* SidebarRoute.swift */; };
 		7E2E9ABF3C87FEACF21C0C28 /* MobileOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA20DA12EE914B907307D05 /* MobileOnboardingView.swift */; };
@@ -43,12 +44,13 @@
 		9A0C2315B7FA578A107F0FB0 /* KeptoraUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A6B85E35727BB5026BB925 /* KeptoraUITests.swift */; };
 		9E443D00F1D0F03E6D432DCA /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C3D5EB4BA07723F5267078 /* DesignTokens.swift */; };
 		9E7B809929FE92A5C296BC30 /* MobileAssetThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC8C497949439681308A452B /* MobileAssetThumbnail.swift */; };
-		9E9AF04D9CF65EA6868F892F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D06AC0A9CE9D01ADB39F3D92 /* InfoPlist.strings */; };
 		9F2572857A3BAED3217DAF77 /* AssetDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35A8FEA04E501AACDAA3A477 /* AssetDescriptor.swift */; };
 		A12D04F6278CD5C6F5B44DB4 /* MobileHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69676A4C411DD7EE8237095 /* MobileHistoryView.swift */; };
 		A58610C59A1A9391201AD72F /* KeptoraiOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */; };
 		A6B806F9159AA81178505422 /* MacLibraryServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = B914D27DB91D8CEC081BEBF3 /* MacLibraryServices.swift */; };
+		C0F142BDD318CB4C648130BF /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */; };
 		C52A7D1EF462E27AC235B5AC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AE1278DFA4EA6E22DB0E92C /* InfoPlist.strings */; };
+		E9C0A74F2D88417A00000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AE1278DFA4EA6E22DB0E92C /* InfoPlist.strings */; };
 		D0FD1B7E2BAC4FBB6C274EED /* MacSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAD7FDB8D10D1183CC7707C9 /* MacSettingsView.swift */; };
 		D5A0B7F9001D6CD469E8CBA2 /* AccessPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDD9ADD26E13E7AA556A098 /* AccessPolicyTests.swift */; };
 		D9AD822D1748DA98FED51FC4 /* MobileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE6B3E20A313AC590D81BFBC /* MobileSettingsView.swift */; };
@@ -90,10 +92,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		01042D242456D3F194006741 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeptoraiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
-		0378CD1B1337CB55EBA65F43 /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		10202F33BF679EC811E40EC5 /* MacArchiveModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveModel.swift; sourceTree = "<group>"; };
 		11D09C4A20DA834789E9E33A /* MobilePaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobilePaywallView.swift; sourceTree = "<group>"; };
 		21A07D0212ACD138CAD229FE /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -110,18 +110,20 @@
 		50E774654B7B6226883187D4 /* MobileDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileDesignSystem.swift; sourceTree = "<group>"; };
 		51A67311226C96284F4B89DA /* StoreEntitlementController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreEntitlementController.swift; sourceTree = "<group>"; };
 		53406219D4FB25D5BA694E94 /* KeptoraTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeptoraTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		573358EB00CA10450884EC53 /* KeptoraiOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KeptoraiOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		573358EB00CA10450884EC53 /* KeptoraiOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeptoraiOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5883DE01B18E906F673AE422 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		613069B0E9EE5A3652896BEB /* PluralLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluralLocalizationTests.swift; sourceTree = "<group>"; };
 		672A8A48D93117012C00A077 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		676187D00848EA2167E9F517 /* MainRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainRootView.swift; sourceTree = "<group>"; };
-		6761B45D22452CD3D24296FD /* Keptora.storekit */ = {isa = PBXFileReference; path = Keptora.storekit; sourceTree = "<group>"; };
+		6761B45D22452CD3D24296FD /* Keptora.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Keptora.storekit; sourceTree = "<group>"; };
 		6A8E980E951F9FD5A36B3F0C /* AccessPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessPolicy.swift; sourceTree = "<group>"; };
+		715A33683093EEB400DA09FE /* SideBySideCompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideBySideCompareView.swift; sourceTree = "<group>"; };
 		73AABC11321789E7943CC9B0 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		790ACE72A777FF388A7B974C /* VolumeIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeIdentity.swift; sourceTree = "<group>"; };
-		7C45ED0F97908516DA693A50 /* KeptoraiOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KeptoraiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7C45ED0F97908516DA693A50 /* Keptora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keptora.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81E19EA94178B31F1612EB08 /* SidebarRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarRoute.swift; sourceTree = "<group>"; };
-		91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
 		9AAB7266C8270E5B171FB408 /* MobileArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileArchiveView.swift; sourceTree = "<group>"; };
 		A644FBE542DB8CB11EDBA79E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA8A8F7F6BE81F610420897D /* Keptora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keptora.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -140,11 +142,9 @@
 		C8C58F1AC3180E8D9825200A /* MobileKeptoraStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileKeptoraStore.swift; sourceTree = "<group>"; };
 		D2329B10C41146459D9F4F4F /* KeptoraiOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraiOSUITests.swift; sourceTree = "<group>"; };
 		D9C2BD72DE85B07B28F8DFD2 /* MobileTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileTips.swift; sourceTree = "<group>"; };
-		D9FB23E410776C716154AA58 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		DAF74F5CC8839E3307733FF0 /* StoreKitEntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitEntitlementTests.swift; sourceTree = "<group>"; };
 		E1C3D5EB4BA07723F5267078 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		E902F7C94B03B002D8515AF5 /* MacArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacArchiveView.swift; sourceTree = "<group>"; };
-		EEE9ACA1F6467CBBF836C6A3 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		FA6D7EAB98E9F77A4ED67CC4 /* ColorContrastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorContrastTests.swift; sourceTree = "<group>"; };
 		FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeptoraiOSTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -209,7 +209,6 @@
 		3C3B9A32672717CDE084699E /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				D06AC0A9CE9D01ADB39F3D92 /* InfoPlist.strings */,
 				A644FBE542DB8CB11EDBA79E /* Assets.xcassets */,
 				6761B45D22452CD3D24296FD /* Keptora.storekit */,
 				016DA04EFC29D36785EEEE2B /* Localizable.xcstrings */,
@@ -342,7 +341,7 @@
 			isa = PBXGroup;
 			children = (
 				AA8A8F7F6BE81F610420897D /* Keptora.app */,
-				7C45ED0F97908516DA693A50 /* KeptoraiOS.app */,
+				7C45ED0F97908516DA693A50 /* Keptora.app */,
 				573358EB00CA10450884EC53 /* KeptoraiOSTests.xctest */,
 				0076DBFB149089C84647B3D2 /* KeptoraiOSUITests.xctest */,
 				53406219D4FB25D5BA694E94 /* KeptoraTests.xctest */,
@@ -368,6 +367,7 @@
 				E902F7C94B03B002D8515AF5 /* MacArchiveView.swift */,
 				B914D27DB91D8CEC081BEBF3 /* MacLibraryServices.swift */,
 				AB3B580F106A42DF1476F8F4 /* MacPhotosLibraryView.swift */,
+				715A33683093EEB400DA09FE /* SideBySideCompareView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -388,6 +388,7 @@
 				3E3BD3F0BFD823252D556F91 /* KeptoraiOSEdgeCaseTests.swift */,
 				FDE3345032148E667A5BC64A /* KeptoraiOSTests.swift */,
 				613069B0E9EE5A3652896BEB /* PluralLocalizationTests.swift */,
+				97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */,
 			);
 			path = KeptoraiOSTests;
 			sourceTree = "<group>";
@@ -458,7 +459,7 @@
 				B24870071C26701538012E60 /* KeptoraCore */,
 			);
 			productName = KeptoraiOS;
-			productReference = 7C45ED0F97908516DA693A50 /* KeptoraiOS.app */;
+			productReference = 7C45ED0F97908516DA693A50 /* Keptora.app */;
 			productType = "com.apple.product-type.application";
 		};
 		55660543026B6BEF237FCE22 /* KeptoraiOSUITests */ = {
@@ -525,7 +526,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					031067D391AC8B857E322EBB = {
 						DevelopmentTeam = ZSRUTGX74S;
@@ -610,7 +611,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				74A040452123E3960456BF4A /* Assets.xcassets in Resources */,
-				9E9AF04D9CF65EA6868F892F /* InfoPlist.strings in Resources */,
+				E9C0A74F2D88417A00000001 /* InfoPlist.strings in Resources */,
 				8E5298D7C5F1390EAB394FA1 /* Localizable.xcstrings in Resources */,
 				606F5A4A6BAF41E7039F94D5 /* PrivacyInfo.xcprivacy in Resources */,
 			);
@@ -642,6 +643,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				35659DEC6824D9D374A3D3BD /* AccessPolicy.swift in Sources */,
+				715A33693093EEB400DA09FE /* SideBySideCompareView.swift in Sources */,
 				9F2572857A3BAED3217DAF77 /* AssetDescriptor.swift in Sources */,
 				9E443D00F1D0F03E6D432DCA /* DesignTokens.swift in Sources */,
 				8D69D4AAB1CE665E077AB34A /* KeptoraApp.swift in Sources */,
@@ -667,6 +669,7 @@
 				E403676CFC405153B3C2020B /* KeptoraiOSEdgeCaseTests.swift in Sources */,
 				A58610C59A1A9391201AD72F /* KeptoraiOSTests.swift in Sources */,
 				EB732CAE33C12DCE937C88A7 /* PluralLocalizationTests.swift in Sources */,
+				C0F142BDD318CB4C648130BF /* ThumbnailCacheTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -736,24 +739,46 @@
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
 		};
-		D06AC0A9CE9D01ADB39F3D92 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				EEE9ACA1F6467CBBF836C6A3 /* de */,
-				01042D242456D3F194006741 /* en */,
-				D9FB23E410776C716154AA58 /* fr */,
-				0378CD1B1337CB55EBA65F43 /* tr */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		05AA1E84735C484A6112C521 /* ReleaseTesting */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Keptora/Resources/Keptora.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 188;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Keptora/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				MARKETING_VERSION = 1.0.2;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = "-lsqlite3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora;
+				PRODUCT_NAME = Keptora;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = ReleaseTesting;
+		};
 		166869C9DEA6A61A2AC44021 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -784,9 +809,12 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -807,6 +835,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -814,18 +843,38 @@
 			};
 			name = Debug;
 		};
+		1B6BA1890AB3CE40CDDCC8F1 /* ReleaseTesting */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.ios.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KeptoraiOS;
+			};
+			name = ReleaseTesting;
+		};
 		240592E02EC8DC1AB7093454 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Keptora/Resources/Keptora.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 188;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_TESTABILITY = NO;
@@ -835,7 +884,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MARKETING_VERSION = 1.0.2;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-lsqlite3";
@@ -850,6 +899,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -880,9 +931,12 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -896,6 +950,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -909,10 +964,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KeptoraiOS/Resources/KeptoraiOS.entitlements;
-				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 188;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KeptoraiOS/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -920,6 +974,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora;
 				PRODUCT_MODULE_NAME = KeptoraiOS;
@@ -932,21 +987,86 @@
 			};
 			name = Debug;
 		};
+		53E662DD7EAFDAE8804CFF71 /* ReleaseTesting */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) KEPTORA_TESTING";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+			};
+			name = ReleaseTesting;
+		};
 		7C0FD1679211781616B73784 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.tests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Keptora.app/Contents/MacOS/Keptora";
@@ -957,17 +1077,17 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.uitests;
 				SDKROOT = macosx;
 				TEST_TARGET_NAME = Keptora;
@@ -979,7 +1099,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -987,6 +1106,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.ios.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -994,21 +1114,42 @@
 			};
 			name = Debug;
 		};
-		AC138F3572849F0517AAA91A /* Release */ = {
+		AADD4C2E30FB657F8B40B894 /* ReleaseTesting */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Keptora;
+			};
+			name = ReleaseTesting;
+		};
+		AC138F3572849F0517AAA91A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.uitests;
 				SDKROOT = macosx;
 				TEST_TARGET_NAME = Keptora;
@@ -1020,7 +1161,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1028,6 +1168,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.ios.uitests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1035,18 +1176,67 @@
 			};
 			name = Debug;
 		};
+		B369F30C7E9D5AC4C07AC88C /* ReleaseTesting */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Keptora.app/Keptora";
+			};
+			name = ReleaseTesting;
+		};
+		B558BA369610E2E2EBDBFA33 /* ReleaseTesting */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KeptoraiOS/Resources/KeptoraiOS.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 188;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KeptoraiOS/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora;
+				PRODUCT_MODULE_NAME = KeptoraiOS;
+				PRODUCT_NAME = Keptora;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = ReleaseTesting;
+		};
 		C0E4C9C682DC47624C2D3D62 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Keptora/Resources/Keptora.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 188;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1056,9 +1246,9 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MARKETING_VERSION = 1.0.2;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora;
 				PRODUCT_NAME = Keptora;
@@ -1071,17 +1261,17 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.tests;
 				SDKROOT = macosx;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Keptora.app/Contents/MacOS/Keptora";
@@ -1093,7 +1283,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1101,6 +1290,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.ios.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1108,12 +1298,32 @@
 			};
 			name = Release;
 		};
+		F7B65985BC9727041AB9793D /* ReleaseTesting */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Keptora.app/Contents/MacOS/Keptora";
+			};
+			name = ReleaseTesting;
+		};
 		F805B008A7FC069A9AA6C45D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1121,6 +1331,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora.ios.uitests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1134,10 +1345,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KeptoraiOS/Resources/KeptoraiOS.entitlements;
-				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 188;
-				DEVELOPMENT_TEAM = ZSRUTGX74S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KeptoraiOS/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1145,6 +1355,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.alfagolab.keptora;
 				PRODUCT_MODULE_NAME = KeptoraiOS;
@@ -1165,6 +1376,7 @@
 			buildConfigurations = (
 				B110C12345DCC4CC91BD9734 /* Debug */,
 				F805B008A7FC069A9AA6C45D /* Release */,
+				1B6BA1890AB3CE40CDDCC8F1 /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1174,6 +1386,7 @@
 			buildConfigurations = (
 				8A1AE3287B049727B8138FC8 /* Debug */,
 				AC138F3572849F0517AAA91A /* Release */,
+				AADD4C2E30FB657F8B40B894 /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1183,6 +1396,7 @@
 			buildConfigurations = (
 				A91C2B6EE6CA76323824650D /* Debug */,
 				EC93903048CDBC0023EC0459 /* Release */,
+				B369F30C7E9D5AC4C07AC88C /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1192,6 +1406,7 @@
 			buildConfigurations = (
 				4F53477499E8A78E8F278571 /* Debug */,
 				FE580EEFB51D57A5894C045E /* Release */,
+				B558BA369610E2E2EBDBFA33 /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1201,6 +1416,7 @@
 			buildConfigurations = (
 				7C0FD1679211781616B73784 /* Debug */,
 				E2A70CD01D3BD2140D0ADCFA /* Release */,
+				F7B65985BC9727041AB9793D /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1210,6 +1426,7 @@
 			buildConfigurations = (
 				C0E4C9C682DC47624C2D3D62 /* Debug */,
 				240592E02EC8DC1AB7093454 /* Release */,
+				05AA1E84735C484A6112C521 /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1219,6 +1436,7 @@
 			buildConfigurations = (
 				166869C9DEA6A61A2AC44021 /* Debug */,
 				3DC08301C429A5C16F01D0B8 /* Release */,
+				53E662DD7EAFDAE8804CFF71 /* ReleaseTesting */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

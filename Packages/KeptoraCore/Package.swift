@@ -8,15 +8,19 @@ import Foundation
 let portableSources = ["LibraryModels.swift", "LibraryWorkflow.swift", "StableDigest.swift", "AnalysisModels.swift", "QualityAssessment.swift", "MediaFingerprintDiskCache.swift", "MediaWorkGate.swift", "LibrarySessionInfrastructure.swift"]
 let appleSources = (try? FileManager.default.contentsOfDirectory(atPath: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Sources/KeptoraCore").path))?.filter { !portableSources.contains($0) } ?? []
 let targets: [Target] = [
-    .target(name: "KeptoraCore", exclude: appleSources, sources: portableSources),
+    .target(name: "KeptoraCore", exclude: appleSources, sources: portableSources, resources: [.process("Resources")]),
     .testTarget(name: "KeptoraCoreTests", dependencies: ["KeptoraCore"], exclude: ["KeptoraCoreTests.swift", "MetadataDoctorTests.swift", "NativeAnalysisBenchmarkTests.swift"], sources: ["LibraryWorkflowTests.swift", "BulkCleanupPolicyTests.swift", "LibrarySessionInfrastructureTests.swift"])
 ]
 #else
 let targets: [Target] = [
-    .target(name: "KeptoraCore", linkerSettings: [
-        .linkedFramework("Photos"), .linkedFramework("ImageIO"),
-        .linkedFramework("AVFoundation"), .linkedFramework("Vision")
-    ]),
+    .target(
+        name: "KeptoraCore",
+        resources: [.process("Resources")],
+        linkerSettings: [
+            .linkedFramework("Photos"), .linkedFramework("ImageIO"),
+            .linkedFramework("AVFoundation"), .linkedFramework("Vision")
+        ]
+    ),
     .testTarget(name: "KeptoraCoreTests", dependencies: ["KeptoraCore"])
 ]
 #endif

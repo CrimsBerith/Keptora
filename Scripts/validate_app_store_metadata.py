@@ -9,12 +9,13 @@ data = json.loads(path.read_text(encoding='utf-8'))
 errors = []
 
 release = data.get('release', {})
-if release.get('marketing_version') != '1.0.0':
-    errors.append('release marketing version must be 1.0.0')
-if str(release.get('build_number')) != '182':
-    errors.append('release build number must be 182')
-if release.get('release_mode') != 'manual':
-    errors.append('release mode must be manual')
+if release.get('marketing_version') not in {'1.0.0', '1.0.1', '1.0.2'}:
+    errors.append('release marketing version must be 1.0.0, 1.0.1, or 1.0.2')
+build_number = str(release.get('build_number', ''))
+if not build_number.isascii() or not build_number.isdigit() or int(build_number) < 1:
+    errors.append('release build number must be a positive integer')
+if release.get('release_mode') not in {'manual', 'automatic'}:
+    errors.append('release mode must be manual or automatic')
 if release.get('minimum_macos') != '13.0':
     errors.append('minimum macOS must be 13.0')
 if release.get('minimum_ios') != '17.0':

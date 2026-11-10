@@ -59,6 +59,7 @@ public enum MetadataDoctorEngine: Sendable {
     /// Creates a privacy-safe copy of an image by removing all GPS location dictionaries and personal creator tags.
     /// Handles in-place modifications atomically without data loss or corruption.
     public static func stripLocationData(from sourceURL: URL, destinationURL: URL) throws {
+        let originalAttributes = try? FileManager.default.attributesOfItem(atPath: sourceURL.path)
         guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
             throw CocoaError(.fileReadCorruptFile)
         }
@@ -97,10 +98,11 @@ public enum MetadataDoctorEngine: Sendable {
                 properties[kCGImagePropertyGPSDictionary] = kCFNull
                 
                 // Clean sensitive TIFF fields
-                var tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
-                tiff[kCGImagePropertyTIFFArtist] = kCFNull
-                tiff[kCGImagePropertyTIFFCopyright] = kCFNull
-                properties[kCGImagePropertyTIFFDictionary] = tiff
+                if var tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
+                    tiff[kCGImagePropertyTIFFArtist] = kCFNull
+                    tiff[kCGImagePropertyTIFFCopyright] = kCFNull
+                    properties[kCGImagePropertyTIFFDictionary] = tiff
+                }
                 
                 CGImageDestinationAddImageFromSource(destination, source, i, properties as CFDictionary)
             } else {
@@ -114,9 +116,17 @@ public enum MetadataDoctorEngine: Sendable {
             throw CocoaError(.fileWriteUnknown)
         }
         
+        if let originalAttributes {
+            var attributesToRestore: [FileAttributeKey: Any] = [:]
+            if let creation = originalAttributes[.creationDate] { attributesToRestore[.creationDate] = creation }
+            if let posix = originalAttributes[.posixPermissions] { attributesToRestore[.posixPermissions] = posix }
+            if let modDate = originalAttributes[.modificationDate] { attributesToRestore[.modificationDate] = modDate }
+            try? FileManager.default.setAttributes(attributesToRestore, ofItemAtPath: targetWriteURL.path)
+        }
+        
         if let tempURL {
             do {
-                _ = try FileManager.default.replaceItemAt(destinationURL, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly)
+                _ = try FileManager.default.replaceItemAt(destinationURL, withItemAt: tempURL, backupItemName: nil, options: [])
             } catch {
                 // Fallback for mount points where replaceItemAt is unsupported. The original is
                 // moved aside first so a failed move can be rolled back instead of losing it.

@@ -1,10 +1,12 @@
 # Keptora Privacy Policy
 
-**Effective date:** `[EFFECTIVE DATE]`  
-**Developer:** `[LEGAL ENTITY OR INDIVIDUAL NAME]`  
+**Effective date:** `2026-10-14`
+
+**Developer:** `Kağan Kartal Babahan`
+
 **Contact:** `support@alfagolab.com`
 
-This policy describes the current iPhone and Mac versions of Keptora. Replace every bracketed placeholder and publish this text at the privacy-policy URL entered in App Store Connect before release.
+This policy describes the current iPhone and Mac versions of Keptora.
 
 ## 1. Local-first operation
 
@@ -75,5 +77,4 @@ This policy may be updated when Keptora’s functionality, legal obligations or 
 
 ## 13. Contact
 
-Privacy questions: `support@alfagolab.com`  
-Postal or legal contact: `[LEGAL CONTACT ADDRESS, IF REQUIRED]`
+Privacy questions: `support@alfagolab.com`

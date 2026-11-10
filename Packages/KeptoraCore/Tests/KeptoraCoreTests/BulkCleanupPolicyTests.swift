@@ -237,6 +237,32 @@ final class BulkCleanupPolicyTests: XCTestCase {
         let retained = await cache.get(asset: item("b"), algorithm: "exact")
         XCTAssertNil(evicted); XCTAssertEqual(retained?.digest, "b")
     }
+    func testDiskCacheKeyPreservedAcrossByteCountAndMutableFlags() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let cache = MediaFingerprintDiskCache(customCacheURL: url)
+
+        // Photo asset initially without byte count, unfavorited, no album
+        let initialPhoto = item("photo1", bytes: nil, file: false, album: false, favorite: false)
+        let entry = MediaFingerprintDiskCache.CacheEntry(assetID: "photo1", digest: "hash123", byteCount: 4096)
+        await cache.store(asset: initialPhoto, algorithm: "exact", entry: entry)
+        await cache.persistToDisk()
+
+        // 1. Query with discovered byte count
+        let discovered = initialPhoto.with(byteCount: .some(4096))
+        let hitDiscovered = await cache.get(asset: discovered, algorithm: "exact")
+        XCTAssertEqual(hitDiscovered?.digest, "hash123", "Discovered byteCount must not invalidate fingerprint disk cache")
+
+        // 2. Query with favorite toggled
+        let favorited = discovered.with(isFavorite: true)
+        let hitFavorited = await cache.get(asset: favorited, algorithm: "exact")
+        XCTAssertEqual(hitFavorited?.digest, "hash123", "Toggling favorite must not invalidate fingerprint disk cache")
+
+        // 3. Query with album membership toggled
+        let inAlbum = favorited.with(hasAlbumMembership: true)
+        let hitInAlbum = await cache.get(asset: inAlbum, algorithm: "exact")
+        XCTAssertEqual(hitInAlbum?.digest, "hash123", "Adding to album must not invalidate fingerprint disk cache")
+    }
 }
 
 private enum GateTestError: Error { case expected }

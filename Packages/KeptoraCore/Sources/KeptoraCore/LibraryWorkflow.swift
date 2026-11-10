@@ -276,26 +276,56 @@ extension UnifiedLibraryAdapter: SimilarityImageProviding, SimilarityVideoProvid
 #endif
 
 public struct LibraryReviewGroup: Identifiable, Sendable {
-    public enum Kind: Sendable { case exact, verySimilar, similar }
+    public enum Kind: Sendable { case exact, verySimilar, similar, burst }
     public let id: String
     public let kind: Kind
     public let assets: [UniversalMediaAsset]
     public let keeperID: String
-    public var titleKey: String { kind == .exact ? "Exact Copies" : kind == .verySimilar ? "Very Similar" : "Similar Photos" }
-    public var priority: Int { kind == .exact ? 0 : kind == .verySimilar ? 1 : 2 }
-    public static func combined(exact: [UniversalExactGroup], similar: [UniversalSimilarityGroup]) -> [Self] {
+    public var titleKey: String {
+        switch kind {
+        case .exact: return "Exact Copies"
+        case .verySimilar: return "Very Similar"
+        case .similar: return "Similar Photos"
+        case .burst: return "Rapid Bursts"
+        }
+    }
+    public var priority: Int {
+        switch kind {
+        case .exact: return 0
+        case .verySimilar: return 1
+        case .similar: return 2
+        case .burst: return 3
+        }
+    }
+    public static func combined(
+        exact: [UniversalExactGroup],
+        similar: [UniversalSimilarityGroup],
+        bursts: [BurstSequenceGroup] = []
+    ) -> [Self] {
         let exactSets = exact.map { Set($0.assets.map(\.id)) }
         var exactMembership: [String: [Int]] = [:]
         for (index, ids) in exactSets.enumerated() { for id in ids { exactMembership[id, default: []].append(index) } }
-        return exact.map { Self(id: $0.id, kind: .exact, assets: $0.assets, keeperID: $0.keeperID) } + similar.filter { group in
+        let exactGroups = exact.map { Self(id: $0.id, kind: .exact, assets: $0.assets, keeperID: $0.keeperID) }
+        let similarGroups = similar.filter { group in
             let ids = Set(group.assets.map(\.id))
             guard let first = ids.first else { return false }
             return !(exactMembership[first] ?? []).contains { ids.isSubset(of: exactSets[$0]) }
         }.map { Self(id: $0.id, kind: $0.strength == .verySimilar ? .verySimilar : .similar, assets: $0.assets, keeperID: $0.keeperID) }
+        let burstGroups = bursts.filter { burst in
+            let burstIDs = Set(burst.assets.map(\.id))
+            guard let first = burstIDs.first else { return false }
+            let isExactDuplicate = (exactMembership[first] ?? []).contains { burstIDs.isSubset(of: exactSets[$0]) }
+            return !isExactDuplicate
+        }.map { Self(id: $0.id, kind: .burst, assets: $0.assets, keeperID: $0.keeperID) }
+        return exactGroups + similarGroups + burstGroups
     }
 }
 
 extension UniversalMediaAsset {
+    public var formattedDuration: String {
+        let value = max(0, Int((duration ?? 0).rounded()))
+        return String(format: "%d:%02d", value / 60, value % 60)
+    }
     public func sourceBadgeKey(in sources: [LibrarySource]) -> String {
         if case .photoLibrary = reference { return "Photos" }
         return sources.first(where: { $0.id == sourceID })?.kind == .fileProvider || requiresNetwork ? "Cloud Files" : "Files"

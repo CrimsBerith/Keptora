@@ -4,6 +4,7 @@ import SwiftUI
 struct MobilePaywallView: View {
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         NavigationStack {
@@ -20,23 +21,23 @@ struct MobilePaywallView: View {
                                 RoundedRectangle(cornerRadius: 26, style: .continuous)
                                     .stroke(MobileKeptoraDesign.borderGradient, lineWidth: 1)
                             }
-                            .shadow(color: MobileKeptoraDesign.accentGlow, radius: 20, y: 8)
+                            .shadow(color: reduceTransparency ? .clear : MobileKeptoraDesign.accentGlow, radius: 20, y: 8)
                             .accessibilityHidden(true)
 
                         VStack(spacing: 6) {
                             Text("Keptora Pro")
                                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                                .foregroundStyle(MobileKeptoraDesign.brandGradient)
+                                .foregroundStyle(MobileKeptoraDesign.accent)
 
-                            Text("One purchase. No subscription.")
+                            Text("One purchase · No subscription")
                                 .font(.system(.title3, design: .rounded).weight(.medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         }
 
                         VStack(alignment: .leading, spacing: 16) {
                             // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
                             feature("Select suggestions in bulk without the 100-item limit", "infinity", MobileKeptoraDesign.violet)
-                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
+                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         }
                         .keptoraPanel(tint: MobileKeptoraDesign.violet)
 
@@ -47,8 +48,10 @@ struct MobilePaywallView: View {
                                 Group {
                                     if purchase.isWorking {
                                         ProgressView().tint(.white)
+                                    } else if purchase.isUnlocked {
+                                        Text("Purchased")
                                     } else if let product = purchase.product {
-                                        Text("Unlock for \(product.displayPrice)")
+                                        Text(L10n.format("Unlock for %@", product.displayPrice))
                                     } else {
                                         Text("Product unavailable")
                                     }
@@ -56,7 +59,8 @@ struct MobilePaywallView: View {
                                 .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(MobilePrimaryButtonStyle())
-                            .disabled(purchase.product == nil || purchase.isWorking)
+                            .modifier(MobilePaywallShimmer(isEnabled: !purchase.isUnlocked && !purchase.isWorking && purchase.product != nil))
+                            .disabled(purchase.product == nil || purchase.isWorking || purchase.isUnlocked)
                             .accessibilityIdentifier("ios.paywall.purchase")
 
                             if purchase.product == nil && !purchase.isUnlocked {
@@ -81,7 +85,7 @@ struct MobilePaywallView: View {
                             if let status = purchase.statusMessage {
                                 Text(status)
                                     .font(.system(.footnote, design: .rounded))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                                     .multilineTextAlignment(.center)
                                     .accessibilityIdentifier("ios.paywall.status")
                             }
@@ -106,6 +110,7 @@ struct MobilePaywallView: View {
                         .accessibilityIdentifier("ios.paywall.close")
                 }
             }
+            .interactiveDismissDisabled(purchase.isWorking)
             .onChange(of: purchase.isUnlocked) { _, unlocked in
                 if unlocked { dismiss() }
             }
@@ -139,10 +144,44 @@ struct MobilePaywallView: View {
                     .foregroundStyle(tint)
             }
             .frame(width: featureIconBoxSize, height: featureIconBoxSize)
+            .overlay {
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .stroke(tint.opacity(0.25), lineWidth: 0.8)
+            }
 
             Text(title)
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .foregroundStyle(.primary)
         }
+    }
+}
+
+private struct MobilePaywallShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1.0
+    var isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if isEnabled {
+                    GeometryReader { geo in
+                        LinearGradient(
+                            colors: [.clear, Color.white.opacity(0.24), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .rotationEffect(.degrees(25))
+                        .offset(x: phase * (geo.size.width + 120))
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .allowsHitTesting(false)
+                }
+            }
+            .onAppear {
+                guard isEnabled else { return }
+                withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false).delay(0.6)) {
+                    phase = 1.6
+                }
+            }
     }
 }

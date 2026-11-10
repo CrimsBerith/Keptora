@@ -54,13 +54,18 @@ public enum BurstSequenceAnalyzer: Sendable {
             let curr = datedAssets[i]
             
             let timeDiff = (curr.creationDate ?? .distantFuture).timeIntervalSince(prev.creationDate ?? .distantPast)
+            let clusterStart = currentCluster.first?.creationDate ?? prev.creationDate ?? .distantPast
+            let totalSpan = (curr.creationDate ?? .distantFuture).timeIntervalSince(clusterStart)
             
             // Check if within rapid sequence window and same dimension aspect ratio
-            let aspectPrev = Float(prev.pixelWidth) / Float(max(prev.pixelHeight, 1))
-            let aspectCurr = Float(curr.pixelWidth) / Float(max(curr.pixelHeight, 1))
-            let sameAspect = abs(aspectPrev - aspectCurr) < 0.05
+            let hasValidDimensions = prev.pixelWidth > 0 && prev.pixelHeight > 0 && curr.pixelWidth > 0 && curr.pixelHeight > 0
+            let sameAspect = !hasValidDimensions || {
+                let aspectPrev = Float(prev.pixelWidth) / Float(max(prev.pixelHeight, 1))
+                let aspectCurr = Float(curr.pixelWidth) / Float(max(curr.pixelHeight, 1))
+                return abs(aspectPrev - aspectCurr) < 0.05
+            }()
             
-            if timeDiff <= maximumInterval && sameAspect {
+            if timeDiff <= maximumInterval && totalSpan <= 20.0 && currentCluster.count < 30 && sameAspect {
                 currentCluster.append(curr)
             } else {
                 if currentCluster.count >= 2 {
@@ -74,7 +79,7 @@ public enum BurstSequenceAnalyzer: Sendable {
             clusters.append(currentCluster)
         }
         
-        return clusters.enumerated().map { index, cluster in
+        return clusters.map { cluster in
             let sortedMembers = cluster.sorted { lhs, rhs in
                 let lhsScore = UniversalKeeperPolicy.qualityScore(for: lhs)
                 let rhsScore = UniversalKeeperPolicy.qualityScore(for: rhs)
@@ -86,15 +91,18 @@ public enum BurstSequenceAnalyzer: Sendable {
                 
                 let lhsBytes = lhs.byteCount ?? 0
                 let rhsBytes = rhs.byteCount ?? 0
-                return lhsBytes > rhsBytes
+                if lhsBytes != rhsBytes { return lhsBytes > rhsBytes }
+                
+                return UniversalKeeperPolicy.prefersAsKeeper(lhs, rhs)
             }
             
             let startTime = cluster.first?.creationDate ?? Date()
             let endTime = cluster.last?.creationDate ?? Date()
             let span = max(0.1, endTime.timeIntervalSince(startTime))
+            let stableDigest = StableDigest.fnv1a64(cluster.map(\.id).sorted().joined(separator: "|"))
             
             return BurstSequenceGroup(
-                id: "burst:\(index):\(sortedMembers.first?.id ?? "")",
+                id: "burst:\(stableDigest)",
                 assets: sortedMembers,
                 keeperID: sortedMembers.first?.id ?? "",
                 timeSpanSeconds: span

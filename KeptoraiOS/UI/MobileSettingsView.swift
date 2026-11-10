@@ -37,7 +37,7 @@ struct MobileSettingsView: View {
                                 .font(.system(.headline, design: .rounded).weight(.bold))
                             Text(purchase.isUnlocked ? LocalizedStringKey("Lifetime unlocked") : LocalizedStringKey("Free version active"))
                                 .font(.system(.caption, design: .rounded))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         }
 
                         Spacer()
@@ -69,14 +69,16 @@ struct MobileSettingsView: View {
                     if let status = purchase.statusMessage {
                         Text(status)
                             .font(.system(.footnote, design: .rounded))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     }
                 }
                 .padding(.vertical, 4)
             } header: {
                 Text("Keptora Pro")
                     .font(MobileKeptoraDesign.labelFont)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow(tint: MobileKeptoraDesign.accent)
 
             Section {
                 LabeledContent("Permission", value: permissionLabel)
@@ -87,12 +89,14 @@ struct MobileSettingsView: View {
                 if store.authorization == .limited {
                     Text("Keptora scans only the photos you selected. You can change access in Settings > Privacy & Security > Photos.")
                         .font(.system(.footnote, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                 }
             } header: {
                 Text("Photos Access")
                     .font(MobileKeptoraDesign.labelFont)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 LabeledContent(L10n.tr("Photo upload")) { Text(L10n.tr("Never")) }
@@ -109,7 +113,9 @@ struct MobileSettingsView: View {
             } header: {
                 Text(L10n.tr("Privacy"))
                     .font(MobileKeptoraDesign.labelFont)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 Picker("Language", selection: $selectedLanguage) {
@@ -121,7 +127,9 @@ struct MobileSettingsView: View {
             } header: {
                 Text("Language")
                     .font(MobileKeptoraDesign.labelFont)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 Button(role: .destructive) {
@@ -153,12 +161,14 @@ struct MobileSettingsView: View {
                 if cacheCleared {
                     Label("Cache cleared.", systemImage: "checkmark.circle")
                         .font(.system(.footnote, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                 }
             } header: {
                 Text("Maintenance")
                     .font(MobileKeptoraDesign.labelFont)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
 
             Section {
                 Button {
@@ -177,11 +187,13 @@ struct MobileSettingsView: View {
                 LabeledContent("Version", value: appVersionLabel)
                 Text("Keptora by AlfagoLab")
                     .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             } header: {
                 Text("About")
                     .font(MobileKeptoraDesign.labelFont)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
             }
+            .mobileGlassRow()
         }
         .scrollContentBackground(.hidden)
         .background(MobileAuroraBackground())

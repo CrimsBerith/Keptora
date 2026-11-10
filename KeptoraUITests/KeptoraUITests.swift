@@ -6,6 +6,30 @@ final class KeptoraUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testAccessibilityAuditLibraryAndRemovalReview() throws {
+        guard ProcessInfo.processInfo.environment["KEPTORA_ACCESSIBILITY_AUDIT"] == "1" else {
+            throw XCTSkip("Full accessibility diagnostics: run with TEST_RUNNER_KEPTORA_ACCESSIBILITY_AUDIT=1")
+        }
+        guard #available(macOS 14.0, *) else { throw XCTSkip("Accessibility audits require macOS 14 or later") }
+        continueAfterFailure = true
+        let app = launchUnifiedMacFixture()
+        try audit(app)
+        let asset = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "mac.archive.asset.")).firstMatch
+        XCTAssertTrue(asset.waitForExistence(timeout: 10))
+        asset.click()
+        app.buttons["mac.archive.reviewSelection"].click()
+        XCTAssertTrue(app.staticTexts["Review Selection"].waitForExistence(timeout: 5))
+        try audit(app)
+    }
+
+    @available(macOS 14.0, *)
+    private func audit(_ app: XCUIApplication) throws {
+        try app.performAccessibilityAudit { issue in
+            print("AXISSUE: \(issue.compactDescription) | \(issue.element?.debugDescription ?? "No element")")
+            return false
+        }
+    }
+
     private func launchSelectionFixture(language: String = "en", locale: String = "en_US") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -39,7 +63,7 @@ final class KeptoraUITests: XCTestCase {
         XCTAssertTrue(continueButton.isHittable)
         XCTAssertGreaterThanOrEqual(continueButton.frame.height, 32)
         XCTAssertTrue(app.windows.firstMatch.frame.contains(continueButton.frame))
-        continueButton.tap()
+        continueButton.click()
         XCTAssertFalse(app.buttons["mac.sourceSetup.continue"].waitForExistence(timeout: 1))
         XCTAssertTrue(app.windows.firstMatch.exists)
         app.terminate()
@@ -102,7 +126,13 @@ final class KeptoraUITests: XCTestCase {
         }
     }
     private func saveWindowShot(_ window: XCUIElement, name: String) {
-        let shot = XCTAttachment(screenshot: window.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+        let image = window.screenshot()
+        let shot = XCTAttachment(screenshot: image); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+        // Also write the PNG next to the other store assets so it can be uploaded without exporting the xcresult.
+        let output = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("AppStore/Screenshots/Mac/Raw")
+        try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        try? image.pngRepresentation.write(to: output.appendingPathComponent(name + ".png"))
     }
 
     private func launchUnifiedMacFixture(conflict: Bool = false) -> XCUIApplication {

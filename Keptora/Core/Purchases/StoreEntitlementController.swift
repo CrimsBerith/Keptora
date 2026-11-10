@@ -27,12 +27,21 @@ final class StoreEntitlementController: ObservableObject {
         self.defaults = defaults
         reviewedAssetIDs = Set(defaults.stringArray(forKey: reviewedAssetsKey) ?? [])
         transactionUpdatesTask = Task { [weak self] in
+            await self?.refreshEntitlement()
             for await result in Transaction.updates {
                 guard let self else { return }
                 switch result {
                 case .verified(let transaction):
-                    await self.refreshEntitlement()
+                    if transaction.productID == Self.lifetimeProductID {
+                        if transaction.revocationDate != nil {
+                            self.isLifetimeUnlocked = false
+                        } else {
+                            self.isLifetimeUnlocked = true
+                            self.isShowingPaywall = false
+                        }
+                    }
                     await transaction.finish()
+                    await self.refreshEntitlement()
                 case .unverified(let transaction, let error):
                     self.statusMessage = L10n.format("Unverified transaction: %@", error.localizedDescription)
                     await transaction.finish()
@@ -65,6 +74,14 @@ final class StoreEntitlementController: ObservableObject {
     }
 
     func canReview(_ assetID: AssetID) -> Bool { accessPolicy.allowsReview(assetID: assetID) }
+
+    func authorizeSafetyPlan(_ assetIDs: [AssetID]) -> Bool {
+        guard accessPolicy.allowsSafetyPlan(assetIDs: assetIDs) else {
+            presentPaywall(.reviewLimit)
+            return false
+        }
+        return true
+    }
 
     func authorizeReview(_ assetID: AssetID) -> Bool {
         guard accessPolicy.allowsReview(assetID: assetID) else {
@@ -130,15 +147,18 @@ final class StoreEntitlementController: ObservableObject {
         await refreshEntitlement()
         do {
             lifetimeProduct = try await Product.products(for: [Self.lifetimeProductID]).first
-            if lifetimeProduct == nil {
+            if lifetimeProduct == nil && !isLifetimeUnlocked {
                 statusMessage = L10n.tr("Keptora Pro is unavailable right now. Check your internet connection and try again.")
             }
         } catch {
-            statusMessage = L10n.format("Purchases could not be refreshed: %@", error.localizedDescription)
+            if !isLifetimeUnlocked {
+                statusMessage = L10n.format("Purchases could not be refreshed: %@", error.localizedDescription)
+            }
         }
     }
 
     func purchaseLifetime() async {
+        guard !isWorking else { return }
         guard let lifetimeProduct, !isLifetimeUnlocked else { return }
         isWorking = true
         defer { isWorking = false }
@@ -147,10 +167,13 @@ final class StoreEntitlementController: ObservableObject {
             switch try await lifetimeProduct.purchase() {
             case .success(let verification):
                 let transaction = try verified(verification)
-                await refreshEntitlement()
+                if transaction.productID == Self.lifetimeProductID && transaction.revocationDate == nil {
+                    isLifetimeUnlocked = true
+                    isShowingPaywall = false
+                }
                 await transaction.finish()
+                await refreshEntitlement()
                 statusMessage = L10n.tr("Keptora Pro is unlocked on this Apple Account.")
-                isShowingPaywall = false
             case .pending:
                 statusMessage = L10n.tr("Purchase is pending approval.")
             case .userCancelled:
@@ -164,9 +187,19 @@ final class StoreEntitlementController: ObservableObject {
     }
 
     func restorePurchases() async {
+        guard !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
         statusMessage = nil
+
+        // Resolve cached local entitlements first to avoid password modal and allow offline restore
+        await refreshEntitlement()
+        if isLifetimeUnlocked {
+            statusMessage = L10n.tr("Purchase restored.")
+            isShowingPaywall = false
+            return
+        }
+
         do {
             try await AppStore.sync()
             await refreshEntitlement()
@@ -181,13 +214,21 @@ final class StoreEntitlementController: ObservableObject {
 
     private func refreshEntitlement() async {
         var unlocked = false
+        var hasRevocation = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
-            guard transaction.productID == Self.lifetimeProductID,
-                  transaction.revocationDate == nil else { continue }
-            unlocked = true
+            guard transaction.productID == Self.lifetimeProductID else { continue }
+            if transaction.revocationDate != nil {
+                hasRevocation = true
+            } else {
+                unlocked = true
+            }
         }
-        isLifetimeUnlocked = unlocked
+        if hasRevocation {
+            isLifetimeUnlocked = false
+        } else if unlocked {
+            isLifetimeUnlocked = true
+        }
     }
 
     private func verified<T>(_ result: VerificationResult<T>) throws -> T {

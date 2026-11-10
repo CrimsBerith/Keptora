@@ -3,6 +3,8 @@ import SwiftUI
 
 struct MainRootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var navigation: MacNavigation
     @EnvironmentObject private var store: StoreEntitlementController
@@ -14,24 +16,32 @@ struct MainRootView: View {
     @State private var startupSourcesPrepared = false
     @State private var showSourceSetup = false
 
-    private let primaryRoutes: [SidebarRoute] = [.archive, .history]
+    private let libraryRoutes: [SidebarRoute] = [.archive]
+    private let cleanupRoutes: [SidebarRoute] = [.exact, .similar, .bursts, .screenshots, .videos, .review]
+    private let activityRoutes: [SidebarRoute] = [.history]
 
     var body: some View {
         NavigationSplitView {
             VStack(spacing: 0) {
                 brandHeader
 
+                proHeader
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 6)
+
                 VStack(alignment: .leading, spacing: 2) {
-                    sidebarSection("Workspace", routes: primaryRoutes)
+                    sidebarSection("Library", routes: libraryRoutes)
+                    sidebarSection("Smart Cleanup", routes: cleanupRoutes)
+                    sidebarSection("Activity", routes: activityRoutes)
 
                     Spacer(minLength: 0)
                 }
-                .padding(.top, 8)
+                .padding(.top, 4)
                 .padding(.horizontal, 9)
-
-                proFooter
             }
             .background(KeptoraSidebarBackdrop())
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Workspace")
             .navigationSplitViewColumnWidth(min: 184, ideal: 208, max: 232)
         } detail: {
             ZStack {
@@ -83,6 +93,7 @@ struct MainRootView: View {
         .frame(minWidth: 900, minHeight: 650)
         .background(MacMainWindowMarker())
         .accessibilityElement(children: .contain)
+        .accessibilityLabel("Keptora")
         .accessibilityIdentifier("keptora.root")
         .sheet(isPresented: store.paywallBinding(for: .main)) {
             PaywallView().environmentObject(store)
@@ -96,6 +107,7 @@ struct MainRootView: View {
             presentStartupIfNeeded()
         }
         .keptoraOnChange(of: sourceSetupCompleted) { _ in presentStartupIfNeeded() }
+        .keptoraOnChange(of: navigation.selectedRoute) { newRoute in applyRoute(newRoute) }
         .onAppear {
             archive.undoManager = undoManager
         }
@@ -126,10 +138,10 @@ struct MainRootView: View {
                 Text("KEPTORA")
                     .font(.system(.headline, design: .rounded).weight(.bold))
                     .tracking(1.5)
-                    .foregroundStyle(KeptoraDesign.accentGradient)
+                    .foregroundStyle(KeptoraDesign.accent)
                 Text("Photo & video intelligence")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(KeptoraDesign.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -144,7 +156,7 @@ struct MainRootView: View {
                 .textCase(.uppercase)
                 .font(.system(.caption2, design: .rounded, weight: .bold))
                 .tracking(1.2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(KeptoraDesign.secondaryInk)
                 .padding(.horizontal, 18)
                 .padding(.bottom, 2)
                 .padding(.top, 10)
@@ -175,7 +187,20 @@ struct MainRootView: View {
                 Text(route.title)
                     .font(.system(.body, design: .rounded).weight(isSelected ? .semibold : .medium))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Spacer()
+                if let count = routeBadgeCount(route) {
+                    Text(verbatim: "\(count)")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(isSelected ? Color.white : KeptoraDesign.secondaryInk)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(
+                            isSelected ? Color.white.opacity(0.2) : Color.primary.opacity(0.06),
+                            in: Capsule()
+                        )
+                }
                 if isSelected {
                     Circle()
                         .fill(KeptoraDesign.cyan)
@@ -188,48 +213,167 @@ struct MainRootView: View {
             .padding(.vertical, 5)
             .background(
                 isSelected
-                    ? KeptoraDesign.accent.opacity(0.13)
-                    : (isHovered ? Color.primary.opacity(0.04) : Color.clear),
+                    ? (reduceTransparency ? KeptoraDesign.accent.opacity(0.24) : KeptoraDesign.accent.opacity(0.16))
+                    : (isHovered ? (reduceTransparency ? Color.secondary.opacity(0.14) : Color.primary.opacity(0.06)) : Color.clear),
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .keptoraAnimation(KeptoraDesign.animFast, value: isHovered)
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? KeptoraDesign.accent.opacity(0.20) : Color.clear)
+                    .stroke(
+                        sidebarBorder(isSelected: isSelected, isHovered: isHovered),
+                        lineWidth: isSelected ? 1.5 : 1.0
+                    )
+                    .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hoveredRoute = $0 ? route : nil }
         .accessibilityIdentifier("mac.sidebar.\(route.rawValue)")
+        .accessibilityLabel(Text(routeBadgeCount(route).map { "\(route.localizedTitle), \($0) items" } ?? route.localizedTitle))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
+    private func sidebarBorder(isSelected: Bool, isHovered: Bool) -> AnyShapeStyle {
+        if reduceTransparency {
+            if isSelected { return AnyShapeStyle(KeptoraDesign.accent) }
+            if isHovered { return AnyShapeStyle(colorScheme == .dark ? Color.white.opacity(0.35) : Color.black.opacity(0.22)) }
+            return AnyShapeStyle(Color.clear)
+        }
+        if isSelected {
+            return AnyShapeStyle(LinearGradient(colors: [KeptoraDesign.cyan.opacity(0.65), KeptoraDesign.accent.opacity(0.40)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        if isHovered {
+            return AnyShapeStyle(LinearGradient(colors: [Color.white.opacity(colorScheme == .dark ? 0.24 : 0.60), Color.white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        return AnyShapeStyle(Color.clear)
+    }
+
+    private func routeBadgeCount(_ route: SidebarRoute) -> Int? {
+        switch route {
+        case .archive:
+            return archive.scopedAssets.count > 0 ? archive.scopedAssets.count : nil
+        case .exact:
+            let count = archive.gallery.findingCounts[.copies] ?? 0
+            return count > 0 ? count : nil
+        case .similar:
+            let count = archive.gallery.findingCounts[.verySimilar] ?? 0
+            return count > 0 ? count : nil
+        case .bursts:
+            let count = archive.gallery.findingCounts[.bursts] ?? 0
+            return count > 0 ? count : nil
+        case .screenshots:
+            let count = archive.scopedAssets.filter { $0.context?.isScreenshot == true }.count
+            return count > 0 ? count : nil
+        case .videos:
+            let count = archive.scopedAssets.filter { $0.mediaKind == .video }.count
+            return count > 0 ? count : nil
+        case .review:
+            let count = archive.gallery.findingCounts[.review] ?? 0
+            return count > 0 ? count : nil
+        case .history:
+            return archive.history.count > 0 ? archive.history.count : nil
+        }
+    }
+
+    private func applyRoute(_ route: SidebarRoute) {
+        archive.galleryContext.screenshotsOnly = (route == .screenshots)
+        switch route {
+        case .archive:
+            archive.galleryContext.finding = .all
+            archive.galleryContext.media = 0
+            archive.contextChanged()
+        case .exact:
+            archive.openFinding(.copies)
+        case .similar:
+            archive.openFinding(.verySimilar)
+        case .bursts:
+            archive.openFinding(.bursts)
+        case .screenshots:
+            archive.galleryContext.search = ""
+            archive.galleryContext.media = 0
+            archive.galleryContext.finding = .all
+            archive.contextChanged()
+        case .videos:
+            archive.galleryContext.search = ""
+            archive.galleryContext.media = 2
+            archive.galleryContext.finding = .all
+            archive.contextChanged()
+        case .review:
+            archive.openFinding(.review)
+        case .history:
+            break
+        }
+    }
+
     @ViewBuilder
-    private var proFooter: some View {
-        Divider()
+    private var proHeader: some View {
         if store.isLifetimeUnlocked {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(KeptoraDesign.success)
-                Text("Keptora Pro")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(KeptoraDesign.success)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Keptora Pro")
+                        .font(.system(.subheadline, design: .rounded).weight(.bold))
+                        .foregroundStyle(KeptoraDesign.success)
+                    Text("Lifetime Unlocked")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(KeptoraDesign.secondaryInk)
+                }
+                Spacer()
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(KeptoraDesign.success.opacity(0.08))
+            )
+            .accessibilityIdentifier("mac.pro.unlockedBadge")
         } else {
             Button {
                 store.presentPaywall(.settings)
             } label: {
-                Label("Unlock Keptora Pro", systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 8) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(KeptoraDesign.iconGradient)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 26, height: 26)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Unlock Keptora Pro")
+                            .font(.system(.subheadline, design: .rounded).weight(.bold))
+                            .foregroundStyle(.primary)
+                        Text("Unlimited cleanup & tools")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(KeptoraDesign.secondaryInk)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            reduceTransparency
+                                ? AnyShapeStyle(KeptoraDesign.elevated)
+                                : AnyShapeStyle(.ultraThinMaterial.opacity(0.6))
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(KeptoraDesign.borderGradient, lineWidth: 1)
+                )
             }
-            .buttonStyle(.borderedProminent)
-            .tint(KeptoraDesign.accentFill)
-            .controlSize(.regular)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .buttonStyle(.plain)
             .accessibilityIdentifier("mac.paywall.open")
         }
     }
@@ -237,8 +381,10 @@ struct MainRootView: View {
     @ViewBuilder
     private var routeDetail: some View {
         switch navigation.selectedRoute {
-        case .archive: MacArchiveView()
-        case .history: CombinedCleanupHistoryView()
+        case .archive, .exact, .similar, .bursts, .screenshots, .videos, .review:
+            MacArchiveView()
+        case .history:
+            CombinedCleanupHistoryView()
         }
     }
 }

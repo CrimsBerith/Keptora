@@ -49,7 +49,8 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
         let keys: Set<URLResourceKey> = [
             .isRegularFileKey, .isDirectoryKey, .isHiddenKey, .fileSizeKey,
             .creationDateKey, .contentModificationDateKey,
-            .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey
+            .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey,
+            .isSymbolicLinkKey
         ]
         let issues = EnumerationIssues()
         guard let enumerator = FileManager.default.enumerator(
@@ -71,7 +72,7 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
             let values: URLResourceValues?
             do { values = try url.resourceValues(forKeys: keys) }
             catch { issues.append(url.lastPathComponent + ": " + error.localizedDescription); continue }
-            guard values?.isRegularFile == true else { continue }
+            guard values?.isRegularFile == true, values?.isSymbolicLink != true else { continue }
             let kind: UniversalMediaKind = SupportedMediaExtensions.videos.contains(ext) ? .video : .image
             let cloudOnly = values?.isUbiquitousItem == true && values?.ubiquitousItemDownloadingStatus == .notDownloaded
             let metadata = kind == .image && !cloudOnly ? PhotoMetadataExtractor.extract(from: url) : nil

@@ -80,21 +80,36 @@ public struct AnalysisSessionProgress: Codable, Sendable {
 
 /// Persistent evidence is usable only when the source exposes a meaningful revision.
 public enum MediaRevisionPolicy {
-    public static func key(for asset: UniversalMediaAsset, algorithm: String) -> String? {
+    public static func key(for asset: UniversalMediaAsset, algorithm: String, stripNonIntrinsic: Bool = false) -> String? {
         guard let modified = asset.modificationDate, modified.timeIntervalSince1970.isFinite else { return nil }
         switch asset.reference {
-        case .file: guard let bytes = asset.byteCount, bytes >= 0, asset.fileRevision != nil else { return nil }
+        case .file:
+            if !stripNonIntrinsic {
+                guard let bytes = asset.byteCount, bytes >= 0, asset.fileRevision != nil else { return nil }
+            } else {
+                guard asset.fileRevision != nil else { return nil }
+            }
         case .photoLibrary: break
         }
         // JSON keeps subsecond precision; include all resource/selection-relevant metadata.
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         var revision = asset.with(sourceID: "", requiresNetwork: false)
+        if stripNonIntrinsic {
+            revision = revision.with(
+                byteCount: .some(nil),
+                isFavorite: false,
+                hasAlbumMembership: false
+            )
+        }
         // An overlapping root is a route, not a different content revision.
         if case .file(let url) = revision.reference {
             revision = revision.with(reference: .file(url.standardizedFileURL.resolvingSymlinksInPath()))
         }
         guard let data = try? encoder.encode(revision) else { return nil }
         return algorithm + ":" + data.base64EncodedString()
+    }
+    public static func fingerprintKey(for asset: UniversalMediaAsset, algorithm: String) -> String? {
+        key(for: asset, algorithm: algorithm, stripNonIntrinsic: true)
     }
     public static func same(_ lhs: UniversalMediaAsset, _ rhs: UniversalMediaAsset, algorithm: String) -> Bool {
         guard let a = key(for: lhs, algorithm: algorithm), let b = key(for: rhs, algorithm: algorithm) else { return false }
@@ -146,16 +161,23 @@ public actor LibrarySelectionArchive {
 }
 
 public enum LibraryFindingFilter: String, Codable, CaseIterable, Sendable, Identifiable {
-    case all, copies, verySimilar, review
+    case all, copies, verySimilar, bursts, review
     public var id: String { rawValue }
     public var titleKey: String {
-        switch self { case .all: return "All Items"; case .copies: return "Exact Copies"; case .verySimilar: return "Very Similar"; case .review: return "Worth Reviewing" }
+        switch self {
+        case .all: return "All Items"
+        case .copies: return "Exact Copies"
+        case .verySimilar: return "Very Similar"
+        case .bursts: return "Rapid Bursts"
+        case .review: return "Worth Reviewing"
+        }
     }
     public func ids(groups: [LibraryReviewGroup], quality: [String: QualityAssessment]) -> Set<String>? {
         switch self {
         case .all: return nil
         case .copies: return Set(groups.filter { $0.kind == .exact }.flatMap { $0.assets.map(\.id) })
         case .verySimilar: return Set(groups.filter { $0.kind == .verySimilar }.flatMap { $0.assets.map(\.id) })
+        case .bursts: return Set(groups.filter { $0.kind == .burst }.flatMap { $0.assets.map(\.id) })
         case .review: return Set(quality.filter { $0.value.needsReview }.keys).union(groups.filter { $0.kind == .similar }.flatMap { $0.assets.map(\.id) })
         }
     }

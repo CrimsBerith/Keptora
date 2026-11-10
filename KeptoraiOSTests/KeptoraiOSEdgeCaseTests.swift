@@ -5,6 +5,148 @@ import KeptoraCore
 @MainActor
 final class KeptoraiOSEdgeCaseTests: XCTestCase {
 
+    func testPartialRollbackPreservesRecoveryReceiptAndOnlyRemovesMovedItemsFromSelection() async throws {
+        let defaults = UserDefaults.standard
+        let keys = [AppStorageKeys.iOSCleanupHistory, "Keptora.ManualSelection.unified.iOS"]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let firstURL = root.appendingPathComponent("a.jpg"), secondURL = root.appendingPathComponent("b.jpg")
+        let firstBytes = Data("first original".utf8), secondBytes = Data("second original".utf8)
+        let occupiedBytes = Data("new file at original path; must not be overwritten".utf8)
+        try firstBytes.write(to: firstURL)
+        try secondBytes.write(to: secondURL)
+        let executor = FolderQuarantineExecutor(beforeQuarantineMove: { _, index in
+            guard index == 1 else { return }
+            try occupiedBytes.write(to: firstURL)
+            throw CocoaError(.fileWriteUnknown)
+        })
+        let store = MobileKeptoraStore(folderCleanup: executor)
+        store.connectLocalFolderForTesting(root)
+        await store.loadCatalogue()
+        let items = store.assets.sorted { $0.displayName < $1.displayName }
+        XCTAssertEqual(items.count, 2)
+        store.replaceAssetsForTesting(items)
+        store.selectedLibraryIDs = Set(items.map(\.id))
+
+        let removed = await store.cleanupLibrarySelection(expectedIDs: store.selectedLibraryIDs, reviewedAssets: items)
+
+        XCTAssertFalse(removed)
+        XCTAssertEqual(store.selectedLibraryIDs, [items[1].id])
+        XCTAssertTrue(store.errorMessage?.hasPrefix(L10n.format("Moved: %lld items. Not moved: %lld items. See History for recovery.", 1, 1)) == true)
+        let receipt = try XCTUnwrap(store.history.first { $0.folderRecord?.sourceRoot == root })
+        XCTAssertEqual(receipt.itemCount, 1)
+        XCTAssertEqual(receipt.folderRecord?.movedCount, 1)
+        let operation = try XCTUnwrap(receipt.folderRecord?.operations.first { $0.state == .moved })
+        XCTAssertEqual(try Data(contentsOf: operation.quarantineURL), firstBytes)
+        XCTAssertEqual(try Data(contentsOf: firstURL), occupiedBytes)
+        XCTAssertEqual(try Data(contentsOf: secondURL), secondBytes)
+        XCTAssertFalse(store.isCleaningUp)
+    }
+
+    func testProtectedItemsStayOutOfManualAndBulkSelection() {
+        let defaults = UserDefaults.standard, key = "Keptora.ReviewDecisions.iOS"
+        let saved = defaults.object(forKey: key)
+        defer {
+            if let saved { defaults.set(saved, forKey: key) } else { defaults.removeObject(forKey: key) }
+        }
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let protected = photo(namespace + "protected"), other = photo(namespace + "other")
+        store.replaceAssetsForTesting([protected, other])
+        store.selectedLibraryIDs = []
+        store.decisions = LibraryReviewDecisions()
+        store.toggleProtection(protected)
+
+        store.toggleLibrarySelection(protected)
+        XCTAssertTrue(store.selectedLibraryIDs.isEmpty)
+        store.selectLibraryItems([protected, other])
+        XCTAssertEqual(store.selectedLibraryIDs, [other.id])
+        store.replaceLibrarySelection([protected.id])
+        XCTAssertTrue(store.selectedLibraryIDs.isEmpty)
+        store.unprotectAndSelect(protected)
+        XCTAssertEqual(store.selectedLibraryIDs, [protected.id])
+        XCTAssertFalse(store.decisions.protectedIDs.contains(protected.id))
+        store.undoLibrarySelection()
+        XCTAssertTrue(store.selectedLibraryIDs.isEmpty)
+        XCTAssertTrue(store.decisions.protectedIDs.contains(protected.id))
+    }
+
+    func testRemovalRejectsPreviouslySelectedProtectedFileWithoutMovingIt() async throws {
+        let defaults = UserDefaults.standard
+        let keys = [AppStorageKeys.iOSCleanupHistory, "Keptora.ReviewDecisions.iOS", "Keptora.ManualSelection.unified.iOS"]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("protected.jpg"), bytes = Data("protected original".utf8)
+        try bytes.write(to: original)
+        let store = MobileKeptoraStore()
+        store.connectLocalFolderForTesting(root)
+        await store.loadCatalogue()
+        let asset = try XCTUnwrap(store.assets.first)
+        store.decisions = LibraryReviewDecisions()
+        store.decisions.toggleProtection(asset.id)
+        // Simulate a selection restored from an older version, bypassing UI guards.
+        store.selectedLibraryIDs = [asset.id]
+        let history = store.history
+
+        let removed = await store.cleanupLibrarySelection(expectedIDs: [asset.id], reviewedAssets: [asset])
+
+        XCTAssertFalse(removed)
+        XCTAssertEqual(try? Data(contentsOf: original), bytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(".Keptora Quarantine").path))
+        XCTAssertEqual(store.history, history)
+        XCTAssertNotNil(store.errorMessage)
+    }
+
+    func testRecoveryReloadShowsCorruptRecordBesideHealthyRecordAndClearsWarningAfterRepair() async throws {
+        let defaults = UserDefaults.standard
+        let historyKey = AppStorageKeys.iOSCleanupHistory
+        let previousHistory = defaults.object(forKey: historyKey)
+        defer {
+            if let previousHistory { defaults.set(previousHistory, forKey: historyKey) }
+            else { defaults.removeObject(forKey: historyKey) }
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("recoverable photo".utf8).write(to: root.appendingPathComponent("photo.jpg"))
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let assets = try await adapter.enumerateAssets()
+        let selections = try await LibraryCleanupPreflight().prepare(assets, adapter: adapter)
+        let record = try await FolderQuarantineExecutor().quarantine(root: root, selections: selections)
+        let corruptID = UUID()
+        let corruptDirectory = root.appendingPathComponent(".Keptora Quarantine/\(corruptID.uuidString)")
+        try FileManager.default.createDirectory(at: corruptDirectory, withIntermediateDirectories: true)
+        let manifest = corruptDirectory.appendingPathComponent("recovery.json")
+        try Data("broken manifest".utf8).write(to: manifest)
+
+        let store = MobileKeptoraStore()
+        store.connectLocalFolderForTesting(root)
+        await store.loadCatalogue()
+        XCTAssertNil(store.catalogueError)
+        XCTAssertEqual(store.recoveryCatalogueIssues.map(\.manifestURL), [manifest])
+        XCTAssertTrue(store.history.contains { $0.id == record.id })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.operations[0].quarantineURL.path))
+
+        let repaired = FolderQuarantineRecord(id: corruptID, sourceRoot: root, operations: [])
+        try JSONEncoder().encode(repaired).write(to: manifest, options: .atomic)
+        await store.loadCatalogue()
+        XCTAssertTrue(store.recoveryCatalogueIssues.isEmpty)
+        XCTAssertTrue(store.history.contains { $0.id == record.id })
+    }
+
     private func photo(_ id: String, bytes: Int64 = 1_000, modified: Double = 1_700_000_000) -> UniversalMediaAsset {
         UniversalMediaAsset(id: id, sourceID: "photos", reference: .photoLibrary(localIdentifier: id), displayName: id + ".jpg",
                             mediaKind: .image, byteCount: bytes, modificationDate: Date(timeIntervalSince1970: modified))

@@ -425,14 +425,20 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 #else
                         let cgImage = Self.orientedPreview(image)
 #endif
-                        if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                        if (info?[PHImageResultIsDegradedKey] as? Bool) == true {
+                            if !allowNetwork {
+                                if let cgImage {
+                                    singleShot.resume(returning: cgImage)
+                                } else {
+                                    singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
+                                }
+                            }
+                            return
+                        }
                         if let cgImage {
                             singleShot.resume(returning: cgImage)
                         } else {
-                            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                            if !isDegraded {
-                                singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(asset.displayName))
-                            }
+                            singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(asset.displayName))
                         }
                     }
                 }
@@ -455,17 +461,16 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             throw UniversalScanError.cleanupNotPermitted("Some Photos items changed after review. Scan again before cleanup.")
         }
         if case .suggestedCopies = intent {
-        var protectedNames: [String] = []
-        let albumMemberIDs = Self.albumMemberIdentifiers()
-        fetched.enumerateObjects { asset, _, _ in
-            let resources = PHAssetResource.assetResources(for: asset)
-            if asset.isFavorite || asset.isHidden || Self.isSharedAsset(asset) || albumMemberIDs.contains(asset.localIdentifier) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
-                protectedNames.append(resources.first?.originalFilename ?? asset.localIdentifier)
+            var protectedNames: [String] = []
+            fetched.enumerateObjects { asset, _, _ in
+                let resources = PHAssetResource.assetResources(for: asset)
+                if asset.isFavorite || asset.isHidden || Self.isSharedAsset(asset) || resources.contains(where: { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto }) {
+                    protectedNames.append(resources.first?.originalFilename ?? asset.localIdentifier)
+                }
             }
-        }
-        guard protectedNames.isEmpty else {
-            throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
-        }
+            guard protectedNames.isEmpty else {
+                throw UniversalScanError.cleanupNotPermitted("Protected Photos items must be reviewed individually before removal.")
+            }
         }
         if let reviewedAssets {
             let reviewedIDs = Set(reviewedAssets.compactMap { item -> String? in
@@ -632,6 +637,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 import CoreImage
 import UIKit
 private extension PhotoLibrarySourceAdapter {
+    private static let sharedCIContext = CIContext(options: [
+        .useSoftwareRenderer: false,
+        .priorityRequestLow: true
+    ])
+
     static func orientedPreview(_ image: UIImage?) -> CGImage? {
         guard let image, let cg = image.cgImage else { return nil }
         guard image.imageOrientation != .up else { return cg }
@@ -648,7 +658,7 @@ private extension PhotoLibrarySourceAdapter {
         @unknown default: orientation = 1
         }
         let oriented = CIImage(cgImage: cg).oriented(forExifOrientation: orientation)
-        return CIContext().createCGImage(oriented, from: oriented.extent)
+        return sharedCIContext.createCGImage(oriented, from: oriented.extent)
     }
 }
 #endif

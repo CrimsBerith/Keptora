@@ -54,6 +54,7 @@ final class StoreKitEntitlementTests: XCTestCase {
             try await Task.sleep(nanoseconds: 500_000_000)
             _ = try session.buyProduct(productIdentifier: id)
         }
+        try await AppStore.sync()
     }
 
     func testProductLoadingAndConfiguration() async {

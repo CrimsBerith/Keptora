@@ -21,15 +21,21 @@ struct MacSettingsView: View {
                 }
                 HStack {
                     if !store.isLifetimeUnlocked {
-                        Button("View Keptora Pro") { store.presentPaywall(.settings, host: .settings) }
-                            .accessibilityIdentifier("mac.settings.showPaywall")
+                        Button {
+                            store.presentPaywall(.settings, host: .settings)
+                        } label: {
+                            Label("View Keptora Pro", systemImage: "sparkles")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(KeptoraDesign.accentFill)
+                        .accessibilityIdentifier("mac.settings.showPaywall")
                     }
                     Button("Restore Purchases") { Task { await store.restorePurchases() } }
                         .disabled(store.isWorking)
                         .accessibilityIdentifier("mac.settings.restorePurchases")
                 }
                 if let status = store.statusMessage {
-                    Text(status).font(.footnote).foregroundStyle(.secondary)
+                    Text(status).font(.footnote).foregroundStyle(KeptoraDesign.secondaryInk)
                 }
             }
 
@@ -58,13 +64,15 @@ struct MacSettingsView: View {
                     Button("Copy Diagnostics") { archive.copyDiagnostics(); copiedDiagnostics = archive.error == nil }
                 }
                 Text(copiedDiagnostics ? "Diagnostics copied." : "Diagnostics contain counts and app state only. Photos, file names and paths are not included.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                    .font(.footnote).foregroundStyle(KeptoraDesign.secondaryInk)
                 LabeledContent("Version", value: appVersionLabel)
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         .frame(width: 480)
         .fixedSize(horizontal: false, vertical: true)
+        .background(KeptoraBackdrop())
         .sheet(isPresented: store.paywallBinding(for: .settings)) {
             PaywallView().environmentObject(store)
         }

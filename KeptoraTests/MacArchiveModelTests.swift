@@ -4,6 +4,43 @@ import KeptoraCore
 
 @MainActor
 final class MacArchiveModelTests: XCTestCase {
+    func testPartialRollbackReconcilesMovedItemsBeforeReturning() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let firstURL = root.appendingPathComponent("a.jpg"), secondURL = root.appendingPathComponent("b.jpg")
+        let firstBytes = Data("first original".utf8), secondBytes = Data("second original".utf8)
+        let occupiedBytes = Data("new occupant must not be overwritten".utf8)
+        try firstBytes.write(to: firstURL)
+        try secondBytes.write(to: secondURL)
+        let adapter = FolderSourceAdapter(rootURL: root, cleanupAvailable: true)
+        let access = MacSourceAccessCoordinator()
+        access.scopes[adapter.source.id] = root
+        access.adapters[adapter.source.id] = adapter
+        let executor = FolderQuarantineExecutor(beforeQuarantineMove: { _, index in
+            guard index == 1 else { return }
+            try occupiedBytes.write(to: firstURL)
+            throw CocoaError(.fileWriteUnknown)
+        })
+        let model = MacArchiveModel(sourceAccess: access, folderCleanup: executor, persistentSession: false)
+        model.connectedFolders = [adapter.source]
+        model.assets = try await adapter.enumerateAssets().sorted { $0.displayName < $1.displayName }
+        let items = model.assets
+        XCTAssertEqual(items.count, 2)
+        model.selection = Set(items.map(\.id))
+
+        let outcome = await model.removeSelectionOutcome(expectedIDs: model.selection, reviewedAssets: items)
+
+        XCTAssertEqual(outcome.completedIDs, [items[0].id])
+        XCTAssertEqual(model.selection, [items[1].id])
+        XCTAssertFalse(model.assets.contains { $0.id == items[0].id })
+        let receipt = try XCTUnwrap(model.history.first { $0.folderRecord?.sourceRoot == root })
+        let operation = try XCTUnwrap(receipt.folderRecord?.operations.first { $0.state == .moved })
+        XCTAssertEqual(try Data(contentsOf: operation.quarantineURL), firstBytes)
+        XCTAssertEqual(try Data(contentsOf: firstURL), occupiedBytes)
+        XCTAssertEqual(try Data(contentsOf: secondURL), secondBytes)
+    }
+
     func testRemovingOneOfThreeCopiesKeepsTheRemainingPairAndKeeper() {
         func item(_ id: String, _ bytes: Int64) -> UniversalMediaAsset {
             UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: id, mediaKind: .image, byteCount: bytes)

@@ -4,9 +4,13 @@ import SwiftUI
 struct PaywallView: View {
     @EnvironmentObject private var store: StoreEntitlementController
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
+            KeptoraBackdrop()
+
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 20) {
@@ -19,8 +23,9 @@ struct PaywallView: View {
                             .overlay {
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .stroke(KeptoraDesign.borderGradient, lineWidth: 1)
+                                    .allowsHitTesting(false)
                             }
-                            .shadow(color: KeptoraDesign.accentGlow, radius: 22, y: 8)
+                            .shadow(color: reduceTransparency ? .clear : KeptoraDesign.accentGlow, radius: 22, y: 8)
                             .accessibilityHidden(true)
 
                         // Headline
@@ -29,31 +34,31 @@ struct PaywallView: View {
                                 .font(KeptoraDesign.titleFont)
                             Text(store.paywallReason.detailKey)
                                 .font(.title3)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(KeptoraDesign.secondaryInk)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 560)
                         }
 
                         // One-time callout
-                        (Text("One-time purchase.").fontWeight(.semibold) + Text(" No subscription, ever."))
+                        Text("One purchase · No subscription")
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
 
                         // Feature list
                         VStack(alignment: .leading, spacing: 14) {
                             // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
                             feature("Select suggestions in bulk without the 100-item limit", image: "infinity")
-                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(.secondary)
+                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(KeptoraDesign.secondaryInk)
                         }
                         .padding(20)
                         .frame(maxWidth: 590, alignment: .leading)
-                        .background(KeptoraDesign.quiet,
-                                    in: RoundedRectangle(cornerRadius: KeptoraDesign.cardRadius, style: .continuous))
+                        .keptoraGlass(cornerRadius: KeptoraDesign.cardRadius, tint: KeptoraDesign.violet)
 
                         // Trial label
                         Text(store.trialLabel)
                             .font(.callout.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
 
 #if DEBUG
                         if store.requiresProductConfiguration {
@@ -68,7 +73,7 @@ struct PaywallView: View {
                         if let statusMessage = store.statusMessage {
                             Text(statusMessage)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(KeptoraDesign.secondaryInk)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 590)
                         }
@@ -89,15 +94,36 @@ struct PaywallView: View {
                     }
                 }.controlSize(.large)
                 .padding(18)
+                .background {
+                    if reduceTransparency {
+                        KeptoraDesign.canvas
+                    } else {
+                        Rectangle().fill(.ultraThinMaterial)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(colorScheme == .dark ? 0.28 : 0.60), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 1)
+                    .allowsHitTesting(false)
+                }
             }
 
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 32, height: 32).contentShape(Rectangle())
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(KeptoraDesign.secondaryInk)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        reduceTransparency ? Color.secondary.opacity(0.18) : Color.white.opacity(0.12),
+                        in: Circle()
+                    )
+                    .overlay(Circle().stroke(Color.white.opacity(0.20), lineWidth: 1).allowsHitTesting(false))
             }
             .buttonStyle(.plain)
             .padding(14)
@@ -124,7 +150,7 @@ struct PaywallView: View {
         Button { Task { await store.purchaseLifetime() } } label: {
             Group {
                 if store.isWorking { ProgressView().controlSize(.small) }
-                else if let product = store.lifetimeProduct { Text("Unlock for \(product.displayPrice)") }
+                else if let product = store.lifetimeProduct { Text(L10n.format("Unlock for %@", product.displayPrice)) }
                 else if store.isLifetimeUnlocked { Text("Purchased") }
                 else { Text("Lifetime Product Unavailable") }
             }.frame(minWidth: 150, minHeight: 32)

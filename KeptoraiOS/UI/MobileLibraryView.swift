@@ -38,15 +38,15 @@ struct MobileScanSourcesSection: View {
                     HStack(alignment: .center, spacing: 12) {
                         Image(systemName: selected ? "checkmark.square.fill" : "square")
                             .font(.title3).foregroundStyle(selected ? MobileKeptoraDesign.accent : Color.secondary)
-                        Image(systemName: source.scanSymbol).foregroundStyle(.secondary).frame(width: 22)
+                        Image(systemName: source.scanSymbol).foregroundStyle(MobileKeptoraDesign.secondaryInk).frame(width: 22)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(source.kind == .photos ? L10n.tr("Photos / iCloud Photos") : source.displayName).font(.subheadline.weight(.semibold))
                             if let report {
                                 (report.error == nil ? Text(L10n.plural("%lld items", report.itemCount)) : Text("Count incomplete"))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                                 Text(LocalizedStringKey(report.statusKey)).font(.caption)
                                     .foregroundStyle(report.error != nil || report.authorization == .limited ? MobileKeptoraDesign.warning : Color.secondary)
-                            } else { Text("Loading item count…").font(.caption).foregroundStyle(.secondary) }
+                            } else { Text("Loading item count…").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk) }
                         }
                         Spacer(minLength: 0)
                     }.padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 54, alignment: .leading).contentShape(Rectangle())
@@ -56,22 +56,23 @@ struct MobileScanSourcesSection: View {
             }
             Divider()
             if store.selectedSourceIDs.isEmpty {
-                Text("Select at least one source").font(.footnote).foregroundStyle(.secondary)
+                Text("Select at least one source").font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     .padding(.top, 12).accessibilityIdentifier("sources.emptySelection")
             } else {
                 Text(store.selectedSourceIDs.count == 1
                      ? L10n.format("1 source selected · %lld different items", store.scopedAssets.count)
                      : L10n.format("%lld sources selected · %lld different items", store.selectedSourceIDs.count, store.scopedAssets.count))
-                    .font(.footnote).foregroundStyle(.secondary).padding(.top, 12).accessibilityIdentifier("sources.summary")
+                    .font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk).padding(.top, 12).accessibilityIdentifier("sources.summary")
             }
             // These only matter once there is more than one source to combine.
             if store.connectedSources.count > 1 {
                 Text("Selected sources appear together. The same item in overlapping folders is counted once.")
-                    .font(.caption).foregroundStyle(.secondary).padding(.top, 6)
-                Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+                    .font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk).padding(.top, 6)
+                Text("Unticking a source keeps its connection. You can include it again later.").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk).padding(.top, 6)
             }
-        }.padding(14)
-            .background(MobileKeptoraDesign.elevated, in: RoundedRectangle(cornerRadius: 16))
+        }
+        .padding(16)
+        .keptoraMobileGlass(cornerRadius: 18, tint: MobileKeptoraDesign.accent)
     }
 }
 
@@ -93,11 +94,14 @@ struct MobileSourceLibraryView: View {
                         Image("onboarding_privacy").resizable().scaledToFit().frame(maxHeight: 150)
                             .clipShape(RoundedRectangle(cornerRadius: 20)).accessibilityHidden(true)
                         Text("Connect your library").font(.title2.bold())
-                        Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(.secondary)
+                        Text("Connect Photos and folders once. Choose which sources to include in each scan.").foregroundStyle(MobileKeptoraDesign.secondaryInk)
                         if store.isRequestingPhotosAccess { ProgressView("Waiting for Photos access…") }
                     }
                     sourceSection.disabled(controlsDisabled)
-                    if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(.secondary) }
+                    if !store.connectedSources.isEmpty {
+                        MobileScanSourcesSection()
+                    }
+                    if isStartupSetup { Text("You can continue without access and add sources later.").font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk) }
                     privacyStrip
                     // Background on access and cloud folders stays one tap away instead of filling the screen.
                     DisclosureGroup("Details") {
@@ -106,7 +110,7 @@ struct MobileSourceLibraryView: View {
                             Text("Add folders from iCloud Drive, On My iPhone, or another provider in Files. Selected sources appear together in your library.")
                             Text("Cloud providers may download files according to their own settings.")
                             Text("No camera, microphone, contacts or live location permission is needed. Existing photo details are read only from media you approve.")
-                        }.font(.footnote).foregroundStyle(.secondary).padding(.top, 6)
+                        }.font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk).padding(.top, 6)
                     }.font(.subheadline)
                 }
                 .padding(.horizontal, MobileKeptoraDesign.pagePadding)
@@ -129,7 +133,16 @@ struct MobileSourceLibraryView: View {
                     .disabled(store.isRequestingPhotosAccess)
                     .accessibilityIdentifier("ios.sourceSetup.continue")
                 }
-                .padding().background(.regularMaterial)
+                .padding()
+                .background(.ultraThinMaterial)
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(height: 1)
+                }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("ios.sourceSetup.actions")
             }
@@ -178,15 +191,14 @@ struct MobileSourceLibraryView: View {
                         subtitle: photosConnected ? Text("Connected") : Text("Photos and videos on this device"),
                         image: "photo.on.rectangle.angled",
                         selected: photosConnected,
-                        tint: MobileKeptoraDesign.coral
+                        tint: MobileKeptoraDesign.accent
                     )
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("library.source.photos")
             }
-            if !store.connectedSources.isEmpty { MobileScanSourcesSection() }
 
-            if store.authorization == .limited, photosConnected {
+            if store.authorization == .limited {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         Image(systemName: "photo.badge.exclamationmark")
@@ -221,14 +233,7 @@ struct MobileSourceLibraryView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(MobileKeptoraDesign.amber.opacity(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(MobileKeptoraDesign.amber.opacity(0.3), lineWidth: 0.8)
-                        )
-                )
+                .keptoraMobileGlass(cornerRadius: 14, tint: MobileKeptoraDesign.amber)
             }
 
             if store.authorization == .denied || store.authorization == .restricted {
@@ -281,14 +286,7 @@ struct MobileSourceLibraryView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(MobileKeptoraDesign.danger.opacity(0.08))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(MobileKeptoraDesign.danger.opacity(0.2), lineWidth: 0.8)
-                        )
-                )
+                .keptoraMobileGlass(cornerRadius: 14, tint: MobileKeptoraDesign.danger)
             }
 
             ForEach(store.connectedFolders) { folder in
@@ -351,7 +349,7 @@ struct MobileSourceLibraryView: View {
                 
                 subtitle
                     .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     .lineLimit(2)
             }
 
@@ -372,21 +370,7 @@ struct MobileSourceLibraryView: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous))
-        .background(
-            selected ? tint.opacity(0.08) : Color(uiColor: .secondarySystemGroupedBackground).opacity(0.70),
-            in: RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: MobileKeptoraDesign.cardRadius, style: .continuous)
-                .stroke(
-                    selected
-                    ? LinearGradient(colors: [tint, MobileKeptoraDesign.violet], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    : LinearGradient(colors: [Color.white.opacity(0.32), Color.primary.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: selected ? 1.5 : 1
-                )
-        }
-        .shadow(color: selected ? tint.opacity(0.18) : Color.black.opacity(0.03), radius: 16, y: 7)
+        .keptoraMobileGlass(cornerRadius: MobileKeptoraDesign.cardRadius, tint: tint, isSelected: selected)
         .contentShape(Rectangle())
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -410,11 +394,6 @@ struct MobileSourceLibraryView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .background(MobileKeptoraDesign.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(MobileKeptoraDesign.accent.opacity(0.18), lineWidth: 1)
-        }
+        .keptoraMobileGlass(cornerRadius: 16, tint: MobileKeptoraDesign.accent)
     }
 }

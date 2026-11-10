@@ -9,6 +9,7 @@ public enum LibraryAnalysisUpdate: Sendable {
     case photos([UniversalSimilarityGroup], [String: QualityAssessment], [AnalysisIssue])
     case findings([String: QualityAssessment], [AnalysisIssue])
     case videos([UniversalSimilarityGroup], [AnalysisIssue])
+    case bursts([BurstSequenceGroup])
     case failure(AnalysisStage, String)
     case metrics(AnalysisStage, AnalysisWorkMetrics)
     case finished(AnalysisSessionProgress)
@@ -56,6 +57,10 @@ public actor LibraryAnalysisCoordinator {
         let catalogueStatus = AnalysisStageProgress(status: coverage.contains { $0.error != nil } ? .partial : .completed,
                                                    processed: assets.count, total: assets.count)
         session.update(.catalogue, catalogueStatus); await receive(.progress(.catalogue, catalogueStatus))
+        let bursts = BurstSequenceAnalyzer.analyzeBursts(assets: assets)
+        if !bursts.isEmpty {
+            await receive(.bursts(bursts))
+        }
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await self.exact(assets, adapter: adapter, allowNetwork: allowNetwork, checkpoint: checkpoint, checkpointUpdate: checkpointUpdate) }
@@ -81,7 +86,7 @@ public actor LibraryAnalysisCoordinator {
         do {
             let scanner = UniversalExactScanner()
             let result = try await scanner.scan(adapter: adapter, allowNetwork: allowNetwork,
-                fingerprintAllAssets: true, preloadedAssets: assets, resuming: checkpoint, control: control,
+                fingerprintAllAssets: false, preloadedAssets: assets, resuming: checkpoint, control: control,
                 checkpointInterval: configuration.checkpointInterval, checkpointUpdate: checkpointUpdate, groupsUpdate: { groups in Task { await self.exactGroups(groups) } }) { done, total, _ in
                     Task { await self.progress(.exact, done: done, total: total) }
                 }

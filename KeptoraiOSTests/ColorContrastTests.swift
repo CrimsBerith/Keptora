@@ -11,6 +11,7 @@ final class ColorContrastTests: XCTestCase {
 
     func testTextColorsMeetAAOnSystemAndTintedBackgrounds() {
         let textColors: [(String, Color)] = [
+            ("secondaryInk", MobileKeptoraDesign.secondaryInk),
             ("accent", MobileKeptoraDesign.accent),
             ("danger", MobileKeptoraDesign.danger),
             ("success", MobileKeptoraDesign.success),
@@ -33,7 +34,7 @@ final class ColorContrastTests: XCTestCase {
     }
 
     func testWhiteLabelsOnFilledButtonsMeetAA() {
-        for (name, fill) in [("accentFill", MobileKeptoraDesign.accentFill), ("dangerFill", MobileKeptoraDesign.dangerFill)] {
+        for (name, fill) in [("accentFill", MobileKeptoraDesign.accentFill), ("dangerFill", MobileKeptoraDesign.dangerFill), ("mintFill", MobileKeptoraDesign.mintFill)] {
             for style in styles {
                 let resolved = UIColor(fill).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
                 XCTAssertGreaterThanOrEqual(Self.contrast(.white, resolved), 4.5, name)

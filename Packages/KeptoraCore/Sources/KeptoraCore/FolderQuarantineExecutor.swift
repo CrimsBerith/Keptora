@@ -4,9 +4,12 @@ public actor FolderQuarantineExecutor {
     private var verified: [URL: (LibraryFileRevision, UniversalExactFingerprint)] = [:]
     private let beforeRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
     private let afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
+    private let beforeQuarantineMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)?
     public init(beforeRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil,
-                afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil) {
+                afterRestoreMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil,
+                beforeQuarantineMove: (@Sendable (FolderQuarantineOperation, Int) async throws -> Void)? = nil) {
         self.beforeRestoreMove = beforeRestoreMove; self.afterRestoreMove = afterRestoreMove
+        self.beforeQuarantineMove = beforeQuarantineMove
     }
 
     public func preflight(root: URL) -> Bool {
@@ -33,6 +36,9 @@ public actor FolderQuarantineExecutor {
         var paths = Set<String>()
 
         for selection in selections {
+            guard !selection.asset.isProtectedFromGlobalSelection else {
+                throw UniversalScanError.cleanupNotPermitted("Keptora blocked removal of protected item: \(selection.asset.displayName)")
+            }
             guard case .file(let originalURL) = selection.asset.reference,
                   let relative = LibraryFileIdentity.relativePath(originalURL, root: root),
                   paths.insert(originalURL.standardizedFileURL.path).inserted else {
@@ -45,7 +51,7 @@ public actor FolderQuarantineExecutor {
                 throw UniversalScanError.cleanupNotPermitted("A selected file changed after review. Scan again before cleanup.")
             }
             let destination = quarantineRoot.appendingPathComponent(relative)
-            guard LibraryFileIdentity.relativePath(destination, root: root) != nil,
+            guard LibraryFileIdentity.relativePath(destination, root: quarantineRoot) != nil,
                   !FileManager.default.fileExists(atPath: destination.path) else {
                 throw UniversalScanError.cleanupNotPermitted("Keptora blocked a quarantine name collision.")
             }
@@ -71,6 +77,7 @@ public actor FolderQuarantineExecutor {
                     at: operation.quarantineURL.deletingLastPathComponent(),
                     withIntermediateDirectories: true
                 )
+                try await beforeQuarantineMove?(operation, index)
                 let beforeMove = try await StreamingSHA256.file(at: operation.originalURL, progress: { _ in })
                 try validateReviewed([reviewedAssets[index]])
                 guard beforeMove.digest == operation.expectedDigest else {
@@ -98,13 +105,23 @@ public actor FolderQuarantineExecutor {
         } catch {
             var rollbackFailed = false
             for operation in completed.reversed() {
-                do { try coordinatedMove(from: operation.quarantineURL, to: operation.originalURL) }
-                catch { rollbackFailed = true }
+                do {
+                    let originalDir = operation.originalURL.deletingLastPathComponent()
+                    try FileManager.default.createDirectory(at: originalDir, withIntermediateDirectories: true)
+                    try coordinatedMove(from: operation.quarantineURL, to: operation.originalURL)
+                } catch {
+                    rollbackFailed = true
+                }
             }
             await reconcileAfterCompensation(&record)
-            try? saveManifest(record)
             if rollbackFailed {
+                try? saveManifest(record)
                 throw FolderCleanupFailure(record: record, message: L10n.tr("Some files remain in the recovery folder. Reopen this source and restore its recovery record."))
+            } else {
+                let remaining = (try? FileManager.default.contentsOfDirectory(atPath: quarantineRoot.path)) ?? []
+                if remaining.isEmpty {
+                    try? FileManager.default.removeItem(at: quarantineRoot)
+                }
             }
             throw error
         }

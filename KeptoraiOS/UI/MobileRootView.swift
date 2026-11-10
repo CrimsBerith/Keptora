@@ -28,7 +28,7 @@ struct MobileRootView: View {
         }
         .alert(Text(store.errorAlertParts.title), isPresented: Binding(
             get: { store.errorMessage != nil },
-            set: { if !$0 { store.errorMessage = nil } }
+            set: { if !$0 { DispatchQueue.main.async { store.errorMessage = nil } } }
         )) {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
@@ -75,7 +75,7 @@ private struct MobileModalHost: View {
         }
         .alert(Text(store.errorAlertParts.title), isPresented: Binding(
             get: { store.errorMessage != nil },
-            set: { if !$0 { store.errorMessage = nil } }
+            set: { if !$0 { DispatchQueue.main.async { store.errorMessage = nil } } }
         )) {
             Button("OK", role: .cancel) { store.errorMessage = nil }
         } message: {
