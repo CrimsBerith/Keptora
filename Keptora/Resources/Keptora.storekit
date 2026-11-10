@@ -8,12 +8,22 @@
       "internalID": "KEPTORA_PRO_LIFETIME",
       "localizations": [
         {
-          "description": "Unlock unlimited review decisions and reversible Safety Plans after the first 100 free reviews.",
+          "description": "Remove the 100-item limit on bulk suggestions",
           "displayName": "Keptora Pro Lifetime",
           "locale": "en_US"
         },
         {
-          "description": "İlk 100 ücretsiz incelemeden sonra sınırsız kararları ve geri alınabilir Güvenlik Planlarını açın.",
+          "description": "Hebt das 100-Element-Limit für Vorschläge auf",
+          "displayName": "Keptora Pro Lifetime",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Supprime la limite de 100 suggestions",
+          "displayName": "Keptora Pro à vie",
+          "locale": "fr_FR"
+        },
+        {
+          "description": "100 öğelik toplu öneri seçimi sınırını kaldır",
           "displayName": "Keptora Pro Ömür Boyu",
           "locale": "tr_TR"
         }

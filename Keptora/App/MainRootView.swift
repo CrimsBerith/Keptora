@@ -142,7 +142,7 @@ struct MainRootView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .textCase(.uppercase)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption2, design: .rounded, weight: .bold))
                 .tracking(1.2)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 18)

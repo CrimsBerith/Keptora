@@ -14,3 +14,11 @@ Claude outputs/
 
 __pycache__/
 *.pyc
+
+# Local tooling output
+/.build/
+.lean_ai/
+graphify-out/
+.kilo/
+.caveman/
+.agents/

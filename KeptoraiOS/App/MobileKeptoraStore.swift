@@ -242,10 +242,14 @@ final class MobileKeptoraStore: ObservableObject {
     private var lastProgressUpdateTime = Date.distantPast
 
     init() {
+        #if DEBUG
         if LaunchArguments.contains(LaunchArguments.resetSourceSetupUITesting) {
             UserDefaults.standard.removeObject(forKey: AppStorageKeys.iOSSourceSetupCompleted)
         }
         isPhotosDeniedUITesting = LaunchArguments.contains(LaunchArguments.photosDeniedUITesting)
+        #else
+        isPhotosDeniedUITesting = false
+        #endif
         if let data = UserDefaults.standard.data(forKey: historyKey),
            let decoded = try? JSONDecoder().decode([CleanupHistoryEntry].self, from: data) {
             history = decoded
@@ -253,6 +257,7 @@ final class MobileKeptoraStore: ObservableObject {
         let checkpointFileExists = scanCheckpointFileURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
         hasScanCheckpoint = checkpointFileExists || UserDefaults.standard.data(forKey: scanCheckpointKey) != nil
         reviewedAssetIDs = Set(UserDefaults.standard.stringArray(forKey: reviewedAssetsKey) ?? [])
+        #if DEBUG
         if LaunchArguments.contains(LaunchArguments.thousandsStressUITesting) {
             seedThousandsStressUITesting()
         } else if LaunchArguments.contains(LaunchArguments.comprehensiveUITesting) {
@@ -267,6 +272,7 @@ final class MobileKeptoraStore: ObservableObject {
             sourceCatalogue = LibrarySourceCatalogue(batches: Dictionary(grouping: assets, by: \.sourceID))
             coverage = connectedFolders.map { LibrarySourceCoverage(source: $0, authorization: .authorized, itemCount: sourceCatalogue.batches[$0.id]?.count ?? 0) }
         }
+        #endif
     }
 
     deinit {
@@ -1104,6 +1110,7 @@ final class MobileKeptoraStore: ObservableObject {
         return asset.with(byteCount: fingerprint.byteCount)
     }
 
+    #if DEBUG
     private func seedVideoReviewForUITesting() {
         let root = URL(fileURLWithPath: "/tmp/Keptora-Video-UI-Test", isDirectory: true)
         let exactKeeper = UniversalMediaAsset(
@@ -1412,6 +1419,7 @@ final class MobileKeptoraStore: ObservableObject {
             )
         ]
     }
+    #endif
 }
 
 private final class MobilePhotoChangeObserver: NSObject, PHPhotoLibraryChangeObserver, @unchecked Sendable {

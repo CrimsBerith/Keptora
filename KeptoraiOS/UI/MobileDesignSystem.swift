@@ -10,7 +10,7 @@ enum MobileKeptoraDesign {
     static let minimumTouchTarget: CGFloat = 44
     static let primaryButtonHeight: CGFloat = 52
 
-    // MARK: – Semantic Palette (Matching macOS Cullora Aurora)
+    // MARK: – Semantic Palette (Matching macOS Keptora Aurora)
     static let ink = Color(uiColor: .label)
     static let secondaryInk = Color(uiColor: .secondaryLabel)
     static let canvas = Color(uiColor: .systemGroupedBackground)

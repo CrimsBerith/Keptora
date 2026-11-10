@@ -162,7 +162,8 @@ struct MobileLibraryView: View {
     }
 
     private var galleryColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 106), spacing: 4)]
+        // Cells differ in height (Keep button, findings menu), so pin them to the row top to keep thumbnails aligned.
+        [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 106), spacing: 4, alignment: .top)]
     }
 
     // Split out of `body` so newer Swift compilers can type-check the gallery in reasonable time.

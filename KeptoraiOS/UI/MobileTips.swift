@@ -10,8 +10,10 @@ enum MobileTips {
 
     /// Call once at launch. UI tests pass `-keptoraHideTips` so tips never cover the controls they tap.
     static func configure() {
+        #if DEBUG
         if LaunchArguments.contains(LaunchArguments.hideTips) { Tips.hideAllTipsForTesting() }
         if LaunchArguments.contains(LaunchArguments.resetTips) { try? Tips.resetDatastore() }
+        #endif
         try? Tips.configure([.displayFrequency(.immediate)])
     }
 

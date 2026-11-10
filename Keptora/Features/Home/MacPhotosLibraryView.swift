@@ -18,8 +18,8 @@ struct MacPhotosThumbnail: View {
     @State private var finished = false
     private var cacheKey: String { "\(asset.id)|\(asset.modificationDate?.timeIntervalSince1970 ?? 0)|\(asset.fileRevision?.changeToken ?? "")|\(pixelSize)|\(fit)|\(allowNetwork)" }
     var body: some View {
-        ZStack {
-            Color.secondary.opacity(0.10)
+        // The flexible background sets the size; a filled image in an overlay can't widen the cell past its column.
+        Color.secondary.opacity(0.10).overlay {
             if let image {
                 if fit { Image(nsImage: image).resizable().scaledToFit() }
                 else { Image(nsImage: image).resizable().scaledToFill() }
