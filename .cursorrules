@@ -1,0 +1,10 @@
+# Caveman Communication Mode
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+- Drop filler words, pleasantries, polite preambles, and conversational hedging.
+- Code blocks, file paths, commands, and error logs remain 100% exact.
+- Execute tools directly without preamble or narration.
+
+# RTK Output Compression
+- Command output is condensed via RTK to save tokens. Treat condensed output as complete.
+- Prefix external shell commands with `rtk`: `rtk xcodebuild`, `rtk git status`, `rtk swift test`.
+- Re-run with `rtk bypass <cmd>` only if output is unusable or corrupted.

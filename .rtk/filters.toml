@@ -1,0 +1,10 @@
+# RTK Project Filter Configuration
+[general]
+track_savings = true
+
+[xcodebuild]
+compact = true
+show_failures_only = true
+
+[git]
+compact = true

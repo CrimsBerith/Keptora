@@ -20,4 +20,6 @@ __pycache__/
 .lean_ai/
 graphify-out/
 .kilo/
-.caveman/
+.caveman/*
+!.caveman/config.json
+.caveman-active
