@@ -315,15 +315,42 @@ struct MobileFullAssetViewer: View {
                                         width: lastOffset.width + value.translation.width,
                                         height: lastOffset.height + value.translation.height
                                     )
+                                } else {
+                                    offset = value.translation
                                 }
                             }
-                            .onEnded { _ in
+                            .onEnded { value in
                                 if scale > 1.05 {
                                     lastOffset = offset
                                 } else {
-                                    withAnimation(.spring()) {
-                                        offset = .zero
-                                        lastOffset = .zero
+                                    if value.translation.width < -90 {
+                                        // Swipe Left -> Select for Deletion
+                                        if !isSelected {
+                                            onToggleSelection()
+                                        }
+                                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                            offset = .zero
+                                            lastOffset = .zero
+                                        }
+                                    } else if value.translation.width > 90 {
+                                        // Swipe Right -> Keep (Deselect)
+                                        if isSelected {
+                                            onToggleSelection()
+                                        }
+                                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                            offset = .zero
+                                            lastOffset = .zero
+                                        }
+                                    } else if value.translation.height > 120 {
+                                        // Swipe Down -> Dismiss
+                                        onDismiss()
+                                    } else {
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                            offset = .zero
+                                            lastOffset = .zero
+                                        }
                                     }
                                 }
                             }

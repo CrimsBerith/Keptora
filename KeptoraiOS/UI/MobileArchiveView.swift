@@ -303,6 +303,8 @@ struct MobileLibraryView: View {
     @State private var pendingFolderPicker = false
     @State private var reviewSelection = false
     @State private var previewAsset: UniversalMediaAsset?
+    @State private var isSwipeCleanPresented = false
+    @State private var swipeCleanStartingIndex = 0
 
     /// Holds the visible list for one render pass. `body` clears it, so each redraw filters and sorts the
     /// library once instead of once per section that reads it (measured ~28 ms per pass at 50,000 items).
@@ -430,6 +432,11 @@ struct MobileLibraryView: View {
             }
         }
         .sheet(isPresented: $reviewSelection) { MobileSelectionReviewSheet() }
+        .fullScreenCover(isPresented: $isSwipeCleanPresented) {
+            MobileSwipeCleanView(
+                assets: swipeCleanStartingIndex < visible.count ? Array(visible[swipeCleanStartingIndex...]) : visible
+            )
+        }
         .fullScreenCover(item: $previewAsset) { asset in
             MobileFullAssetViewer(
                 asset: asset,
@@ -595,7 +602,9 @@ struct MobileLibraryView: View {
             if hasActiveFilters {
                 activeFilterChips
             }
-            if filterCriteria.finding == .copies { exactBatchSelection }
+            if filterCriteria.finding == .copies || (!store.reviewGroups.isEmpty && store.scanState == .completed) {
+                exactBatchSelection
+            }
             if hasActiveFilters && filterCriteria.finding == .all { selectListButton }
             attentionRows
             TipView(PreviewPhotoTip())
@@ -606,6 +615,27 @@ struct MobileLibraryView: View {
         HStack(spacing: 8) {
             LiquidGlassFilterButton(activeFilterCount: filterCriteria.activeFilterBadgeCount) {
                 isFilterSheetPresented = true
+            }
+            if !visible.isEmpty {
+                Button {
+                    swipeCleanStartingIndex = 0
+                    isSwipeCleanPresented = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "hand.draw.fill")
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                        Text(L10n.tr("Swipe Clean"))
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                    }
+                    .foregroundStyle(MobileKeptoraDesign.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(uiColor: .secondarySystemFill), in: Capsule())
+                    .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("archive.swipeClean")
             }
             Spacer()
             if hasActiveFilters {
@@ -671,7 +701,8 @@ struct MobileLibraryView: View {
         let extraCopies = store.exactSuggestionCandidates(visibleIDs: scope)
         let extraBytes = extraCopies.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
         let anyFinding = !extraCopies.isEmpty || !store.reviewGroups.isEmpty || store.qualityAssessments.values.contains { $0.needsReview }
-        return VStack(alignment: .leading, spacing: 4) {
+        let remaining = extraCopies.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+        return VStack(alignment: .leading, spacing: 8) {
             Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
             if !anyFinding {
                 Text("No copies or similar photos found.").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
@@ -683,12 +714,32 @@ struct MobileLibraryView: View {
                             .multilineTextAlignment(.leading)
                         Spacer(minLength: 8)
                         Image(systemName: "chevron.right").font(.caption.weight(.semibold))
-                    }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                    }.frame(maxWidth: .infinity, minHeight: 36).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(MobileKeptoraDesign.accent)
                 .font(.subheadline.weight(.semibold))
                 .accessibilityIdentifier("archive.results.copies")
+
+                if remaining > 0 {
+                    Button {
+                        if !store.selectExactSuggestions(isUnlocked: purchase.isUnlocked, visibleIDs: scope) {
+                            store.present(.paywall)
+                        }
+                    } label: {
+                        Label(L10n.format("Select Suggested for Deletion (%lld)", remaining), systemImage: "checkmark.circle.fill")
+                    }
+                    .buttonStyle(MobilePrimaryButtonStyle())
+                    .accessibilityIdentifier("archive.results.selectSuggested")
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text(L10n.format("Suggested Copies Selected (%lld)", extraCopies.count))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(MobileKeptoraDesign.mint)
+                    .padding(.vertical, 4)
+                }
             }
         }
         .accessibilityElement(children: .contain)
@@ -960,6 +1011,14 @@ struct MobileLibraryView: View {
                     previewAsset = asset
                 }
             }
+            Button(LocalizedStringKey("Swipe Clean from Here"), systemImage: "hand.draw") {
+                if let idx = visible.firstIndex(where: { $0.id == asset.id }) {
+                    swipeCleanStartingIndex = idx
+                } else {
+                    swipeCleanStartingIndex = 0
+                }
+                isSwipeCleanPresented = true
+            }
             if !groups.isEmpty && !kept {
                 Button("Keep This", systemImage: "star.fill") {
                     store.keep(asset, in: groups)
@@ -1043,12 +1102,21 @@ struct MobileLibraryView: View {
     }
 
     private func thumbnailBadges(_ asset: UniversalMediaAsset, keeperLabel: String?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources))
-                .font(.caption2.weight(.semibold)).lineLimit(1).padding(.horizontal, 5).padding(.vertical, 3)
+                .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .allowsTightening(true)
+                .padding(.horizontal, 5).padding(.vertical, 2.5)
                 .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
             if let issue = store.qualityAssessments[asset.id]?.findings.first {
-                Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol).font(.caption2).lineLimit(1).padding(4)
+                Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol)
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.70)
+                    .allowsTightening(true)
+                    .padding(4)
                     .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
             }
             if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
@@ -1056,13 +1124,14 @@ struct MobileLibraryView: View {
                 Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(0.65)
+                    .allowsTightening(true)
                     .padding(4)
                     .foregroundStyle(.white)
                     .background(MobileKeptoraDesign.mintFill.opacity(0.94), in: RoundedRectangle(cornerRadius: 4))
             }
             Spacer()
-        }.padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }.padding(4).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func thumbnailSelectionIndicator(_ asset: UniversalMediaAsset, selected: Bool) -> some View {
@@ -1341,13 +1410,25 @@ struct MobileSelectionReviewSheet: View {
         }
     }
     @ViewBuilder private func reviewRow(_ asset: UniversalMediaAsset) -> some View {
-        if typeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: 12) { reviewDetails(asset); excludeButton(asset) }
-        } else {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { reviewDetails(asset); excludeButton(asset) }
+        Group {
+            if typeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 12) { reviewDetails(asset); excludeButton(asset) }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { reviewDetails(asset); excludeButton(asset) }
+                    VStack(alignment: .leading, spacing: 12) { reviewDetails(asset); excludeButton(asset) }
+                }
             }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                if review.remove(asset.id) {
+                    store.replaceLibrarySelection(store.selectedLibraryIDs.subtracting([asset.id]))
+                }
+            } label: {
+                Label("Keep in Library", systemImage: "arrow.uturn.backward")
+            }
+            .tint(MobileKeptoraDesign.mint)
         }
     }
     private func reviewDetails(_ asset: UniversalMediaAsset) -> some View {
@@ -1400,6 +1481,22 @@ struct MobileCleanupHubView: View {
                     Text("Scan paused.").font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                     Button("Resume Scan") { store.startScan(allowNetwork: store.lastScanAllowedNetwork) }.buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
                 } else if store.scanState == .completed {
+                    let candidates = store.exactSuggestionCandidates()
+                    let remaining = candidates.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+                    if !candidates.isEmpty && remaining > 0 {
+                        Button {
+                            _ = store.selectExactSuggestions(isUnlocked: true)
+                        } label: {
+                            Label(L10n.format("Select Suggested for Deletion (%lld)", remaining), systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
+                        .accessibilityIdentifier("suggestions.selectSuggested")
+                    } else if !candidates.isEmpty {
+                        Label(L10n.format("Suggested Copies Selected (%lld)", candidates.count), systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(MobileKeptoraDesign.mint)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                     // Results exist; scanning again is a secondary action.
                     Button("Scan Again") { store.startScan() }
                         .buttonStyle(MobileSleekActionButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.accent)).disabled(!store.canScanSelectedSources)

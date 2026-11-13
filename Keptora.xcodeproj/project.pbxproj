@@ -18,6 +18,7 @@
 		35659DEC6824D9D374A3D3BD /* AccessPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8E980E951F9FD5A36B3F0C /* AccessPolicy.swift */; };
 		36A166E3E139B8F1274C0E47 /* MacArchiveModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10202F33BF679EC811E40EC5 /* MacArchiveModel.swift */; };
 		45FFBA57CD959E38B3BBFE66 /* MobileArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAB7266C8270E5B171FB408 /* MobileArchiveView.swift */; };
+		B8A1B2C3D4E5F60102030406 /* MobileSwipeCleanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A1B2C3D4E5F60102030405 /* MobileSwipeCleanView.swift */; };
 		49AEB0A7E1CB2BCDAF967591 /* MobileTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9C2BD72DE85B07B28F8DFD2 /* MobileTips.swift */; };
 		4A4070C26497EFCDD8E04818 /* Keptora.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 6761B45D22452CD3D24296FD /* Keptora.storekit */; };
 		4C157F45390FAEA89EB108FC /* KeptoraCore in Frameworks */ = {isa = PBXBuildFile; productRef = F58279EC9A31B8FEE2692ECE /* KeptoraCore */; };
@@ -125,6 +126,7 @@
 		91BCA6A51E1CD718B5412575 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		97114631A12192F5072AE6FA /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
 		9AAB7266C8270E5B171FB408 /* MobileArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileArchiveView.swift; sourceTree = "<group>"; };
+		B8A1B2C3D4E5F60102030405 /* MobileSwipeCleanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSwipeCleanView.swift; sourceTree = "<group>"; };
 		A644FBE542DB8CB11EDBA79E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA8A8F7F6BE81F610420897D /* Keptora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Keptora.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAD7FDB8D10D1183CC7707C9 /* MacSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsView.swift; sourceTree = "<group>"; };
@@ -222,6 +224,7 @@
 			children = (
 				C6EFC8A41DCFA6F29EF6AFB9 /* DirectoryPicker.swift */,
 				9AAB7266C8270E5B171FB408 /* MobileArchiveView.swift */,
+				B8A1B2C3D4E5F60102030405 /* MobileSwipeCleanView.swift */,
 				BC8C497949439681308A452B /* MobileAssetThumbnail.swift */,
 				50E774654B7B6226883187D4 /* MobileDesignSystem.swift */,
 				C69676A4C411DD7EE8237095 /* MobileHistoryView.swift */,
@@ -680,6 +683,7 @@
 				342CEE204E1D64992B44FE40 /* DirectoryPicker.swift in Sources */,
 				584FBBA895C42A20D55F5D29 /* KeptoraiOSApp.swift in Sources */,
 				45FFBA57CD959E38B3BBFE66 /* MobileArchiveView.swift in Sources */,
+				B8A1B2C3D4E5F60102030406 /* MobileSwipeCleanView.swift in Sources */,
 				9E7B809929FE92A5C296BC30 /* MobileAssetThumbnail.swift in Sources */,
 				98BD4C7B77066B674EDC4964 /* MobileDesignSystem.swift in Sources */,
 				A12D04F6278CD5C6F5B44DB4 /* MobileHistoryView.swift in Sources */,

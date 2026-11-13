@@ -374,7 +374,9 @@ struct MacArchiveView: View {
             HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
                 .padding(.horizontal, 16).padding(.top, 10)
             filters
-            if finding == .copies { exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 12) }
+            if finding == .copies || (!archive.reviewGroups.isEmpty && archive.sessionProgress.isComplete) {
+                exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 12)
+            }
             if let message = archive.filterScopeMessage {
                 HStack(alignment: .top) {
                     Text(message).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
@@ -583,23 +585,30 @@ struct MacArchiveView: View {
             if selected {
                 Color.black.opacity(0.28)
             }
-            VStack {
-                HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
                     Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources))
-                        .font(.caption2.weight(.semibold)).lineLimit(1)
-                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .allowsTightening(true)
+                        .padding(.horizontal, 5).padding(.vertical, 2.5)
                         .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5))
-                    Spacer(minLength: 0)
-                    if kept {
-                        Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
-                            .font(.caption2.weight(.semibold)).lineLimit(1)
-                            .padding(.horizontal, 6).padding(.vertical, 3)
-                            .foregroundStyle(.white).background(KeptoraDesign.accentFill, in: RoundedRectangle(cornerRadius: 5))
-                    } else if archive.decisions.protectedIDs.contains(item.id) {
+                    Spacer(minLength: 2)
+                    if archive.decisions.protectedIDs.contains(item.id) {
                         Image(systemName: "lock.fill")
                             .font(.caption.weight(.semibold))
-                            .padding(5).foregroundStyle(.white).background(.black.opacity(0.78), in: Circle())
+                            .padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: Circle())
                     }
+                }
+                if kept {
+                    Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .allowsTightening(true)
+                        .padding(.horizontal, 5).padding(.vertical, 2.5)
+                        .foregroundStyle(.white).background(KeptoraDesign.accentFill, in: RoundedRectangle(cornerRadius: 5))
                 }
                 Spacer(minLength: 0)
                 HStack {
