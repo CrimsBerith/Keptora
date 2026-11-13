@@ -340,78 +340,6 @@ extension View {
     }
 }
 
-// MARK: – Reusable Premium Glassmorphic Card
-
-struct MobilePremiumCard<Content: View>: View {
-    var tint: Color = MobileKeptoraDesign.accent
-    var cornerRadius: CGFloat = MobileKeptoraDesign.cardRadius
-    private let content: Content
-
-    init(tint: Color = MobileKeptoraDesign.accent, cornerRadius: CGFloat = MobileKeptoraDesign.cardRadius, @ViewBuilder content: () -> Content) {
-        self.tint = tint
-        self.cornerRadius = cornerRadius
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(18)
-            .keptoraMobileGlass(cornerRadius: cornerRadius, tint: tint)
-    }
-}
-
-// MARK: – Metric Tile
-
-struct MobileMetricTile: View {
-    let title: LocalizedStringKey
-    let value: String
-    let systemImage: String
-    let tint: Color
-
-    @ScaledMetric(relativeTo: .title3) private var iconBoxSize: CGFloat = 38
-
-    init(title: LocalizedStringKey, value: String, systemImage: String, tint: Color = MobileKeptoraDesign.accent) {
-        self.title = title
-        self.value = value
-        self.systemImage = systemImage
-        self.tint = tint
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(tint.opacity(0.14))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(tint.opacity(0.26), lineWidth: 0.8)
-                    }
-                Image(systemName: systemImage)
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(tint)
-            }
-            .frame(width: iconBoxSize, height: iconBoxSize)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(.title3, design: .rounded).weight(.bold))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-
-                Text(title)
-                    .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .keptoraMobileGlass(cornerRadius: 18, tint: tint)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 // MARK: – Action Buttons
 
 /// Size the label itself so padding belongs to the interactive area, including in List rows.
@@ -576,21 +504,7 @@ struct MobilePillBadge: View {
 }
 
 
-// MARK: – Panel Modifier & GroupBox
-
-struct MobileGlassGroupBoxStyle: GroupBoxStyle {
-    var tint: Color = MobileKeptoraDesign.accent
-
-    func makeBody(configuration: Configuration) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            configuration.label
-                .font(.headline)
-            configuration.content
-        }
-        .padding(16)
-        .keptoraMobileGlass(cornerRadius: MobileKeptoraDesign.cardRadius, tint: tint)
-    }
-}
+// MARK: – Panel Modifier
 
 extension View {
     func keptoraPanel(tint: Color = MobileKeptoraDesign.accent) -> some View {

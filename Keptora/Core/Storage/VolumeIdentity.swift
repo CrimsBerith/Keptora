@@ -36,24 +36,3 @@ struct VolumeIdentity: Hashable, Codable, Sendable {
         stableID == other.stableID
     }
 }
-
-enum SourceAvailability: Hashable, Sendable {
-    case noSource
-    case available(VolumeIdentity)
-    case disconnected(expected: VolumeIdentity?)
-    case replaced(expected: VolumeIdentity, actual: VolumeIdentity)
-
-    var isAvailable: Bool {
-        if case .available = self { return true }
-        return false
-    }
-
-    var label: String {
-        switch self {
-        case .noSource: return "No source"
-        case .available(let volume): return volume.isRemovable ? "External volume connected" : "Volume available"
-        case .disconnected: return "Source volume disconnected"
-        case .replaced: return "Different volume at saved path"
-        }
-    }
-}
