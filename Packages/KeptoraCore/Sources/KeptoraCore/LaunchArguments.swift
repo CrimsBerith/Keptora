@@ -2,7 +2,6 @@ import Foundation
 
 public enum LaunchArguments {
     public static let portfolioUITesting = "-portfolioUITesting"
-    public static let screenshotReconciliation = "-keptoraScreenshotReconciliation"
     public static let selectionUITesting = "-keptoraSelectionUITesting"
     public static let photosDeniedUITesting = "-keptoraPhotosDeniedUITesting"
     public static let resetSourceSetupUITesting = "-keptoraResetSourceSetupUITesting"

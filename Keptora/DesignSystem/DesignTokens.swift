@@ -4,9 +4,7 @@ import SwiftUI
 
 enum KeptoraDesign {
     // MARK: – Layout
-    static let pagePadding: CGFloat = 28
     static let cardRadius: CGFloat = 20
-    static let compactRadius: CGFloat = 12
 
     // MARK: – Semantic colours (adaptive)
     // Keptora aurora palette. Text, icon and tint colors have a light and a dark value, each at
@@ -32,16 +30,8 @@ enum KeptoraDesign {
 
     // MARK: – Derived / glow
     static let accentGlow       = violet.opacity(0.30)
-    static let accentSubtle     = accent.opacity(0.12)
-    static let accentBorder     = accent.opacity(0.20)
 
     // MARK: – Gradients
-    static let accentGradient = LinearGradient(
-        colors: [Color(red: 0.22, green: 0.46, blue: 0.98),
-                 Color(red: 0.46, green: 0.24, blue: 0.95),
-                 Color(red: 0.92, green: 0.27, blue: 0.56)],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
     static let iconGradient = LinearGradient(
         colors: [cyan, accent, violet],
         startPoint: .topLeading, endPoint: .bottomTrailing
@@ -55,25 +45,12 @@ enum KeptoraDesign {
     // MARK: – Surface layers
     static let canvas          = Color(nsColor: .windowBackgroundColor)
     static let elevated        = Color(nsColor: .controlBackgroundColor)
-    static let quiet           = Color(nsColor: .underPageBackgroundColor)
-    static let ticketSelected  = accent.opacity(0.14)
-    static let reviewFloor     = Color(nsColor: .underPageBackgroundColor).opacity(0.62)
-    static let drawerSurface   = Color(nsColor: .windowBackgroundColor)
 
     // MARK: – Typography
     static let titleFont   = Font.system(size: 36, weight: .bold,     design: .rounded)
-    static let sectionFont = Font.system(size: 17, weight: .semibold, design: .rounded)
-    static let labelFont   = Font.system(size: 11, weight: .semibold, design: .rounded)
-    static let bodyFont    = Font.system(.body,   design: .rounded)
-    static let captionFont = Font.system(.caption, design: .rounded)
 
     // MARK: – Animation presets
     static let animFast   = Animation.easeOut(duration: 0.16)
-    static let animMedium = Animation.easeInOut(duration: 0.26)
-    static let animSpring = Animation.spring(response: 0.38, dampingFraction: 0.72)
-
-    // MARK: – Layout constants
-    static let drawerWidth:  CGFloat = 320
 }
 
 /// Soft glow used by the backdrops. A radial gradient looks like the old blurred circle but costs
@@ -149,35 +126,6 @@ struct KeptoraSidebarBackdrop: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-    }
-}
-
-// MARK: - Shapes
-
-struct ArchivePlateShape: InsettableShape {
-    var cut: CGFloat
-    var insetAmount: CGFloat = 0
-
-    func path(in rect: CGRect) -> Path {
-        let r = rect.insetBy(dx: insetAmount, dy: insetAmount)
-        let c = min(cut, min(r.width, r.height) / 3)
-        var path = Path()
-        path.move(to: CGPoint(x: r.minX, y: r.minY + c))
-        path.addLine(to: CGPoint(x: r.minX + c, y: r.minY))
-        path.addLine(to: CGPoint(x: r.maxX - c * 0.55, y: r.minY))
-        path.addLine(to: CGPoint(x: r.maxX, y: r.minY + c * 0.55))
-        path.addLine(to: CGPoint(x: r.maxX, y: r.maxY - c))
-        path.addLine(to: CGPoint(x: r.maxX - c, y: r.maxY))
-        path.addLine(to: CGPoint(x: r.minX + c * 0.55, y: r.maxY))
-        path.addLine(to: CGPoint(x: r.minX, y: r.maxY - c * 0.55))
-        path.closeSubpath()
-        return path
-    }
-
-    func inset(by amount: CGFloat) -> ArchivePlateShape {
-        var copy = self
-        copy.insetAmount += amount
-        return copy
     }
 }
 
@@ -317,26 +265,6 @@ extension View {
         isSelected: Bool = false
     ) -> some View {
         modifier(KeptoraGlassModifier(cornerRadius: cornerRadius, tint: tint, isSelected: isSelected))
-    }
-}
-
-// MARK: - Reusable Components
-
-struct PremiumCard<Content: View>: View {
-    var cornerRadius: CGFloat = KeptoraDesign.cardRadius
-    var tint: Color? = nil
-    private let content: Content
-
-    init(cornerRadius: CGFloat = KeptoraDesign.cardRadius, tint: Color? = nil, @ViewBuilder content: () -> Content) {
-        self.cornerRadius = cornerRadius
-        self.tint = tint
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(20)
-            .keptoraGlass(cornerRadius: cornerRadius, tint: tint)
     }
 }
 

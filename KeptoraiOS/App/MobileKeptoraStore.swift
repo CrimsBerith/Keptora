@@ -196,10 +196,7 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     private let photosAdapter = PhotoLibrarySourceAdapter()
-    private let scanner = UniversalExactScanner()
     private let folderCleanup: FolderQuarantineExecutor
-    private let similarityAnalyzer = VisualSimilarityAnalyzer()
-    private let videoSimilarityAnalyzer = VideoSimilarityAnalyzer()
     @Published private(set) var connectedFolders: [LibrarySource] = []
     @Published private(set) var coverage: [LibrarySourceCoverage] = []
     @Published private(set) var connectionErrors: [String] = []
@@ -270,7 +267,6 @@ final class MobileKeptoraStore: ObservableObject {
     }
     private let reviewedAssetsKey = AppStorageKeys.iOSReviewedAssets
     private let freeReviewLimit = AppStoreConfiguration.freeReviewLimit
-    private var lastProgressUpdateTime = Date.distantPast
 
     init(folderCleanup: FolderQuarantineExecutor = .init()) {
         self.folderCleanup = folderCleanup

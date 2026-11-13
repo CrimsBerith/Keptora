@@ -73,29 +73,6 @@ final class StoreEntitlementController: ObservableObject {
         return L10n.format("%1$lld of %2$lld free reviews remaining", Int64(accessPolicy.freeReviewsRemaining), Int64(AccessPolicy.freeReviewLimit))
     }
 
-    func canReview(_ assetID: AssetID) -> Bool { accessPolicy.allowsReview(assetID: assetID) }
-
-    func authorizeSafetyPlan(_ assetIDs: [AssetID]) -> Bool {
-        guard accessPolicy.allowsSafetyPlan(assetIDs: assetIDs) else {
-            presentPaywall(.reviewLimit)
-            return false
-        }
-        return true
-    }
-
-    func authorizeReview(_ assetID: AssetID) -> Bool {
-        guard accessPolicy.allowsReview(assetID: assetID) else {
-            presentPaywall(.reviewLimit)
-            return false
-        }
-        reservedAssetIDs.insert(assetID.rawValue)
-        return true
-    }
-
-    func recordReview(_ assetID: AssetID) {
-        recordReviews([assetID])
-    }
-
     func authorizeReviews(_ assetIDs: [AssetID]) -> Bool {
         guard accessPolicy.allowsReviews(assetIDs: assetIDs) else {
             presentPaywall(.reviewLimit)
@@ -119,13 +96,6 @@ final class StoreEntitlementController: ObservableObject {
         guard changed else { return }
         defaults.set(Array(reviewedAssetIDs).sorted(), forKey: reviewedAssetsKey)
     }
-
-    func releaseReservedReviews(_ assetIDs: [AssetID]) {
-        for id in assetIDs {
-            reservedAssetIDs.remove(id.rawValue)
-        }
-    }
-
 
     func presentPaywall(_ reason: PaywallReason, host: PaywallHost = .main) {
         paywallHost = host

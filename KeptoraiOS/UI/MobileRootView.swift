@@ -3,7 +3,6 @@ import SwiftUI
 
 struct MobileRootView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
-    @EnvironmentObject private var purchase: MobilePurchaseController
 
     var body: some View {
         TabView(selection: $store.selectedTab) {

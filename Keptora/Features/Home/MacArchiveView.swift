@@ -554,32 +554,6 @@ struct MacArchiveView: View {
             }
         }.disabled(archive.busy || archive.loading || archive.isExactAnalyzing)
     }
-    private func groupActions(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset], itemCount: Int) -> some View {
-        let remaining = candidates.filter { !archive.selection.contains($0.id) }.count
-        return VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.format("%@ · %lld items", L10n.tr(String.LocalizationValue(group.titleKey)), itemCount)).font(.caption.weight(.semibold))
-            Text(LocalizedStringKey(archive.decisions.keeperReason(in: group, quality: archive.qualityAssessments, configuration: archive.analysisConfiguration))).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { groupButtons(group, candidates: candidates, remaining: remaining) }
-                VStack(alignment: .leading, spacing: 8) { groupButtons(group, candidates: candidates, remaining: remaining) }
-            }
-        }.disabled(archive.busy || archive.analyzing)
-    }
-    @ViewBuilder private func groupButtons(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset], remaining: Int) -> some View {
-        Button { archive.selectOthers(in: group, visibleIDs: Set(candidates.map(\.id))) } label: {
-            if candidates.isEmpty { Text("No Other Items to Select") }
-            else if remaining == 0 { Text("Others Selected") }
-            else { Text(L10n.format("Select Others (%lld)", remaining)) }
-        }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.others.\(group.id)")
-        Button {
-            comparingGroup = group
-        } label: {
-            Label("Compare", systemImage: "square.split.2x1")
-        }
-        .disabled(group.assets.count < 2)
-        .accessibilityIdentifier("mac.archive.compare.\(group.id)")
-        Menu("Group Actions") { Button("Protect Group") { archive.protect(group) } }
-    }
     private func selectByClick(_ item: UniversalMediaAsset) {
         searchFocused = false
         if NSEvent.modifierFlags.contains(.shift), let anchor = rangeAnchor {
