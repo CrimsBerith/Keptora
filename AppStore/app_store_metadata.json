@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "release": {
-    "marketing_version": "1.0.2",
-    "build_number": "187",
+    "marketing_version": "1.0.3",
+    "build_number": "189",
     "release_mode": "automatic",
     "minimum_macos": "13.0",
     "minimum_ios": "17.0",

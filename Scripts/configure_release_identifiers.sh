@@ -42,4 +42,4 @@ m.setdefault('release', {})['marketing_version']='1.0.0'; m['release']['build_nu
 meta.write_text(json.dumps(m, ensure_ascii=False, indent=2)+'\n')
 print('Configured:', app, team, product, privacy, support, marketing)
 PY2
-python3 "$ROOT/Scripts/validate_phase5s_static.py" --release
+bash "$ROOT/Scripts/validate_package.sh"

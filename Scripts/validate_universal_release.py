@@ -20,7 +20,7 @@ mac_info = plistlib.loads((ROOT / "Keptora/Resources/Info.plist").read_bytes())
 ios_info = plistlib.loads((ROOT / "KeptoraiOS/Resources/Info.plist").read_bytes())
 
 marketing_version = str(metadata.get("release", {}).get("marketing_version", ""))
-need(marketing_version in {"1.0.0", "1.0.1", "1.0.2"}, "metadata version must be 1.0.0, 1.0.1, or 1.0.2")
+need(marketing_version in {"1.0.0", "1.0.1", "1.0.2", "1.0.3"}, "metadata version must be 1.0.0, 1.0.1, 1.0.2, or 1.0.3")
 build_number = str(metadata.get("release", {}).get("build_number", ""))
 need(build_number.isascii() and build_number.isdigit() and int(build_number) > 0, "metadata build must be a positive integer")
 need(f"MARKETING_VERSION: {marketing_version}" in spec, f"Xcode spec version must match metadata ({marketing_version})")
