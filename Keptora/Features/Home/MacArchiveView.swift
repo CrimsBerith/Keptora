@@ -748,74 +748,83 @@ struct MacArchiveView: View {
                             }
     }
     private var filters: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                TextField("Search photos, trips, albums, dates...", text: contextBinding(\.search)).textFieldStyle(.roundedBorder).focused($searchFocused).frame(minWidth: 120)
-                Menu("Filters") {
-                    Picker("Media type", selection: contextBinding(\.media)) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }
-                    Picker("Album", selection: contextBinding(\.albumID)) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }
-                    Picker("Quality", selection: qualityBinding) {
-                        ForEach(LibraryQualityFilter.allCases) { filter in
-                            Text(verbatim: "\(L10n.tr(String.LocalizationValue(filter.titleKey))) (\(archive.gallery.qualityCounts[filter] ?? 0))").tag(filter)
+        GlassEffectContainer(spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    TextField("Search photos, trips, albums, dates...", text: contextBinding(\.search)).textFieldStyle(.roundedBorder).focused($searchFocused).frame(minWidth: 120)
+                    Menu("Filters") {
+                        Picker("Media type", selection: contextBinding(\.media)) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }
+                        Picker("Album", selection: contextBinding(\.albumID)) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }
+                        Picker("Quality", selection: qualityBinding) {
+                            ForEach(LibraryQualityFilter.allCases) { filter in
+                                Text(verbatim: "\(L10n.tr(String.LocalizationValue(filter.titleKey))) (\(archive.gallery.qualityCounts[filter] ?? 0))").tag(filter)
+                            }
+                        }
+                    }.accessibilityIdentifier("mac.archive.filters")
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { findingPicker.pickerStyle(.segmented); scanControls }
+                    HStack(spacing: 12) { findingPicker.pickerStyle(.menu); Spacer(minLength: 8); scanControls }
+                }
+                HStack(spacing: 12) {
+                    Text(L10n.plural("In this list: %lld items", visible.count))
+                        .font(.subheadline.weight(.semibold))
+                        .contentTransition(.numericText())
+                        .animation(.snappy, value: visible.count)
+                        .accessibilityIdentifier("mac.archive.visibleCount")
+                    Spacer(minLength: 8)
+                    // Only for a narrowed list; in finding views it would also select the photos suggested to keep.
+                    if finding == .all && (qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty) {
+                        Button { archive.selectItems(visible) } label: { Text(L10n.format("Select This List (%lld)", visible.count)) }
+                            .disabled(visible.isEmpty || archive.loading || !archive.canEditLibrary).accessibilityIdentifier("mac.archive.selectAll")
+                    }
+                    Menu("View Options") {
+                        Toggle("Keep Related Shots Together", isOn: contextBinding(\.smartOrder))
+                        Button("Reset Filters") { resetFilters() }
+                        let count = visible.filter { archive.decisions.protectedIDs.contains($0.id) }.count
+                        if count > 0 { Text(L10n.format("%lld protected items stay unselected", count)) }
+                    }
+                }
+                // The finding filter is already visible in the Library view picker; chips list the other filters.
+                if qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            if qualityFilter != .all { filterChip(L10n.tr(String.LocalizationValue(qualityFilter.titleKey)), id: "quality") { archive.galleryContext.quality = .all } }
+                            if media != 0 { filterChip(L10n.tr(media == 1 ? "Photos" : "Videos"), id: "media") { media = 0 } }
+                            if !albumID.isEmpty { filterChip(archive.albums.first { $0.id == albumID }?.title ?? L10n.tr("Album"), id: "album") { albumID = "" } }
+                            if !search.isEmpty { filterChip(L10n.format("Search: %@", search), id: "search") { search = "" } }
                         }
                     }
-                }.accessibilityIdentifier("mac.archive.filters")
-            }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { findingPicker.pickerStyle(.segmented); scanControls }
-                HStack(spacing: 12) { findingPicker.pickerStyle(.menu); Spacer(minLength: 8); scanControls }
-            }
-            HStack(spacing: 12) {
-                Text(L10n.plural("In this list: %lld items", visible.count))
-                    .font(.subheadline.weight(.semibold))
-                    .contentTransition(.numericText())
-                    .animation(.snappy, value: visible.count)
-                    .accessibilityIdentifier("mac.archive.visibleCount")
-                Spacer(minLength: 8)
-                // Only for a narrowed list; in finding views it would also select the photos suggested to keep.
-                if finding == .all && (qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty) {
-                    Button { archive.selectItems(visible) } label: { Text(L10n.format("Select This List (%lld)", visible.count)) }
-                        .disabled(visible.isEmpty || archive.loading || !archive.canEditLibrary).accessibilityIdentifier("mac.archive.selectAll")
                 }
-                Menu("View Options") {
-                    Toggle("Keep Related Shots Together", isOn: contextBinding(\.smartOrder))
-                    Button("Reset Filters") { resetFilters() }
-                    let count = visible.filter { archive.decisions.protectedIDs.contains($0.id) }.count
-                    if count > 0 { Text(L10n.format("%lld protected items stay unselected", count)) }
+                if archive.analysisPaused { Text("Scan paused.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
+                else if archive.analyzing {
+                    ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1)))
+                    Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                } else if archive.sessionProgress.isComplete {
+                    scanResults
                 }
             }
-            // The finding filter is already visible in the Library view picker; chips list the other filters.
-            if qualityFilter != .all || media != 0 || !albumID.isEmpty || !search.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        if qualityFilter != .all { filterChip(L10n.tr(String.LocalizationValue(qualityFilter.titleKey)), id: "quality") { archive.galleryContext.quality = .all } }
-                        if media != 0 { filterChip(L10n.tr(media == 1 ? "Photos" : "Videos"), id: "media") { media = 0 } }
-                        if !albumID.isEmpty { filterChip(archive.albums.first { $0.id == albumID }?.title ?? L10n.tr("Album"), id: "album") { albumID = "" } }
-                        if !search.isEmpty { filterChip(L10n.format("Search: %@", search), id: "search") { search = "" } }
-                    }
-                }
-            }
-            if archive.analysisPaused { Text("Scan paused.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk) }
-            else if archive.analyzing {
-                ProgressView(value: Double(archive.analysisProcessed), total: Double(max(archive.analysisTotal, 1)))
-                Text("Scanning your photos. You can select ready results.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-            } else if archive.sessionProgress.isComplete {
-                scanResults
-            }
-        }.padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 14).disabled(archive.busy)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 14)
+            .disabled(archive.busy)
+        }
     }
     @ViewBuilder private var scanControls: some View {
         if archive.analyzing && !archive.analysisPaused {
-            Button("Pause Scan") { archive.pauseAnalysis() }
+            Button("Pause Scan") { archive.pauseAnalysis() }.buttonStyle(.glass)
             Menu("Scan Options") { Button("Cancel Scan") { archive.cancelAnalysis() } }
         }
-        else if archive.analysisPaused { Button("Resume Scan") { archive.resumeAnalysis() }; Button("Cancel Scan") { archive.cancelAnalysis() } }
+        else if archive.analysisPaused {
+            Button("Resume Scan") { archive.resumeAnalysis() }.buttonStyle(.glassProminent)
+            Button("Cancel Scan") { archive.cancelAnalysis() }.buttonStyle(.glass)
+        }
         else if archive.sessionProgress.isComplete {
             // Results are showing; scanning again is secondary.
-            Button("Scan Again") { archive.analyze() }.accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
+            Button("Scan Again") { archive.analyze() }.buttonStyle(.glass).accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
             cloudScanMenu
         } else {
-            Button("Start Scan") { archive.analyze() }.buttonStyle(.borderedProminent).accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
+            Button("Start Scan") { archive.analyze() }.buttonStyle(.glassProminent).accessibilityIdentifier("mac.archive.scanAll").disabled(!archive.canScanSelectedSources)
             cloudScanMenu
         }
     }
@@ -855,17 +864,7 @@ struct MacArchiveView: View {
         Button(action: remove) {
             HStack { Text(title).multilineTextAlignment(.leading); Spacer(minLength: 4); Image(systemName: "xmark.circle.fill") }
                 .font(.caption.weight(.semibold)).padding(8).frame(minWidth: 32, minHeight: 32)
-                .background(KeptoraDesign.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(
-                            reduceTransparency
-                                ? AnyShapeStyle(KeptoraDesign.accent.opacity(0.40))
-                                : AnyShapeStyle(LinearGradient(colors: [Color.white.opacity(colorScheme == .dark ? 0.30 : 0.65), KeptoraDesign.accent.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing)),
-                            lineWidth: 0.8
-                        )
-                        .allowsHitTesting(false)
-                )
+                .glassEffect(.regular.tint(KeptoraDesign.accent).interactive(), in: .rect(cornerRadius: 8))
                 .contentShape(RoundedRectangle(cornerRadius: 8))
         }.buttonStyle(.plain).accessibilityLabel(Text(L10n.format("Remove Filter: %@", title)))
             .accessibilityIdentifier("mac.archive.filter.remove." + id)

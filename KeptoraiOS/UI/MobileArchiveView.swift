@@ -49,8 +49,6 @@ struct MobileLibraryFilterCriteria: Equatable {
 // MARK: – Liquid Glass Filter Button
 
 struct LiquidGlassFilterButton: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     let activeFilterCount: Int
     let action: () -> Void
 
@@ -76,39 +74,14 @@ struct LiquidGlassFilterButton: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background {
-                if reduceTransparency {
-                    Capsule()
-                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(
-                                    colorScheme == .dark ? Color.white.opacity(0.28) : Color.black.opacity(0.18),
-                                    lineWidth: 1
-                                )
-                        )
-                } else {
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        colors: [
-                                            colorScheme == .dark ? Color.white.opacity(0.35) : Color.white.opacity(0.70),
-                                            colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.03)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
-                }
-            }
+            .glassEffect(
+                activeFilterCount > 0
+                    ? .regular.tint(MobileKeptoraDesign.accent).interactive()
+                    : .regular.interactive(),
+                in: .capsule
+            )
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget, minHeight: MobileKeptoraDesign.minimumTouchTarget)
             .contentShape(Rectangle())
         }
@@ -756,49 +729,51 @@ struct MobileLibraryView: View {
     }
 
     private var filterBar: some View {
-        HStack(spacing: 8) {
-            LiquidGlassFilterButton(activeFilterCount: filterCriteria.activeFilterBadgeCount) {
-                isFilterSheetPresented = true
-            }
-            if !visible.isEmpty {
-                Button {
-                    swipeCleanStartingIndex = 0
-                    isSwipeCleanPresented = true
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "hand.draw.fill")
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                        Text(L10n.tr("Swipe Clean"))
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                    }
-                    .foregroundStyle(MobileKeptoraDesign.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(uiColor: .secondarySystemFill), in: Capsule())
-                    .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
-                    .contentShape(Rectangle())
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                LiquidGlassFilterButton(activeFilterCount: filterCriteria.activeFilterBadgeCount) {
+                    isFilterSheetPresented = true
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("archive.swipeClean")
-            }
-            Spacer()
-            if hasActiveFilters {
-                Button(action: resetFilters) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                        Text(L10n.tr("Reset Filters"))
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                if !visible.isEmpty {
+                    Button {
+                        swipeCleanStartingIndex = 0
+                        isSwipeCleanPresented = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "hand.draw.fill")
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                            Text(L10n.tr("Swipe Clean"))
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                        }
+                        .foregroundStyle(MobileKeptoraDesign.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .glassEffect(.regular.tint(MobileKeptoraDesign.accent).interactive(), in: .capsule)
+                        .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
-                    .padding(.horizontal, 10)
-                    .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget, minHeight: MobileKeptoraDesign.minimumTouchTarget)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("archive.swipeClean")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L10n.tr("Reset Filters"))
-                .accessibilityHint(L10n.tr("Clears active filters and restores full list view"))
-                .accessibilityIdentifier("archive.resetFilters")
+                Spacer()
+                if hasActiveFilters {
+                    Button(action: resetFilters) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                            Text(L10n.tr("Reset Filters"))
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                        }
+                        .foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                        .padding(.horizontal, 10)
+                        .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget, minHeight: MobileKeptoraDesign.minimumTouchTarget)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.tr("Reset Filters"))
+                    .accessibilityHint(L10n.tr("Clears active filters and restores full list view"))
+                    .accessibilityIdentifier("archive.resetFilters")
+                }
             }
         }
     }
@@ -929,19 +904,19 @@ struct MobileLibraryView: View {
 
     @ViewBuilder private var scanButtons: some View {
         if store.scanState.isScanning || store.isAnalyzing {
-            Button("Pause Scan") { store.suspendScanForBackground() }.buttonStyle(MobileSleekActionButtonStyle(tint: MobileKeptoraDesign.accent))
+            Button("Pause Scan") { store.suspendScanForBackground() }.buttonStyle(.glass)
             Menu { Button("Cancel Scan") { store.cancelScan() } } label: {
                 Image(systemName: "ellipsis.circle").frame(width: 44, height: 44).contentShape(Rectangle())
             }.accessibilityLabel("Scan Options")
         } else if store.scanState == .paused {
             Button("Resume Scan") { store.startScan(allowNetwork: store.lastScanAllowedNetwork) }
-                .buttonStyle(MobilePrimaryButtonStyle()).disabled(!store.canScanSelectedSources)
+                .buttonStyle(.glassProminent).disabled(!store.canScanSelectedSources)
         } else {
             if store.scanState == .completed {
-                Button("Scan Again") { store.startScan() }.buttonStyle(MobileSleekActionButtonStyle(tint: MobileKeptoraDesign.accent))
+                Button("Scan Again") { store.startScan() }.buttonStyle(.glass)
                     .accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
             } else {
-                Button("Start Scan") { store.startScan() }.buttonStyle(MobilePrimaryButtonStyle())
+                Button("Start Scan") { store.startScan() }.buttonStyle(.glassProminent)
                     .accessibilityIdentifier("archive.scanAll").disabled(!store.canScanSelectedSources)
             }
             if store.skippedCloudItems > 0 {
@@ -964,7 +939,7 @@ struct MobileLibraryView: View {
 
     private var selectListButton: some View {
         Button { store.selectLibraryItems(visible) } label: { Text(L10n.format("Select This List (%lld)", visible.count)) }
-            .buttonStyle(MobileSleekActionButtonStyle(tint: MobileKeptoraDesign.accent))
+            .buttonStyle(.glass)
             .disabled(visible.isEmpty || store.isCleaningUp).accessibilityIdentifier("archive.selectAll")
     }
 
@@ -1406,20 +1381,13 @@ struct MobileLibraryView: View {
                 HStack(spacing: MobileKeptoraDesign.actionSpacing) { secondarySelectionButtons }
             }
             Button { reviewSelection = true } label: { Text(L10n.format("Review Selection (%lld)", store.selectedLibraryIDs.count)) }
-                .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true)).disabled(store.selectedLibraryIDs.isEmpty)
+                .buttonStyle(.glassProminent(fillsWidth: true)).disabled(store.selectedLibraryIDs.isEmpty)
                 .accessibilityIdentifier("archive.reviewSelection")
         }
         .padding(14)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) {
-            LinearGradient(
-                colors: [Color.white.opacity(0.30), Color.white.opacity(0.04)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: 1)
-        }
-        .shadow(color: Color.black.opacity(0.06), radius: 14, y: -4)
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
         .disabled(store.isCleaningUp)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("archive.selectionBar")
@@ -1438,7 +1406,7 @@ struct MobileLibraryView: View {
                 }
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
             }
-            .buttonStyle(MobileSleekActionButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.accent))
+            .buttonStyle(.glass(tint: MobileKeptoraDesign.accent, fillsWidth: true))
             .accessibilityIdentifier("archive.undoSelection")
             .popoverTip(UndoSelectionTip())
         }
@@ -1452,7 +1420,7 @@ struct MobileLibraryView: View {
             }
             .font(.system(.subheadline, design: .rounded).weight(.semibold))
         }
-        .buttonStyle(MobileSleekActionButtonStyle(fillsWidth: true, tint: MobileKeptoraDesign.secondaryInk))
+        .buttonStyle(.glass(tint: MobileKeptoraDesign.secondaryInk, fillsWidth: true))
         .disabled(store.selectedLibraryIDs.isEmpty)
         .accessibilityIdentifier("archive.clearSelection")
     }

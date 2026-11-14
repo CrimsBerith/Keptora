@@ -129,77 +129,185 @@ struct KeptoraSidebarBackdrop: View {
     }
 }
 
-// MARK: - Glassmorphism System
+// MARK: - Liquid Glass Design System (iOS 26 / macOS Liquid Glass)
 
-struct KeptoraGlassModifier: ViewModifier {
+enum GlassShape: Sendable, Equatable {
+    case capsule
+    case circle
+    case rect(cornerRadius: CGFloat)
+}
+
+struct GlassStyle: Sendable, Equatable {
+    var tintColor: Color?
+    var isInteractive: Bool = false
+    var isProminent: Bool = false
+
+    init(tintColor: Color? = nil, isInteractive: Bool = false, isProminent: Bool = false) {
+        self.tintColor = tintColor
+        self.isInteractive = isInteractive
+        self.isProminent = isProminent
+    }
+
+    static var regular: GlassStyle { GlassStyle() }
+    static var prominent: GlassStyle { GlassStyle(isProminent: true) }
+
+    func tint(_ color: Color) -> GlassStyle {
+        var copy = self
+        copy.tintColor = color
+        return copy
+    }
+
+    func interactive(_ isInteractive: Bool = true) -> GlassStyle {
+        var copy = self
+        copy.isInteractive = isInteractive
+        return copy
+    }
+}
+
+struct GlassEffectContainer<Content: View>: View {
+    var spacing: CGFloat
+    let content: Content
+
+    init(spacing: CGFloat = 16.0, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+    }
+}
+
+struct GlassEffectModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var cornerRadius: CGFloat = KeptoraDesign.cardRadius
-    var tint: Color? = nil
+    var style: GlassStyle = .regular
+    var shape: GlassShape = .capsule
     var isSelected: Bool = false
+    @State private var isHovered: Bool = false
 
     func body(content: Content) -> some View {
         content
             .background {
-                if reduceTransparency {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(isSelected ? KeptoraDesign.accent.opacity(0.18) : KeptoraDesign.elevated)
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(
-                                colorScheme == .dark
-                                    ? Color.white.opacity(isSelected ? 0.08 : 0.03)
-                                    : Color.white.opacity(isSelected ? 0.52 : 0.38)
-                            )
-
-                        if let tint {
-                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                                .fill(tint.opacity(isSelected ? 0.16 : 0.05))
-                        } else if isSelected {
-                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                                .fill(KeptoraDesign.accent.opacity(0.12))
-                        }
-                    }
-                }
+                glassBackground
             }
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(
-                        borderShapeStyle,
-                        lineWidth: isSelected ? 1.5 : 1.0
-                    )
-                    .allowsHitTesting(false)
+                glassBorder
             }
             .shadow(
                 color: shadowColor,
-                radius: isSelected ? 14 : 9,
+                radius: isSelected ? 16 : (isHovered ? 14 : 9),
                 x: 0,
-                y: isSelected ? 5 : 3
+                y: isSelected ? 5 : (isHovered ? 4 : 2.5)
             )
+            .scaleEffect(style.isInteractive && isHovered && !reduceMotion ? 1.015 : 1.0)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.72), value: isHovered)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.72), value: isSelected)
+            #if os(macOS)
+            .onHover { hovering in
+                if style.isInteractive {
+                    isHovered = hovering
+                }
+            }
+            #endif
+    }
+
+    @ViewBuilder
+    private var glassBackground: some View {
+        switch shape {
+        case .capsule:
+            applyBackground(to: Capsule())
+        case .circle:
+            applyBackground(to: Circle())
+        case .rect(let radius):
+            applyBackground(to: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private func applyBackground<S: Shape>(to shape: S) -> some View {
+        if reduceTransparency {
+            shape.fill(isSelected ? (style.tintColor ?? KeptoraDesign.accent).opacity(0.18) : KeptoraDesign.elevated)
+        } else {
+            ZStack {
+                shape.fill(.ultraThinMaterial)
+
+                // Specular Light Diffusion Layer
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            colorScheme == .dark
+                                ? Color.white.opacity(isHovered ? 0.12 : (isSelected ? 0.09 : 0.04))
+                                : Color.white.opacity(isHovered ? 0.65 : (isSelected ? 0.58 : 0.42)),
+                            colorScheme == .dark
+                                ? Color.white.opacity(0.01)
+                                : Color.white.opacity(0.15)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+                // Fluid Chromatic Tint Layer
+                if let tint = style.tintColor {
+                    shape.fill(
+                        RadialGradient(
+                            colors: [
+                                tint.opacity(isSelected ? 0.22 : (style.isProminent ? 0.28 : (isHovered ? 0.15 : 0.07))),
+                                tint.opacity(isSelected ? 0.08 : (isHovered ? 0.05 : 0.02))
+                            ],
+                            center: .topLeading,
+                            startRadius: 0,
+                            endRadius: 300
+                        )
+                    )
+                } else if isSelected {
+                    shape.fill(KeptoraDesign.accent.opacity(0.14))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var glassBorder: some View {
+        switch shape {
+        case .capsule:
+            applyBorder(to: Capsule())
+        case .circle:
+            applyBorder(to: Circle())
+        case .rect(let radius):
+            applyBorder(to: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private func applyBorder<S: InsettableShape>(to shape: S) -> some View {
+        shape.strokeBorder(
+            borderShapeStyle,
+            lineWidth: isSelected ? 1.5 : 1.0
+        )
+        .allowsHitTesting(false)
     }
 
     private var borderShapeStyle: AnyShapeStyle {
         if reduceTransparency {
             if isSelected {
-                return AnyShapeStyle((tint ?? KeptoraDesign.accent))
+                return AnyShapeStyle(style.tintColor ?? KeptoraDesign.accent)
             }
             return AnyShapeStyle(colorScheme == .dark ? Color.white.opacity(0.32) : Color.black.opacity(0.20))
         }
-        return AnyShapeStyle(borderGradient)
+        return AnyShapeStyle(specularGradient)
     }
 
-    private var borderGradient: LinearGradient {
+    private var specularGradient: LinearGradient {
         if isSelected {
             return LinearGradient(
                 colors: [
-                    (tint ?? KeptoraDesign.accent).opacity(0.90),
-                    KeptoraDesign.violet.opacity(0.75),
-                    (tint ?? KeptoraDesign.cyan).opacity(0.55)
+                    (style.tintColor ?? KeptoraDesign.accent).opacity(0.95),
+                    KeptoraDesign.violet.opacity(0.78),
+                    (style.tintColor ?? KeptoraDesign.cyan).opacity(0.55)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -209,10 +317,10 @@ struct KeptoraGlassModifier: ViewModifier {
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [
-                    Color.white.opacity(0.32),
-                    (tint ?? KeptoraDesign.cyan).opacity(0.18),
-                    Color.white.opacity(0.04),
-                    Color.white.opacity(0.10)
+                    Color.white.opacity(isHovered ? 0.45 : 0.30),
+                    (style.tintColor ?? KeptoraDesign.cyan).opacity(isHovered ? 0.25 : 0.14),
+                    Color.white.opacity(0.03),
+                    Color.white.opacity(0.09)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -220,10 +328,10 @@ struct KeptoraGlassModifier: ViewModifier {
         } else {
             return LinearGradient(
                 colors: [
-                    Color.white.opacity(0.78),
-                    (tint ?? KeptoraDesign.accent).opacity(0.20),
-                    Color.white.opacity(0.15),
-                    Color.black.opacity(0.03)
+                    Color.white.opacity(isHovered ? 0.90 : 0.78),
+                    (style.tintColor ?? KeptoraDesign.accent).opacity(isHovered ? 0.30 : 0.18),
+                    Color.white.opacity(0.18),
+                    Color.black.opacity(0.04)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -236,9 +344,165 @@ struct KeptoraGlassModifier: ViewModifier {
             return .clear
         }
         if isSelected {
-            return (tint ?? KeptoraDesign.accent).opacity(colorScheme == .dark ? 0.28 : 0.16)
+            return (style.tintColor ?? KeptoraDesign.accent).opacity(colorScheme == .dark ? 0.30 : 0.18)
+        }
+        if let tint = style.tintColor, style.isProminent {
+            return tint.opacity(colorScheme == .dark ? 0.25 : 0.15)
         }
         return Color.black.opacity(colorScheme == .dark ? 0.22 : 0.05)
+    }
+}
+
+struct GlassButtonStyle: ButtonStyle {
+    var tint: Color? = nil
+    var shape: GlassShape = .capsule
+    var fillsWidth: Bool = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    init(tint: Color? = nil, shape: GlassShape = .capsule, fillsWidth: Bool = false) {
+        self.tint = tint
+        self.shape = shape
+        self.fillsWidth = fillsWidth
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
+            .glassEffect(
+                .regular.tint(tint ?? KeptoraDesign.accent).interactive(),
+                in: shape
+            )
+            .opacity(isEnabled ? (configuration.isPressed ? 0.82 : 1.0) : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.975 : 1.0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: configuration.isPressed)
+    }
+}
+
+struct GlassProminentButtonStyle: ButtonStyle {
+    var tint: Color = KeptoraDesign.accentFill
+    var shape: GlassShape = .capsule
+    var fillsWidth: Bool = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    init(tint: Color = KeptoraDesign.accentFill, shape: GlassShape = .capsule, fillsWidth: Bool = false) {
+        self.tint = tint
+        self.shape = shape
+        self.fillsWidth = fillsWidth
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.headline, design: .rounded).weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
+            .background {
+                prominentBackground(isPressed: configuration.isPressed)
+            }
+            .overlay {
+                prominentBorder
+            }
+            .shadow(
+                color: tint.opacity(colorScheme == .dark ? 0.40 : 0.25),
+                radius: configuration.isPressed ? 8 : 12,
+                y: configuration.isPressed ? 2 : 4
+            )
+            .opacity(isEnabled ? (configuration.isPressed ? 0.90 : 1.0) : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.975 : 1.0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: configuration.isPressed)
+    }
+
+    @ViewBuilder
+    private func prominentBackground(isPressed: Bool) -> some View {
+        switch shape {
+        case .capsule:
+            applyProminentBackground(to: Capsule(), isPressed: isPressed)
+        case .circle:
+            applyProminentBackground(to: Circle(), isPressed: isPressed)
+        case .rect(let radius):
+            applyProminentBackground(to: RoundedRectangle(cornerRadius: radius, style: .continuous), isPressed: isPressed)
+        }
+    }
+
+    @ViewBuilder
+    private func applyProminentBackground<S: Shape>(to shape: S, isPressed: Bool) -> some View {
+        if reduceTransparency {
+            shape.fill(tint)
+        } else {
+            ZStack {
+                shape.fill(.ultraThinMaterial)
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            tint.opacity(isPressed ? 0.92 : 0.85),
+                            tint.opacity(isPressed ? 0.80 : 0.72)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                // Specular sheen
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.35),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var prominentBorder: some View {
+        switch shape {
+        case .capsule:
+            applyProminentBorder(to: Capsule())
+        case .circle:
+            applyProminentBorder(to: Circle())
+        case .rect(let radius):
+            applyProminentBorder(to: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private func applyProminentBorder<S: InsettableShape>(to shape: S) -> some View {
+        shape.strokeBorder(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.60),
+                    tint.opacity(0.30),
+                    Color.white.opacity(0.10)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            lineWidth: 1.0
+        )
+        .allowsHitTesting(false)
+    }
+}
+
+extension ButtonStyle where Self == GlassButtonStyle {
+    static var glass: GlassButtonStyle { GlassButtonStyle() }
+    static func glass(tint: Color? = nil, shape: GlassShape = .capsule, fillsWidth: Bool = false) -> GlassButtonStyle {
+        GlassButtonStyle(tint: tint, shape: shape, fillsWidth: fillsWidth)
+    }
+}
+
+extension ButtonStyle where Self == GlassProminentButtonStyle {
+    static var glassProminent: GlassProminentButtonStyle { GlassProminentButtonStyle() }
+    static func glassProminent(tint: Color = KeptoraDesign.accentFill, shape: GlassShape = .capsule, fillsWidth: Bool = false) -> GlassProminentButtonStyle {
+        GlassProminentButtonStyle(tint: tint, shape: shape, fillsWidth: fillsWidth)
     }
 }
 
@@ -258,13 +522,20 @@ struct KeptoraGlassGroupBoxStyle: GroupBoxStyle {
 }
 
 extension View {
+    /// Applies Apple's Liquid Glass material effect with blur, specular rim reflection, and interactive response.
+    func glassEffect(_ style: GlassStyle = .regular, in shape: GlassShape = .capsule) -> some View {
+        modifier(GlassEffectModifier(style: style, shape: shape))
+    }
+
     /// Applies a refined frosted-glass surface with specular rim lighting, ambient shadow, and accessibility fallback.
     func keptoraGlass(
         cornerRadius: CGFloat = KeptoraDesign.cardRadius,
         tint: Color? = nil,
         isSelected: Bool = false
     ) -> some View {
-        modifier(KeptoraGlassModifier(cornerRadius: cornerRadius, tint: tint, isSelected: isSelected))
+        var style = GlassStyle.regular
+        if let tint { style = style.tint(tint) }
+        return modifier(GlassEffectModifier(style: style, shape: .rect(cornerRadius: cornerRadius), isSelected: isSelected))
     }
 }
 
