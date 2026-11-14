@@ -1163,22 +1163,22 @@ struct MobileLibraryView: View {
 
     private func thumbnailOverlay(_ asset: UniversalMediaAsset, keeperLabel: String?, selected: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            // Top Row: Source badge and lock on leading, media attributes (favorite / video duration) on trailing
+            // Top Row: Lock and Keeper indicator on leading, media attributes (favorite / video duration) on trailing
             HStack(alignment: .top, spacing: 4) {
-                HStack(spacing: 3) {
-                    Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources))
-                        .font(.caption2.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-                        .allowsTightening(true)
-                        .padding(.horizontal, 5).padding(.vertical, 2.5)
-                        .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+                HStack(spacing: 4) {
                     if store.decisions.protectedIDs.contains(asset.id) {
                         Image(systemName: "lock.fill")
                             .font(.caption2.weight(.semibold))
-                            .padding(3)
+                            .padding(4)
                             .foregroundStyle(.white)
-                            .background(.black.opacity(0.78), in: Circle())
+                            .background(.black.opacity(0.70), in: Circle())
+                    }
+                    if keeperLabel != nil {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2.weight(.semibold))
+                            .padding(4)
+                            .foregroundStyle(.white)
+                            .background(MobileKeptoraDesign.mintFill.opacity(0.90), in: Circle())
                     }
                 }
 
@@ -1192,31 +1192,8 @@ struct MobileLibraryView: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5).padding(.vertical, 2.5)
-                    .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+                    .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 4))
                 }
-            }
-
-            // Middle: Quality issue finding (if any)
-            if let issue = store.qualityAssessments[asset.id]?.findings.first {
-                Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol)
-                    .font(.caption2)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.70)
-                    .allowsTightening(true)
-                    .padding(4)
-                    .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
-            }
-
-            // Middle: Keeper badge (if kept)
-            if let keeperLabel {
-                Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-                    .allowsTightening(true)
-                    .padding(4)
-                    .foregroundStyle(.white)
-                    .background(MobileKeptoraDesign.mintFill.opacity(0.94), in: RoundedRectangle(cornerRadius: 4))
             }
 
             Spacer(minLength: 0)

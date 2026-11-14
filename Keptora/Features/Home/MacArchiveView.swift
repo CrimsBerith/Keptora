@@ -606,28 +606,17 @@ struct MacArchiveView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Label(LocalizedStringKey(item.sourceBadgeKey(in: archive.connectedSources)), systemImage: item.sourceBadgeSymbol(in: archive.connectedSources))
-                        .font(.caption2.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-                        .allowsTightening(true)
-                        .padding(.horizontal, 5).padding(.vertical, 2.5)
-                        .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 5))
-                    Spacer(minLength: 2)
                     if archive.decisions.protectedIDs.contains(item.id) {
                         Image(systemName: "lock.fill")
                             .font(.caption.weight(.semibold))
-                            .padding(4).foregroundStyle(.white).background(.black.opacity(0.78), in: Circle())
+                            .padding(4).foregroundStyle(.white).background(.black.opacity(0.70), in: Circle())
                     }
-                }
-                if kept {
-                    Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
-                        .font(.caption2.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-                        .allowsTightening(true)
-                        .padding(.horizontal, 5).padding(.vertical, 2.5)
-                        .foregroundStyle(.white).background(KeptoraDesign.accentFill, in: RoundedRectangle(cornerRadius: 5))
+                    if kept {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2.weight(.semibold))
+                            .padding(4).foregroundStyle(.white).background(KeptoraDesign.accentFill, in: Circle())
+                    }
+                    Spacer(minLength: 2)
                 }
                 Spacer(minLength: 0)
                 HStack {
