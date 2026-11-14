@@ -20,6 +20,7 @@ public struct MobileSwipeCleanView: View {
     @State private var currentIndex: Int = 0
     @State private var dragOffset: CGSize = .zero
     @State private var dragRotation: Double = 0
+    @State private var isProcessingSwipe: Bool = false
     @State private var history: [SwipeHistoryEntry] = []
     @State private var showReviewSheet: Bool = false
 
@@ -140,6 +141,7 @@ public struct MobileSwipeCleanView: View {
                     // Background placeholder card (next card)
                     if let next = nextAsset {
                         cardView(for: next, isCurrent: false)
+                            .id(next.id)
                             .frame(width: cardWidth, height: cardHeight)
                             .scaleEffect(0.94)
                             .offset(y: 10)
@@ -150,10 +152,12 @@ public struct MobileSwipeCleanView: View {
                     // Foreground active card
                     if let current = currentAsset {
                         cardView(for: current, isCurrent: true)
+                            .id(current.id)
                             .frame(width: cardWidth, height: cardHeight)
                             .offset(dragOffset)
                             .rotationEffect(.degrees(dragRotation))
                             .gesture(dragGesture(cardWidth: cardWidth))
+                            .allowsHitTesting(!isProcessingSwipe)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -305,10 +309,12 @@ public struct MobileSwipeCleanView: View {
     private func dragGesture(cardWidth: CGFloat) -> some Gesture {
         DragGesture()
             .onChanged { value in
+                guard !isProcessingSwipe else { return }
                 dragOffset = value.translation
                 dragRotation = Double(value.translation.width / cardWidth) * 16
             }
             .onEnded { value in
+                guard !isProcessingSwipe else { return }
                 let threshold: CGFloat = 85
                 if value.translation.width < -threshold {
                     swipeAction(.delete)
@@ -326,7 +332,9 @@ public struct MobileSwipeCleanView: View {
     }
 
     private func swipeAction(_ action: SwipeAction) {
+        guard !isProcessingSwipe else { return }
         guard let current = currentAsset else { return }
+        isProcessingSwipe = true
         let wasSelected = store.selectedLibraryIDs.contains(current.id)
 
         history.append(SwipeHistoryEntry(index: currentIndex, asset: current, wasSelected: wasSelected, action: action))
@@ -360,10 +368,12 @@ public struct MobileSwipeCleanView: View {
             dragOffset = .zero
             dragRotation = 0
             currentIndex += 1
+            isProcessingSwipe = false
         }
     }
 
     private func undoLast() {
+        guard !isProcessingSwipe else { return }
         guard let last = history.popLast() else { return }
         currentIndex = last.index
         if last.action == .delete && !last.wasSelected {
@@ -386,12 +396,12 @@ public struct MobileSwipeCleanView: View {
                 Image(systemName: "arrow.uturn.backward")
                     .font(.title3.weight(.semibold))
                     .frame(width: 48, height: 48)
-                    .foregroundStyle(history.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
+                    .foregroundStyle(history.isEmpty || isProcessingSwipe ? Color.secondary.opacity(0.4) : Color.primary)
                     .background(.ultraThinMaterial, in: Circle())
                     .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .disabled(history.isEmpty)
+            .disabled(history.isEmpty || isProcessingSwipe)
             .accessibilityLabel("Undo last swipe")
 
             // Keep button
@@ -406,6 +416,7 @@ public struct MobileSwipeCleanView: View {
                     .shadow(color: MobileKeptoraDesign.mint.opacity(0.35), radius: 8, y: 3)
             }
             .buttonStyle(.plain)
+            .disabled(isProcessingSwipe)
             .accessibilityLabel("Keep photo")
 
             // Skip button
@@ -420,6 +431,7 @@ public struct MobileSwipeCleanView: View {
                     .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .disabled(isProcessingSwipe)
             .accessibilityLabel("Skip photo")
 
             // Delete button
@@ -434,6 +446,7 @@ public struct MobileSwipeCleanView: View {
                     .shadow(color: MobileKeptoraDesign.danger.opacity(0.35), radius: 8, y: 3)
             }
             .buttonStyle(.plain)
+            .disabled(isProcessingSwipe)
             .accessibilityLabel("Select for deletion")
         }
     }

@@ -215,6 +215,23 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         XCTAssertEqual(restrictedStore.selectedLibraryIDs, Set([b.id, c.id]))
     }
 
+    func testSwipeActionSelectionAndDeselectionLifecycle() {
+        let store = MobileKeptoraStore()
+        let ns = UUID().uuidString
+        let a = UniversalMediaAsset(id: ns + "a", sourceID: "test", reference: .photoLibrary(localIdentifier: ns + "a"), displayName: "a.jpg", mediaKind: .image)
+        let b = UniversalMediaAsset(id: ns + "b", sourceID: "test", reference: .photoLibrary(localIdentifier: ns + "b"), displayName: "b.jpg", mediaKind: .image)
+        store.replaceAssetsForTesting([a, b])
+
+        // Simulating swipe left (delete): marks asset into selection
+        store.selectLibraryItems([a])
+        XCTAssertTrue(store.selectedLibraryIDs.contains(a.id))
+        XCTAssertFalse(store.selectedLibraryIDs.contains(b.id))
+
+        // Simulating swipe right (keep): removes asset from selection if previously selected
+        store.replaceLibrarySelection(store.selectedLibraryIDs.subtracting([a.id]))
+        XCTAssertFalse(store.selectedLibraryIDs.contains(a.id))
+    }
+
     func testCatalogueChangeKeepsResultsForUnchangedItems() {
         let store = MobileKeptoraStore(), ns = UUID().uuidString
         let a = photo(ns + "a"), b = photo(ns + "b"), c = photo(ns + "c"), d = photo(ns + "d")
