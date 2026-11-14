@@ -164,6 +164,57 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         XCTAssertEqual(store.similarityGroups.first?.assets.count, 2)
     }
 
+    func testSelectSimilarSuggestionsSelectsOnlyCandidatesAndPreservesKeepers() {
+        let store = MobileKeptoraStore(), ns = UUID().uuidString
+        let a = photo(ns + "a", bytes: 1_000), b = photo(ns + "b", bytes: 3_000), c = photo(ns + "c", bytes: 2_000)
+        store.replaceAssetsForTesting([a, b, c])
+        store.replaceSimilarityGroupsForTesting([UniversalSimilarityGroup(id: ns, assets: [a, b, c], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: a.id)])
+
+        let candidates = store.similarSuggestionCandidates()
+        XCTAssertEqual(Set(candidates.map(\.id)), [b.id, c.id])
+        XCTAssertFalse(candidates.contains(where: { $0.id == a.id }), "Keeper must never be suggested")
+
+        let didSelect = store.selectSimilarSuggestions(isUnlocked: true)
+        XCTAssertTrue(didSelect)
+        XCTAssertEqual(store.selectedLibraryIDs, Set([b.id, c.id]))
+        XCTAssertFalse(store.selectedLibraryIDs.contains(a.id))
+
+        // Removal intent must be .suggestedCopies
+        XCTAssertEqual(store.removalIntent(for: store.librarySelection), .suggestedCopies)
+    }
+
+    func testSelectSimilarSuggestionsEnforcesFreeReviewPolicyAndProtection() {
+        let store = MobileKeptoraStore(), ns = UUID().uuidString
+        let a = photo(ns + "a"), b = photo(ns + "b"), c = photo(ns + "c")
+        store.replaceAssetsForTesting([a, b, c])
+        store.replaceSimilarityGroupsForTesting([UniversalSimilarityGroup(id: ns, assets: [a, b, c], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: a.id)])
+
+        // Protect b: b should no longer be in similar candidates
+        store.toggleProtection(b)
+        XCTAssertEqual(store.similarSuggestionCandidates().map(\.id), [c.id])
+
+        // Unprotect b: both b and c are candidates
+        store.toggleProtection(b)
+        XCTAssertEqual(Set(store.similarSuggestionCandidates().map(\.id)), [b.id, c.id])
+
+        // Exceed free limit
+        let dummyIDs = Set((0..<100).map { "dummy_\($0)" })
+        UserDefaults.standard.set(Array(dummyIDs), forKey: AppStorageKeys.iOSReviewedAssets)
+        defer { UserDefaults.standard.removeObject(forKey: AppStorageKeys.iOSReviewedAssets) }
+        let restrictedStore = MobileKeptoraStore()
+        restrictedStore.replaceAssetsForTesting([a, b, c])
+        restrictedStore.replaceSimilarityGroupsForTesting([UniversalSimilarityGroup(id: ns, assets: [a, b, c], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: a.id)])
+
+        let didSelectLocked = restrictedStore.selectSimilarSuggestions(isUnlocked: false)
+        XCTAssertFalse(didSelectLocked, "Free tier must reject review when exceeding limit")
+        XCTAssertTrue(restrictedStore.selectedLibraryIDs.isEmpty)
+
+        // With isUnlocked: true, succeeds
+        let didSelectUnlocked = restrictedStore.selectSimilarSuggestions(isUnlocked: true)
+        XCTAssertTrue(didSelectUnlocked)
+        XCTAssertEqual(restrictedStore.selectedLibraryIDs, Set([b.id, c.id]))
+    }
+
     func testCatalogueChangeKeepsResultsForUnchangedItems() {
         let store = MobileKeptoraStore(), ns = UUID().uuidString
         let a = photo(ns + "a"), b = photo(ns + "b"), c = photo(ns + "c"), d = photo(ns + "d")

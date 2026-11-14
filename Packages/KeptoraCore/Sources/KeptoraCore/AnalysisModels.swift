@@ -289,6 +289,11 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
         let excluded = exclusions(in: groups)
         return UnifiedLibraryAdapter.uniqueReferences(exact.flatMap { eligibleMembers($0, excluding: excluded) })
     }
+    public func similarSuggestions(_ groups: [LibraryReviewGroup]) -> [UniversalMediaAsset] {
+        let similar = groups.filter { $0.kind == .similar || $0.kind == .verySimilar }
+        let byGroup = candidatesByGroup(groups)
+        return UnifiedLibraryAdapter.uniqueReferences(similar.flatMap { byGroup[$0.id] ?? [] })
+    }
 }
 
 public struct LibraryReviewBlock: Identifiable, Sendable {

@@ -298,6 +298,9 @@ final class MacArchiveModel: ObservableObject {
     func exactSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
         decisions.exactSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
     }
+    func similarSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
+        decisions.similarSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
+    }
     func selectOthers(in group: LibraryReviewGroup, visibleIDs: Set<String>? = nil) {
         let candidates = groupSuggestionCandidates(group).filter { !selection.contains($0.id) && (visibleIDs?.contains($0.id) ?? true) }
         guard authorizeSuggestions?(candidates.map(\.id)) ?? true else { return }
@@ -305,6 +308,11 @@ final class MacArchiveModel: ObservableObject {
     }
     func selectExactSuggestions(visibleIDs: Set<String>? = nil) {
         let candidates = exactSuggestionCandidates(visibleIDs: visibleIDs).filter { !selection.contains($0.id) }
+        guard authorizeSuggestions?(candidates.map(\.id)) ?? true else { return }
+        selectItems(candidates)
+    }
+    func selectSimilarSuggestions(visibleIDs: Set<String>? = nil) {
+        let candidates = similarSuggestionCandidates(visibleIDs: visibleIDs).filter { !selection.contains($0.id) }
         guard authorizeSuggestions?(candidates.map(\.id)) ?? true else { return }
         selectItems(candidates)
     }
@@ -764,7 +772,7 @@ final class MacArchiveModel: ObservableObject {
         if snapshot.contains(where: \.isProtectedFromGlobalSelection) {
             return .manualSelection
         }
-        let suggestedIDs = Set(exactSuggestionCandidates().map(\.id))
+        let suggestedIDs = Set(exactSuggestionCandidates().map(\.id)).union(similarSuggestionCandidates().map(\.id))
         let snapshotIDs = Set(snapshot.map(\.id))
         if !snapshotIDs.isEmpty && snapshotIDs.isSubset(of: suggestedIDs) {
             return .suggestedCopies

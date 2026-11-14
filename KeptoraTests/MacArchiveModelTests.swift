@@ -55,6 +55,31 @@ final class MacArchiveModelTests: XCTestCase {
         XCTAssertEqual(similar.first?.strength, .verySimilar)
     }
 
+    func testSelectSimilarSuggestionsSelectsCandidatesAndRespectsKeepersAndProtection() {
+        let model = MacArchiveModel(persistentSession: false)
+        func item(_ id: String) -> UniversalMediaAsset {
+            UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: id, mediaKind: .image)
+        }
+        let a = item("a"), b = item("b"), c = item("c")
+        model.assets = [a, b, c]
+        model.similar = [UniversalSimilarityGroup(id: "sim1", assets: [a, b, c], maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: a.id)]
+
+        let candidates = model.similarSuggestionCandidates()
+        XCTAssertEqual(Set(candidates.map(\.id)), [b.id, c.id])
+        XCTAssertFalse(candidates.contains(where: { $0.id == a.id }), "Keeper 'a' must never be suggested")
+
+        // Protect b: b is excluded
+        model.toggleProtection(b)
+        XCTAssertEqual(model.similarSuggestionCandidates().map(\.id), [c.id])
+
+        // Unprotect b
+        model.toggleProtection(b)
+        model.selectSimilarSuggestions()
+        XCTAssertEqual(model.selection, Set([b.id, c.id]))
+        XCTAssertFalse(model.selection.contains(a.id))
+        XCTAssertEqual(model.removalIntent(for: model.selected), .suggestedCopies)
+    }
+
     func testProtectedPhotosRequireExplicitUnprotectForManualAndBulkSelection() {
         let model = MacArchiveModel(persistentSession: false)
         let photo = UniversalMediaAsset(id: UUID().uuidString, sourceID: "test", reference: .photoLibrary(localIdentifier: "a"), displayName: "a.jpg", mediaKind: .image)

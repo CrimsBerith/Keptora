@@ -602,8 +602,11 @@ struct MobileLibraryView: View {
             if hasActiveFilters {
                 activeFilterChips
             }
-            if filterCriteria.finding == .copies || (!store.reviewGroups.isEmpty && store.scanState == .completed) {
+            if filterCriteria.finding == .copies || (filterCriteria.finding == .all && !store.reviewGroups.isEmpty && store.scanState == .completed) {
                 exactBatchSelection
+            }
+            if filterCriteria.finding == .verySimilar || filterCriteria.finding == .review || (filterCriteria.finding == .all && !store.reviewGroups.isEmpty && store.scanState == .completed) {
+                similarBatchSelection
             }
             if hasActiveFilters && filterCriteria.finding == .all { selectListButton }
             attentionRows
@@ -700,8 +703,11 @@ struct MobileLibraryView: View {
         let scope = Set(store.scopedAssets.map(\.id))
         let extraCopies = store.exactSuggestionCandidates(visibleIDs: scope)
         let extraBytes = extraCopies.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
-        let anyFinding = !extraCopies.isEmpty || !store.reviewGroups.isEmpty || store.qualityAssessments.values.contains { $0.needsReview }
+        let similarCandidates = store.similarSuggestionCandidates(visibleIDs: scope)
+        let similarBytes = similarCandidates.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
+        let anyFinding = !extraCopies.isEmpty || !similarCandidates.isEmpty || !store.reviewGroups.isEmpty || store.qualityAssessments.values.contains { $0.needsReview }
         let remaining = extraCopies.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+        let similarRemaining = similarCandidates.filter { !store.selectedLibraryIDs.contains($0.id) }.count
         return VStack(alignment: .leading, spacing: 8) {
             Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
             if !anyFinding {
@@ -735,6 +741,40 @@ struct MobileLibraryView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
                         Text(L10n.format("Suggested Copies Selected (%lld)", extraCopies.count))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(MobileKeptoraDesign.mint)
+                    .padding(.vertical, 4)
+                }
+            }
+            if !similarCandidates.isEmpty {
+                Button { filterCriteria.finding = .verySimilar } label: {
+                    HStack {
+                        Label(L10n.format("Similar photos: %lld · %@", similarCandidates.count, ByteCountFormatter.string(fromByteCount: similarBytes, countStyle: .file)), systemImage: "photo.stack")
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    }.frame(maxWidth: .infinity, minHeight: 36).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(MobileKeptoraDesign.accent)
+                .font(.subheadline.weight(.semibold))
+                .accessibilityIdentifier("archive.results.similar")
+
+                if similarRemaining > 0 {
+                    Button {
+                        if !store.selectSimilarSuggestions(isUnlocked: purchase.isUnlocked, visibleIDs: scope) {
+                            store.present(.paywall)
+                        }
+                    } label: {
+                        Label(L10n.format("Select Similar Photos (%lld)", similarRemaining), systemImage: "checkmark.circle.fill")
+                    }
+                    .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
+                    .accessibilityIdentifier("archive.results.selectSimilar")
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text(L10n.format("Similar Photos Selected (%lld)", similarCandidates.count))
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(MobileKeptoraDesign.mint)
@@ -936,6 +976,26 @@ struct MobileLibraryView: View {
         }.disabled(store.isCleaningUp || store.isLoadingCatalogue || store.scanState.isScanning || store.isAnalyzing)
     }
 
+    private var similarBatchSelection: some View {
+        let scope = Set(visible.map(\.id))
+        let candidates = store.similarSuggestionCandidates(visibleIDs: scope)
+        let remaining = candidates.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+        return Group {
+            if !candidates.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button {
+                        if !store.selectSimilarSuggestions(isUnlocked: purchase.isUnlocked, visibleIDs: scope) { store.present(.paywall) }
+                    } label: {
+                        if remaining == 0 { Text("Similar Photos Selected") }
+                        else { Text(L10n.format("Select Similar Photos (%lld)", remaining)) }
+                    }.buttonStyle(MobileSleekActionButtonStyle(tint: MobileKeptoraDesign.accent)).disabled(remaining == 0)
+                        .accessibilityIdentifier("archive.selectSimilarPhotos")
+                    Text("Items suggested to keep and protected items stay unselected.").font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                }
+            }
+        }.disabled(store.isCleaningUp || store.isLoadingCatalogue || store.scanState.isScanning || store.isAnalyzing)
+    }
+
     private func sectionHeader(_ section: (date: Date, assets: [UniversalMediaAsset])) -> some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: MobileKeptoraDesign.actionSpacing) { sectionHeaderContents(section) }
@@ -981,7 +1041,7 @@ struct MobileLibraryView: View {
                     HStack(spacing: 3) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 8, weight: .bold))
-                        Text("Keep This")
+                        Text(LocalizedStringKey("Keep This"))
                             .font(.system(size: 9, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
@@ -1082,14 +1142,14 @@ struct MobileLibraryView: View {
 
     private func selectionThumbnail(_ asset: UniversalMediaAsset, selected: Bool, keeperLabel: String?) -> some View {
         let isKeeper = keeperLabel != nil
-        return ZStack(alignment: .bottomTrailing) {
+        return ZStack {
             Color(uiColor: .secondarySystemFill)
             MobileAssetThumbnail(asset: asset, contentMode: .fill, showsRetryButton: false)
                 .accessibilityHidden(true)
                 .overlay(selected ? Color.black.opacity(0.28) : .clear)
                 .allowsHitTesting(false)
-            thumbnailBadges(asset, keeperLabel: keeperLabel).allowsHitTesting(false)
-            thumbnailSelectionIndicator(asset, selected: selected).allowsHitTesting(false)
+            thumbnailOverlay(asset, keeperLabel: keeperLabel, selected: selected)
+                .allowsHitTesting(false)
         }
         .aspectRatio(1, contentMode: .fit)
         .clipped()
@@ -1101,15 +1161,42 @@ struct MobileLibraryView: View {
         )
     }
 
-    private func thumbnailBadges(_ asset: UniversalMediaAsset, keeperLabel: String?) -> some View {
+    private func thumbnailOverlay(_ asset: UniversalMediaAsset, keeperLabel: String?, selected: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources))
-                .font(.caption2.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
-                .allowsTightening(true)
-                .padding(.horizontal, 5).padding(.vertical, 2.5)
-                .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+            // Top Row: Source badge and lock on leading, media attributes (favorite / video duration) on trailing
+            HStack(alignment: .top, spacing: 4) {
+                HStack(spacing: 3) {
+                    Label(LocalizedStringKey(asset.sourceBadgeKey(in: store.connectedSources)), systemImage: asset.sourceBadgeSymbol(in: store.connectedSources))
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .allowsTightening(true)
+                        .padding(.horizontal, 5).padding(.vertical, 2.5)
+                        .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+                    if store.decisions.protectedIDs.contains(asset.id) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2.weight(.semibold))
+                            .padding(3)
+                            .foregroundStyle(.white)
+                            .background(.black.opacity(0.78), in: Circle())
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                if asset.isFavorite || asset.mediaKind == .video {
+                    HStack(spacing: 3) {
+                        if asset.isFavorite { Image(systemName: "heart.fill").foregroundStyle(.pink) }
+                        if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5).padding(.vertical, 2.5)
+                    .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
+                }
+            }
+
+            // Middle: Quality issue finding (if any)
             if let issue = store.qualityAssessments[asset.id]?.findings.first {
                 Label(LocalizedStringKey(issue.titleKey), systemImage: issue.symbol)
                     .font(.caption2)
@@ -1119,7 +1206,8 @@ struct MobileLibraryView: View {
                     .padding(4)
                     .foregroundStyle(.white).background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 4))
             }
-            if store.decisions.protectedIDs.contains(asset.id) { Image(systemName: "lock.fill").foregroundStyle(.white) }
+
+            // Middle: Keeper badge (if kept)
             if let keeperLabel {
                 Label(LocalizedStringKey(keeperLabel), systemImage: "bookmark.fill")
                     .font(.caption2.weight(.semibold))
@@ -1130,24 +1218,19 @@ struct MobileLibraryView: View {
                     .foregroundStyle(.white)
                     .background(MobileKeptoraDesign.mintFill.opacity(0.94), in: RoundedRectangle(cornerRadius: 4))
             }
-            Spacer()
-        }.padding(4).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
 
-    private func thumbnailSelectionIndicator(_ asset: UniversalMediaAsset, selected: Bool) -> some View {
-        HStack {
-            if asset.isFavorite || asset.mediaKind == .video {
-                HStack(spacing: 4) {
-                    if asset.isFavorite { Image(systemName: "heart.fill") }
-                    if asset.mediaKind == .video { Label(asset.formattedDuration, systemImage: "play.fill") }
-                }
+            Spacer(minLength: 0)
+
+            // Bottom Row: Selection checkmark on trailing
+            HStack {
+                Spacer()
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
+                    .foregroundStyle(selected ? MobileKeptoraDesign.accent : .white)
+                    .shadow(color: .black.opacity(0.4), radius: 2)
             }
-            Spacer()
-            Image(systemName: selected ? "checkmark.circle.fill" : "circle").font(.title2)
-                .foregroundStyle(selected ? MobileKeptoraDesign.accent : .white)
         }
-        .font(.caption2.weight(.semibold)).foregroundStyle(.white)
-        .padding(8).background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
+        .padding(4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func groupActions(_ group: LibraryReviewGroup, candidates: [UniversalMediaAsset], itemCount: Int) -> some View {
@@ -1457,6 +1540,7 @@ struct MobileSelectionReviewSheet: View {
 
 struct MobileCleanupHubView: View {
     @EnvironmentObject private var store: MobileKeptoraStore
+    @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
         ScrollView {
@@ -1485,7 +1569,9 @@ struct MobileCleanupHubView: View {
                     let remaining = candidates.filter { !store.selectedLibraryIDs.contains($0.id) }.count
                     if !candidates.isEmpty && remaining > 0 {
                         Button {
-                            _ = store.selectExactSuggestions(isUnlocked: true)
+                            if !store.selectExactSuggestions(isUnlocked: purchase.isUnlocked) {
+                                store.present(.paywall)
+                            }
                         } label: {
                             Label(L10n.format("Select Suggested for Deletion (%lld)", remaining), systemImage: "checkmark.circle.fill")
                         }
@@ -1493,6 +1579,24 @@ struct MobileCleanupHubView: View {
                         .accessibilityIdentifier("suggestions.selectSuggested")
                     } else if !candidates.isEmpty {
                         Label(L10n.format("Suggested Copies Selected (%lld)", candidates.count), systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(MobileKeptoraDesign.mint)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    let similar = store.similarSuggestionCandidates()
+                    let similarRemaining = similar.filter { !store.selectedLibraryIDs.contains($0.id) }.count
+                    if !similar.isEmpty && similarRemaining > 0 {
+                        Button {
+                            if !store.selectSimilarSuggestions(isUnlocked: purchase.isUnlocked) {
+                                store.present(.paywall)
+                            }
+                        } label: {
+                            Label(L10n.format("Select Similar Photos (%lld)", similarRemaining), systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(MobilePrimaryButtonStyle(fillsWidth: true))
+                        .accessibilityIdentifier("suggestions.selectSimilar")
+                    } else if !similar.isEmpty {
+                        Label(L10n.format("Similar Photos Selected (%lld)", similar.count), systemImage: "checkmark.circle.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(MobileKeptoraDesign.mint)
                             .frame(maxWidth: .infinity, alignment: .center)

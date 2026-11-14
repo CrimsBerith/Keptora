@@ -374,8 +374,11 @@ struct MacArchiveView: View {
             HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
                 .padding(.horizontal, 16).padding(.top, 10)
             filters
-            if finding == .copies || (!archive.reviewGroups.isEmpty && archive.sessionProgress.isComplete) {
-                exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 12)
+            if finding == .copies || (finding == .all && !archive.reviewGroups.isEmpty && archive.sessionProgress.isComplete) {
+                exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 8)
+            }
+            if finding == .verySimilar || finding == .review || (finding == .all && !archive.reviewGroups.isEmpty && archive.sessionProgress.isComplete) {
+                similarBatchSelection.padding(.horizontal, 16).padding(.bottom, 8)
             }
             if let message = archive.filterScopeMessage {
                 HStack(alignment: .top) {
@@ -556,6 +559,22 @@ struct MacArchiveView: View {
             }
         }.disabled(archive.busy || archive.loading || archive.isExactAnalyzing)
     }
+    private var similarBatchSelection: some View {
+        let scope = Set(visible.map(\.id))
+        let candidates = archive.similarSuggestionCandidates(visibleIDs: scope)
+        let remaining = candidates.filter { !archive.selection.contains($0.id) }.count
+        return Group {
+            if !candidates.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button { archive.selectSimilarSuggestions(visibleIDs: scope) } label: {
+                        if remaining == 0 { Text("Similar Photos Selected") }
+                        else { Text(L10n.format("Select Similar Photos (%lld)", remaining)) }
+                    }.disabled(remaining == 0).accessibilityIdentifier("mac.archive.selectSimilarPhotos")
+                    Text("Items suggested to keep and protected items stay unselected.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                }.padding(.bottom, 8)
+            }
+        }.disabled(archive.busy || archive.loading || archive.analyzing)
+    }
     private func selectByClick(_ item: UniversalMediaAsset) {
         searchFocused = false
         if NSEvent.modifierFlags.contains(.shift), let anchor = rangeAnchor {
@@ -699,7 +718,7 @@ struct MacArchiveView: View {
                             .disabled(archive.analyzing)
                             .accessibilityIdentifier("mac.archive.keep.\(item.id)")
                     } else if kept {
-                        Text("Suggested Keep")
+                        Text(LocalizedStringKey("Suggested Keep"))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(KeptoraDesign.accent)
                     }
@@ -818,6 +837,8 @@ struct MacArchiveView: View {
     private var scanResults: some View {
         let extraCopies = archive.exactSuggestionCandidates(visibleIDs: Set(archive.scopedAssets.map(\.id)))
         let extraBytes = extraCopies.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
+        let similar = archive.similarSuggestionCandidates(visibleIDs: Set(archive.scopedAssets.map(\.id)))
+        let similarBytes = similar.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
         return HStack(spacing: 12) {
             Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
             if !extraCopies.isEmpty {
@@ -826,7 +847,15 @@ struct MacArchiveView: View {
                 }
                 .buttonStyle(.link)
                 .accessibilityIdentifier("mac.archive.results.copies")
-            } else if archive.gallery.findingCounts[.copies] == 0 && archive.gallery.findingCounts[.verySimilar] == 0 {
+            }
+            if !similar.isEmpty {
+                Button { finding = .verySimilar } label: {
+                    Label(L10n.format("Similar photos: %lld · %@", similar.count, ByteCountFormatter.string(fromByteCount: similarBytes, countStyle: .file)), systemImage: "photo.stack")
+                }
+                .buttonStyle(.link)
+                .accessibilityIdentifier("mac.archive.results.similar")
+            }
+            if extraCopies.isEmpty && similar.isEmpty && archive.gallery.findingCounts[.copies] == 0 && archive.gallery.findingCounts[.verySimilar] == 0 {
                 Text("No copies or similar photos found.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
             }
         }

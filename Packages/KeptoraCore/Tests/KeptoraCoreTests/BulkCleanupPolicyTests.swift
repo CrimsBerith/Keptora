@@ -154,6 +154,29 @@ final class BulkCleanupPolicyTests: XCTestCase {
             similar: [UniversalSimilarityGroup(id: "similar", assets: [b,c], maximumDistance: 0.1, strength: .verySimilar, keeperID: "b")])
         XCTAssertTrue(LibraryReviewDecisions().exactSuggestions(groups).isEmpty)
     }
+    func testSimilarSuggestionsReturnOnlyEligibleNonKeepersAndRespectProtection() {
+        let a = item("a"), b = item("b"), c = item("c"), favorite = item("fav", favorite: true)
+        let groups = LibraryReviewGroup.combined(
+            exact: [UniversalExactGroup(digest: "same", assets: [a, b], keeperID: "a")],
+            similar: [UniversalSimilarityGroup(id: "similar", assets: [b, c, favorite], maximumDistance: 0.1, strength: .verySimilar, keeperID: "b")]
+        )
+        // Keepers across groups are "a" (exact) and "b" (similar).
+        // "fav" is protected from global selection.
+        // Therefore, candidate is only "c".
+        var decisions = LibraryReviewDecisions()
+        XCTAssertEqual(decisions.similarSuggestions(groups).map(\.id), ["c"])
+
+        // User changes keeper in similar group to "c":
+        let similarGroup = groups.first { $0.kind == .verySimilar }!
+        decisions.keep("c", in: similarGroup)
+        // Now "c" is keeper. "b" is not keeper anywhere (in exact group keeper is "a").
+        // "b" is now eligible.
+        XCTAssertEqual(decisions.similarSuggestions(groups).map(\.id), ["b"])
+
+        // If "b" is protected, similarSuggestions returns empty.
+        decisions.toggleProtection("b")
+        XCTAssertTrue(decisions.similarSuggestions(groups).isEmpty)
+    }
     func testGroupSelectionRespectsKeepersInOtherVisibleRelations() {
         let a = item("a"), b = item("b"), c = item("c")
         let groups = LibraryReviewGroup.combined(exact: [UniversalExactGroup(digest: "same", assets: [a, b], keeperID: "a")],

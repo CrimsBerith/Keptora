@@ -525,6 +525,9 @@ final class MobileKeptoraStore: ObservableObject {
     func exactSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
         decisions.exactSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
     }
+    func similarSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
+        decisions.similarSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
+    }
     @discardableResult
     func selectOthers(in group: LibraryReviewGroup, isUnlocked: Bool, visibleIDs: Set<String>? = nil) -> Bool {
         guard !isCleaningUp else { return false }
@@ -537,6 +540,14 @@ final class MobileKeptoraStore: ObservableObject {
     func selectExactSuggestions(isUnlocked: Bool, visibleIDs: Set<String>? = nil) -> Bool {
         guard !isCleaningUp else { return false }
         let candidates = exactSuggestionCandidates(visibleIDs: visibleIDs).filter { !selectedLibraryIDs.contains($0.id) }
+        guard !candidates.isEmpty else { return true }
+        guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
+        selectLibraryItems(candidates); return true
+    }
+    @discardableResult
+    func selectSimilarSuggestions(isUnlocked: Bool, visibleIDs: Set<String>? = nil) -> Bool {
+        guard !isCleaningUp else { return false }
+        let candidates = similarSuggestionCandidates(visibleIDs: visibleIDs).filter { !selectedLibraryIDs.contains($0.id) }
         guard !candidates.isEmpty else { return true }
         guard authorizeReview(assetIDs: candidates.map(\.id), isUnlocked: isUnlocked) else { return false }
         selectLibraryItems(candidates); return true
@@ -763,7 +774,7 @@ final class MobileKeptoraStore: ObservableObject {
         if snapshot.contains(where: \.isProtectedFromGlobalSelection) {
             return .manualSelection
         }
-        let suggestedIDs = Set(exactSuggestionCandidates().map(\.id))
+        let suggestedIDs = Set(exactSuggestionCandidates().map(\.id)).union(similarSuggestionCandidates().map(\.id))
         let snapshotIDs = Set(snapshot.map(\.id))
         if !snapshotIDs.isEmpty && snapshotIDs.isSubset(of: suggestedIDs) {
             return .suggestedCopies
