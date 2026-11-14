@@ -662,12 +662,17 @@ final class MobileKeptoraStore: ObservableObject {
         let requestedSource = source
         isLoadingCatalogue = true
         catalogueError = nil
+        let initialAssets = assets
         catalogueTask = Task { [weak self] in
             guard let self else { return }
             defer { if catalogueGeneration == generation { isLoadingCatalogue = false } }
             do {
                 let adapter = unifiedAdapter
-                let catalogue = try await adapter.enumerateAssets()
+                let catalogue = try await adapter.enumerateAssets(onSourceBatch: { [weak self] partialItems, reports, cat in
+                    Task { @MainActor [weak self] in
+                        self?.receiveCatalogueBatch(partialItems, reports: reports, catalogue: cat, generation: generation)
+                    }
+                })
                 let reports = await adapter.coverage
                 guard !Task.isCancelled, requestedSource == source, catalogueGeneration == generation else { return }
                 coverage = reports
@@ -677,11 +682,11 @@ final class MobileKeptoraStore: ObservableObject {
                     guard !Task.isCancelled, catalogueGeneration == generation else { return }
                 }
                 let previousSelection = assets + pendingSelection
-                let previous = Dictionary(assets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                let previous = Dictionary(initialAssets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
                 let contentChanged = catalogue.contains(where: { item in previous[item.id]?.modificationDate != item.modificationDate }) || Set(previous.keys) != Set(catalogue.map(\.id))
                 // A new or edited photo only invalidates results that include changed items.
                 // Wiping everything made one screenshot during review erase the whole scan.
-                let unchangedIDs = LibraryCatalogueReconciliation.unchangedIDs(current: catalogue, previous: assets)
+                let unchangedIDs = LibraryCatalogueReconciliation.unchangedIDs(current: catalogue, previous: initialAssets)
                 // PhotoKit catalogues carry no file sizes; the scan measures them. A Photos change
                 // notification reloads the catalogue, so keep sizes already known for unchanged items
                 // instead of showing "Zero KB" until the next scan.
@@ -889,6 +894,15 @@ final class MobileKeptoraStore: ObservableObject {
                 similarityProgress = nil; videoSimilarityProgress = nil
             }
         }
+    }
+    private func receiveCatalogueBatch(_ items: [UniversalMediaAsset], reports: [LibrarySourceCoverage], catalogue: LibrarySourceCatalogue, generation: UUID) {
+        guard catalogueGeneration == generation, !Task.isCancelled else { return }
+        let previous = assets + pendingSelection
+        sourceCatalogue.merge(catalogue)
+        assets = sourceCatalogue.assets(in: connectedSources, selectedIDs: Set(connectedSources.map(\.id)), current: items + assets)
+            .sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+        coverage = connectedSources.compactMap { source in reports.first { $0.id == source.id } ?? coverage.first { $0.id == source.id } }
+        reconcileLibrarySelection(previous: previous)
     }
     private func receiveAnalysis(_ update: LibraryAnalysisUpdate, generation: UUID) {
         guard scanGeneration == generation, !Task.isCancelled else { return }

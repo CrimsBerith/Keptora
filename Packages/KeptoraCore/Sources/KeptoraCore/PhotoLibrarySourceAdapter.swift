@@ -82,8 +82,35 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 
     /// `PHAssetResource.assetResources(for:)` is the slow part of a catalogue load. Photos edits
     /// update `modificationDate`, so an unchanged date means the file name and edit state are too.
-    private struct ResourceSummary { let modified: Date; let filename: String?; let hasAdjustments: Bool }
+    private struct ResourceSummary: Codable, Sendable {
+        let modified: Date
+        let filename: String?
+        let hasAdjustments: Bool
+    }
     private var resourceSummaries: [String: ResourceSummary] = [:]
+    private var hasLoadedResourceCache = false
+
+    private static var resourceCacheURL: URL {
+        let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let folder = base.appendingPathComponent("KeptoraCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder.appendingPathComponent("photo_resource_summaries.json")
+    }
+
+    private func ensureResourceCacheLoaded() {
+        guard !hasLoadedResourceCache else { return }
+        hasLoadedResourceCache = true
+        guard let data = try? Data(contentsOf: Self.resourceCacheURL),
+              let decoded = try? JSONDecoder().decode([String: ResourceSummary].self, from: data) else { return }
+        resourceSummaries = decoded
+    }
+
+    private func persistResourceCache() {
+        guard !resourceSummaries.isEmpty else { return }
+        guard let data = try? JSONEncoder().encode(resourceSummaries) else { return }
+        try? data.write(to: Self.resourceCacheURL, options: .atomic)
+    }
 
     public init() {}
 
@@ -103,6 +130,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         guard authorization == .authorized || authorization == .limited else {
             throw UniversalScanError.sourcePermissionDenied
         }
+        ensureResourceCacheLoaded()
         let options = PHFetchOptions()
         options.includeAllBurstAssets = true
         options.includeHiddenAssets = true
@@ -115,17 +143,30 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         summaries.reserveCapacity(fetch.count)
         for index in 0..<fetch.count {
             try Task.checkCancellation(); try await control?.waitIfPaused()
+            if index % 64 == 0 { await Task.yield() }
             let asset = fetch.object(at: index)
             PhotoLibraryAssetCache.shared.set(asset, for: asset.localIdentifier)
             guard asset.mediaType == .image || asset.mediaType == .video else { continue }
             let summary: ResourceSummary
-            if let modified = asset.modificationDate, let cached = resourceSummaries[asset.localIdentifier], cached.modified == modified {
+            if let modified = asset.modificationDate, let cached = resourceSummaries[asset.localIdentifier], abs(cached.modified.timeIntervalSince(modified)) < 0.001 {
+                summary = cached
+            } else if asset.modificationDate == nil, let cached = resourceSummaries[asset.localIdentifier] {
                 summary = cached
             } else {
-                let resources = PHAssetResource.assetResources(for: asset)
-                summary = ResourceSummary(modified: asset.modificationDate ?? .distantPast,
-                    filename: Self.primaryResource(in: resources, mediaType: asset.mediaType)?.originalFilename ?? resources.first?.originalFilename,
-                    hasAdjustments: resources.contains { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto || $0.type == .adjustmentBaseVideo })
+                let mightBeEdited = asset.modificationDate != nil &&
+                    abs((asset.modificationDate ?? .distantPast).timeIntervalSince(asset.creationDate ?? .distantPast)) >= 1.0
+                if mightBeEdited || asset.mediaType == .video || index < 200 {
+                    let resources = PHAssetResource.assetResources(for: asset)
+                    let foundFilename = Self.primaryResource(in: resources, mediaType: asset.mediaType)?.originalFilename ?? resources.first?.originalFilename
+                    let adjustments = resources.contains { $0.type == .adjustmentData || $0.type == .adjustmentBasePhoto || $0.type == .adjustmentBaseVideo }
+                    summary = ResourceSummary(modified: asset.modificationDate ?? .distantPast,
+                        filename: foundFilename,
+                        hasAdjustments: adjustments)
+                } else {
+                    summary = ResourceSummary(modified: asset.modificationDate ?? .distantPast,
+                        filename: nil,
+                        hasAdjustments: false)
+                }
             }
             // Without a modification date a change cannot be detected, so such items are never reused.
             if asset.modificationDate != nil { summaries[asset.localIdentifier] = summary }
@@ -161,6 +202,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
         await onBatch(output)
         resourceSummaries = summaries
+        persistResourceCache()
         return output
     }
 
