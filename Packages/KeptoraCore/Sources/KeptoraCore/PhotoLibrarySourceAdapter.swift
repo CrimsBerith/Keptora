@@ -658,23 +658,30 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
     }
 
     private static func albumMemberships() -> [String: [MediaAlbum]] {
-        let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        let smartAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
         var membership: [String: [MediaAlbum]] = [:]
-        collections.enumerateObjects { collection, _, _ in
-            let album = MediaAlbum(id: collection.localIdentifier, title: collection.localizedTitle ?? "Album")
+        let processCollection: (PHAssetCollection) -> Void = { collection in
+            guard let title = collection.localizedTitle, !title.isEmpty else { return }
+            let album = MediaAlbum(id: collection.localIdentifier, title: title)
             let members = PHAsset.fetchAssets(in: collection, options: nil)
             members.enumerateObjects { asset, _, _ in membership[asset.localIdentifier, default: []].append(album) }
         }
+        userAlbums.enumerateObjects { col, _, _ in processCollection(col) }
+        smartAlbums.enumerateObjects { col, _, _ in processCollection(col) }
         return membership
     }
 
     private static func albumMemberIdentifiers() -> Set<String> {
-        let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+        let smartAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
         var identifiers = Set<String>()
-        collections.enumerateObjects { collection, _, _ in
+        let processCollection: (PHAssetCollection) -> Void = { collection in
             let members = PHAsset.fetchAssets(in: collection, options: nil)
             members.enumerateObjects { asset, _, _ in identifiers.insert(asset.localIdentifier) }
         }
+        userAlbums.enumerateObjects { col, _, _ in processCollection(col) }
+        smartAlbums.enumerateObjects { col, _, _ in processCollection(col) }
         return identifiers
     }
 

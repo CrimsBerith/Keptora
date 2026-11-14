@@ -298,6 +298,7 @@ struct MobileLibraryView: View {
     @State private var filterCriteria = MobileLibraryFilterCriteria()
     @State private var isFilterSheetPresented = false
     @State private var search = ""
+    @State private var debouncedSearch = ""
     @State private var cloudScan = false
     @State private var sources = false
     @State private var pendingFolderPicker = false
@@ -340,7 +341,7 @@ struct MobileLibraryView: View {
         galleryMemo.scopedFirstID == store.scopedAssets.first?.id &&
         galleryMemo.scopedLastID == store.scopedAssets.last?.id &&
         galleryMemo.filterCriteria == filterCriteria &&
-        galleryMemo.search == search &&
+        galleryMemo.search == debouncedSearch &&
         galleryMemo.libraryCollectionSortBySize == store.libraryCollectionSortBySize &&
         galleryMemo.libraryCollectionIDsCount == store.libraryCollectionIDs?.count
     }
@@ -352,7 +353,7 @@ struct MobileLibraryView: View {
         galleryMemo.scopedFirstID = store.scopedAssets.first?.id
         galleryMemo.scopedLastID = store.scopedAssets.last?.id
         galleryMemo.filterCriteria = filterCriteria
-        galleryMemo.search = search
+        galleryMemo.search = debouncedSearch
         galleryMemo.libraryCollectionSortBySize = store.libraryCollectionSortBySize
         galleryMemo.libraryCollectionIDsCount = store.libraryCollectionIDs?.count
         galleryMemo.visible = computed
@@ -363,22 +364,27 @@ struct MobileLibraryView: View {
 
     private func computeVisible() -> [UniversalMediaAsset] {
         let findingIDs = filterCriteria.finding.ids(groups: store.reviewGroups, quality: store.qualityAssessments)
-        return store.scopedAssets.filter { asset in
+        let filtered = store.scopedAssets.filter { asset in
             (findingIDs?.contains(asset.id) ?? true) &&
             (filterCriteria.media == 0 || (filterCriteria.media == 1 ? asset.mediaKind == .image : asset.mediaKind == .video)) &&
             (filterCriteria.albumID.isEmpty || asset.context?.albums.contains { $0.id == filterCriteria.albumID } == true) &&
             (!filterCriteria.favouritesOnly || asset.isFavorite) &&
             store.collectionContains(asset) &&
             (!filterCriteria.dateRangeEnabled || dateMatches(asset)) &&
-            (search.isEmpty || SmartLibrarySearchMatcher.matches(asset: asset, query: search))
-        }.sorted {
-            if filterCriteria.largestFirst || store.libraryCollectionSortBySize {
+            (debouncedSearch.isEmpty || SmartLibrarySearchMatcher.matches(asset: asset, query: debouncedSearch))
+        }
+        if filterCriteria.largestFirst || store.libraryCollectionSortBySize {
+            return filtered.sorted {
                 let a = $0.byteCount ?? -1, b = $1.byteCount ?? -1
                 if a != b { return a > b }
+                let da = $0.context?.captureDate ?? $0.creationDate ?? .distantPast
+                let db = $1.context?.captureDate ?? $1.creationDate ?? .distantPast
+                return da == db ? $0.id < $1.id : da > db
             }
-            let a = $0.context?.captureDate ?? $0.creationDate ?? .distantPast
-            let b = $1.context?.captureDate ?? $1.creationDate ?? .distantPast
-            return a == b ? $0.id < $1.id : (filterCriteria.oldestFirst ? a < b : a > b)
+        } else if filterCriteria.oldestFirst {
+            return filtered.reversed()
+        } else {
+            return filtered
         }
     }
 
@@ -396,11 +402,27 @@ struct MobileLibraryView: View {
         if filterCriteria.largestFirst || store.libraryCollectionSortBySize || filterCriteria.grouping == 0 {
             computed = [(date: .distantFuture, assets: currentVisible)]
         } else {
-            let grouped = Dictionary(grouping: currentVisible) {
-                guard let date = $0.context?.captureDate ?? $0.creationDate else { return Date.distantPast }
-                return calendar.dateInterval(of: filterCriteria.grouping == 1 ? .day : .month, for: date)?.start ?? .distantPast
+            var groupedSections: [(date: Date, assets: [UniversalMediaAsset])] = []
+            var currentSectionDate: Date? = nil
+            var currentSectionAssets: [UniversalMediaAsset] = []
+
+            for asset in currentVisible {
+                let rawDate = asset.context?.captureDate ?? asset.creationDate ?? .distantPast
+                let sectionDate = calendar.dateInterval(of: filterCriteria.grouping == 1 ? .day : .month, for: rawDate)?.start ?? .distantPast
+                if let current = currentSectionDate, current == sectionDate {
+                    currentSectionAssets.append(asset)
+                } else {
+                    if let current = currentSectionDate {
+                        groupedSections.append((date: current, assets: currentSectionAssets))
+                    }
+                    currentSectionDate = sectionDate
+                    currentSectionAssets = [asset]
+                }
             }
-            computed = grouped.map { (date: $0.key, assets: $0.value) }.sorted { filterCriteria.oldestFirst ? $0.date < $1.date : $0.date > $1.date }
+            if let current = currentSectionDate {
+                groupedSections.append((date: current, assets: currentSectionAssets))
+            }
+            computed = groupedSections
         }
         galleryMemo.sectionsGrouping = filterCriteria.grouping
         galleryMemo.sectionsOldestFirst = filterCriteria.oldestFirst
@@ -585,6 +607,16 @@ struct MobileLibraryView: View {
             if store.canOpenPhotosSettings { Button("Open Settings") { store.openPhotosSettings() }.accessibilityIdentifier("ios.photosPermission.openSettings") }
             Button("Not Now", role: .cancel) { }.accessibilityIdentifier("ios.photosPermission.notNow")
         } message: { Text(store.photosPermissionHelpMessage) }
+        .task(id: search) {
+            if search.isEmpty {
+                debouncedSearch = ""
+                return
+            }
+            do {
+                try await Task.sleep(nanoseconds: 120_000_000)
+                debouncedSearch = search
+            } catch {}
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ios.page.archive")
     }
@@ -673,12 +705,18 @@ struct MobileLibraryView: View {
     }
 
     @ViewBuilder private var dateSectionsGallery: some View {
-        ForEach(sections, id: \.date) { section in
-            sectionHeader(section)
-            LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
-                ForEach(section.assets) { asset in cell(asset).id(asset.id) }
-            }.scrollTargetLayout()
+        LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
+            ForEach(sections, id: \.date) { section in
+                Section {
+                    ForEach(section.assets) { asset in cell(asset).id(asset.id) }
+                } header: {
+                    sectionHeader(section)
+                        .padding(.top, 10)
+                        .padding(.bottom, 4)
+                }
+            }
         }
+        .scrollTargetLayout()
     }
 
     private var welcome: some View {

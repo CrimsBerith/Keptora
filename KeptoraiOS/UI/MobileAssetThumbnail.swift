@@ -116,6 +116,9 @@ struct MobileAssetThumbnail: View {
             let photo: PHAsset?
             if let cachedPhoto = MobilePHAssetCache.shared.asset(for: localIdentifier) {
                 photo = cachedPhoto
+            } else if let coreCached = PhotoLibraryAssetCache.shared.asset(for: localIdentifier) {
+                photo = coreCached
+                MobilePHAssetCache.shared.setAsset(coreCached, for: localIdentifier)
             } else {
                 let fetched = await Task.detached(priority: .userInitiated) {
                     PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject
@@ -134,7 +137,7 @@ struct MobileAssetThumbnail: View {
                 await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
                     request.setContinuation(continuation)
                     let options = PHImageRequestOptions()
-                    options.deliveryMode = .highQualityFormat
+                    options.deliveryMode = pixelSize <= 384 ? .fastFormat : .highQualityFormat
                     options.resizeMode = .fast
                     options.isNetworkAccessAllowed = allowNetwork
                     let targetMode: PHImageContentMode = (contentMode == .fit) ? .aspectFit : .aspectFill
@@ -149,7 +152,7 @@ struct MobileAssetThumbnail: View {
                         let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
                         // If network access is disabled or asset is in iCloud, degraded image is the only locally available representation
                         let isFinalOrOnlyAvailable = !options.isNetworkAccessAllowed && isInCloud
-                        if degraded && img != nil && !failed && !isFinalOrOnlyAvailable { return }
+                        if degraded && img != nil && !failed && !isFinalOrOnlyAvailable && pixelSize > 384 { return }
                         request.resumeOnce { continuation.resume(returning: img) }
                     }
                     request.setID(id)
