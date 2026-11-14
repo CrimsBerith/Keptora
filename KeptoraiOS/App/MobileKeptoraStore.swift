@@ -74,7 +74,13 @@ final class MobileKeptoraStore: ObservableObject {
     @Published private(set) var source: SourceSelection = .none
     @Published private(set) var authorization: SourceAuthorization = .notDetermined
     @Published var scanState: ScanState = .idle
-    @Published private(set) var assets: [UniversalMediaAsset] = []
+    @Published private(set) var assets: [UniversalMediaAsset] = [] { didSet { invalidateScope() } }
+    private var cachedScopedAssets: [UniversalMediaAsset]?
+    private var cachedAlbums: [MediaAlbum]?
+    private func invalidateScope() {
+        cachedScopedAssets = nil
+        cachedAlbums = nil
+    }
     #if DEBUG || KEPTORA_TESTING
     // Test fixtures use the same selection logic without exposing catalogue mutation in release builds.
     func replaceAssetsForTesting(_ items: [UniversalMediaAsset]) { assets = items }
@@ -197,7 +203,7 @@ final class MobileKeptoraStore: ObservableObject {
 
     private let photosAdapter = PhotoLibrarySourceAdapter()
     private let folderCleanup: FolderQuarantineExecutor
-    @Published private(set) var connectedFolders: [LibrarySource] = []
+    @Published private(set) var connectedFolders: [LibrarySource] = [] { didSet { invalidateScope() } }
     @Published private(set) var coverage: [LibrarySourceCoverage] = []
     @Published private(set) var connectionErrors: [String] = []
     @Published private(set) var scanSourceSelection = LibrarySourceSelection(excludedIDs: Set(UserDefaults.standard.stringArray(forKey: AppStorageKeys.iOSExcludedScanSources) ?? []))
@@ -205,11 +211,16 @@ final class MobileKeptoraStore: ObservableObject {
     private var folderAdapters: [String: FolderSourceAdapter] = [:]
     private var folderScopes: [String: URL] = [:]
     private var folderBookmarks: [String: Data] = [:]
-    private var photosConnected = false
+    private var photosConnected = false { didSet { invalidateScope() } }
     var connectedSources: [LibrarySource] { (photosConnected ? [.photos] : []) + connectedFolders }
     var libraryTitle: String { sourceSelectionState == .all ? L10n.tr("All Connected Sources") : L10n.tr("Selected Sources") }
     var selectedSourceIDs: Set<String> { scanSourceSelection.selectedIDs(in: connectedSources, coverage: coverage) }
-    var scopedAssets: [UniversalMediaAsset] { sourceCatalogue.assets(in: connectedSources, selectedIDs: selectedSourceIDs, current: assets) }
+    var scopedAssets: [UniversalMediaAsset] {
+        if let cached = cachedScopedAssets { return cached }
+        let value = sourceCatalogue.assets(in: connectedSources, selectedIDs: selectedSourceIDs, current: assets)
+        cachedScopedAssets = value
+        return value
+    }
     var sourceControlsDisabled: Bool { isCleaningUp || scanState.isScanning || isAnalyzing || isLoadingCatalogue || isRequestingPhotosAccess }
     var canScanSelectedSources: Bool { !sourceControlsDisabled && !selectedSourceIDs.isEmpty }
     var sourceSelectionState: LibrarySourceSelection.State { scanSourceSelection.state(in: connectedSources, coverage: coverage) }
@@ -225,6 +236,7 @@ final class MobileKeptoraStore: ObservableObject {
         scanSourcesChanged()
     }
     private func scanSourcesChanged() {
+        invalidateScope()
         UserDefaults.standard.set(Array(scanSourceSelection.excludedIDs).sorted(), forKey: AppStorageKeys.iOSExcludedScanSources)
         exactGroups = []; similarityGroups = []; similarVideoGroups = []; burstGroups = []
         selectedAssetIDs = []; selectedSimilarVideoAssetIDs = []
@@ -567,9 +579,12 @@ final class MobileKeptoraStore: ObservableObject {
     }
 
     var albums: [MediaAlbum] {
+        if let cached = cachedAlbums { return cached }
         var unique: [String: MediaAlbum] = [:]
         for asset in scopedAssets { for album in asset.context?.albums ?? [] { unique[album.id] = album } }
-        return unique.values.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        let value = unique.values.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        cachedAlbums = value
+        return value
     }
 
     private var librarySelectionKey: String { "Keptora.ManualSelection.unified.iOS" }

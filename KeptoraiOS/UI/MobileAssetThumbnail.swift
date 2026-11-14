@@ -49,11 +49,18 @@ struct MobileAssetThumbnail: View {
         }
         .clipped()
         .task(id: cacheKey) {
+            if let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
+                self.image = cached
+                self.didFinish = true
+                return
+            }
             image = nil; didFinish = false; needsDownload = false
             await load()
             if !Task.isCancelled { didFinish = true }
         }
     }
+
+    private static let cachingImageManager = PHCachingImageManager()
 
     private var unavailableLabel: LocalizedStringKey {
         needsDownload ? "Cloud original needs download" : "Preview unavailable"
@@ -106,8 +113,19 @@ struct MobileAssetThumbnail: View {
                 loadedImage = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
             }
         case .photoLibrary(let localIdentifier):
-            let result = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
-            guard let photo = result.firstObject else { return }
+            let photo: PHAsset?
+            if let cachedPhoto = MobilePHAssetCache.shared.asset(for: localIdentifier) {
+                photo = cachedPhoto
+            } else {
+                let fetched = await Task.detached(priority: .userInitiated) {
+                    PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject
+                }.value
+                if let fetched {
+                    MobilePHAssetCache.shared.setAsset(fetched, for: localIdentifier)
+                }
+                photo = fetched
+            }
+            guard let photo else { return }
             let request = PhotoImageRequest()
             let size = CGSize(width: pixelSize, height: pixelSize)
             // Cancelling the SwiftUI task (cell scrolled away) must also cancel the PhotoKit request,
@@ -120,7 +138,7 @@ struct MobileAssetThumbnail: View {
                     options.resizeMode = .fast
                     options.isNetworkAccessAllowed = allowNetwork
                     let targetMode: PHImageContentMode = (contentMode == .fit) ? .aspectFit : .aspectFill
-                    let id = PHImageManager.default().requestImage(
+                    let id = Self.cachingImageManager.requestImage(
                         for: photo,
                         targetSize: size,
                         contentMode: targetMode,
@@ -178,14 +196,28 @@ struct MobileAssetPreview: View {
     }
 }
 
+final class MobilePHAssetCache: @unchecked Sendable {
+    static let shared = MobilePHAssetCache()
+    private let cache = NSCache<NSString, PHAsset>()
+    private init() {
+        cache.countLimit = 4000
+    }
+    func asset(for identifier: String) -> PHAsset? {
+        cache.object(forKey: identifier as NSString)
+    }
+    func setAsset(_ asset: PHAsset, for identifier: String) {
+        cache.setObject(asset, forKey: identifier as NSString)
+    }
+}
+
 final class MobileThumbnailCache: @unchecked Sendable {
     static let shared = MobileThumbnailCache()
     private let cache = NSCache<NSString, UIImage>()
     private var memoryObserver: (any NSObjectProtocol)?
 
     private init() {
-        cache.totalCostLimit = 64 * 1024 * 1024 // 64 MB
-        cache.countLimit = 250
+        cache.totalCostLimit = 256 * 1024 * 1024 // 256 MB
+        cache.countLimit = 1500
         memoryObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didReceiveMemoryWarningNotification,
             object: nil,

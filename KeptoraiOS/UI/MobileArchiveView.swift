@@ -306,15 +306,58 @@ struct MobileLibraryView: View {
     @State private var isSwipeCleanPresented = false
     @State private var swipeCleanStartingIndex = 0
 
-    /// Holds the visible list for one render pass. `body` clears it, so each redraw filters and sorts the
-    /// library once instead of once per section that reads it (measured ~28 ms per pass at 50,000 items).
-    private final class VisibleMemo { var value: [UniversalMediaAsset]? }
-    @State private var visibleMemo = VisibleMemo()
+    /// Memoizes expensive filtering, sorting, date-grouping, and review block layout across render passes.
+    /// Invalidates automatically when scope, filters, or groups change, but remains valid during scrolling
+    /// and selection updates for smooth 60/120 FPS performance.
+    private final class MobileGalleryMemo {
+        var scopedAssetsCount: Int = -1
+        var scopedFirstID: String?
+        var scopedLastID: String?
+        var filterCriteria: MobileLibraryFilterCriteria?
+        var search: String = ""
+        var libraryCollectionSortBySize: Bool = false
+        var libraryCollectionIDsCount: Int?
+
+        var visible: [UniversalMediaAsset] = []
+
+        var sectionsGrouping: Int = -1
+        var sectionsOldestFirst: Bool = false
+        var sections: [(date: Date, assets: [UniversalMediaAsset])] = []
+
+        var reviewGroupsCount: Int = -1
+        var reviewQualityCount: Int = -1
+        var reviewBlocks: [LibraryReviewBlock] = []
+        var reviewOrderedAssets: [UniversalMediaAsset] = []
+        var reviewGroups: [LibraryReviewGroup] = []
+        var reviewMembership: [String: [LibraryReviewGroup]] = [:]
+        var reviewKeeperBadges: [String: String] = [:]
+        var reviewCandidatesByGroup: [String: [UniversalMediaAsset]] = [:]
+    }
+    @State private var galleryMemo = MobileGalleryMemo()
+
+    private var isVisibleMemoValid: Bool {
+        galleryMemo.scopedAssetsCount == store.scopedAssets.count &&
+        galleryMemo.scopedFirstID == store.scopedAssets.first?.id &&
+        galleryMemo.scopedLastID == store.scopedAssets.last?.id &&
+        galleryMemo.filterCriteria == filterCriteria &&
+        galleryMemo.search == search &&
+        galleryMemo.libraryCollectionSortBySize == store.libraryCollectionSortBySize &&
+        galleryMemo.libraryCollectionIDsCount == store.libraryCollectionIDs?.count
+    }
 
     private var visible: [UniversalMediaAsset] {
-        if let cached = visibleMemo.value { return cached }
+        if isVisibleMemoValid { return galleryMemo.visible }
         let computed = computeVisible()
-        visibleMemo.value = computed
+        galleryMemo.scopedAssetsCount = store.scopedAssets.count
+        galleryMemo.scopedFirstID = store.scopedAssets.first?.id
+        galleryMemo.scopedLastID = store.scopedAssets.last?.id
+        galleryMemo.filterCriteria = filterCriteria
+        galleryMemo.search = search
+        galleryMemo.libraryCollectionSortBySize = store.libraryCollectionSortBySize
+        galleryMemo.libraryCollectionIDsCount = store.libraryCollectionIDs?.count
+        galleryMemo.visible = computed
+        galleryMemo.sectionsGrouping = -1
+        galleryMemo.reviewGroupsCount = -1
         return computed
     }
 
@@ -340,20 +383,91 @@ struct MobileLibraryView: View {
         }
     }
 
+    private var isSectionsMemoValid: Bool {
+        isVisibleMemoValid &&
+        galleryMemo.sectionsGrouping == filterCriteria.grouping &&
+        galleryMemo.sectionsOldestFirst == filterCriteria.oldestFirst
+    }
+
     private var sections: [(date: Date, assets: [UniversalMediaAsset])] {
+        if isSectionsMemoValid { return galleryMemo.sections }
         let calendar = Calendar.current
+        let currentVisible = visible
+        let computed: [(date: Date, assets: [UniversalMediaAsset])]
         if filterCriteria.largestFirst || store.libraryCollectionSortBySize || filterCriteria.grouping == 0 {
-            return [(date: .distantFuture, assets: visible)]
+            computed = [(date: .distantFuture, assets: currentVisible)]
+        } else {
+            let grouped = Dictionary(grouping: currentVisible) {
+                guard let date = $0.context?.captureDate ?? $0.creationDate else { return Date.distantPast }
+                return calendar.dateInterval(of: filterCriteria.grouping == 1 ? .day : .month, for: date)?.start ?? .distantPast
+            }
+            computed = grouped.map { (date: $0.key, assets: $0.value) }.sorted { filterCriteria.oldestFirst ? $0.date < $1.date : $0.date > $1.date }
         }
-        let grouped = Dictionary(grouping: visible) {
-            guard let date = $0.context?.captureDate ?? $0.creationDate else { return Date.distantPast }
-            return calendar.dateInterval(of: filterCriteria.grouping == 1 ? .day : .month, for: date)?.start ?? .distantPast
+        galleryMemo.sectionsGrouping = filterCriteria.grouping
+        galleryMemo.sectionsOldestFirst = filterCriteria.oldestFirst
+        galleryMemo.sections = computed
+        return computed
+    }
+
+    private struct ReviewProjection {
+        let blocks: [LibraryReviewBlock]
+        let orderedAssets: [UniversalMediaAsset]
+        let groups: [LibraryReviewGroup]
+        let membership: [String: [LibraryReviewGroup]]
+        let keeperBadges: [String: String]
+        let candidatesByGroup: [String: [UniversalMediaAsset]]
+    }
+
+    private var isReviewMemoValid: Bool {
+        isVisibleMemoValid &&
+        galleryMemo.reviewGroupsCount == store.reviewGroups.count &&
+        galleryMemo.reviewQualityCount == store.qualityAssessments.count
+    }
+
+    private var reviewProjection: ReviewProjection {
+        if isReviewMemoValid {
+            return ReviewProjection(
+                blocks: galleryMemo.reviewBlocks,
+                orderedAssets: galleryMemo.reviewOrderedAssets,
+                groups: galleryMemo.reviewGroups,
+                membership: galleryMemo.reviewMembership,
+                keeperBadges: galleryMemo.reviewKeeperBadges,
+                candidatesByGroup: galleryMemo.reviewCandidatesByGroup
+            )
         }
-        return grouped.map { (date: $0.key, assets: $0.value) }.sorted { filterCriteria.oldestFirst ? $0.date < $1.date : $0.date > $1.date }
+        let currentVisible = visible
+        let candidates = store.decisions.candidatesByGroup(store.reviewGroups)
+        var memberMap: [String: [LibraryReviewGroup]] = [:]
+        for group in store.reviewGroups {
+            for asset in group.assets {
+                memberMap[asset.id, default: []].append(group)
+            }
+        }
+        let badges = store.decisions.keeperBadgeKeys(in: store.reviewGroups)
+        let blocks = LibraryReviewBlock.make(assets: currentVisible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
+        let ordered = blocks.flatMap(\.assets)
+        let grps = blocks.flatMap(\.groups)
+
+        galleryMemo.reviewGroupsCount = store.reviewGroups.count
+        galleryMemo.reviewQualityCount = store.qualityAssessments.count
+        galleryMemo.reviewBlocks = blocks
+        galleryMemo.reviewOrderedAssets = ordered
+        galleryMemo.reviewGroups = grps
+        galleryMemo.reviewMembership = memberMap
+        galleryMemo.reviewKeeperBadges = badges
+        galleryMemo.reviewCandidatesByGroup = candidates
+
+        return ReviewProjection(
+            blocks: blocks,
+            orderedAssets: ordered,
+            groups: grps,
+            membership: memberMap,
+            keeperBadges: badges,
+            candidatesByGroup: candidates
+        )
     }
 
     var body: some View {
-        let _ = { visibleMemo.value = nil }()
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 libraryContent
@@ -521,38 +635,25 @@ struct MobileLibraryView: View {
     }
 
     @ViewBuilder private var unifiedReviewGallery: some View {
-        let candidatesByGroup = store.decisions.candidatesByGroup(store.reviewGroups)
+        let projection = reviewProjection
         let visibleIDs = Set(visible.map(\.id))
-        var membership: [String: [LibraryReviewGroup]] = [:]
-        let _ = {
-            for group in store.reviewGroups {
-                for asset in group.assets {
-                    membership[asset.id, default: []].append(group)
-                }
-            }
-        }()
-        let keeperBadges = store.decisions.keeperBadgeKeys(in: store.reviewGroups)
-        let blocks = LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
-        let orderedAssets = blocks.flatMap(\.assets)
-        let groups = blocks.flatMap(\.groups)
         VStack(alignment: .leading, spacing: 10) {
             Text(LocalizedStringKey(filterCriteria.finding.titleKey)).font(.headline)
             LazyVGrid(columns: galleryColumns, alignment: .leading, spacing: 4) {
-                ForEach(orderedAssets) { asset in
-                    cell(asset, groups: membership[asset.id] ?? [], keeperBadge: keeperBadges[asset.id]).id(asset.id)
+                ForEach(projection.orderedAssets) { asset in
+                    cell(asset, groups: projection.membership[asset.id] ?? [], keeperBadge: projection.keeperBadges[asset.id]).id(asset.id)
                 }
             }.scrollTargetLayout()
-            ForEach(groups) { group in
-                groupActions(group, candidates: (candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) }, itemCount: group.assets.filter { visibleIDs.contains($0.id) }.count)
+            ForEach(projection.groups) { group in
+                groupActions(group, candidates: (projection.candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) }, itemCount: group.assets.filter { visibleIDs.contains($0.id) }.count)
             }
         }
     }
 
     @ViewBuilder private var smartBlocksGallery: some View {
-        let candidatesByGroup = store.decisions.candidatesByGroup(store.reviewGroups)
+        let projection = reviewProjection
         let visibleIDs = Set(visible.map(\.id))
-        let blocks = LibraryReviewBlock.make(assets: visible, groups: store.reviewGroups, quality: store.qualityAssessments, smart: true)
-        ForEach(blocks) { block in
+        ForEach(projection.blocks) { block in
             let membership = block.groupsByAsset
             let keeperBadges = store.decisions.keeperBadgeKeys(in: block.groups)
             VStack(alignment: .leading, spacing: 10) {
@@ -563,7 +664,7 @@ struct MobileLibraryView: View {
                     }
                 }.scrollTargetLayout()
                 ForEach(block.groups) { group in
-                    groupActions(group, candidates: (candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) }, itemCount: group.assets.filter { visibleIDs.contains($0.id) }.count)
+                    groupActions(group, candidates: (projection.candidatesByGroup[group.id] ?? []).filter { visibleIDs.contains($0.id) }, itemCount: group.assets.filter { visibleIDs.contains($0.id) }.count)
                 }
             }
         }

@@ -249,11 +249,6 @@ struct MacArchiveView: View {
                     .onAppear { restorePosition(proxy) }
                     .onChange(of: archive.loading) { _, loading in if !loading { restorePosition(proxy) } }
                     .onChange(of: archive.assets.count) { restorePosition(proxy) }
-                    .onPreferenceChange(MacGalleryPositions.self) { positions in
-                        if let first = positions.filter({ $0.value >= 0 }).min(by: { $0.value < $1.value }), archive.scrollAnchorID != first.key {
-                            archive.recordScrollAnchor(first.key)
-                        }
-                    }
                     .onChange(of: keyboardFocus) { _, id in archive.recordFocus(id); if let id { proxy.scrollTo(id, anchor: .center) } }
             }
             if !archive.selection.isEmpty || archive.canUndoSelection || archive.canRedoSelection {
@@ -729,9 +724,16 @@ struct MacArchiveView: View {
         }
         .padding(10)
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .keptoraGlass(cornerRadius: 16, tint: selected ? KeptoraDesign.accent : nil, isSelected: selected)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(selected ? KeptoraDesign.accent.opacity(0.12) : KeptoraDesign.elevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(selected ? KeptoraDesign.accent : Color.white.opacity(0.08), lineWidth: selected ? 2 : 1)
+                )
+        )
         .id(item.id)
-        .background(GeometryReader { geometry in Color.clear.preference(key: MacGalleryPositions.self, value: [item.id: geometry.frame(in: .named("mac-gallery")).minY]) })
+        .onAppear { archive.recordVisibleItem(item.id) }
         .contextMenu {
                                 if case .file(let url) = item.reference { Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }
                                 if archive.decisions.protectedIDs.contains(item.id) { Button("Unprotect and Select") { archive.unprotectAndSelect(item) } }
@@ -1099,9 +1101,4 @@ struct MacManualHistoryView: View {
 
 struct CombinedCleanupHistoryView: View {
     var body: some View { ScrollView { MacManualHistoryView() } }
-}
-
-private struct MacGalleryPositions: PreferenceKey {
-    static let defaultValue: [String: CGFloat] = [:]
-    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) { value.merge(nextValue(), uniquingKeysWith: { _, new in new }) }
 }

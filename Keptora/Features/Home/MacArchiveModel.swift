@@ -114,6 +114,7 @@ final class MacArchiveModel: ObservableObject {
     private var navigationFocusID: String?
     var scrollAnchorID: String? { navigationScrollID ?? galleryContext.scrollID }
     var focusedAssetID: String? { navigationFocusID ?? galleryContext.focusedID }
+    func recordVisibleItem(_ id: String) { if navigationScrollID == nil { navigationScrollID = id } }
     func recordScrollAnchor(_ id: String) { if scrollAnchorID != id { navigationScrollID = id; scheduleSave() } }
     func recordFocus(_ id: String?) { navigationFocusID = id; scheduleSave() }
     @Published var workMetrics: [AnalysisStage: AnalysisWorkMetrics] = [:]

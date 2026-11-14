@@ -36,8 +36,11 @@ public struct MobileSwipeCleanView: View {
         case skip
     }
 
+    private let deckIDs: Set<String>
+
     public init(assets: [UniversalMediaAsset], onFinish: (() -> Void)? = nil) {
         self.assets = assets
+        self.deckIDs = Set(assets.map(\.id))
         self.onFinish = onFinish
     }
 
@@ -53,13 +56,13 @@ public struct MobileSwipeCleanView: View {
     }
 
     private var selectedInDeckCount: Int {
-        let deckIDs = Set(assets.map(\.id))
-        return store.selectedLibraryIDs.intersection(deckIDs).count
+        store.selectedLibraryIDs.intersection(deckIDs).count
     }
 
     private var selectedBytesInDeck: Int64 {
-        let deckIDs = Set(assets.map(\.id))
-        return assets.filter { store.selectedLibraryIDs.contains($0.id) }
+        let selectedIDs = store.selectedLibraryIDs.intersection(deckIDs)
+        guard !selectedIDs.isEmpty else { return 0 }
+        return assets.filter { selectedIDs.contains($0.id) }
             .reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
     }
 

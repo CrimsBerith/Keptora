@@ -16,7 +16,8 @@ struct MacPhotosThumbnail: View {
     var allowNetwork = false
     @State private var image: NSImage?
     @State private var finished = false
-    private var cacheKey: String { "\(asset.id)|\(asset.modificationDate?.timeIntervalSince1970 ?? 0)|\(asset.fileRevision?.changeToken ?? "")|\(pixelSize)|\(fit)|\(allowNetwork)" }
+    private static let cachingManager = PHCachingImageManager()
+    private var cacheKey: String { "\(asset.id)|\(asset.modificationDate?.timeIntervalSince1970 ?? asset.creationDate?.timeIntervalSince1970 ?? 0)|\(asset.fileRevision?.changeToken ?? "")|\(pixelSize)|\(fit)|\(allowNetwork)" }
     var body: some View {
         // The flexible background sets the size; a filled image in an overlay can't widen the cell past its column.
         Color.secondary.opacity(0.10).overlay {
@@ -28,17 +29,24 @@ struct MacPhotosThumbnail: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .clipped()
-        .task(id: cacheKey) { await load() }
+        .task(id: cacheKey) {
+            if let cached = MacArchiveThumbnailCache.shared.get(cacheKey) {
+                self.image = cached
+                self.finished = true
+                return
+            }
+            await load()
+        }
     }
     private func load() async {
         image = nil; finished = false
         defer {
             if !Task.isCancelled {
                 finished = true
-                if let image, asset.modificationDate != nil { MacArchiveThumbnailCache.shared.store(image, key: cacheKey) }
+                if let image { MacArchiveThumbnailCache.shared.store(image, key: cacheKey) }
             }
         }
-        if asset.modificationDate != nil, let cached = MacArchiveThumbnailCache.shared.get(cacheKey) { image = cached; return }
+        if let cached = MacArchiveThumbnailCache.shared.get(cacheKey) { image = cached; return }
         if case .file(let url) = asset.reference {
             do { try await FolderSourceAdapter(rootURL: url.deletingLastPathComponent(), cleanupAvailable: false).prepareForAccess(url, allowNetwork: allowNetwork) }
             catch { return }
@@ -69,14 +77,24 @@ struct MacPhotosThumbnail: View {
             }
             return
         }
-        guard case .photoLibrary(let identifier) = asset.reference,
-              let photo = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject else { return }
+        guard case .photoLibrary(let identifier) = asset.reference else { return }
+        let photo: PHAsset?
+        if let cached = MacPHAssetCache.shared.get(identifier) {
+            photo = cached
+        } else {
+            let fetched = await Task.detached(priority: .userInitiated) {
+                PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject
+            }.value
+            if let fetched { MacPHAssetCache.shared.set(identifier, asset: fetched) }
+            photo = fetched
+        }
+        guard let photo else { return }
         let request = MacArchiveImageRequest()
         let decoded: NSImage? = await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 let options = PHImageRequestOptions(); options.deliveryMode = .highQualityFormat
-                options.resizeMode = .exact; options.isNetworkAccessAllowed = allowNetwork
-                let id = PHImageManager.default().requestImage(for: photo, targetSize: NSSize(width: pixelSize, height: pixelSize),
+                options.resizeMode = .fast; options.isNetworkAccessAllowed = allowNetwork
+                let id = Self.cachingManager.requestImage(for: photo, targetSize: NSSize(width: pixelSize, height: pixelSize),
                     contentMode: fit ? .aspectFit : .aspectFill, options: options) { value, info in
                         let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
                         let cancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
@@ -91,10 +109,17 @@ struct MacPhotosThumbnail: View {
         if !Task.isCancelled { image = decoded }
     }
 }
+private final class MacPHAssetCache: @unchecked Sendable {
+    static let shared = MacPHAssetCache()
+    private let cache = NSCache<NSString, PHAsset>()
+    private init() { cache.countLimit = 4000 }
+    func get(_ id: String) -> PHAsset? { cache.object(forKey: id as NSString) }
+    func set(_ id: String, asset: PHAsset) { cache.setObject(asset, forKey: id as NSString) }
+}
 private final class MacArchiveThumbnailCache: @unchecked Sendable {
     static let shared = MacArchiveThumbnailCache()
     private let cache = NSCache<NSString, NSImage>()
-    private init() { cache.totalCostLimit = 64 * 1_048_576; cache.countLimit = 250 }
+    private init() { cache.totalCostLimit = 256 * 1_048_576; cache.countLimit = 1500 }
     func get(_ key: String) -> NSImage? { cache.object(forKey: key as NSString) }
     func store(_ image: NSImage, key: String) {
         let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
