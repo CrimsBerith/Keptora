@@ -39,6 +39,7 @@ public actor VisualSimilarityAnalyzer {
         for (index, asset) in candidates.enumerated() {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
+            if index % 8 == 0 { await Task.yield() }
             progress(index, candidates.count)
             let value: (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment)
             do { value = try await descriptor(for: asset, provider: provider, allowNetwork: allowNetwork, similarityEnabled: similarityEnabled) }

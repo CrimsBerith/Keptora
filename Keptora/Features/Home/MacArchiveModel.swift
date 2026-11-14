@@ -247,11 +247,12 @@ final class MacArchiveModel: ObservableObject {
     private var generation = UUID()
     private var observer: MacArchivePhotoObserver?
     private var selectionKey: String { "Keptora.ManualSelection.unified.Mac" }
-    @Published var qualityAssessments: [String: QualityAssessment] = [:] { didSet { cachedProjection = nil; analysisCacheDirty = true } }
-    @Published var analysisIssues: [AnalysisIssue] = [] { didSet { cachedProjection = nil; analysisCacheDirty = true } }
+    @Published var qualityAssessments: [String: QualityAssessment] = [:] { didSet { if !analyzing { cachedProjection = nil }; analysisCacheDirty = true } }
+    @Published var analysisIssues: [AnalysisIssue] = [] { didSet { if !analyzing { cachedProjection = nil }; analysisCacheDirty = true } }
     @Published private(set) var analysisFailures: [AnalysisStage: String] = [:] { didSet { analysisCacheDirty = true } }
     @Published var sessionProgress = AnalysisSessionProgress() { didSet { analysisCacheDirty = true } }
     private var fingerprints: [String: UniversalExactFingerprint] = [:]
+    private var lastFindingsPublishTime = Date.distantPast
     @Published private(set) var lastCleanupOutcome: LibraryCleanupOutcome?
     @Published var pendingSelection: [UniversalMediaAsset] = []
     @Published var unresolvedSelectionIDs: Set<String> = []
@@ -687,8 +688,9 @@ final class MacArchiveModel: ObservableObject {
         exact = []; similar = []; similarVideos = []; burstGroups = []; fingerprints = [:]
         status = L10n.tr("Loading sources"); analysisProcessed = 0; analysisTotal = scopedAssets.count
         let adapter = scanAdapter
-        task = Task {
-            defer { if generation == current { analyzing = false; status = nil; scheduleSave(); scheduleAnalysisSave() }; operations.release(lease); drainRefresh() }
+        lastFindingsPublishTime = .distantPast
+        task = Task(priority: .utility) {
+            defer { if generation == current { analyzing = false; cachedProjection = nil; status = nil; scheduleSave(); scheduleAnalysisSave() }; operations.release(lease); drainRefresh() }
             let coordinator = LibraryAnalysisCoordinator { update in await self.receiveAnalysis(update, generation: current) }
             do {
                 try await coordinator.run(adapter: adapter, allowNetwork: allowNetwork, configuration: configuration, control: control,
@@ -730,6 +732,9 @@ final class MacArchiveModel: ObservableObject {
             similar = groups; qualityAssessments = quality; replaceIssues(.photos, issues); skippedPreviews = issues.count
         case .findings(let quality, let issues):
             guard sessionProgress.stages[.photos]?.isTerminal != true else { return }
+            let now = Date()
+            guard now.timeIntervalSince(lastFindingsPublishTime) >= 1.0 else { return }
+            lastFindingsPublishTime = now
             qualityAssessments = quality; replaceIssues(.photos, issues)
         case .videos(let groups, let issues): similarVideos = groups; replaceIssues(.videos, issues)
         case .bursts(let bursts): burstGroups = bursts; invalidateGroups()

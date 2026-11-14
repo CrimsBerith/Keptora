@@ -165,6 +165,7 @@ final class MobileKeptoraStore: ObservableObject {
     private var catalogueTask: Task<Void, Never>?
     private var catalogueGeneration = UUID()
     private var scanGeneration = UUID()
+    private var lastFindingsPublishTime = Date.distantPast
     private var manualSelectionIsLoaded = false
     private var photoObserver: MobilePhotoChangeObserver?
 
@@ -860,7 +861,8 @@ final class MobileKeptoraStore: ObservableObject {
         exactGroups = []; similarityGroups = []; similarVideoGroups = []; burstGroups = []
         scanState = .scanning(processed: 0, total: max(scopedAssets.count, 1), current: L10n.tr("Loading sources"))
         UIApplication.shared.isIdleTimerDisabled = true
-        scanTask = Task { [weak self] in
+        lastFindingsPublishTime = .distantPast
+        scanTask = Task(priority: .utility) { [weak self] in
             guard let self else { return }
             defer { if scanGeneration == generation { UIApplication.shared.isIdleTimerDisabled = false; resumePendingPhotoReload() } }
             let checkpoint = await checkpointArchive.load(url: checkpointURL, ticket: checkpointTicket, sourceID: adapter.source.id, allowNetwork: allowNetwork)
@@ -919,6 +921,9 @@ final class MobileKeptoraStore: ObservableObject {
             skippedSimilarityPreviews = issues.count
         case .findings(let quality, let issues):
             guard sessionProgress.stages[.photos]?.isTerminal != true else { return }
+            let now = Date()
+            guard now.timeIntervalSince(lastFindingsPublishTime) >= 1.0 else { return }
+            lastFindingsPublishTime = now
             qualityAssessments = quality; replaceIssues(.photos, issues)
         case .videos(let groups, let issues): similarVideoGroups = groups; replaceIssues(.videos, issues)
         case .bursts(let bursts): burstGroups = bursts; cachedReviewGroups = nil

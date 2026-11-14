@@ -25,6 +25,15 @@ private final class LockedPhotoHasher: @unchecked Sendable {
     }
 }
 
+public final class PhotoLibraryAssetCache: @unchecked Sendable {
+    public static let shared = PhotoLibraryAssetCache()
+    private let cache = NSCache<NSString, PHAsset>()
+    private init() { cache.countLimit = 5000 }
+    public func asset(for id: String) -> PHAsset? { cache.object(forKey: id as NSString) }
+    public func set(_ asset: PHAsset, for id: String) { cache.setObject(asset, forKey: id as NSString) }
+    public func clear() { cache.removeAllObjects() }
+}
+
 private final class CancellablePhotosRequest: @unchecked Sendable {
     private let lock = NSLock()
     private var id: PHImageRequestID?
@@ -107,6 +116,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         for index in 0..<fetch.count {
             try Task.checkCancellation(); try await control?.waitIfPaused()
             let asset = fetch.object(at: index)
+            PhotoLibraryAssetCache.shared.set(asset, for: asset.localIdentifier)
             guard asset.mediaType == .image || asset.mediaType == .video else { continue }
             let summary: ResourceSummary
             if let modified = asset.modificationDate, let cached = resourceSummaries[asset.localIdentifier], cached.modified == modified {
@@ -376,6 +386,8 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         }
     }
 
+    private static let cachingImageManager = PHCachingImageManager()
+
     public func similarityImage(
         for asset: UniversalMediaAsset,
         maximumPixelSize: Int,
@@ -383,7 +395,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
     ) async throws -> CGImage {
         guard case .photoLibrary(let localIdentifier) = asset.reference,
               asset.mediaKind == .image,
-              let photo = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
+              let photo = PhotoLibraryAssetCache.shared.asset(for: localIdentifier) ?? PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
             throw UniversalScanError.inaccessibleAsset(asset.displayName)
         }
         return try await Self.withTimeout(seconds: 10) {
@@ -397,7 +409,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { continuation in
                 let singleShot = SingleShotContinuation(continuation)
-                let requestID = PHImageManager.default().requestImage(
+                let requestID = Self.cachingImageManager.requestImage(
                     for: photo,
                     targetSize: targetSize,
                     contentMode: .aspectFit,

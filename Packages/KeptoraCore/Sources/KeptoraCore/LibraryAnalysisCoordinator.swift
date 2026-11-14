@@ -28,7 +28,7 @@ public actor LibraryAnalysisCoordinator {
     private func progress(_ stage: AnalysisStage, done: Int, total: Int) async {
         guard session.stages[stage]?.isTerminal != true else { return }
         let now = Date()
-        guard done == 0 || done == total || now.timeIntervalSince(lastProgress[stage] ?? .distantPast) >= 0.1 else { return }
+        guard done == 0 || done == total || now.timeIntervalSince(lastProgress[stage] ?? .distantPast) >= 0.35 else { return }
         lastProgress[stage] = now
         let value = AnalysisStageProgress(status: .running, processed: done, total: total)
         session.update(stage, value); await receive(.progress(stage, value))
@@ -63,10 +63,10 @@ public actor LibraryAnalysisCoordinator {
         }
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask { try await self.exact(assets, adapter: adapter, allowNetwork: allowNetwork, checkpoint: checkpoint, checkpointUpdate: checkpointUpdate) }
-                group.addTask { try await self.photos(assets, adapter: adapter, allowNetwork: allowNetwork) }
+                group.addTask(priority: .utility) { try await self.exact(assets, adapter: adapter, allowNetwork: allowNetwork, checkpoint: checkpoint, checkpointUpdate: checkpointUpdate) }
+                group.addTask(priority: .utility) { try await self.photos(assets, adapter: adapter, allowNetwork: allowNetwork) }
                 if configuration.similarityEnabled {
-                    group.addTask { try await self.videos(assets, adapter: adapter, allowNetwork: allowNetwork) }
+                    group.addTask(priority: .utility) { try await self.videos(assets, adapter: adapter, allowNetwork: allowNetwork) }
                 } else {
                     await complete(.videos, count: 0, issues: [])
                 }

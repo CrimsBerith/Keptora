@@ -419,9 +419,12 @@ struct MobileLibraryView: View {
     }
 
     private var isReviewMemoValid: Bool {
-        isVisibleMemoValid &&
-        galleryMemo.reviewGroupsCount == store.reviewGroups.count &&
-        galleryMemo.reviewQualityCount == store.qualityAssessments.count
+        guard isVisibleMemoValid else { return false }
+        if store.scanState.isScanning || store.isAnalyzing {
+            return galleryMemo.reviewGroupsCount == store.reviewGroups.count && !galleryMemo.reviewBlocks.isEmpty
+        }
+        return galleryMemo.reviewGroupsCount == store.reviewGroups.count &&
+               galleryMemo.reviewQualityCount == store.qualityAssessments.count
     }
 
     private var reviewProjection: ReviewProjection {

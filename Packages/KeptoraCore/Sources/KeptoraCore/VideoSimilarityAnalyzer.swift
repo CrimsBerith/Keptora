@@ -69,6 +69,7 @@ public actor VideoSimilarityAnalyzer {
         for (offset, asset) in candidates.enumerated() {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
+            if offset % 4 == 0 { await Task.yield() }
             progress(offset, candidates.count)
             let sample: UniversalVideoSimilaritySample
             do {

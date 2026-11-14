@@ -155,9 +155,10 @@ public actor UniversalExactScanner {
         var unknownDimensionKinds: Set<UniversalMediaKind> = []
         let kindCounts = Dictionary(grouping: assets, by: \.mediaKind).mapValues(\.count)
 
-        for asset in assets {
+        for (index, asset) in assets.enumerated() {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
+            if index % 64 == 0 { await Task.yield() }
             let hasUnknownDim = asset.pixelWidth == 0 || asset.pixelHeight == 0
             if hasUnknownDim { unknownDimensionKinds.insert(asset.mediaKind) }
 
@@ -197,8 +198,9 @@ public actor UniversalExactScanner {
         for (index, asset) in assets.enumerated() {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
+            if index % 16 == 0 { await Task.yield() }
             let now = Date()
-            if index == 0 || index == assets.count - 1 || now.timeIntervalSince(lastProgressEmission) >= 0.05 {
+            if index == 0 || index == assets.count - 1 || now.timeIntervalSince(lastProgressEmission) >= 0.35 {
                 lastProgressEmission = now
                 progress(index, assets.count, asset.displayName)
             }
