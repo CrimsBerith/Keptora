@@ -127,7 +127,7 @@ struct MacGalleryProjection {
             (!context.isScreenshotsOnly || item.context?.isScreenshot == true) &&
             (context.media == 0 || (context.media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
             (context.albumID.isEmpty || item.context?.albums.contains { $0.id == context.albumID } == true) &&
-            (search.isEmpty || item.displayName.localizedCaseInsensitiveContains(search))
+            (search.isEmpty || SmartLibrarySearchMatcher.matches(asset: item, query: search))
         }.sorted {
             let a = $0.context?.captureDate ?? $0.creationDate ?? .distantPast
             let b = $1.context?.captureDate ?? $1.creationDate ?? .distantPast

@@ -370,8 +370,7 @@ struct MobileLibraryView: View {
             (!filterCriteria.favouritesOnly || asset.isFavorite) &&
             store.collectionContains(asset) &&
             (!filterCriteria.dateRangeEnabled || dateMatches(asset)) &&
-            (search.isEmpty || asset.displayName.localizedCaseInsensitiveContains(search) ||
-             asset.context?.camera?.localizedCaseInsensitiveContains(search) == true)
+            (search.isEmpty || SmartLibrarySearchMatcher.matches(asset: asset, query: search))
         }.sorted {
             if filterCriteria.largestFirst || store.libraryCollectionSortBySize {
                 let a = $0.byteCount ?? -1, b = $1.byteCount ?? -1
@@ -485,7 +484,7 @@ struct MobileLibraryView: View {
         }
         .navigationTitle(store.libraryCollectionKind.map { L10n.tr(String.LocalizationValue($0)) } ?? store.libraryCollectionTitle ?? L10n.tr("Photo Library"))
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $search, prompt: "Search filenames or camera")
+        .searchable(text: $search, prompt: "Search photos, trips, albums, dates...")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {

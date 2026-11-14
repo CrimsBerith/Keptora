@@ -11277,6 +11277,35 @@
         }
       }
     },
+    "Search photos, trips, albums, dates..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotos, Reisen, Alben oder Daten suchen…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search photos, trips, albums, dates..."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher photos, voyages, albums, dates…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotoğraf, gezi, albüm veya tarih ara…"
+          }
+        }
+      }
+    },
     "Search: %@" : {
       "extractionState" : "manual",
       "localizations" : {

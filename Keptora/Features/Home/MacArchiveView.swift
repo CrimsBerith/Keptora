@@ -750,7 +750,7 @@ struct MacArchiveView: View {
     private var filters: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                TextField("Search filenames", text: contextBinding(\.search)).textFieldStyle(.roundedBorder).focused($searchFocused).frame(minWidth: 120)
+                TextField("Search photos, trips, albums, dates...", text: contextBinding(\.search)).textFieldStyle(.roundedBorder).focused($searchFocused).frame(minWidth: 120)
                 Menu("Filters") {
                     Picker("Media type", selection: contextBinding(\.media)) { Text("All").tag(0); Text("Photos").tag(1); Text("Videos").tag(2) }
                     Picker("Album", selection: contextBinding(\.albumID)) { Text("All Albums").tag(""); ForEach(archive.albums) { Text($0.title).tag($0.id) } }

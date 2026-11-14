@@ -331,6 +331,68 @@ final class LibraryWorkflowTests: XCTestCase {
         XCTAssertTrue(result.fingerprintsByAssetID["p2"]?.digest.hasPrefix("unique:") == true)
     }
     #endif
+
+    func testSmartSearchMatcherFindsTripsAndSemanticQueries() {
+        let cal = Calendar.current
+        var comps = DateComponents()
+        comps.year = 2024
+        comps.month = 11
+        comps.day = 14
+        let nov2024 = cal.date(from: comps) ?? Date()
+
+        // 1. Photo in a travel album
+        let travelAlbumPhoto = UniversalMediaAsset(
+            id: "trip1",
+            sourceID: "photos",
+            reference: .photoLibrary(localIdentifier: "trip1"),
+            displayName: "IMG_1001.JPG",
+            mediaKind: .image,
+            creationDate: nov2024,
+            context: MediaContext(albums: [MediaAlbum(id: "alb1", title: "İtalya Gezisi")], captureDate: nov2024)
+        )
+
+        // 2. Photo with GPS coordinates (trip outing)
+        let gpsPhoto = UniversalMediaAsset(
+            id: "trip2",
+            sourceID: "photos",
+            reference: .photoLibrary(localIdentifier: "trip2"),
+            displayName: "IMG_2002.JPG",
+            mediaKind: .image,
+            creationDate: nov2024,
+            context: MediaContext(location: MediaLocation(latitude: 41.9028, longitude: 12.4964), captureDate: nov2024)
+        )
+
+        // 3. Regular indoor photo without travel context
+        let plainPhoto = UniversalMediaAsset(
+            id: "plain",
+            sourceID: "photos",
+            reference: .photoLibrary(localIdentifier: "plain"),
+            displayName: "IMG_3003.JPG",
+            mediaKind: .image,
+            creationDate: nov2024,
+            isFavorite: true,
+            context: MediaContext(captureDate: nov2024)
+        )
+
+        // "gezi" should match the travel album photo and GPS outdoor photo, but not the plain photo
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "gezi"))
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "GEZİ"))
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: gpsPhoto, query: "gezi"))
+        XCTAssertFalse(SmartLibrarySearchMatcher.matches(asset: plainPhoto, query: "gezi"))
+
+        // Date search
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "2024"))
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "Kasım"))
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "November"))
+
+        // Multi-token: "gezi 2024" matches trip1 and trip2, rejects plain
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "gezi 2024"))
+        XCTAssertFalse(SmartLibrarySearchMatcher.matches(asset: plainPhoto, query: "gezi 2024"))
+
+        // Flag search
+        XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: plainPhoto, query: "favori"))
+        XCTAssertFalse(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "favori"))
+    }
 }
 
 private struct WorkflowSource: SourceAdapter {
