@@ -1,5 +1,5 @@
 .DS_Store
-Build/
+[bB]uild/
 DerivedData/
 ValidationArtifacts/Mac/
 *.xcresult
@@ -8,9 +8,19 @@ ValidationArtifacts/Mac/
 *.dSYM
 .swiftpm/
 Packages/*/.build/
+Packages/*/[bB]uild/
 xcuserdata/
 *.moved-aside
 Claude outputs/
+
+# AppStore heavy/generated assets and redundant resolutions
+AppStore/Generated/
+AppStore/SourceAssets/
+AppStore/Illustrations/
+AppStore/Keptora_App_Review_Corpus.zip
+AppStore/AppIcon/previous_icon_set/
+AppStore/Screenshots/iPhone-6.3/
+AppStore/Screenshots/iPhone-6.7/
 
 __pycache__/
 *.pyc
