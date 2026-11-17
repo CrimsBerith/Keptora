@@ -102,16 +102,17 @@ public enum LibraryFileIdentity {
     public static func key(for url: URL) -> String {
         let canonical = url.standardizedFileURL.resolvingSymlinksInPath()
         let attributes = try? FileManager.default.attributesOfItem(atPath: canonical.path)
-        if let device = attributes?[.systemNumber] as? NSNumber, let inode = attributes?[.systemFileNumber] as? NSNumber {
-            #if os(macOS) || os(iOS)
-            let volume = (try? canonical.resourceValues(forKeys: [.volumeUUIDStringKey]))?.volumeUUIDString ?? device.stringValue
-            #else
-            let volume = device.stringValue
-            #endif
-            return StableDigest.fnv1a64(volume + ":" + inode.stringValue)
+        #if os(macOS) || os(iOS)
+        let volume = (try? canonical.resourceValues(forKeys: [.volumeUUIDStringKey]))?.volumeUUIDString
+            ?? (attributes?[.systemNumber] as? NSNumber)?.stringValue
+        #else
+        let volume = (attributes?[.systemNumber] as? NSNumber)?.stringValue
+        #endif
+        if let inode = attributes?[.systemFileNumber] as? NSNumber {
+            return StableDigest.fnv1a64((volume ?? "") + ":" + inode.stringValue)
         }
-        // Providers without persistent IDs retain path identity; reconnect/review is required after a move.
-        return StableDigest.fnv1a64(canonical.path)
+        // Providers without persistent IDs retain volume+path identity; reconnect/review is required after a disk change or move.
+        return StableDigest.fnv1a64((volume ?? "") + ":" + canonical.path)
     }
     public static func relativePath(_ url: URL, root: URL) -> String? {
         guard let location = resolvedLocation(url), let source = resolvedLocation(root) else { return nil }

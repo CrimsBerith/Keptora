@@ -304,6 +304,12 @@ final class LibrarySessionInfrastructureTests: XCTestCase {
         let complete = LibrarySourceCoverage(source: source, authorization: .authorized, itemCount: 25)
         XCTAssertTrue(PendingLibrarySelection(ids: selection.ids, current: [], previous: selection.pending, coverage: [complete]).ids.isEmpty)
     }
+    func testFolderSourceIdentityDistinguishesDifferentVolumeAtSamePath() {
+        let path = "/Volumes/Backup/Photos"
+        let key1 = StableDigest.fnv1a64("volume-uuid-1:" + path)
+        let key2 = StableDigest.fnv1a64("volume-uuid-2:" + path)
+        XCTAssertNotEqual(key1, key2)
+    }
 }
 
 private struct FixedDigestSource: SourceAdapter {
