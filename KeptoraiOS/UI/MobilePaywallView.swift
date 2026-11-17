@@ -40,10 +40,9 @@ struct MobilePaywallView: View {
                             feature("Select suggestions in bulk without the 100-item limit", "infinity", MobileKeptoraDesign.violet)
                             Text("Manual selection, privacy and recovery are available without Pro.")
                                 .font(.callout)
-                                .foregroundStyle(.primary)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .foregroundStyle(MobileKeptoraDesign.ink)
                         }
-                        .keptoraPanel(tint: MobileKeptoraDesign.violet)
+                        .keptoraPanel(tint: Color(uiColor: .secondarySystemGroupedBackground))
 
                         VStack(spacing: 14) {
                             Button {
@@ -85,13 +84,11 @@ struct MobilePaywallView: View {
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.restorePurchases")
 
-                            Button {
+                            Button(L10n.tr("Redeem Pro Code")) {
                                 isRedeemingOfferCode = true
-                            } label: {
-                                Text("Redeem Pro Code")
-                                    .foregroundStyle(.primary)
                             }
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(MobileKeptoraDesign.accent)
                                 .buttonStyle(MobileActionButtonStyle(fillsWidth: true))
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.redeemCode")
@@ -142,19 +139,17 @@ struct MobilePaywallView: View {
     @ViewBuilder private var legalLinks: some View {
         Link(destination: AppStoreConfiguration.privacyPolicyURL) {
             Text("Privacy Policy")
-                .font(.caption)
-                .foregroundStyle(MobileKeptoraDesign.accent)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
-                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         Link(destination: AppStoreConfiguration.termsOfUseURL) {
             Text("Terms of Use")
-                .font(.caption)
-                .foregroundStyle(MobileKeptoraDesign.accent)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
-                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
     }
 

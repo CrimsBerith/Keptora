@@ -1738,7 +1738,6 @@ struct MobileSelectionReviewSheet: View {
                     Text("Selected Items")
                         .font(.headline)
                         .foregroundStyle(MobileKeptoraDesign.ink)
-                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -1753,11 +1752,9 @@ struct MobileSelectionReviewSheet: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(source.localizedScanTitle + " · " + items.count.formatted(.number.locale(L10n.currentLocale)))
                                     .font(.body)
-                                    .fixedSize(horizontal: false, vertical: true)
                                 Text(source.kind == .photos ? LocalizedStringKey("Recently Deleted in Photos") : LocalizedStringKey("Recovery Folder"))
                                     .font(.subheadline)
-                                    .foregroundStyle(MobileKeptoraDesign.ink)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                    .foregroundStyle(MobileKeptoraDesign.secondaryInk)
                             }
                         }
                     }
@@ -1768,7 +1765,6 @@ struct MobileSelectionReviewSheet: View {
                     Text("Removal by Source")
                         .font(.headline)
                         .foregroundStyle(MobileKeptoraDesign.ink)
-                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -1907,18 +1903,14 @@ struct MobileSelectionReviewSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(asset.displayName)
                     .font(.body)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
                     .truncationMode(.middle)
-                    .fixedSize(horizontal: false, vertical: true)
                 Text(store.sourceLabel(asset))
                     .font(.subheadline)
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
                 if let date = asset.captureDateDescription {
                     Text(date)
                         .font(.subheadline)
                         .foregroundStyle(MobileKeptoraDesign.secondaryInk)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

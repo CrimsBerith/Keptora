@@ -567,12 +567,14 @@ struct MobileActionButtonStyle: ButtonStyle {
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
                    maxWidth: fillsWidth ? .infinity : nil,
                    minHeight: MobileKeptoraDesign.minimumTouchTarget)
-            .background(
-                isEnabled
-                    ? tint.opacity(configuration.isPressed ? 0.18 : 0.09)
-                    : Color(uiColor: .secondarySystemGroupedBackground),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
+            .background {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(tint.opacity(configuration.isPressed ? 0.18 : (isEnabled ? 0.09 : 0.0)))
+                    }
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(

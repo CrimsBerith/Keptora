@@ -117,40 +117,21 @@ struct MobileSettingsView: View {
             .mobileGlassRow()
 
             Section {
-                LabeledContent(L10n.tr("Photo upload")) { Text(L10n.tr("Never")) }
-                LabeledContent {
-                    Text(L10n.tr("Not required"))
-                        .fixedSize(horizontal: false, vertical: true)
-                } label: {
-                    Text(L10n.tr("Account"))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                LabeledContent {
-                    Text(L10n.tr("None"))
-                        .fixedSize(horizontal: false, vertical: true)
-                } label: {
-                    Text(L10n.tr("Analytics"))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                // Replaces a long sentence in Photos Access; how removal and recovery work is in "How Keptora Works".
-                LabeledContent {
-                    Text(L10n.tr("Only when you allow"))
-                        .fixedSize(horizontal: false, vertical: true)
-                } label: {
-                    Text(L10n.tr("iCloud originals"))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                LabeledContent(L10n.tr("Photo upload"), value: L10n.tr("Never"))
+                LabeledContent(L10n.tr("Account"), value: L10n.tr("Not required"))
+                LabeledContent(L10n.tr("Analytics"), value: L10n.tr("None"))
+                LabeledContent(L10n.tr("iCloud originals"), value: L10n.tr("Only when you allow"))
                 Link(L10n.tr("Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
-                    .foregroundStyle(MobileKeptoraDesign.accent)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .font(.body)
+                    .foregroundStyle(MobileKeptoraDesign.accentFill)
                     .accessibilityIdentifier("ios.settings.privacy")
                 Link(L10n.tr("Support"), destination: AppStoreConfiguration.supportURL)
-                    .foregroundStyle(MobileKeptoraDesign.accent)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .font(.body)
+                    .foregroundStyle(MobileKeptoraDesign.accentFill)
                     .accessibilityIdentifier("ios.settings.support")
                 Link(L10n.tr("Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
-                    .foregroundStyle(MobileKeptoraDesign.accent)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .font(.body)
+                    .foregroundStyle(MobileKeptoraDesign.accentFill)
                     .accessibilityIdentifier("ios.settings.terms")
             } header: {
                 Text(L10n.tr("Privacy"))
