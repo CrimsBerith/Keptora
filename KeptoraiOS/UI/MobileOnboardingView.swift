@@ -60,7 +60,7 @@ struct MobileOnboardingView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         welcomeRow("lock.shield.fill", "On-Device Privacy", tint: MobileKeptoraDesign.mint)
                         welcomeRow("checkmark.circle.fill", "Review Before Removing", tint: MobileKeptoraDesign.accent)
-                        welcomeRow("arrow.uturn.backward.circle.fill", "Recoverable Anytime", tint: MobileKeptoraDesign.danger)
+                        welcomeRow("arrow.uturn.backward.circle.fill", "Recently Deleted & Recovery", tint: MobileKeptoraDesign.coral)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .keptoraPanel(tint: MobileKeptoraDesign.accent)

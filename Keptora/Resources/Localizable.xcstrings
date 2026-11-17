@@ -451,27 +451,75 @@
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Originale konnten nicht analysiert werden. Sie bleiben in der Mediathek."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Original konnte nicht analysiert werden. Es bleibt in der Mediathek."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Originale konnten nicht analysiert werden. Sie bleiben in der Mediathek."
+                }
+              }
+            }
           }
         },
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld originals could not be analyzed. They remain in the library."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld original could not be analyzed. It remains in the library."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld originals could not be analyzed. They remain in the library."
+                }
+              }
+            }
           }
         },
         "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld originaux n’ont pas pu être analysés. Ils restent dans la photothèque."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld original n’a pas pu être analysé. Il reste dans la photothèque."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld originaux n’ont pas pu être analysés. Ils restent dans la photothèque."
+                }
+              }
+            }
           }
         },
         "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld asıl dosya analiz edilemedi. Arşivde görünmeye devam eder."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld asıl dosya analiz edilemedi. Arşivde görünmeye devam eder."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld asıl dosya analiz edilemedi. Arşivde görünmeye devam eder."
+                }
+              }
+            }
           }
         }
       }
@@ -480,27 +528,75 @@
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Vorschaubilder konnten nicht analysiert werden. Die Ergebnisse umfassen nur zugängliche Elemente."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Vorschaubild konnte nicht analysiert werden. Die Ergebnisse umfassen nur zugängliche Elemente."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Vorschaubilder konnten nicht analysiert werden. Die Ergebnisse umfassen nur zugängliche Elemente."
+                }
+              }
+            }
           }
         },
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld previews could not be analyzed. Results cover only accessible items."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld preview could not be analyzed. Results cover only accessible items."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld previews could not be analyzed. Results cover only accessible items."
+                }
+              }
+            }
           }
         },
         "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld aperçus n’ont pas pu être analysés. Les résultats concernent uniquement les éléments accessibles."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld aperçu n’a pas pu être analysé. Les résultats ne couvrent que les éléments accessibles."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld aperçus n’ont pas pu être analysés. Les résultats ne couvrent que les éléments accessibles."
+                }
+              }
+            }
           }
         },
         "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld önizleme analiz edilemedi. Sonuçlar yalnızca erişilebilen öğeleri kapsıyor."
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld önizleme analiz edilemedi. Sonuçlar yalnızca erişilebilen öğeleri kapsar."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld önizleme analiz edilemedi. Sonuçlar yalnızca erişilebilen öğeleri kapsar."
+                }
+              }
+            }
           }
         }
       }
@@ -9970,6 +10066,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Geri Alınabilir"
+          }
+        }
+      }
+    },
+    "Recently Deleted & Recovery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt gelöscht & Wiederherstellung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recently Deleted & Recovery"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimés récemment et récupération"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son Silinenler ve Kurtarma"
           }
         }
       }

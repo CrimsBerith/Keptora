@@ -419,10 +419,10 @@ struct MacArchiveView: View {
                     Button("Manage Access") { archive.openPhotosSettings() }.padding(.bottom, 8)
                 }
                 if archive.skippedPreviews > 0 {
-                    Text(String(format: L10n.tr("%lld previews could not be analyzed. Results cover only accessible items."), archive.skippedPreviews)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk).padding(.horizontal, 20)
+                    Text(L10n.plural("%lld previews could not be analyzed. Results cover only accessible items.", archive.skippedPreviews)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk).padding(.horizontal, 20)
                 }
                 if archive.skippedCloudItems > 0 {
-                    Text(String(format: L10n.tr("%lld originals could not be analyzed. They remain in the library."), archive.skippedCloudItems)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk).padding(.horizontal, 20)
+                    Text(L10n.plural("%lld originals could not be analyzed. They remain in the library.", archive.skippedCloudItems)).font(.caption).foregroundStyle(KeptoraDesign.secondaryInk).padding(.horizontal, 20)
                 }
                 if archive.sessionProgress.isFinished && !archive.sessionProgress.isComplete && !archive.sessionProgress.stages.values.contains(where: { $0.status == .cancelled }) {
                     Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption).padding(.horizontal, 20)

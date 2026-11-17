@@ -1289,7 +1289,7 @@ struct MobileLibraryView: View {
             Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(MobileKeptoraDesign.warning)
         }
         if store.skippedCloudItems > 0 {
-            Text(L10n.format("%lld originals could not be analyzed. They remain in the library.", store.skippedCloudItems)).font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
+            Text(L10n.plural("%lld originals could not be analyzed. They remain in the library.", store.skippedCloudItems)).font(.caption).foregroundStyle(MobileKeptoraDesign.secondaryInk)
         }
         if store.scanState == .completed && store.sessionProgress.isFinished && !store.sessionProgress.isComplete {
             Label("Analysis partially completed. Some items need attention.", systemImage: "exclamationmark.triangle").font(.caption)
@@ -1993,7 +1993,7 @@ struct MobileCleanupHubView: View {
                 collection("Duplicates & Similar Photos", icon: "square.on.square", items: UnifiedLibraryAdapter.uniqueReferences(store.reviewGroups.flatMap { $0.assets }), needsScan: true)
                 collection("Worth Reviewing", icon: "camera.metering.center.weighted", items: store.scopedAssets.filter { store.qualityAssessments[$0.id]?.needsReview == true }, needsScan: true)
                 if store.skippedSimilarityPreviews > 0 {
-                    Text(L10n.format("%lld previews could not be analyzed. Results cover only accessible items.", store.skippedSimilarityPreviews)).font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                    Text(L10n.plural("%lld previews could not be analyzed. Results cover only accessible items.", store.skippedSimilarityPreviews)).font(.footnote).foregroundStyle(MobileKeptoraDesign.secondaryInk)
                 }
                 if let error = store.similarityError ?? store.videoSimilarityError {
                     Label("Some analysis could not be completed", systemImage: "exclamationmark.triangle").font(.headline)

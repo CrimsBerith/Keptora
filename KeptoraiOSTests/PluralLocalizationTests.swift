@@ -41,4 +41,26 @@ final class PluralLocalizationTests: XCTestCase {
         XCTAssertEqual(plural("%lld active filters", 1, in: "tr"), "1 etkin filtre")
         XCTAssertEqual(plural("%lld active filters", 3, in: "tr"), "3 etkin filtre")
     }
+
+    func testSkippedOriginalsCountUsesSingularAndPlural() {
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 1, in: "en"), "1 original could not be analyzed. It remains in the library.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 2, in: "en"), "2 originals could not be analyzed. They remain in the library.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 1, in: "de"), "1 Original konnte nicht analysiert werden. Es bleibt in der Mediathek.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 2, in: "de"), "2 Originale konnten nicht analysiert werden. Sie bleiben in der Mediathek.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 1, in: "fr"), "1 original n’a pas pu être analysé. Il reste dans la photothèque.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 2, in: "fr"), "2 originaux n’ont pas pu être analysés. Ils restent dans la photothèque.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 1, in: "tr"), "1 asıl dosya analiz edilemedi. Arşivde görünmeye devam eder.")
+        XCTAssertEqual(plural("%lld originals could not be analyzed. They remain in the library.", 2, in: "tr"), "2 asıl dosya analiz edilemedi. Arşivde görünmeye devam eder.")
+    }
+
+    func testSkippedPreviewsCountUsesSingularAndPlural() {
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 1, in: "en"), "1 preview could not be analyzed. Results cover only accessible items.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 2, in: "en"), "2 previews could not be analyzed. Results cover only accessible items.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 1, in: "de"), "1 Vorschaubild konnte nicht analysiert werden. Die Ergebnisse umfassen nur zugängliche Elemente.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 2, in: "de"), "2 Vorschaubilder konnten nicht analysiert werden. Die Ergebnisse umfassen nur zugängliche Elemente.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 1, in: "fr"), "1 aperçu n’a pas pu être analysé. Les résultats ne couvrent que les éléments accessibles.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 2, in: "fr"), "2 aperçus n’ont pas pu être analysés. Les résultats ne couvrent que les éléments accessibles.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 1, in: "tr"), "1 önizleme analiz edilemedi. Sonuçlar yalnızca erişilebilen öğeleri kapsar.")
+        XCTAssertEqual(plural("%lld previews could not be analyzed. Results cover only accessible items.", 2, in: "tr"), "2 önizleme analiz edilemedi. Sonuçlar yalnızca erişilebilen öğeleri kapsar.")
+    }
 }
