@@ -441,6 +441,10 @@ final class MobileGalleryCoordinator: NSObject, UICollectionViewDelegate, UIColl
 final class MobileGalleryAssetCell: UICollectionViewCell {
     var onKeep: (() -> Void)?
 
+    #if DEBUG
+    var testDisplayedImage: UIImage? { imageView.image }
+    #endif
+
     private let container = UIView()
     private let imageView = UIImageView()
     private let placeholderView = UIImageView(image: UIImage(systemName: "photo.badge.exclamationmark"))
@@ -455,6 +459,7 @@ final class MobileGalleryAssetCell: UICollectionViewCell {
     private let selectionTarget = UIView()
 
     private var representedID: String?
+    private var representedThumbnailKey: String?
     private var representedFavorite = false
     private var representedAsset: UniversalMediaAsset?
     private var state: MobileGalleryCellState?
@@ -599,6 +604,8 @@ final class MobileGalleryAssetCell: UICollectionViewCell {
         imageView.image = nil
         placeholderView.isHidden = true
         representedID = nil
+        representedThumbnailKey = nil
+        representedFavorite = false
         representedAsset = nil
         state = nil
         onKeep = nil
@@ -606,8 +613,13 @@ final class MobileGalleryAssetCell: UICollectionViewCell {
 
     func apply(asset: UniversalMediaAsset, state: MobileGalleryCellState, loader: MobileGalleryThumbnailLoader) {
         representedAsset = asset
-        if representedID != asset.id || representedFavorite != asset.isFavorite {
-            if representedID != asset.id { loadImage(asset, loader: loader) }
+        let thumbnailKey = MobileGalleryThumbnailLoader.cacheKey(for: asset)
+        let needsThumbnailReload = representedThumbnailKey != thumbnailKey
+        if needsThumbnailReload || representedID != asset.id || representedFavorite != asset.isFavorite {
+            if needsThumbnailReload {
+                representedThumbnailKey = thumbnailKey
+                loadImage(asset, loader: loader)
+            }
             representedID = asset.id
             representedFavorite = asset.isFavorite
             applyMedia(asset)
@@ -667,9 +679,9 @@ final class MobileGalleryAssetCell: UICollectionViewCell {
             return
         }
         imageView.image = nil
-        let id = asset.id
+        let expectedKey = MobileGalleryThumbnailLoader.cacheKey(for: asset)
         loadToken = loader.requestImage(for: asset) { [weak self] image, isFinal in
-            guard let self, self.representedID == id else { return }
+            guard let self, self.representedThumbnailKey == expectedKey else { return }
             if let image {
                 self.imageView.image = image
             } else if isFinal, self.imageView.image == nil {
