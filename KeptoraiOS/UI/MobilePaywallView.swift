@@ -5,6 +5,7 @@ struct MobilePaywallView: View {
     @EnvironmentObject private var purchase: MobilePurchaseController
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @State private var isRedeemingOfferCode = false
 
     var body: some View {
         NavigationStack {
@@ -31,13 +32,16 @@ struct MobilePaywallView: View {
 
                             Text("One purchase · No subscription")
                                 .font(.system(.title3, design: .rounded).weight(.medium))
-                                .foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                                .foregroundStyle(.primary)
                         }
 
                         VStack(alignment: .leading, spacing: 16) {
                             // What Pro actually unlocks: suggested batch selection beyond the first 100 items.
                             feature("Select suggestions in bulk without the 100-item limit", "infinity", MobileKeptoraDesign.violet)
-                            Text("Manual selection, privacy and recovery are available without Pro.").font(.callout).foregroundStyle(MobileKeptoraDesign.secondaryInk)
+                            Text("Manual selection, privacy and recovery are available without Pro.")
+                                .font(.callout)
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .keptoraPanel(tint: MobileKeptoraDesign.violet)
 
@@ -81,6 +85,17 @@ struct MobilePaywallView: View {
                                 .disabled(purchase.isWorking)
                                 .accessibilityIdentifier("ios.paywall.restorePurchases")
 
+                            Button {
+                                isRedeemingOfferCode = true
+                            } label: {
+                                Text("Redeem Pro Code")
+                                    .foregroundStyle(.primary)
+                            }
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .buttonStyle(MobileActionButtonStyle(fillsWidth: true))
+                                .disabled(purchase.isWorking)
+                                .accessibilityIdentifier("ios.paywall.redeemCode")
+
                             // Purchase / restore outcomes (cancelled, pending, failed) were previously invisible here.
                             if let status = purchase.statusMessage {
                                 Text(status)
@@ -111,6 +126,9 @@ struct MobilePaywallView: View {
                 }
             }
             .interactiveDismissDisabled(purchase.isWorking)
+            .offerCodeRedemption(isPresented: $isRedeemingOfferCode) { result in
+                Task { await purchase.completeOfferCodeRedemption(result) }
+            }
             .onChange(of: purchase.isUnlocked) { _, unlocked in
                 if unlocked { dismiss() }
             }
@@ -123,11 +141,19 @@ struct MobilePaywallView: View {
     }
     @ViewBuilder private var legalLinks: some View {
         Link(destination: AppStoreConfiguration.privacyPolicyURL) {
-            Text("Privacy Policy").font(.caption).padding(.horizontal, 8).padding(.vertical, 8)
+            Text("Privacy Policy")
+                .font(.caption)
+                .foregroundStyle(MobileKeptoraDesign.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
                 .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
         }
         Link(destination: AppStoreConfiguration.termsOfUseURL) {
-            Text("Terms of Use").font(.caption).padding(.horizontal, 8).padding(.vertical, 8)
+            Text("Terms of Use")
+                .font(.caption)
+                .foregroundStyle(MobileKeptoraDesign.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
                 .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
         }
     }
@@ -152,6 +178,7 @@ struct MobilePaywallView: View {
             Text(title)
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

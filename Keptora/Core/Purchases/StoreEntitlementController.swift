@@ -182,6 +182,17 @@ final class StoreEntitlementController: ObservableObject {
         }
     }
 
+    func completeOfferCodeRedemption(_ result: Result<Void, Error>) async {
+        switch result {
+        case .success:
+            statusMessage = nil
+            await refreshEntitlement()
+            if isLifetimeUnlocked { isShowingPaywall = false }
+        case .failure(let error):
+            statusMessage = error.localizedDescription
+        }
+    }
+
     private func refreshEntitlement() async {
         var unlocked = false
         var hasRevocation = false

@@ -43,6 +43,15 @@ final class KeptoraiOSUITests: XCTestCase {
         try audit(app)
     }
 
+    func testProOfferCodeEntryIsAvailableFromSettingsAndPaywall() {
+        let app = launch(arguments: ["-keptoraComprehensiveUITesting"])
+        app.buttons["ios.library.options"].tap()
+        app.buttons["ios.library.settings"].tap()
+        XCTAssertTrue(app.buttons["ios.settings.redeemProCode"].waitForExistence(timeout: 5))
+        app.buttons["ios.settings.showPaywall"].tap()
+        XCTAssertTrue(app.buttons["ios.paywall.redeemCode"].waitForExistence(timeout: 5))
+    }
+
     private func audit(_ app: XCUIApplication) throws {
         try app.performAccessibilityAudit { issue in
             print("AXISSUE: \(issue.compactDescription) | \(issue.element?.debugDescription ?? "No element")")
@@ -81,6 +90,7 @@ final class KeptoraiOSUITests: XCTestCase {
         locale: String = "en_US"
     ) -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
         app.launchArguments += arguments + [
             "-AppleLanguages", "(\(language))",
             "-AppleLocale", locale,
@@ -215,6 +225,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testStartupSetupCanContinueWithDeniedPhotosAndConnectFiles() {
         let app = XCUIApplication()
+        app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
         app.launchArguments = ["-keptoraHideTips", "-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-hasSeenMobileOnboarding", "YES",
             "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
         app.launch()
@@ -323,6 +334,7 @@ final class KeptoraiOSUITests: XCTestCase {
 
     func testFirstUseTipsAppearOneAtATime() {
         let app = XCUIApplication()
+        app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
         let base = ["-keptoraComprehensiveUITesting", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
                     "-hasSeenMobileOnboarding", "YES", "-Keptora.SourceSetup.iOS.v1", "YES", "-Keptora.AppLanguage", "system"]
         app.launchArguments = base + ["-keptoraResetTips"]
@@ -464,6 +476,16 @@ final class KeptoraiOSUITests: XCTestCase {
         let scan = app.buttons["archive.scanAll"]
         XCTAssertTrue(scan.waitForExistence(timeout: 15)); scan.tap()
         XCTAssertTrue(scan.waitForExistence(timeout: 120), "Scan and both similarity passes must finish")
+        let selectAll = app.buttons["archive.results.selectAllSuggestions"]
+        if selectAll.waitForExistence(timeout: 10) {
+            XCTAssertFalse(app.buttons["archive.selectExtraCopies"].exists)
+            XCTAssertFalse(app.buttons["archive.selectSimilarPhotos"].exists)
+            selectAll.tap()
+        } else {
+            XCTAssertTrue(app.staticTexts["archive.results.allSuggestionsSelected"].waitForExistence(timeout: 5),
+                          "Only completed selections should hide the combined recommendation action")
+        }
+        XCTAssertTrue(app.buttons["archive.reviewSelection"].waitForExistence(timeout: 5))
         selectFindingFilter("copies", in: app)
         let exact = app.staticTexts["Exact Copies"].firstMatch
         for _ in 0..<6 where !exact.isHittable { app.swipeUp() }
@@ -669,15 +691,77 @@ final class KeptoraiOSUITests: XCTestCase {
     }
 
 
-    func testThousandsOfMediaStressLiveScan() {
+    func testSeededGalleryStressUI() {
         let app = launch(arguments: ["-keptoraThousandsStressUITesting"])
         XCTAssertTrue(app.staticTexts["archive.visibleCount"].waitForExistence(timeout: 10))
+        for _ in 0..<4 {
+            app.swipeUp()
+            app.swipeDown()
+        }
         selectFindingFilter("copies", in: app)
         saveScreenshot(app, name: "Stress — copies together in one gallery")
         selectMediaTypeFilter("Videos", in: app)
         saveScreenshot(app, name: "Stress — video copies in shared gallery")
         selectMediaTypeFilter("Photos", in: app)
         saveScreenshot(app, name: "Stress — photo copies in shared gallery")
+    }
+
+    func testGalleryRemainsInteractiveDuringSyntheticScan() {
+        let app = launch(arguments: ["-keptoraSyntheticScanUITesting"])
+        let scanStatus = app.staticTexts["archive.scanStatus"]
+        XCTAssertTrue(scanStatus.waitForExistence(timeout: 5), "Synthetic scan fixture must remain active during interaction")
+        let scanProgress = app.progressIndicators["archive.scanProgress"]
+        XCTAssertTrue(scanProgress.waitForExistence(timeout: 5), "Synthetic scan progress must be accessible")
+        let initialProgress = scanProgress.value as? String
+        XCTAssertNotNil(initialProgress)
+        let progressChanged = expectation(
+            for: NSPredicate(format: "value != %@", initialProgress ?? ""),
+            evaluatedWith: scanProgress
+        )
+        wait(for: [progressChanged], timeout: 10)
+
+        let visibleCount = app.staticTexts["archive.visibleCount"]
+        XCTAssertTrue(visibleCount.waitForExistence(timeout: 5))
+        let initialCount = visibleCount.label
+        let catalogueChanged = expectation(
+            for: NSPredicate(format: "label != %@", initialCount),
+            evaluatedWith: visibleCount
+        )
+        wait(for: [catalogueChanged], timeout: 10)
+
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("Synthetic\n")
+        XCTAssertTrue(scanStatus.exists, "Search interaction must not finish the active synthetic scan")
+
+        openFilters(in: app)
+        let videosFilter = app.segmentedControls.buttons["Videos"]
+        XCTAssertTrue(videosFilter.waitForExistence(timeout: 5))
+        videosFilter.tap()
+        applyFilters(in: app)
+        XCTAssertTrue(scanStatus.exists, "Filter interaction must not finish the active synthetic scan")
+        XCTAssertTrue(
+            app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "archive.asset.synthetic-scan-"))
+                .firstMatch.waitForExistence(timeout: 5)
+        )
+
+        app.swipeUp()
+        app.swipeDown()
+
+        let firstAsset = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "archive.asset.synthetic-scan-")
+        ).firstMatch
+        reveal(firstAsset, in: app)
+        firstAsset.tap()
+        XCTAssertTrue(app.staticTexts["Selected items: 1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(scanStatus.exists, "Selection interaction must not finish the active synthetic scan")
+
+        let cancelMenu = app.buttons["Scan Options"]
+        XCTAssertTrue(cancelMenu.waitForExistence(timeout: 5))
+        cancelMenu.tap()
+        app.buttons["Cancel Scan"].tap()
+        XCTAssertTrue(scanStatus.waitForNonExistence(timeout: 5))
     }
 
 

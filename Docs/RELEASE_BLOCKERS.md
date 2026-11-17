@@ -1,9 +1,17 @@
-# Release Blockers — Keptora 1.0.3 (189)
+# Release Blockers — Keptora
+
+## Local validation update (2026-11-16)
+
+- Debug `build-for-testing` passed for macOS and iOS Simulator (iPhone 16).
+- KeptoraCore: 142 tests, 1 benchmark skipped, 0 failures. macOS unit tests: 37 passed. Five focused iOS regressions passed.
+- Universal release, Mac localization, project-reference, App Store metadata, and photo-cleaner asset validators passed.
+- Release archive, static analyzer, full iOS suite, physical-device acceptance, live Photos/iCloud, StoreKit sandbox, and App Store Connect/legal verification remain unperformed.
+- Candidate identity is unresolved: this document previously named `1.0.3 (189)`, while the submission checklist names `1.0.0 (181/182)`. Do not treat either as the release candidate until source project and App Store Connect records are reconciled.
 
 ## Status update (2026-11-09)
 
-- Resolved #1: macOS and iOS Debug + Release builds compile; KeptoraTests (32), KeptoraCore (127, 1 benchmark skipped) and KeptoraiOSTests (27/28; the real-Photos integration test needs simulator Photos access) pass.
-- Resolved #2: team `ZSRUTGX74S`, bundle `com.alfagolab.keptora`, product `com.keptora.app.pro.lifetime`.
+- Historical snapshot only: macOS and iOS Debug + Release builds compile; KeptoraTests (32), KeptoraCore (127, 1 benchmark skipped) and KeptoraiOSTests (27/28; the real-Photos integration test needs simulator Photos access) were reported at that time.
+- Project config values reported at that time: team `ZSRUTGX74S`, bundle `com.alfagolab.keptora`, product `com.keptora.app.pro.lifetime`. App Store Connect matching remains owner-verification work.
 - Resolved #3 (URLs): marketing, privacy and support pages are live on alfagolab.com; support lists `support@alfagolab.com`.
 - Version raised to 1.0.3 (189): App Store Connect has already approved 1.0.2 on iOS and macOS.
 - StoreKit product descriptions now match the paywall (Pro removes the 100-item bulk suggestion limit). Mirror them in App Store Connect.
@@ -12,8 +20,8 @@
 
 These are mandatory blockers:
 
-1. No real macOS SDK compile, XCTest, analyzer, or archive has run in this environment.
-2. Bundle ID, Development Team, and lifetime product ID remain placeholders until configured.
+1. Local Debug macOS/iOS simulator builds and macOS/focused iOS XCTest passed on 2026-11-16; Release archive and static analyzer have not run.
+2. Project target identifiers are configured, but their match to the final App Store Connect record and owner account still needs confirmation.
 3. Public privacy/support/marketing URLs, legal identity, support contact, and review contact remain placeholders.
 4. App Store Connect record, agreements, tax, banking, regional business disclosures, categories, age rating, rights, and export answers are not configured here.
 5. StoreKit local/sandbox purchase, pending, cancel, offline, restore, refund/revocation, second-Mac, and Family Sharing tests are incomplete.

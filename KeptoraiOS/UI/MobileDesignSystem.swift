@@ -14,15 +14,13 @@ enum MobileKeptoraDesign {
     // Opaque secondary text stays legible on tinted panels as well as plain system surfaces.
     static let secondaryInk = adaptive(light: (0.34, 0.34, 0.38), dark: (0.76, 0.76, 0.80))
 
-    // Keptora aurora spectrum.
-    // Text, icon and tint colors have a light and a dark value, each at least 4.5:1 against
-    // system and lightly tinted backgrounds (WCAG AA). Filled buttons with white labels use the
-    // fixed `…Fill` colors instead, which keep white text above 4.5:1 in both modes.
+    // Keptora aurora spectrum. Cyan and coral maintain 4.5:1 contrast against black and white;
+    // filled buttons with white labels use the fixed `…Fill` colors.
     static let accent   = adaptive(light: (0.29, 0.22, 0.86), dark: (0.70, 0.67, 1.00))
     static let accentFill = Color(red: 0.34, green: 0.28, blue: 0.96)
     static let violet   = Color(red: 0.58, green: 0.25, blue: 0.94)
-    static let cyan     = Color(red: 0.08, green: 0.67, blue: 0.88)
-    static let coral    = Color(red: 0.98, green: 0.39, blue: 0.47)
+    static let cyan     = Color(red: 0.02, green: 0.49, blue: 0.67)
+    static let coral    = Color(red: 0.83, green: 0.24, blue: 0.34)
     static let mint     = adaptive(light: (0.00, 0.42, 0.28), dark: (0.30, 0.85, 0.62))
     static let mintFill = Color(red: 0.05, green: 0.50, blue: 0.35)
     static let success  = mint
@@ -152,7 +150,13 @@ struct GlassEffectContainer<Content: View>: View {
     }
 
     var body: some View {
-        content
+        if #available(iOS 26.0, *) {
+            SwiftUI.GlassEffectContainer(spacing: spacing) {
+                content
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -166,6 +170,47 @@ struct GlassEffectModifier: ViewModifier {
     var isSelected: Bool = false
 
     func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            nativeGlass(content)
+        } else {
+            legacyGlass(content)
+        }
+    }
+
+    @available(iOS 26.0, *)
+    @ViewBuilder
+    private func nativeGlass(_ content: Content) -> some View {
+        switch shape {
+        case .capsule:
+            nativeGlass(content, in: Capsule())
+        case .circle:
+            nativeGlass(content, in: Circle())
+        case .rect(let radius):
+            nativeGlass(content, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func nativeGlass<S: Shape>(_ content: Content, in shape: S) -> some View {
+        var glass = SwiftUI.Glass.regular
+        if let tint = style.tintColor {
+            glass = glass.tint(tint)
+        }
+        if style.isInteractive {
+            glass = glass.interactive()
+        }
+
+        return content
+            .glassEffect(glass, in: shape)
+            .overlay {
+                if isSelected {
+                    shape.stroke((style.tintColor ?? MobileKeptoraDesign.accent).opacity(0.78), lineWidth: 1.5)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private func legacyGlass(_ content: Content) -> some View {
         content
             .background {
                 glassBackground
@@ -337,6 +382,7 @@ struct GlassButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            .foregroundStyle(isEnabled ? Color.primary : MobileKeptoraDesign.secondaryInk)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
@@ -345,7 +391,7 @@ struct GlassButtonStyle: ButtonStyle {
                 .regular.tint(tint ?? MobileKeptoraDesign.accent).interactive(),
                 in: shape
             )
-            .opacity(isEnabled ? (configuration.isPressed ? 0.82 : 1.0) : 0.45)
+            .opacity(isEnabled && configuration.isPressed ? 0.82 : 1.0)
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.975 : 1.0))
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: configuration.isPressed)
     }
@@ -369,7 +415,7 @@ struct GlassProminentButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.headline, design: .rounded).weight(.semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(isEnabled ? Color.white : MobileKeptoraDesign.secondaryInk)
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
             .frame(minHeight: MobileKeptoraDesign.minimumTouchTarget)
@@ -385,7 +431,7 @@ struct GlassProminentButtonStyle: ButtonStyle {
                 radius: configuration.isPressed ? 8 : 12,
                 y: configuration.isPressed ? 2 : 4
             )
-            .opacity(isEnabled ? (configuration.isPressed ? 0.90 : 1.0) : 0.45)
+            .opacity(isEnabled && configuration.isPressed ? 0.90 : 1.0)
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.975 : 1.0))
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: configuration.isPressed)
     }
@@ -404,7 +450,9 @@ struct GlassProminentButtonStyle: ButtonStyle {
 
     @ViewBuilder
     private func applyProminentBackground<S: Shape>(to shape: S, isPressed: Bool) -> some View {
-        if reduceTransparency {
+        if !isEnabled {
+            shape.fill(Color(uiColor: .secondarySystemGroupedBackground))
+        } else if reduceTransparency {
             shape.fill(tint)
         } else {
             ZStack {
@@ -513,14 +561,16 @@ struct MobileActionButtonStyle: ButtonStyle {
         return configuration.label
             .font(.system(.subheadline, design: .rounded).weight(.semibold))
             .multilineTextAlignment(.center)
-            .foregroundStyle(tint)
+            .foregroundStyle(isEnabled ? tint : MobileKeptoraDesign.secondaryInk)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
                    maxWidth: fillsWidth ? .infinity : nil,
                    minHeight: MobileKeptoraDesign.minimumTouchTarget)
             .background(
-                tint.opacity(configuration.isPressed ? 0.18 : 0.09),
+                isEnabled
+                    ? tint.opacity(configuration.isPressed ? 0.18 : 0.09)
+                    : Color(uiColor: .secondarySystemGroupedBackground),
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .overlay {
@@ -542,7 +592,7 @@ struct MobileActionButtonStyle: ButtonStyle {
                     )
             }
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .opacity(isEnabled ? 1 : 0.45)
+            .opacity(1)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
     }
 }
@@ -560,7 +610,7 @@ struct MobileSleekActionButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(.subheadline, design: .rounded).weight(.semibold))
             .multilineTextAlignment(.center)
-            .foregroundStyle(isEnabled ? tint : Color.secondary.opacity(0.6))
+            .foregroundStyle(isEnabled ? tint : MobileKeptoraDesign.secondaryInk)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
@@ -568,7 +618,9 @@ struct MobileSleekActionButtonStyle: ButtonStyle {
                    minHeight: MobileKeptoraDesign.minimumTouchTarget)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(tint.opacity(configuration.isPressed ? 0.18 : 0.09))
+                    .fill(isEnabled
+                        ? tint.opacity(configuration.isPressed ? 0.18 : 0.09)
+                        : Color(uiColor: .secondarySystemGroupedBackground))
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -589,7 +641,7 @@ struct MobileSleekActionButtonStyle: ButtonStyle {
                     )
             }
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .opacity(isEnabled ? 1 : 0.45)
+            .opacity(1)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
     }
 }
@@ -605,13 +657,16 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(.headline, design: .rounded).weight(.semibold))
             .multilineTextAlignment(.center)
-            .foregroundStyle(.white)
+            .foregroundStyle(isEnabled ? Color.white : MobileKeptoraDesign.secondaryInk)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
             .frame(minWidth: MobileKeptoraDesign.minimumTouchTarget,
                    maxWidth: fillsWidth ? .infinity : nil,
                    minHeight: MobileKeptoraDesign.primaryButtonHeight)
-            .background(tint, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(
+                isEnabled ? tint : Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -630,7 +685,7 @@ struct MobilePrimaryButtonStyle: ButtonStyle {
             }
             .shadow(color: reduceTransparency ? .clear : tint.opacity(isEnabled ? (configuration.isPressed ? 0.15 : 0.24) : 0), radius: 8, y: 3)
             .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.98 : 1.0))
-            .opacity(isEnabled ? (configuration.isPressed ? 0.92 : 1.0) : 0.45)
+            .opacity(isEnabled && configuration.isPressed ? 0.92 : 1.0)
             .animation(reduceMotion ? nil : MobileKeptoraDesign.animFast, value: configuration.isPressed)
     }
 }
@@ -674,27 +729,13 @@ extension View {
 // MARK: – Glass List/Form Row Background
 
 struct MobileGlassListRow: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     var tint: Color? = nil
 
     var body: some View {
-        if reduceTransparency {
+        ZStack {
             Color(uiColor: .secondarySystemGroupedBackground)
-        } else {
-            ZStack {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                Rectangle()
-                    .fill(
-                        colorScheme == .dark
-                            ? Color.white.opacity(0.04)
-                            : Color.white.opacity(0.48)
-                    )
-                if let tint {
-                    Rectangle()
-                        .fill(tint.opacity(0.08))
-                }
+            if let tint {
+                tint.opacity(0.06)
             }
         }
     }

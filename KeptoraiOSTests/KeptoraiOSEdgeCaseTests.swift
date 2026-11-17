@@ -108,6 +108,53 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(".Keptora Quarantine").path))
         XCTAssertEqual(store.history, history)
         XCTAssertNotNil(store.errorMessage)
+
+        let immediateRemoval = await store.cleanupLibraryAssetImmediately(asset)
+        XCTAssertFalse(immediateRemoval)
+        XCTAssertEqual(try? Data(contentsOf: original), bytes)
+    }
+
+    func testImmediateSwipeRemovalQuarantinesOnlySwipedFileAndPreservesOtherSelection() async throws {
+        let defaults = UserDefaults.standard
+        let keys = [
+            AppStorageKeys.iOSCleanupHistory,
+            "Keptora.ManualSelection.unified.iOS",
+            "Keptora.UnifiedFolderBookmarks.iOS",
+            AppStorageKeys.iOSExcludedScanSources
+        ]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let swipedURL = root.appendingPathComponent("swiped.jpg")
+        let selectedURL = root.appendingPathComponent("selected.jpg")
+        let swipedBytes = Data("swiped file".utf8)
+        try swipedBytes.write(to: swipedURL)
+        try Data("separate selection".utf8).write(to: selectedURL)
+
+        let store = MobileKeptoraStore()
+        store.connectLocalFolderForTesting(root)
+        await store.loadCatalogue()
+        let swiped = try XCTUnwrap(store.assets.first { $0.displayName == "swiped.jpg" })
+        let separatelySelected = try XCTUnwrap(store.assets.first { $0.displayName == "selected.jpg" })
+        store.selectedLibraryIDs = [separatelySelected.id]
+
+        let removed = await store.cleanupLibraryAssetImmediately(swiped)
+
+        XCTAssertTrue(removed)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: swipedURL.path))
+        XCTAssertEqual(store.selectedLibraryIDs, [separatelySelected.id])
+        let receipt = try XCTUnwrap(store.history.first { $0.folderRecord?.sourceRoot == root })
+        XCTAssertEqual(receipt.itemCount, 1)
+        let operation = try XCTUnwrap(receipt.folderRecord?.operations.first)
+        XCTAssertEqual(try Data(contentsOf: operation.quarantineURL), swipedBytes)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: selectedURL.path))
     }
 
     func testRecoveryReloadShowsCorruptRecordBesideHealthyRecordAndClearsWarningAfterRepair() async throws {
@@ -215,6 +262,73 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         XCTAssertEqual(restrictedStore.selectedLibraryIDs, Set([b.id, c.id]))
     }
 
+    func testSelectAllSuggestionsCombinesCategoriesWithoutSelectingKeepersOrProtectedItems() {
+        let defaults = UserDefaults.standard
+        let keys = [AppStorageKeys.iOSReviewedAssets, "Keptora.ManualSelection.unified.iOS", "Keptora.ReviewDecisions.iOS"]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let exactKeeper = photo(namespace + "exact-keeper")
+        let exactCandidate = photo(namespace + "exact-candidate")
+        let similarKeeper = photo(namespace + "similar-keeper")
+        let similarCandidate = photo(namespace + "similar-candidate")
+        let protectedCandidate = photo(namespace + "protected-candidate")
+        let alreadySelected = photo(namespace + "already-selected")
+        store.replaceAssetsForTesting([exactKeeper, exactCandidate, similarKeeper, similarCandidate, protectedCandidate, alreadySelected])
+        store.selectedLibraryIDs = [alreadySelected.id]
+        store.decisions = LibraryReviewDecisions()
+        store.exactGroups = [.init(digest: namespace, assets: [exactKeeper, exactCandidate], keeperID: exactKeeper.id)]
+        store.replaceSimilarityGroupsForTesting([
+            .init(id: namespace, assets: [similarKeeper, similarCandidate, protectedCandidate],
+                  maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: similarKeeper.id)
+        ])
+        store.toggleProtection(protectedCandidate)
+
+        let didSelect = store.selectAllSuggestions(isUnlocked: true)
+
+        XCTAssertTrue(didSelect)
+        XCTAssertEqual(store.selectedLibraryIDs, [alreadySelected.id, exactCandidate.id, similarCandidate.id])
+        XCTAssertFalse(store.selectedLibraryIDs.contains(exactKeeper.id))
+        XCTAssertFalse(store.selectedLibraryIDs.contains(similarKeeper.id))
+        XCTAssertFalse(store.selectedLibraryIDs.contains(protectedCandidate.id))
+    }
+
+    func testSelectAllSuggestionsAppliesFreeReviewLimitAtomically() {
+        let defaults = UserDefaults.standard
+        let keys = [AppStorageKeys.iOSReviewedAssets, "Keptora.ManualSelection.unified.iOS"]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+        let previouslyReviewed = Set((0..<99).map { "existing-\($0)" })
+        defaults.set(Array(previouslyReviewed), forKey: AppStorageKeys.iOSReviewedAssets)
+
+        let store = MobileKeptoraStore(), namespace = UUID().uuidString
+        let exactKeeper = photo(namespace + "exact-keeper"), exactCandidate = photo(namespace + "exact-candidate")
+        let similarKeeper = photo(namespace + "similar-keeper"), similarCandidate = photo(namespace + "similar-candidate")
+        let alreadySelected = photo(namespace + "already-selected")
+        store.replaceAssetsForTesting([exactKeeper, exactCandidate, similarKeeper, similarCandidate, alreadySelected])
+        store.selectedLibraryIDs = [alreadySelected.id]
+        store.exactGroups = [.init(digest: namespace, assets: [exactKeeper, exactCandidate], keeperID: exactKeeper.id)]
+        store.replaceSimilarityGroupsForTesting([
+            .init(id: namespace, assets: [similarKeeper, similarCandidate],
+                  maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: similarKeeper.id)
+        ])
+
+        let didSelect = store.selectAllSuggestions(isUnlocked: false)
+
+        XCTAssertFalse(didSelect)
+        XCTAssertEqual(store.selectedLibraryIDs, [alreadySelected.id])
+        XCTAssertEqual(Set(UserDefaults.standard.stringArray(forKey: AppStorageKeys.iOSReviewedAssets) ?? []), previouslyReviewed)
+    }
+
     func testSwipeActionSelectionAndDeselectionLifecycle() {
         let store = MobileKeptoraStore()
         let ns = UUID().uuidString
@@ -230,6 +344,12 @@ final class KeptoraiOSEdgeCaseTests: XCTestCase {
         // Simulating swipe right (keep): removes asset from selection if previously selected
         store.replaceLibrarySelection(store.selectedLibraryIDs.subtracting([a.id]))
         XCTAssertFalse(store.selectedLibraryIDs.contains(a.id))
+    }
+
+    func testSwipeDeckThumbnailDoesNotRequestNetworkDownloads() {
+        let thumbnail = MobileSwipeCleanView.swipeDeckThumbnail(for: photo(UUID().uuidString))
+
+        XCTAssertFalse(thumbnail.allowNetwork, "Entering or swiping the deck must not download cloud-only originals")
     }
 
     func testCatalogueChangeKeepsResultsForUnchangedItems() {

@@ -3,7 +3,7 @@
 //  KeptoraiOS
 //
 //  Card-swipe triage for rapid decluttering.
-//  Swipe Left = Select for deletion | Swipe Right = Keep | Swipe Up = Skip
+//  Swipe Left = Remove | Swipe Right = Keep | Swipe Up = Skip
 //
 
 import SwiftUI
@@ -21,8 +21,10 @@ public struct MobileSwipeCleanView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var dragRotation: Double = 0
     @State private var isProcessingSwipe: Bool = false
+    @State private var pendingDeleteID: String?
     @State private var history: [SwipeHistoryEntry] = []
     @State private var showReviewSheet: Bool = false
+    @State private var removalAlert: String?
 
     private struct SwipeHistoryEntry {
         let index: Int
@@ -45,15 +47,38 @@ public struct MobileSwipeCleanView: View {
         self.onFinish = onFinish
     }
 
+    static func swipeDeckThumbnail(for asset: UniversalMediaAsset) -> MobileAssetThumbnail {
+        MobileAssetThumbnail(
+            asset: asset,
+            pixelSize: 1200,
+            contentMode: .fit,
+            allowNetwork: false,
+            showsRetryButton: false
+        )
+    }
+
+    private var pendingDeleteOffset: Int {
+        guard let pendingDeleteID,
+              assets.indices.contains(currentIndex),
+              assets[currentIndex].id == pendingDeleteID else { return 0 }
+        return 1
+    }
+
     private var currentAsset: UniversalMediaAsset? {
-        guard currentIndex >= 0 && currentIndex < assets.count else { return nil }
-        return assets[currentIndex]
+        let displayedIndex = currentIndex + pendingDeleteOffset
+        guard displayedIndex >= 0 && displayedIndex < assets.count else { return nil }
+        return assets[displayedIndex]
     }
 
     private var nextAsset: UniversalMediaAsset? {
-        let nextIndex = currentIndex + 1
+        let nextIndex = currentIndex + pendingDeleteOffset + 1
         guard nextIndex >= 0 && nextIndex < assets.count else { return nil }
         return assets[nextIndex]
+    }
+
+    private var prefetchedAssets: [UniversalMediaAsset] {
+        let firstPrefetchIndex = currentIndex + pendingDeleteOffset + 2
+        return Array(assets.dropFirst(min(firstPrefetchIndex, assets.count)).prefix(2))
     }
 
     private var selectedInDeckCount: Int {
@@ -72,8 +97,10 @@ public struct MobileSwipeCleanView: View {
             ZStack {
                 MobileAuroraBackground().ignoresSafeArea()
 
-                if currentIndex < assets.count {
+                if currentAsset != nil {
                     activeDeckView
+                } else if isProcessingSwipe {
+                    ProgressView("Removing…")
                 } else {
                     completedView
                 }
@@ -109,6 +136,14 @@ public struct MobileSwipeCleanView: View {
             .sheet(isPresented: $showReviewSheet) {
                 MobileSelectionReviewSheet()
             }
+            .alert("Removal Not Completed", isPresented: Binding(
+                get: { removalAlert != nil },
+                set: { if !$0 { removalAlert = nil } }
+            )) {
+                Button("OK") { removalAlert = nil }
+            } message: {
+                if let removalAlert { Text(removalAlert) }
+            }
         }
     }
 
@@ -117,11 +152,17 @@ public struct MobileSwipeCleanView: View {
         VStack(spacing: 12) {
             // Header progress
             HStack {
-                Text(L10n.format("%lld of %lld", currentIndex + 1, assets.count))
+                let position = currentIndex + pendingDeleteOffset + 1
+                Text(L10n.format("%lld of %lld", min(position, assets.count), assets.count))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(MobileKeptoraDesign.secondaryInk)
 
                 Spacer()
+
+                if isProcessingSwipe {
+                    ProgressView("Removing…")
+                        .font(.caption)
+                }
 
                 if selectedInDeckCount > 0 {
                     Text(L10n.format("%lld marked · %@", selectedInDeckCount, ByteCountFormatter.string(fromByteCount: selectedBytesInDeck, countStyle: .file)))
@@ -159,6 +200,20 @@ public struct MobileSwipeCleanView: View {
                             .gesture(dragGesture(cardWidth: cardWidth))
                             .allowsHitTesting(!isProcessingSwipe)
                     }
+
+                    ForEach(prefetchedAssets) { asset in
+                        MobileAssetThumbnail(
+                            asset: asset,
+                            pixelSize: 1200,
+                            contentMode: .fit,
+                            allowNetwork: false,
+                            showsRetryButton: false
+                        )
+                        .frame(width: 1, height: 1)
+                        .hidden()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
@@ -180,13 +235,7 @@ public struct MobileSwipeCleanView: View {
             // Card background & photo
             Color(uiColor: .secondarySystemFill)
 
-            MobileAssetThumbnail(
-                asset: asset,
-                pixelSize: 1200,
-                contentMode: .fit,
-                allowNetwork: true,
-                showsRetryButton: false
-            )
+            Self.swipeDeckThumbnail(for: asset)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
 
@@ -337,14 +386,49 @@ public struct MobileSwipeCleanView: View {
         isProcessingSwipe = true
         let wasSelected = store.selectedLibraryIDs.contains(current.id)
 
-        history.append(SwipeHistoryEntry(index: currentIndex, asset: current, wasSelected: wasSelected, action: action))
+        if action != .delete {
+            history.append(SwipeHistoryEntry(index: currentIndex, asset: current, wasSelected: wasSelected, action: action))
+        }
 
         switch action {
         case .delete:
             let impact = UINotificationFeedbackGenerator()
             impact.notificationOccurred(.warning)
-            store.selectLibraryItems([current])
-            animateOut(to: -500)
+            withAnimation(.easeOut(duration: 0.22)) {
+                dragOffset = CGSize(width: -500, height: 0)
+                dragRotation = -15
+            }
+            Task {
+                store.errorMessage = nil
+                let removalTask = Task { await store.cleanupLibraryAssetImmediately(current) }
+                try? await Task.sleep(for: .milliseconds(220))
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    pendingDeleteID = current.id
+                    dragOffset = .zero
+                    dragRotation = 0
+                }
+                let removed = await removalTask.value
+                if removed {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        currentIndex += 1
+                        pendingDeleteID = nil
+                    }
+                    history.removeAll()
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        pendingDeleteID = nil
+                    }
+                    if let message = store.errorMessage {
+                        removalAlert = message
+                        store.errorMessage = nil
+                    }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        dragOffset = .zero
+                        dragRotation = 0
+                    }
+                }
+                isProcessingSwipe = false
+            }
 
         case .keep:
             let impact = UINotificationFeedbackGenerator()
@@ -376,9 +460,7 @@ public struct MobileSwipeCleanView: View {
         guard !isProcessingSwipe else { return }
         guard let last = history.popLast() else { return }
         currentIndex = last.index
-        if last.action == .delete && !last.wasSelected {
-            store.replaceLibrarySelection(store.selectedLibraryIDs.subtracting([last.asset.id]))
-        } else if last.action == .keep && last.wasSelected {
+        if last.action == .keep && last.wasSelected {
             store.selectLibraryItems([last.asset])
         }
         withAnimation(.spring()) {
@@ -447,7 +529,7 @@ public struct MobileSwipeCleanView: View {
             }
             .buttonStyle(.plain)
             .disabled(isProcessingSwipe)
-            .accessibilityLabel("Select for deletion")
+            .accessibilityLabel("Remove Photo")
         }
     }
 

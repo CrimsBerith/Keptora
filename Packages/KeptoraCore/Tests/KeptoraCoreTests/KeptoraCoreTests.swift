@@ -626,6 +626,18 @@ final class KeptoraCoreTests: XCTestCase {
         XCTAssertEqual(LaunchArguments.portfolioUITesting, "-portfolioUITesting")
         XCTAssertEqual(AppStorageKeys.appLanguage, "Keptora.AppLanguage")
     }
+
+    func testFixtureLaunchArgumentsRequireExplicitUITestEnvironment() {
+        let fixtureArgument = LaunchArguments.thousandsStressUITesting
+        let arguments = [fixtureArgument]
+        XCTAssertFalse(LaunchArguments.isUITestFixtureEnabled(fixtureArgument, arguments: arguments, environment: [:]))
+        XCTAssertFalse(LaunchArguments.isUITestFixtureEnabled(fixtureArgument, arguments: [], environment: ["KEPTORA_UI_TESTING": "1"]))
+        XCTAssertTrue(LaunchArguments.isUITestFixtureEnabled(fixtureArgument, arguments: arguments, environment: ["KEPTORA_UI_TESTING": "1"]))
+
+        let scanFixtureArgument = LaunchArguments.syntheticScanUITesting
+        XCTAssertFalse(LaunchArguments.isUITestFixtureEnabled(scanFixtureArgument, arguments: [scanFixtureArgument], environment: [:]))
+        XCTAssertTrue(LaunchArguments.isUITestFixtureEnabled(scanFixtureArgument, arguments: [scanFixtureArgument], environment: ["KEPTORA_UI_TESTING": "1"]))
+    }
 }
 
 private actor CountingSourceAdapter: SourceAdapter {

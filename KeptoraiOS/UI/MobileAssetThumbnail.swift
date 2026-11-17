@@ -48,7 +48,7 @@ struct MobileAssetThumbnail: View {
             }
         }
         .clipped()
-        .task(id: cacheKey) {
+        .task(id: requestKey) {
             if let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {
                 self.image = cached
                 self.didFinish = true
@@ -68,8 +68,10 @@ struct MobileAssetThumbnail: View {
 
     var cacheKey: String {
         let stamp = asset.modificationDate?.timeIntervalSince1970 ?? asset.creationDate?.timeIntervalSince1970 ?? 0
-        return "\(asset.id)_\(stamp)_\(asset.fileRevision?.physicalIdentity ?? "")_\(asset.fileRevision?.changeToken ?? "")_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")_\(allowNetwork)"
+        return "\(asset.id)_\(stamp)_\(asset.fileRevision?.physicalIdentity ?? "")_\(asset.fileRevision?.changeToken ?? "")_\(Int(pixelSize))_\(contentMode == .fit ? "fit" : "fill")"
     }
+
+    private var requestKey: String { "\(cacheKey)_\(allowNetwork)" }
 
     private func load() async {
         if let cached = MobileThumbnailCache.shared.image(forKey: cacheKey) {

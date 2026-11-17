@@ -1,5 +1,7 @@
 # App Store Submission Checklist — Keptora 1.0.0 (182)
 
+> **Identity warning:** This checklist says `1.0.0 (182)`; [RELEASE_BLOCKERS.md](../Docs/RELEASE_BLOCKERS.md) previously said `1.0.3 (189)`. Neither is confirmed as the current candidate. Reconcile project settings and App Store Connect with the release owner before archive or submission.
+
 ## Legal and business
 
 - [ ] Apple Developer Program membership active.

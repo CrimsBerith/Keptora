@@ -174,7 +174,13 @@ struct GlassEffectContainer<Content: View>: View {
     }
 
     var body: some View {
-        content
+        if #available(macOS 26.0, *) {
+            SwiftUI.GlassEffectContainer(spacing: spacing) {
+                content
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -189,6 +195,47 @@ struct GlassEffectModifier: ViewModifier {
     @State private var isHovered: Bool = false
 
     func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            nativeGlass(content)
+        } else {
+            legacyGlass(content)
+        }
+    }
+
+    @available(macOS 26.0, *)
+    @ViewBuilder
+    private func nativeGlass(_ content: Content) -> some View {
+        switch shape {
+        case .capsule:
+            nativeGlass(content, in: Capsule())
+        case .circle:
+            nativeGlass(content, in: Circle())
+        case .rect(let radius):
+            nativeGlass(content, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
+    }
+
+    @available(macOS 26.0, *)
+    private func nativeGlass<S: Shape>(_ content: Content, in shape: S) -> some View {
+        var glass = SwiftUI.Glass.regular
+        if let tint = style.tintColor {
+            glass = glass.tint(tint)
+        }
+        if style.isInteractive {
+            glass = glass.interactive()
+        }
+
+        return content
+            .glassEffect(glass, in: shape)
+            .overlay {
+                if isSelected {
+                    shape.stroke((style.tintColor ?? KeptoraDesign.accent).opacity(0.78), lineWidth: 1.5)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private func legacyGlass(_ content: Content) -> some View {
         content
             .background {
                 glassBackground

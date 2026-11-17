@@ -206,6 +206,25 @@ final class BulkCleanupPolicyTests: XCTestCase {
         XCTAssertEqual(blocks.first?.titleKey, "Related Shots"); XCTAssertEqual(blocks.first?.groups.count, 1500)
         XCTAssertEqual(blocks.last?.id, "other")
     }
+    func testSmartReviewBlocksWithoutGroupsPreserveQualityAndAssetOrder() {
+        let assets = [item("a"), item("b"), item("c")]
+        let assessment = QualityAssessment(state: .evaluated, findings: [.possibleBlur], detailScore: 0, exposureScore: 0)
+
+        let blocks = LibraryReviewBlock.make(
+            assets: assets,
+            groups: [],
+            quality: ["b": assessment],
+            smart: true
+        )
+        XCTAssertEqual(blocks.map(\.id), ["quality", "other"])
+        XCTAssertEqual(blocks[0].assets.map(\.id), ["b"])
+        XCTAssertEqual(blocks[1].assets.map(\.id), ["a", "c"])
+
+        let unreviewedBlocks = LibraryReviewBlock.make(assets: assets, groups: [], quality: [:], smart: true)
+        XCTAssertEqual(unreviewedBlocks.map(\.id), ["other"])
+        XCTAssertEqual(unreviewedBlocks[0].assets, assets)
+        XCTAssertTrue(LibraryReviewBlock.make(assets: [], groups: [], quality: [:], smart: true).isEmpty)
+    }
     func testFindingFiltersKeepQualitySingletonsAndSeparateVerySimilar() {
         let a = item("a"), b = item("b"), c = item("c")
         let groups = LibraryReviewGroup.combined(exact: [], similar: [UniversalSimilarityGroup(id: "similar", assets: [a,b], maximumDistance: 0.1, strength: .verySimilar)])

@@ -32,6 +32,7 @@ final class KeptoraUITests: XCTestCase {
 
     private func launchSelectionFixture(language: String = "en", locale: String = "en_US") -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
         app.launchArguments += [
             "-portfolioUITesting",
             "-keptoraSelectionUITesting",
@@ -50,6 +51,7 @@ final class KeptoraUITests: XCTestCase {
 
     func testStartupSetupCanContinueWithDeniedPhotos() {
         let app = XCUIApplication()
+        app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
         app.launchArguments = ["-keptoraPhotosDeniedUITesting", "-keptoraResetSourceSetupUITesting", "-Keptora.Onboarding.Completed.v1", "YES",
             "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
         app.launch()
@@ -100,6 +102,7 @@ final class KeptoraUITests: XCTestCase {
                 try? FileManager.default.copyItem(at: source, to: folder.appendingPathComponent(source.lastPathComponent))
             }
             let app = XCUIApplication()
+            app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
             app.launchArguments = ["-portfolioUITesting", "-keptoraUnifiedMacUITesting", "-keptoraPhotosDeniedUITesting",
                                    "-keptoraStoreScreenshotWindow", "-AppleLanguages", "(\(language))", "-Keptora.AppLanguage", language]
             app.launchEnvironment["KEPTORA_MAC_FIXTURE_ID"] = fixtureID
@@ -137,6 +140,7 @@ final class KeptoraUITests: XCTestCase {
 
     private func launchUnifiedMacFixture(conflict: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchEnvironment["KEPTORA_UI_TESTING"] = "1"
         app.launchArguments = ["-portfolioUITesting", "-keptoraUnifiedMacUITesting", "-keptoraPhotosDeniedUITesting", "-AppleLanguages", "(en)", "-Keptora.AppLanguage", "system"]
         if conflict { app.launchArguments.append("-keptoraRestoreConflictUITesting") }
         app.launchEnvironment["KEPTORA_MAC_FIXTURE_ID"] = UUID().uuidString
@@ -260,6 +264,9 @@ final class KeptoraUITests: XCTestCase {
         app.menuBarItems["Keptora"].click()
         app.menuItems["Settings…"].click()
         XCTAssertTrue(app.buttons["mac.settings.restorePurchases"].waitForExistence(timeout: 10))
+        if #available(macOS 15.0, *) {
+            XCTAssertTrue(app.buttons["mac.settings.redeemProCode"].exists)
+        }
         XCTAssertTrue(element(withIdentifier: "mac.settings.language", in: app).exists)
         XCTAssertTrue(element(withIdentifier: "mac.settings.support", in: app).exists)
         XCTAssertTrue(app.buttons["mac.settings.exportDiagnostics"].exists)

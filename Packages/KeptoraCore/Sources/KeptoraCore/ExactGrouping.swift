@@ -128,15 +128,29 @@ public actor UniversalExactScanner {
         var lastCheckpointEmission = Date()
         var pendingEntriesCount = 0
         var lastProgressEmission = Date.distantPast
+        // Bumped only when a fingerprint gains a second member, so unchanged groups are not resent.
+        var groupRevision = 0, emittedGroupRevision = 0
 
+        func add(_ fingerprint: UniversalExactFingerprint, _ item: UniversalMediaAsset) {
+            groupsByFingerprint[fingerprint, default: []].append(item)
+            if (groupsByFingerprint[fingerprint]?.count ?? 0) > 1 { groupRevision += 1 }
+        }
+
+        // Each checkpoint re-encodes every completed entry. Singletons finish in microseconds,
+        // so a count-only trigger fired many full saves per second on large libraries.
+        // A minimum spacing keeps the total write cost linear in practice.
         func emitCheckpointIfNeeded(force: Bool = false) {
             guard !completedEntries.isEmpty else { return }
             let now = Date()
-            if force || pendingEntriesCount >= checkpointInterval || now.timeIntervalSince(lastCheckpointEmission) >= 2.0 {
+            let elapsed = now.timeIntervalSince(lastCheckpointEmission)
+            if force || (elapsed >= 3.0 && (pendingEntriesCount >= checkpointInterval || elapsed >= 10.0)) {
                 checkpointUpdate(.init(sourceID: adapter.source.id, allowNetwork: allowNetwork, entries: completedEntries))
-                groupsUpdate(groupsByFingerprint.compactMap { fingerprint, members in
-                    members.count > 1 && !fingerprint.digest.hasPrefix("unique:") ? UniversalExactGroup(digest: fingerprint.digest, assets: members) : nil
-                }.sorted { $0.id < $1.id })
+                if groupRevision != emittedGroupRevision {
+                    emittedGroupRevision = groupRevision
+                    groupsUpdate(groupsByFingerprint.compactMap { fingerprint, members in
+                        members.count > 1 && !fingerprint.digest.hasPrefix("unique:") ? UniversalExactGroup(digest: fingerprint.digest, assets: members) : nil
+                    }.sorted { $0.id < $1.id })
+                }
                 lastCheckpointEmission = now
                 pendingEntriesCount = 0
             }
@@ -194,6 +208,50 @@ public actor UniversalExactScanner {
             }
         }
 
+        func recordSingleton(_ asset: UniversalMediaAsset) {
+            let resolvedByteCount = asset.byteCount ?? 0
+            let fingerprint = UniversalExactFingerprint(
+                digest: "unique:\(asset.id)",
+                byteCount: resolvedByteCount
+            )
+            let fingerprintedAsset = asset.with(
+                byteCount: resolvedByteCount > 0 ? resolvedByteCount : nil,
+                requiresNetwork: asset.requiresNetwork
+            )
+            add(fingerprint, fingerprintedAsset)
+            completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
+            pendingEntriesCount += 1
+            emitCheckpointIfNeeded()
+        }
+
+        // Candidate duplicate: two or more assets share the exact signature. Full SHA-256 fingerprint required.
+        func hashCandidate(_ asset: UniversalMediaAsset) async throws {
+            do {
+                metrics.hashedOriginals += 1
+                let fingerprint = try await adapter.exactFingerprint(
+                    for: asset,
+                    allowNetwork: allowNetwork,
+                    progress: { _ in }
+                )
+                let fingerprintedAsset = asset.with(
+                    byteCount: fingerprint.byteCount,
+                    requiresNetwork: false
+                )
+                add(fingerprint, fingerprintedAsset)
+                completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
+                await MediaFingerprintDiskCache.shared.store(asset: asset, algorithm: MediaAnalysisVersion.exact,
+                    entry: .init(assetID: asset.id, digest: fingerprint.digest, byteCount: fingerprint.byteCount))
+                pendingEntriesCount += 1
+                emitCheckpointIfNeeded()
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                let issue = AnalysisIssue(asset: asset, stage: .exact, error: error)
+                issues.append(issue)
+                if issue.reason == .downloadRequired { skippedNetwork += 1 }
+            }
+        }
+
         // Phase 2: Processing and hashing candidate assets.
         for (index, asset) in assets.enumerated() {
             try await control?.waitIfPaused()
@@ -227,7 +285,7 @@ public actor UniversalExactScanner {
             if let prior = resumableEntries[asset.id], Self.sameRevision(asset, prior.sourceAsset) {
                 // Singletons can keep their unique fingerprint; candidates require real SHA256 (not "unique:")
                 if !isCandidate || !prior.fingerprint.digest.hasPrefix("unique:") {
-                    groupsByFingerprint[prior.fingerprint, default: []].append(prior.fingerprintedAsset)
+                    add(prior.fingerprint, prior.fingerprintedAsset)
                     metrics.cacheHits += 1
                     completedEntries.append(prior)
                     continue
@@ -238,7 +296,7 @@ public actor UniversalExactScanner {
                 metrics.cacheHits += 1
                 let fingerprint = UniversalExactFingerprint(digest: cached.digest, byteCount: cached.byteCount)
                 let updated = asset.with(byteCount: cached.byteCount, requiresNetwork: false)
-                groupsByFingerprint[fingerprint, default: []].append(updated)
+                add(fingerprint, updated)
                 completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: updated, fingerprint: fingerprint))
                 pendingEntriesCount += 1
                 emitCheckpointIfNeeded()
@@ -247,48 +305,13 @@ public actor UniversalExactScanner {
 
             // Singleton fast-path: prune hashing
             if !isCandidate {
-                let resolvedByteCount = asset.byteCount ?? 0
-                let fingerprint = UniversalExactFingerprint(
-                    digest: "unique:\(asset.id)",
-                    byteCount: resolvedByteCount
-                )
-                let fingerprintedAsset = asset.with(
-                    byteCount: resolvedByteCount > 0 ? resolvedByteCount : nil,
-                    requiresNetwork: asset.requiresNetwork
-                )
-                groupsByFingerprint[fingerprint, default: []].append(fingerprintedAsset)
-                completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
-                pendingEntriesCount += 1
-                emitCheckpointIfNeeded()
+                recordSingleton(asset)
                 continue
             }
 
-            // Candidate duplicate: two or more assets share the exact signature. Full SHA-256 fingerprint required.
-            do {
-                metrics.hashedOriginals += 1
-                let fingerprint = try await adapter.exactFingerprint(
-                    for: asset,
-                    allowNetwork: allowNetwork,
-                    progress: { _ in }
-                )
-                let fingerprintedAsset = asset.with(
-                    byteCount: fingerprint.byteCount,
-                    requiresNetwork: false
-                )
-                groupsByFingerprint[fingerprint, default: []].append(fingerprintedAsset)
-                completedEntries.append(.init(sourceAsset: asset, fingerprintedAsset: fingerprintedAsset, fingerprint: fingerprint))
-                await MediaFingerprintDiskCache.shared.store(asset: asset, algorithm: MediaAnalysisVersion.exact,
-                    entry: .init(assetID: asset.id, digest: fingerprint.digest, byteCount: fingerprint.byteCount))
-                pendingEntriesCount += 1
-                emitCheckpointIfNeeded()
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                let issue = AnalysisIssue(asset: asset, stage: .exact, error: error)
-                issues.append(issue)
-                if issue.reason == .downloadRequired { skippedNetwork += 1 }
-            }
+            try await hashCandidate(asset)
         }
+
         emitCheckpointIfNeeded(force: true)
 
         let groups = groupsByFingerprint.compactMap { fingerprint, members in

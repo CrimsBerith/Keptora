@@ -69,19 +69,84 @@ final class MacArchiveModel: ObservableObject {
     private var cachedScopedAssets: [UniversalMediaAsset]?
     private var cachedAlbums: [MediaAlbum]?
     private var cachedReviewGroups: [LibraryReviewGroup]?
-    private var cachedProjection: MacGalleryProjection?
+    @Published private(set) var gallery = MacGalleryProjection.empty
+    @Published private(set) var isGalleryUpdating = false
+    private var galleryProjectionRevision: UInt64 = 0
+    private var galleryBuildTask: Task<Void, Never>?
     private(set) var galleryProjectionBuilds = 0
     private var appliedSearch = ""
     private var searchTask: Task<Void, Never>?
-    var gallery: MacGalleryProjection {
-        if let cachedProjection { return cachedProjection }
-        galleryProjectionBuilds += 1
-        let value = MacGalleryProjection(assets: scopedAssets, groups: reviewGroups, quality: qualityAssessments,
-            issues: analysisIssues, decisions: decisions, context: galleryContext, search: appliedSearch)
-        cachedProjection = value; return value
+
+    /// Set once a projection has been shown; later scan refreshes keep it on screen.
+    @Published private(set) var hasGalleryProjection = false
+    private var galleryRefreshQueued = false
+
+    private func invalidateGalleryProjection(userInitiated: Bool = false) {
+        galleryProjectionRevision &+= 1
+        // While a scan streams results, rebuild about once a second and keep the current
+        // gallery usable. Cancelling and restarting on every update starved the build and
+        // kept the grid disabled behind "Updating gallery…" for the whole scan.
+        if analyzing && !userInitiated && hasGalleryProjection {
+            guard !galleryRefreshQueued else { return }
+            galleryRefreshQueued = true
+            let previous = galleryBuildTask
+            galleryBuildTask = Task { [weak self] in
+                await previous?.value
+                do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
+                guard let self, !Task.isCancelled else { return }
+                self.galleryRefreshQueued = false
+                await self.buildGalleryProjection()
+            }
+            return
+        }
+        isGalleryUpdating = true
+        galleryBuildTask?.cancel()
+        galleryRefreshQueued = false
+        galleryBuildTask = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: 20_000_000) } catch { return }
+            guard let self, !Task.isCancelled else { return }
+            await self.buildGalleryProjection()
+        }
     }
-    private func invalidateScope() { cachedScopedAssets = nil; cachedAlbums = nil; cachedProjection = nil }
-    private func invalidateGroups() { cachedReviewGroups = nil; cachedProjection = nil; analysisCacheDirty = true }
+    /// Inputs are read when the build starts, so coalesced changes are all included.
+    private func buildGalleryProjection() async {
+        let revision = galleryProjectionRevision
+        let input = MacGalleryProjectionInput(
+            assets: scopedAssets,
+            groups: reviewGroups,
+            quality: qualityAssessments,
+            issues: analysisIssues,
+            decisions: decisions,
+            context: galleryContext,
+            search: appliedSearch
+        )
+        galleryProjectionBuilds += 1
+        let worker = Task.detached(priority: .userInitiated) {
+            MacGalleryProjection.build(input)
+        }
+        let result = await withTaskCancellationHandler {
+            await worker.value
+        } onCancel: {
+            worker.cancel()
+        }
+        guard let result, !Task.isCancelled else { return }
+        // Cancellation covers superseded user changes. A newer scan refresh may already be
+        // queued; this result is still fresher than what is on screen.
+        gallery = result
+        hasGalleryProjection = true
+        if galleryProjectionRevision == revision { isGalleryUpdating = false }
+    }
+    func waitForGalleryProjection() async { await galleryBuildTask?.value }
+    private func invalidateScope() {
+        cachedScopedAssets = nil
+        cachedAlbums = nil
+        invalidateGalleryProjection()
+    }
+    private func invalidateGroups() {
+        cachedReviewGroups = nil
+        invalidateGalleryProjection()
+        analysisCacheDirty = true
+    }
     @Published var selection: Set<String> = [] { didSet { if sourceReady { persistSelection() } } }
     @Published var sourceName = L10n.tr("Choose a source")
     @Published var sourceRoot: URL?
@@ -92,13 +157,17 @@ final class MacArchiveModel: ObservableObject {
     @Published var galleryContext = MacGalleryContext() {
         didSet {
             var prior = oldValue; prior.search = galleryContext.search
-            if prior != galleryContext { cachedProjection = nil }
+            if prior != galleryContext { invalidateGalleryProjection(userInitiated: true) }
             guard galleryContext.search != oldValue.search else { return }
             searchTask?.cancel()
             let value = galleryContext.search
             searchTask = Task { [weak self] in
                 do { try await Task.sleep(nanoseconds: 120_000_000) } catch { return }
-                guard let self else { return }; self.objectWillChange.send(); self.appliedSearch = value; self.cachedProjection = nil
+                guard let self else { return }
+                guard self.appliedSearch != value else { return }
+                self.objectWillChange.send()
+                self.appliedSearch = value
+                self.invalidateGalleryProjection(userInitiated: true)
             }
         }
     }
@@ -247,8 +316,8 @@ final class MacArchiveModel: ObservableObject {
     private var generation = UUID()
     private var observer: MacArchivePhotoObserver?
     private var selectionKey: String { "Keptora.ManualSelection.unified.Mac" }
-    @Published var qualityAssessments: [String: QualityAssessment] = [:] { didSet { if !analyzing { cachedProjection = nil }; analysisCacheDirty = true } }
-    @Published var analysisIssues: [AnalysisIssue] = [] { didSet { if !analyzing { cachedProjection = nil }; analysisCacheDirty = true } }
+    @Published var qualityAssessments: [String: QualityAssessment] = [:] { didSet { if !analyzing { invalidateGalleryProjection() }; analysisCacheDirty = true } }
+    @Published var analysisIssues: [AnalysisIssue] = [] { didSet { if !analyzing { invalidateGalleryProjection() }; analysisCacheDirty = true } }
     @Published private(set) var analysisFailures: [AnalysisStage: String] = [:] { didSet { analysisCacheDirty = true } }
     @Published var sessionProgress = AnalysisSessionProgress() { didSet { analysisCacheDirty = true } }
     private var fingerprints: [String: UniversalExactFingerprint] = [:]
@@ -256,7 +325,7 @@ final class MacArchiveModel: ObservableObject {
     @Published private(set) var lastCleanupOutcome: LibraryCleanupOutcome?
     @Published var pendingSelection: [UniversalMediaAsset] = []
     @Published var unresolvedSelectionIDs: Set<String> = []
-    @Published var decisions = (UserDefaults.standard.data(forKey: "Keptora.ReviewDecisions.Mac").flatMap { try? JSONDecoder().decode(LibraryReviewDecisions.self, from: $0) }) ?? LibraryReviewDecisions() { didSet { cachedProjection = nil } }
+    @Published var decisions = (UserDefaults.standard.data(forKey: "Keptora.ReviewDecisions.Mac").flatMap { try? JSONDecoder().decode(LibraryReviewDecisions.self, from: $0) }) ?? LibraryReviewDecisions() { didSet { invalidateGalleryProjection(userInitiated: true) } }
     @Published private(set) var canUndoSelection = false
     @Published private(set) var canRedoSelection = false
     private var selectionSession = LibrarySelectionUndoSession()
@@ -297,26 +366,33 @@ final class MacArchiveModel: ObservableObject {
     func groupSuggestionCandidates(_ group: LibraryReviewGroup) -> [UniversalMediaAsset] {
         decisions.candidates(in: group, respecting: reviewGroups)
     }
+    private func selectSuggestions(_ candidates: [UniversalMediaAsset]) {
+        let selectable = candidates.filter { !selection.contains($0.id) && !decisions.protectedIDs.contains($0.id) }
+        guard !selectable.isEmpty, canEditLibrary, !busy else { return }
+        guard authorizeSuggestions?(selectable.map(\.id)) ?? true else { return }
+        selectItems(selectable)
+    }
     func exactSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
         decisions.exactSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
     }
     func similarSuggestionCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
         decisions.similarSuggestions(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
     }
+    func suggestedCandidates(visibleIDs: Set<String>? = nil) -> [UniversalMediaAsset] {
+        decisions.suggestedCandidates(reviewGroups).filter { visibleIDs?.contains($0.id) ?? true }
+    }
     func selectOthers(in group: LibraryReviewGroup, visibleIDs: Set<String>? = nil) {
         let candidates = groupSuggestionCandidates(group).filter { !selection.contains($0.id) && (visibleIDs?.contains($0.id) ?? true) }
-        guard authorizeSuggestions?(candidates.map(\.id)) ?? true else { return }
-        selectItems(candidates)
+        selectSuggestions(candidates)
+    }
+    func selectAllSuggestions(visibleIDs: Set<String>? = nil) {
+        selectSuggestions(suggestedCandidates(visibleIDs: visibleIDs))
     }
     func selectExactSuggestions(visibleIDs: Set<String>? = nil) {
-        let candidates = exactSuggestionCandidates(visibleIDs: visibleIDs).filter { !selection.contains($0.id) }
-        guard authorizeSuggestions?(candidates.map(\.id)) ?? true else { return }
-        selectItems(candidates)
+        selectSuggestions(exactSuggestionCandidates(visibleIDs: visibleIDs))
     }
     func selectSimilarSuggestions(visibleIDs: Set<String>? = nil) {
-        let candidates = similarSuggestionCandidates(visibleIDs: visibleIDs).filter { !selection.contains($0.id) }
-        guard authorizeSuggestions?(candidates.map(\.id)) ?? true else { return }
-        selectItems(candidates)
+        selectSuggestions(similarSuggestionCandidates(visibleIDs: visibleIDs))
     }
     func selectItems(_ items: [UniversalMediaAsset]) { setSelection(selection.union(items.filter { !decisions.protectedIDs.contains($0.id) }.map(\.id))) }
     func toggleSelection(_ item: UniversalMediaAsset) {
@@ -371,9 +447,13 @@ final class MacArchiveModel: ObservableObject {
         }
         migratingLegacyState = false
         var migratedIDs: [String: String] = [:]
+        // Indexed once: scanning every previous item for every current file was O(n²) on the
+        // main actor and stalled large folder libraries on each catalogue update.
+        var previousByReference: [MediaAssetReference: [UniversalMediaAsset]] = [:]
+        for previous in previousSelection + pendingSelection { previousByReference[previous.reference, default: []].append(previous) }
         for item in assets {
             if case .file(let url) = item.reference {
-                for previous in previousSelection + pendingSelection where previous.id != item.id && previous.reference == item.reference &&
+                for previous in previousByReference[item.reference] ?? [] where previous.id != item.id &&
                     previous.fileRevision?.physicalIdentity == item.fileRevision?.physicalIdentity && item.fileRevision != nil {
                     if saved.remove(previous.id) != nil { saved.insert(item.id) }; migratedIDs[previous.id] = item.id
                 }
@@ -407,7 +487,7 @@ final class MacArchiveModel: ObservableObject {
         self.folders = folderCleanup
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory
         #if DEBUG || KEPTORA_TESTING
-        let testRoot = LaunchArguments.contains("-keptoraUnifiedMacUITesting") ? FileManager.default.temporaryDirectory.appendingPathComponent("KeptoraMacUI-" + (ProcessInfo.processInfo.environment["KEPTORA_MAC_FIXTURE_ID"] ?? UUID().uuidString)) : nil
+        let testRoot = LaunchArguments.isUITestFixtureEnabled("-keptoraUnifiedMacUITesting") ? FileManager.default.temporaryDirectory.appendingPathComponent("KeptoraMacUI-" + (ProcessInfo.processInfo.environment["KEPTORA_MAC_FIXTURE_ID"] ?? UUID().uuidString)) : nil
         fixtureRoot = testRoot
         #else
         let testRoot: URL? = nil
@@ -420,7 +500,7 @@ final class MacArchiveModel: ObservableObject {
             guard let self else { return }; self.objectWillChange.send()
             if self.pendingRefresh && self.operations.canAcquire(self.operationResources, mode: .read) { self.drainRefresh() }
         }
-        if LaunchArguments.contains(LaunchArguments.resetSourceSetupUITesting) {
+        if LaunchArguments.isUITestFixtureEnabled(LaunchArguments.resetSourceSetupUITesting) {
             UserDefaults.standard.removeObject(forKey: AppStorageKeys.macSourceSetupCompleted)
         }
         if let data = UserDefaults.standard.data(forKey: historyKey), let entries = try? JSONDecoder().decode([MacRecoveryEntry].self, from: data) { history = entries }
@@ -526,7 +606,7 @@ final class MacArchiveModel: ObservableObject {
         Task { await requestPhotosAccess() }
     }
     private func currentPhotosAuthorization() async -> SourceAuthorization {
-        if LaunchArguments.contains(LaunchArguments.photosDeniedUITesting) { return .denied }
+        if LaunchArguments.isUITestFixtureEnabled(LaunchArguments.photosDeniedUITesting) { return .denied }
         return await photos.authorizationStatus()
     }
     func requestPhotosAccess(showError: Bool = true) async {
@@ -689,12 +769,23 @@ final class MacArchiveModel: ObservableObject {
         status = L10n.tr("Loading sources"); analysisProcessed = 0; analysisTotal = scopedAssets.count
         let adapter = scanAdapter
         lastFindingsPublishTime = .distantPast
+        let forwardPartialCatalogue = scopedAssets.isEmpty
         task = Task(priority: .utility) {
-            defer { if generation == current { analyzing = false; cachedProjection = nil; status = nil; scheduleSave(); scheduleAnalysisSave() }; operations.release(lease); drainRefresh() }
+            defer {
+                if generation == current {
+                    analyzing = false
+                    invalidateGalleryProjection()
+                    status = nil
+                    scheduleSave()
+                    scheduleAnalysisSave()
+                }
+                operations.release(lease)
+                drainRefresh()
+            }
             let coordinator = LibraryAnalysisCoordinator { update in await self.receiveAnalysis(update, generation: current) }
             do {
                 try await coordinator.run(adapter: adapter, allowNetwork: allowNetwork, configuration: configuration, control: control,
-                    checkpoint: resumeCheckpoint, checkpointUpdate: { value in
+                    checkpoint: resumeCheckpoint, forwardPartialCatalogue: forwardPartialCatalogue, checkpointUpdate: { value in
                         session.capture(value)
                         Task { @MainActor in guard self.generation == current, !self.discardScanCheckpoint, !self.sessionProgress.isComplete else { return }; self.checkpoint = value; self.scheduleAnalysisSave() }
                     })
@@ -954,7 +1045,7 @@ final class MacArchiveModel: ObservableObject {
             }
             lease = acquired
             #if DEBUG || KEPTORA_TESTING
-            if LaunchArguments.contains("-keptoraRestoreConflictUITesting"), let original = record.operations.first?.originalURL {
+            if LaunchArguments.isUITestFixtureEnabled("-keptoraRestoreConflictUITesting"), let original = record.operations.first?.originalURL {
                 try Data("Occupied original — must not be overwritten".utf8).write(to: original)
             }
             #endif
@@ -1062,7 +1153,9 @@ final class MacArchiveModel: ObservableObject {
         // A bounded periodic write, independent of selection/search/scroll writes.
         guard analysisSaveTask == nil else { return }
         analysisSaveTask = Task { [weak self] in
-            do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { return }
+            // Each save encodes the whole library state; during a scan every few seconds is enough.
+            let delay: UInt64 = (self?.analyzing ?? false) ? 5_000_000_000 : 1_000_000_000
+            do { try await Task.sleep(nanoseconds: delay) } catch { return }
             guard let self else { return }; await self.flushAnalysisCache(); self.analysisSaveTask = nil
             if self.analysisCacheDirty { self.scheduleAnalysisSave() }
         }

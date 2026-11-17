@@ -6,6 +6,7 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isRedeemingOfferCode = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -132,6 +133,9 @@ struct PaywallView: View {
         }
         .frame(minWidth: 540, idealWidth: 640, minHeight: 480, idealHeight: 580)
         .task { if store.lifetimeProduct == nil { await store.refresh() } }
+        .modifier(MacOfferCodeRedemptionModifier(isPresented: $isRedeemingOfferCode) { result in
+            Task { await store.completeOfferCodeRedemption(result) }
+        })
     }
     private var secondaryActions: some View {
         ViewThatFits(in: .horizontal) {
@@ -143,6 +147,13 @@ struct PaywallView: View {
         Button("Maybe Later") { dismiss() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("mac.paywall.close")
         if store.lifetimeProduct == nil && !store.isLifetimeUnlocked {
             Button("Retry Loading") { Task { await store.refresh() } }.disabled(store.isWorking).accessibilityIdentifier("mac.paywall.retry")
+        }
+        if #available(macOS 15.0, *) {
+            Button("Redeem Pro Code") { isRedeemingOfferCode = true }
+                .accessibilityIdentifier("mac.paywall.redeemCode")
+        } else {
+            Text("On macOS 13–14, redeem on an iPhone or iPad, then restore purchases here.")
+                .font(.caption)
         }
         Button("Restore Purchases") { Task { await store.restorePurchases() } }.disabled(store.isWorking)
     }
@@ -166,6 +177,20 @@ struct PaywallView: View {
             Image(systemName: image)
                 .foregroundStyle(KeptoraDesign.success)
                 .symbolRenderingMode(.hierarchical)
+        }
+    }
+}
+
+struct MacOfferCodeRedemptionModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    let onCompletion: (Result<Void, Error>) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.offerCodeRedemption(isPresented: $isPresented, onCompletion: onCompletion)
+        } else {
+            content
         }
     }
 }

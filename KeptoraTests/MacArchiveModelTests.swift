@@ -80,6 +80,55 @@ final class MacArchiveModelTests: XCTestCase {
         XCTAssertEqual(model.removalIntent(for: model.selected), .suggestedCopies)
     }
 
+    func testRecommendationSelectionBlockedByBusyModelDoesNotConsumeTrialAllowance() {
+        let model = MacArchiveModel(persistentSession: false)
+        let keeper = UniversalMediaAsset(id: "keeper", sourceID: "test", reference: .photoLibrary(localIdentifier: "keeper"), displayName: "keeper", mediaKind: .image)
+        let candidate = UniversalMediaAsset(id: "candidate", sourceID: "test", reference: .photoLibrary(localIdentifier: "candidate"), displayName: "candidate", mediaKind: .image)
+        model.assets = [keeper, candidate]
+        model.exact = [.init(digest: "exact", assets: [keeper, candidate], keeperID: keeper.id)]
+        model.busy = true
+        var consumedTrialIDs: [String] = []
+        model.authorizeSuggestions = { ids in
+            consumedTrialIDs.append(contentsOf: ids)
+            return true
+        }
+
+        model.selectExactSuggestions()
+
+        XCTAssertTrue(consumedTrialIDs.isEmpty)
+        XCTAssertTrue(model.selection.isEmpty)
+    }
+
+    func testSelectAllSuggestionsAuthorizesCombinedCandidatesAndPreservesKeepersAndExistingSelection() {
+        let model = MacArchiveModel(persistentSession: false)
+        func item(_ id: String) -> UniversalMediaAsset {
+            UniversalMediaAsset(id: id, sourceID: "test", reference: .photoLibrary(localIdentifier: id), displayName: id, mediaKind: .image)
+        }
+        let exactKeeper = item("exact-keeper"), exactCandidate = item("exact-candidate")
+        let similarKeeper = item("similar-keeper"), similarCandidate = item("similar-candidate")
+        let protectedCandidate = item("protected-candidate"), alreadySelected = item("already-selected")
+        model.assets = [exactKeeper, exactCandidate, similarKeeper, similarCandidate, protectedCandidate, alreadySelected]
+        model.exact = [.init(digest: "exact", assets: [exactKeeper, exactCandidate], keeperID: exactKeeper.id)]
+        model.similar = [.init(id: "similar", assets: [similarKeeper, similarCandidate, protectedCandidate],
+                               maximumDistance: 0.1, strength: .verySimilar, mediaKind: .image, keeperID: similarKeeper.id)]
+        model.selection = [alreadySelected.id]
+        model.toggleProtection(protectedCandidate)
+        var authorizationCalls = 0
+        model.authorizeSuggestions = { ids in
+            authorizationCalls += 1
+            XCTAssertEqual(Set(ids), [exactCandidate.id, similarCandidate.id])
+            return true
+        }
+
+        model.selectAllSuggestions()
+
+        XCTAssertEqual(authorizationCalls, 1)
+        XCTAssertEqual(model.selection, [alreadySelected.id, exactCandidate.id, similarCandidate.id])
+        XCTAssertFalse(model.selection.contains(exactKeeper.id))
+        XCTAssertFalse(model.selection.contains(similarKeeper.id))
+        XCTAssertFalse(model.selection.contains(protectedCandidate.id))
+    }
+
     func testProtectedPhotosRequireExplicitUnprotectForManualAndBulkSelection() {
         let model = MacArchiveModel(persistentSession: false)
         let photo = UniversalMediaAsset(id: UUID().uuidString, sourceID: "test", reference: .photoLibrary(localIdentifier: "a"), displayName: "a.jpg", mediaKind: .image)
@@ -90,7 +139,7 @@ final class MacArchiveModelTests: XCTestCase {
         XCTAssertEqual(model.selection, [photo.id]); XCTAssertFalse(model.decisions.protectedIDs.contains(photo.id))
         model.undoSelection(); XCTAssertTrue(model.selection.isEmpty); XCTAssertTrue(model.decisions.protectedIDs.contains(photo.id))
     }
-    func testSuggestionCategoryClearsUnrelatedFiltersPreservesSourcesBasketAndTimelineBadges() {
+    func testSuggestionCategoryClearsUnrelatedFiltersPreservesSourcesBasketAndTimelineBadges() async {
         let model = MacArchiveModel(persistentSession: false), id = UUID().uuidString
         let a = UniversalMediaAsset(id: id + "a", sourceID: LibrarySource.photos.id, reference: .photoLibrary(localIdentifier: id + "a"), displayName: "a.jpg", mediaKind: .image)
         let b = a.with(id: id + "b", reference: .photoLibrary(localIdentifier: id + "b"), displayName: "b.jpg")
@@ -99,8 +148,10 @@ final class MacArchiveModelTests: XCTestCase {
         model.galleryContext.search = "missing"; model.galleryContext.albumID = "missing"; model.galleryContext.media = 2
         let sources = model.scanSourceSelection
         model.openFinding(.copies)
+        await model.waitForGalleryProjection()
         XCTAssertEqual(model.gallery.visible.count, 2); XCTAssertEqual(model.selection, [b.id]); XCTAssertEqual(model.scanSourceSelection, sources)
         model.galleryContext.smartOrder = false
+        await model.waitForGalleryProjection()
         XCTAssertEqual(model.gallery.membership[a.id]?.first?.kind, .exact)
         XCTAssertEqual(model.gallery.keeperBadges[a.id], "Suggested Keep")
     }
@@ -117,17 +168,51 @@ final class MacArchiveModelTests: XCTestCase {
         XCTAssertTrue(model.analyzing, "A fresh library starts its first scan without another click")
         model.cancelAnalysis()
     }
-    func testThreeThousandItemProjectionIsReusedDuringSelectionAndProgress() {
+    func testThreeThousandItemProjectionIsReusedDuringSelectionAndProgress() async {
         let model = MacArchiveModel(persistentSession: false); model.photosConnected = true
         model.assets = (0..<3_000).map { n in .init(id: "\(n)", sourceID: LibrarySource.photos.id,
             reference: .photoLibrary(localIdentifier: "\(n)"), displayName: "\(n).jpg", mediaKind: .image) }
+        await model.waitForGalleryProjection()
         XCTAssertEqual(model.gallery.visible.count, 3_000)
         let builds = model.galleryProjectionBuilds
         for item in model.assets.prefix(100) { model.toggleSelection(item); _ = model.gallery }
         model.sessionProgress.update(.exact, .init(status: .running, processed: 100, total: 3_000)); _ = model.gallery
         XCTAssertEqual(model.galleryProjectionBuilds, builds)
-        model.galleryContext.media = 2; XCTAssertTrue(model.gallery.visible.isEmpty)
+        model.galleryContext.media = 2
+        await model.waitForGalleryProjection()
+        XCTAssertTrue(model.gallery.visible.isEmpty)
         XCTAssertEqual(model.galleryProjectionBuilds, builds + 1)
+    }
+    func testMacGalleryProjectionComputationFor50kItems() {
+        let root = URL(fileURLWithPath: "/tmp/keptora-mac-performance", isDirectory: true)
+        let start = Date(timeIntervalSince1970: 1_600_000_000)
+        let assets = (0..<50_000).map { index in
+            let name = "IMG_\(index).jpg"
+            return UniversalMediaAsset(
+                id: "mac-perf-\(index)",
+                sourceID: LibrarySource.photos.id,
+                reference: .file(root.appendingPathComponent(name)),
+                displayName: name,
+                mediaKind: index.isMultiple(of: 10) ? .video : .image,
+                creationDate: start.addingTimeInterval(Double(index) * 60)
+            )
+        }
+        var context = MacGalleryContext()
+        context.media = 1
+        let input = MacGalleryProjectionInput(
+            assets: assets,
+            groups: [],
+            quality: [:],
+            issues: [],
+            decisions: LibraryReviewDecisions(),
+            context: context,
+            search: ""
+        )
+        var visibleCount = 0
+        measure(metrics: [XCTClockMetric()]) {
+            visibleCount = MacGalleryProjection.build(input)?.visible.count ?? 0
+        }
+        XCTAssertEqual(visibleCount, 45_000)
     }
     func testUnreadableSessionBlocksMutationsAndQuitAndPreservesOriginalDuringRepair() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

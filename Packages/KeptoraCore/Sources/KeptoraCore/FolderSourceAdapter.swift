@@ -151,6 +151,9 @@ public actor FolderSourceAdapter: SourceAdapter, SimilarityImageProviding, Simil
     }
 
     private func ensureLocal(_ url: URL, allowNetwork: Bool) async throws {
+        guard LibraryFileIdentity.relativePath(url, root: rootURL) != nil else {
+            throw UniversalScanError.inaccessibleAsset(url.lastPathComponent)
+        }
         let keys: Set<URLResourceKey> = [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey]
         let values = try url.resourceValues(forKeys: keys)
         guard values.isUbiquitousItem == true, values.ubiquitousItemDownloadingStatus == .notDownloaded else { return }

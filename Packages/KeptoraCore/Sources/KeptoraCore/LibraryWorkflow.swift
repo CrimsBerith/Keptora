@@ -224,11 +224,11 @@ public actor UnifiedLibraryAdapter: SourceAdapter {
     private func publishPartial(_ items: [UniversalMediaAsset], source: LibrarySource, authorization: SourceAuthorization,
                                 receive: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?) async {
         partialItems[source.id] = items
-        // Each partial sends the whole catalogue so far. Publishing every batch made a large
-        // library cost O(n²) here and on the receiver's main actor; a few updates a second
-        // keep the gallery filling without that cost. Each source's final batch always publishes.
+        // Each partial sends the whole catalogue so far. Publishing too often makes large
+        // libraries expensive for the receiver's main actor; cap snapshots at one per second.
+        // Each source's final batch always publishes.
         let now = Date()
-        guard let receive, now.timeIntervalSince(lastPartialPublish) >= 0.3 else { return }
+        guard let receive, now.timeIntervalSince(lastPartialPublish) >= 1.0 else { return }
         lastPartialPublish = now
         catalogue.merge(.init(batches: [source.id: Self.uniqueReferences(items)]))
         coverage.removeAll { $0.id == source.id }

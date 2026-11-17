@@ -10,6 +10,7 @@ struct MobileSettingsView: View {
     @State private var isConfirmingClearCache = false
     @State private var cacheClearedFeedback = false
     @State private var cacheCleared = false
+    @State private var isRedeemingOfferCode = false
 
     /// Read from the bundle so the label can never drift from the shipped build.
     private var appVersionLabel: String {
@@ -61,7 +62,24 @@ struct MobileSettingsView: View {
                         .accessibilityIdentifier("ios.settings.showPaywall")
                     }
 
-                    Button("Restore Purchases") { Task { await purchase.restore() } }
+                    Button {
+                        isRedeemingOfferCode = true
+                    } label: {
+                        Text("Redeem Pro Code")
+                            .frame(maxWidth: .infinity, minHeight: MobileKeptoraDesign.minimumTouchTarget, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .disabled(purchase.isWorking)
+                        .accessibilityIdentifier("ios.settings.redeemProCode")
+
+                    Button {
+                        Task { await purchase.restore() }
+                    } label: {
+                        Text("Restore Purchases")
+                            .frame(maxWidth: .infinity, minHeight: MobileKeptoraDesign.minimumTouchTarget, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
                         .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .disabled(purchase.isWorking)
                         .accessibilityIdentifier("ios.settings.restorePurchases")
@@ -100,15 +118,39 @@ struct MobileSettingsView: View {
 
             Section {
                 LabeledContent(L10n.tr("Photo upload")) { Text(L10n.tr("Never")) }
-                LabeledContent(L10n.tr("Account")) { Text(L10n.tr("Not required")) }
-                LabeledContent(L10n.tr("Analytics")) { Text(L10n.tr("None")) }
+                LabeledContent {
+                    Text(L10n.tr("Not required"))
+                        .fixedSize(horizontal: false, vertical: true)
+                } label: {
+                    Text(L10n.tr("Account"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                LabeledContent {
+                    Text(L10n.tr("None"))
+                        .fixedSize(horizontal: false, vertical: true)
+                } label: {
+                    Text(L10n.tr("Analytics"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 // Replaces a long sentence in Photos Access; how removal and recovery work is in "How Keptora Works".
-                LabeledContent(L10n.tr("iCloud originals")) { Text(L10n.tr("Only when you allow")) }
+                LabeledContent {
+                    Text(L10n.tr("Only when you allow"))
+                        .fixedSize(horizontal: false, vertical: true)
+                } label: {
+                    Text(L10n.tr("iCloud originals"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Link(L10n.tr("Privacy Policy"), destination: AppStoreConfiguration.privacyPolicyURL)
+                    .foregroundStyle(MobileKeptoraDesign.accent)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("ios.settings.privacy")
                 Link(L10n.tr("Support"), destination: AppStoreConfiguration.supportURL)
+                    .foregroundStyle(MobileKeptoraDesign.accent)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("ios.settings.support")
                 Link(L10n.tr("Terms of Use"), destination: AppStoreConfiguration.termsOfUseURL)
+                    .foregroundStyle(MobileKeptoraDesign.accent)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("ios.settings.terms")
             } header: {
                 Text(L10n.tr("Privacy"))
@@ -198,6 +240,9 @@ struct MobileSettingsView: View {
         .scrollContentBackground(.hidden)
         .background(MobileAuroraBackground())
         .tint(MobileKeptoraDesign.accent)
+        .offerCodeRedemption(isPresented: $isRedeemingOfferCode) { result in
+            Task { await purchase.completeOfferCodeRedemption(result) }
+        }
         .navigationTitle("Settings")
         .accessibilityIdentifier("ios.page.settings")
         .toolbar {

@@ -369,10 +369,10 @@ struct MacArchiveView: View {
             HStack(spacing: 12) { headerSummary; Spacer(minLength: 12); headerActions }
                 .padding(.horizontal, 16).padding(.top, 10)
             filters
-            if finding == .copies || (finding == .all && !archive.reviewGroups.isEmpty && archive.sessionProgress.isComplete) {
+            if finding == .copies {
                 exactBatchSelection.padding(.horizontal, 16).padding(.bottom, 8)
             }
-            if finding == .verySimilar || finding == .review || (finding == .all && !archive.reviewGroups.isEmpty && archive.sessionProgress.isComplete) {
+            if finding == .verySimilar || finding == .review {
                 similarBatchSelection.padding(.horizontal, 16).padding(.bottom, 8)
             }
             if let message = archive.filterScopeMessage {
@@ -448,36 +448,40 @@ struct MacArchiveView: View {
                 }
                 VStack(spacing: 0) {
                     Text("Click a photo to select or deselect it.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk).padding(.top, 12)
-                    if visible.isEmpty && !archive.loading && !archive.selectedSourceIDs.isEmpty {
-                        if archive.analyzing { Text("Results appear as they become available.").foregroundStyle(KeptoraDesign.secondaryInk).padding(30) }
-                        else {
-                            VStack(spacing: 12) {
-                                Text("No items in this view").font(.headline)
-                                Text("Change the filters or choose another source.").foregroundStyle(KeptoraDesign.secondaryInk)
-                                Button("Reset Filters") { resetFilters() }.accessibilityIdentifier("mac.archive.resetFilters")
-                            }.padding(30)
+                    if archive.isGalleryUpdating {
+                        ProgressView("Updating gallery…").frame(maxWidth: .infinity, minHeight: 180)
+                    } else {
+                        if visible.isEmpty && !archive.loading && !archive.selectedSourceIDs.isEmpty {
+                            if archive.analyzing { Text("Results appear as they become available.").foregroundStyle(KeptoraDesign.secondaryInk).padding(30) }
+                            else {
+                                VStack(spacing: 12) {
+                                    Text("No items in this view").font(.headline)
+                                    Text("Change the filters or choose another source.").foregroundStyle(KeptoraDesign.secondaryInk)
+                                    Button("Reset Filters") { resetFilters() }.accessibilityIdentifier("mac.archive.resetFilters")
+                                }.padding(30)
+                            }
+                        }
+                        if archive.galleryContext.finding == .copies {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                                ForEach(orderedVisible) { item in
+                                    archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
+                                }
+                            }.padding(20)
+                        } else if smartOrder {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                                ForEach(orderedVisible) { item in
+                                    archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
+                                }
+                            }.padding(20)
+                        } else {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
+                                ForEach(visible) { item in
+                                    archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
+                                }
+                            }.padding(20)
                         }
                     }
-                    if archive.galleryContext.finding == .copies {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
-                            ForEach(orderedVisible) { item in
-                                archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
-                            }
-                        }.padding(20)
-                    } else if smartOrder {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
-                            ForEach(orderedVisible) { item in
-                                archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
-                            }
-                        }.padding(20)
-                    } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 12, alignment: .top)], alignment: .leading, spacing: 12) {
-                            ForEach(visible) { item in
-                                archiveCell(item, groups: archive.gallery.membership[item.id] ?? [], keeperBadge: archive.gallery.keeperBadges[item.id])
-                            }
-                        }.padding(20)
-                    }
-                }.disabled(archive.busy)
+                }.disabled(archive.busy || archive.isGalleryUpdating)
 
             }
         }.frame(maxWidth: .infinity)
@@ -835,28 +839,47 @@ struct MacArchiveView: View {
     }
     /// What the finished scan found, with one click into the exact copies.
     private var scanResults: some View {
-        let extraCopies = archive.exactSuggestionCandidates(visibleIDs: Set(archive.scopedAssets.map(\.id)))
+        let scope = Set(archive.scopedAssets.map(\.id))
+        let extraCopies = archive.exactSuggestionCandidates(visibleIDs: scope)
         let extraBytes = extraCopies.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
-        let similar = archive.similarSuggestionCandidates(visibleIDs: Set(archive.scopedAssets.map(\.id)))
+        let similar = archive.similarSuggestionCandidates(visibleIDs: scope)
         let similarBytes = similar.reduce(Int64(0)) { $0 + ($1.byteCount ?? 0) }
-        return HStack(spacing: 12) {
-            Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
-            if !extraCopies.isEmpty {
-                Button { finding = .copies } label: {
-                    Label(L10n.format("Extra copies: %lld · %@", extraCopies.count, ByteCountFormatter.string(fromByteCount: extraBytes, countStyle: .file)), systemImage: "square.on.square")
+        let allCandidates = archive.suggestedCandidates(visibleIDs: scope)
+        let remaining = allCandidates.filter { !archive.selection.contains($0.id) }.count
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Label("Scan complete. Choose what to keep.", systemImage: "checkmark.circle").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                if !extraCopies.isEmpty {
+                    Button { finding = .copies } label: {
+                        Label(L10n.format("Extra copies: %lld · %@", extraCopies.count, ByteCountFormatter.string(fromByteCount: extraBytes, countStyle: .file)), systemImage: "square.on.square")
+                    }
+                    .buttonStyle(.link)
+                    .accessibilityIdentifier("mac.archive.results.copies")
                 }
-                .buttonStyle(.link)
-                .accessibilityIdentifier("mac.archive.results.copies")
-            }
-            if !similar.isEmpty {
-                Button { finding = .verySimilar } label: {
-                    Label(L10n.format("Similar photos: %lld · %@", similar.count, ByteCountFormatter.string(fromByteCount: similarBytes, countStyle: .file)), systemImage: "photo.stack")
+                if !similar.isEmpty {
+                    Button { finding = .verySimilar } label: {
+                        Label(L10n.format("Similar photos: %lld · %@", similar.count, ByteCountFormatter.string(fromByteCount: similarBytes, countStyle: .file)), systemImage: "photo.stack")
+                    }
+                    .buttonStyle(.link)
+                    .accessibilityIdentifier("mac.archive.results.similar")
                 }
-                .buttonStyle(.link)
-                .accessibilityIdentifier("mac.archive.results.similar")
+                if extraCopies.isEmpty && similar.isEmpty && archive.gallery.findingCounts[.copies] == 0 && archive.gallery.findingCounts[.verySimilar] == 0 {
+                    Text("No copies or similar photos found.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+                }
             }
-            if extraCopies.isEmpty && similar.isEmpty && archive.gallery.findingCounts[.copies] == 0 && archive.gallery.findingCounts[.verySimilar] == 0 {
-                Text("No copies or similar photos found.").font(.caption).foregroundStyle(KeptoraDesign.secondaryInk)
+            if remaining > 0 {
+                Button {
+                    archive.selectAllSuggestions(visibleIDs: scope)
+                } label: {
+                    Label(L10n.format("Select All Suggestions (%lld)", remaining), systemImage: "checkmark.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(archive.busy || archive.loading || archive.analyzing)
+                .accessibilityIdentifier("mac.archive.selectAllSuggestions")
+            } else if !allCandidates.isEmpty {
+                Label(L10n.format("All Suggestions Selected (%lld)", allCandidates.count), systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(KeptoraDesign.accent)
             }
         }
     }

@@ -7,6 +7,7 @@ struct MacSettingsView: View {
     @EnvironmentObject private var archive: MacArchiveModel
     @AppStorage(AppStorageKeys.appLanguage) private var selectedLanguage = AppLanguage.system.rawValue
     @State private var copiedDiagnostics = false
+    @State private var isRedeemingOfferCode = false
 
     private var appVersionLabel: String {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–"
@@ -29,6 +30,14 @@ struct MacSettingsView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(KeptoraDesign.accentFill)
                         .accessibilityIdentifier("mac.settings.showPaywall")
+                    }
+                    if #available(macOS 15.0, *) {
+                        Button("Redeem Pro Code") { isRedeemingOfferCode = true }
+                            .accessibilityIdentifier("mac.settings.redeemProCode")
+                    } else {
+                        Text("On macOS 13–14, redeem on an iPhone or iPad, then restore purchases here.")
+                            .font(.footnote)
+                            .foregroundStyle(KeptoraDesign.secondaryInk)
                     }
                     Button("Restore Purchases") { Task { await store.restorePurchases() } }
                         .disabled(store.isWorking)
@@ -76,5 +85,8 @@ struct MacSettingsView: View {
         .sheet(isPresented: store.paywallBinding(for: .settings)) {
             PaywallView().environmentObject(store)
         }
+        .modifier(MacOfferCodeRedemptionModifier(isPresented: $isRedeemingOfferCode) { result in
+            Task { await store.completeOfferCodeRedemption(result) }
+        })
     }
 }

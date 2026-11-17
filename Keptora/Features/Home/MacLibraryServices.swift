@@ -108,7 +108,29 @@ struct MacGalleryKeyboardMonitor: NSViewRepresentable {
     }
 }
 
-struct MacGalleryProjection {
+struct MacGalleryProjectionInput: Sendable {
+    let assets: [UniversalMediaAsset]
+    let groups: [LibraryReviewGroup]
+    let quality: [String: QualityAssessment]
+    let issues: [AnalysisIssue]
+    let decisions: LibraryReviewDecisions
+    let context: MacGalleryContext
+    let search: String
+}
+
+struct MacGalleryProjection: Sendable {
+    static let empty = MacGalleryProjection(
+        visible: [],
+        blocks: [],
+        ordered: [],
+        membership: [:],
+        keeperBadges: [:],
+        candidates: [:],
+        issuesByAsset: [:],
+        findingCounts: [:],
+        qualityCounts: [:]
+    )
+
     let visible: [UniversalMediaAsset]
     let blocks: [LibraryReviewBlock]
     let ordered: [UniversalMediaAsset]
@@ -118,34 +140,61 @@ struct MacGalleryProjection {
     let issuesByAsset: [String: AnalysisIssue]
     let findingCounts: [LibraryFindingFilter: Int]
     let qualityCounts: [LibraryQualityFilter: Int]
-    init(assets: [UniversalMediaAsset], groups: [LibraryReviewGroup], quality: [String: QualityAssessment],
-         issues: [AnalysisIssue], decisions: LibraryReviewDecisions, context: MacGalleryContext, search: String) {
+    static func build(_ input: MacGalleryProjectionInput) -> MacGalleryProjection? {
+        let assets = input.assets
+        let groups = input.groups
+        let quality = input.quality
+        let issues = input.issues
+        let decisions = input.decisions
+        let context = input.context
         let findingIDs = context.finding.ids(groups: groups, quality: quality)
         let qualityIDs = (context.quality ?? .all).ids(quality: quality, issues: issues)
-        visible = assets.filter { item in
-            (findingIDs?.contains(item.id) ?? true) && (qualityIDs?.contains(item.id) ?? true) &&
-            (!context.isScreenshotsOnly || item.context?.isScreenshot == true) &&
-            (context.media == 0 || (context.media == 1 ? item.mediaKind == .image : item.mediaKind == .video)) &&
-            (context.albumID.isEmpty || item.context?.albums.contains { $0.id == context.albumID } == true) &&
-            (search.isEmpty || SmartLibrarySearchMatcher.matches(asset: item, query: search))
-        }.sorted {
+        var visible: [UniversalMediaAsset] = []
+        visible.reserveCapacity(assets.count)
+        for (index, item) in assets.enumerated() {
+            if index.isMultiple(of: 512), Task.isCancelled { return nil }
+            guard
+                findingIDs?.contains(item.id) ?? true,
+                qualityIDs?.contains(item.id) ?? true,
+                !context.isScreenshotsOnly || item.context?.isScreenshot == true,
+                context.media == 0 || (context.media == 1 ? item.mediaKind == .image : item.mediaKind == .video),
+                context.albumID.isEmpty || item.context?.albums.contains(where: { $0.id == context.albumID }) == true,
+                input.search.isEmpty || SmartLibrarySearchMatcher.matches(asset: item, query: input.search)
+            else { continue }
+            visible.append(item)
+        }
+        visible.sort {
             let a = $0.context?.captureDate ?? $0.creationDate ?? .distantPast
             let b = $1.context?.captureDate ?? $1.creationDate ?? .distantPast
             return a == b ? $0.id < $1.id : a > b
         }
-        blocks = LibraryReviewBlock.make(assets: visible, groups: groups, quality: quality, smart: context.smartOrder)
-        ordered = context.smartOrder ? blocks.flatMap(\.assets) : visible
+        if Task.isCancelled { return nil }
+        let blocks = LibraryReviewBlock.make(assets: visible, groups: groups, quality: quality, smart: context.smartOrder)
         var related: [String: [LibraryReviewGroup]] = [:]
         for group in groups { for item in group.assets { related[item.id, default: []].append(group) } }
-        membership = related; keeperBadges = decisions.keeperBadgeKeys(in: groups); candidates = decisions.candidatesByGroup(groups)
-        issuesByAsset = Dictionary(issues.map { ($0.assetID, $0) }, uniquingKeysWith: { first, _ in first })
+        if Task.isCancelled { return nil }
         let scope = Set(assets.map(\.id))
-        findingCounts = Dictionary(uniqueKeysWithValues: LibraryFindingFilter.allCases.map { filter in
+        let findingCounts = Dictionary(uniqueKeysWithValues: LibraryFindingFilter.allCases.map { filter in
             (filter, filter.ids(groups: groups, quality: quality)?.intersection(scope).count ?? assets.count)
         })
-        qualityCounts = Dictionary(uniqueKeysWithValues: LibraryQualityFilter.allCases.map { filter in
+        let qualityCounts = Dictionary(uniqueKeysWithValues: LibraryQualityFilter.allCases.map { filter in
             (filter, filter.ids(quality: quality, issues: issues)?.intersection(scope).count ?? assets.count)
         })
+        guard !Task.isCancelled else { return nil }
+        let ordered = context.smartOrder && !blocks.isEmpty && !(blocks.count == 1 && blocks[0].id == "other")
+            ? blocks.flatMap(\.assets)
+            : visible
+        return MacGalleryProjection(
+            visible: visible,
+            blocks: blocks,
+            ordered: ordered,
+            membership: related,
+            keeperBadges: decisions.keeperBadgeKeys(in: groups),
+            candidates: decisions.candidatesByGroup(groups),
+            issuesByAsset: Dictionary(issues.map { ($0.assetID, $0) }, uniquingKeysWith: { first, _ in first }),
+            findingCounts: findingCounts,
+            qualityCounts: qualityCounts
+        )
     }
 }
 

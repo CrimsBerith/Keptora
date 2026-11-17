@@ -98,6 +98,23 @@ final class LibraryWorkflowTests: XCTestCase {
         XCTAssertEqual(reports.count, 3)
     }
 
+    func testUnifiedEnumerationThrottlesPartialCataloguePublications() async throws {
+        let source = LibrarySource(id: "batch-source", kind: .folder, displayName: "Batch source")
+        let items = (0..<6).map { asset("batch-\($0)").with(sourceID: source.id) }
+        let batches = (1...6).map { Array(items.prefix($0)) }
+        let adapter = UnifiedLibraryAdapter(adapters: [ThrottledWorkflowSource(source: source, batches: batches)])
+        let recorder = CatalogueUpdateRecorder()
+
+        let result = try await adapter.enumerateAssets(onSourceBatch: { items, _, _ in
+            await recorder.record(items.count)
+        })
+
+        XCTAssertEqual(result.count, items.count)
+        let publishedCounts = await recorder.counts
+        XCTAssertEqual(publishedCounts.count, 2)
+        XCTAssertEqual(publishedCounts.last, items.count)
+    }
+
     func testUnifiedEnumerationSurvivesDeniedAndFailedSourcesWithoutClaimingCoverage() async throws {
         let allowed = LibrarySource(id: "allowed", kind: .folder, displayName: "Available")
         let denied = LibrarySource(id: "denied", kind: .fileProvider, displayName: "Cloud")
@@ -413,4 +430,28 @@ private struct WorkflowSource: SourceAdapter {
         return items
     }
     func exactFingerprint(for asset: UniversalMediaAsset, allowNetwork: Bool, progress: @escaping @Sendable (Int64) -> Void) async throws -> UniversalExactFingerprint { fingerprint }
+}
+
+private struct ThrottledWorkflowSource: SourceAdapter {
+    let source: LibrarySource
+    let batches: [[UniversalMediaAsset]]
+    var capabilities: PlatformCapabilities { .photos }
+    func authorizationStatus() async -> SourceAuthorization { .authorized }
+    func requestAuthorization() async -> SourceAuthorization { .authorized }
+    func enumerateAssets() async throws -> [UniversalMediaAsset] { batches.last ?? [] }
+    func enumerateAssets(batchSize: Int, control: LibraryAnalysisControl?, onBatch: @escaping @Sendable ([UniversalMediaAsset]) async -> Void) async throws -> [UniversalMediaAsset] {
+        for batch in batches {
+            try await Task.sleep(for: .milliseconds(120))
+            await onBatch(batch)
+        }
+        return batches.last ?? []
+    }
+    func exactFingerprint(for asset: UniversalMediaAsset, allowNetwork: Bool, progress: @escaping @Sendable (Int64) -> Void) async throws -> UniversalExactFingerprint {
+        UniversalExactFingerprint(digest: asset.id, byteCount: asset.byteCount ?? 0)
+    }
+}
+
+private actor CatalogueUpdateRecorder {
+    private(set) var counts: [Int] = []
+    func record(_ count: Int) { counts.append(count) }
 }

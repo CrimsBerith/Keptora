@@ -34,17 +34,26 @@ public final class PhotoLibraryAssetCache: @unchecked Sendable {
     public func clear() { cache.removeAllObjects() }
 }
 
+/// PhotoKit does not promise to call a result handler after `cancelImageRequest`.
+/// `bind` registers a resume path so a cancelled or timed-out request always ends
+/// its continuation; otherwise the task group in `withTimeout` waits forever.
 private final class CancellablePhotosRequest: @unchecked Sendable {
     private let lock = NSLock()
     private var id: PHImageRequestID?
     private var cancelled = false
+    private var abandon: (@Sendable () -> Void)?
+    func bind(_ abandon: @escaping @Sendable () -> Void) {
+        lock.lock(); self.abandon = abandon; let shouldCancel = cancelled; lock.unlock()
+        if shouldCancel { abandon() }
+    }
     func install(_ id: PHImageRequestID) {
         lock.lock(); self.id = id; let shouldCancel = cancelled; lock.unlock()
         if shouldCancel { PHImageManager.default().cancelImageRequest(id) }
     }
     func cancel() {
-        lock.lock(); cancelled = true; let current = id; lock.unlock()
+        lock.lock(); cancelled = true; let current = id; let abandon = self.abandon; lock.unlock()
         if let current { PHImageManager.default().cancelImageRequest(current) }
+        abandon?()
     }
 }
 
@@ -89,6 +98,9 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
     }
     private var resourceSummaries: [String: ResourceSummary] = [:]
     private var hasLoadedResourceCache = false
+    /// Album membership walks every album's members. A catalogue load and the scan that
+    /// follows it would otherwise repeat that walk back to back.
+    private var albumMembershipCache: (date: Date, assetCount: Int, value: [String: [MediaAlbum]])?
 
     private static var resourceCacheURL: URL {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
@@ -135,7 +147,13 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         options.includeAllBurstAssets = true
         options.includeHiddenAssets = true
         let fetch = PHAsset.fetchAssets(with: options)
-        let albumMemberships = Self.albumMemberships()
+        let albumMemberships: [String: [MediaAlbum]]
+        if let cached = albumMembershipCache, cached.assetCount == fetch.count, Date().timeIntervalSince(cached.date) < 120 {
+            albumMemberships = cached.value
+        } else {
+            albumMemberships = Self.albumMemberships()
+            albumMembershipCache = (Date(), fetch.count, albumMemberships)
+        }
         var output: [UniversalMediaAsset] = []
         output.reserveCapacity(fetch.count)
         // Rebuilt each load, so deleted items do not stay cached.
@@ -269,6 +287,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
+            request.bind { singleShot.resume(throwing: CancellationError()) }
             let requestID = PHImageManager.default().requestImageDataAndOrientation(for: photo, options: imgOptions) { data, _, _, info in
                 autoreleasepool {
                     if let error = info?[PHImageErrorKey] as? Error {
@@ -314,6 +333,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let avAsset: AVAsset = try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { continuation in
             let singleShot = SingleShotContinuation(continuation)
+            request.bind { singleShot.resume(throwing: CancellationError()) }
             let requestID = PHImageManager.default().requestAVAsset(forVideo: photo, options: vidOptions) { avAsset, _, info in
                 if let error = info?[PHImageErrorKey] as? Error {
                     if !allowNetwork && Self.isNetworkAccessRequired(error) {
@@ -414,17 +434,25 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
               let photo = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
             throw UniversalScanError.unsupportedReference
         }
-        return try await withCheckedThrowingContinuation { continuation in
-            let singleShot = SingleShotContinuation<DetailedPhotoMetadata>(continuation)
-            let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
-            options.deliveryMode = .highQualityFormat; options.version = .current
-            PHImageManager.default().requestImageDataAndOrientation(for: photo, options: options) { data, _, _, info in
-                if let data, let source = CGImageSourceCreateWithData(data as CFData, nil) {
-                    singleShot.resume(returning: PhotoMetadataExtractor.extract(from: source))
-                } else {
-                    singleShot.resume(throwing: (info?[PHImageErrorKey] as? Error) ?? UniversalScanError.inaccessibleAsset(asset.displayName))
+        let displayName = asset.displayName
+        return try await Self.withTimeout(seconds: allowNetwork ? 60 : 15) {
+            let request = CancellablePhotosRequest()
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    let singleShot = SingleShotContinuation<DetailedPhotoMetadata>(continuation)
+                    request.bind { singleShot.resume(throwing: CancellationError()) }
+                    let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = allowNetwork
+                    options.deliveryMode = .highQualityFormat; options.version = .current
+                    let requestID = PHImageManager.default().requestImageDataAndOrientation(for: photo, options: options) { data, _, _, info in
+                        if let data, let source = CGImageSourceCreateWithData(data as CFData, nil) {
+                            singleShot.resume(returning: PhotoMetadataExtractor.extract(from: source))
+                        } else {
+                            singleShot.resume(throwing: (info?[PHImageErrorKey] as? Error) ?? UniversalScanError.inaccessibleAsset(displayName))
+                        }
+                    }
+                    request.install(requestID)
                 }
-            }
+            } onCancel: { request.cancel() }
         }
     }
 
@@ -451,6 +479,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { continuation in
                 let singleShot = SingleShotContinuation(continuation)
+                request.bind { singleShot.resume(throwing: CancellationError()) }
                 let requestID = Self.cachingImageManager.requestImage(
                     for: photo,
                     targetSize: targetSize,
@@ -548,39 +577,44 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
               let video = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil).firstObject else {
             throw UniversalScanError.inaccessibleAsset(asset.displayName)
         }
-        let options = PHVideoRequestOptions()
-        options.deliveryMode = .highQualityFormat
-        options.isNetworkAccessAllowed = allowNetwork
-        let request = CancellablePhotosRequest()
-        let avAsset: AVAsset = try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { continuation in
-            let singleShot = SingleShotContinuation(continuation)
-            let requestID = PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
-                if let error = info?[PHImageErrorKey] as? Error {
-                    if !allowNetwork && Self.isNetworkAccessRequired(error) {
-                        singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
-                    } else if Self.isResourceUnavailable(error) {
-                        singleShot.resume(throwing: UniversalScanError.resourceUnavailable(asset.displayName))
-                    } else if Self.isDownloadCancelled(error) {
-                        singleShot.resume(throwing: UniversalScanError.downloadCancelled(asset.displayName))
+        // requestAVAsset and frame generation have no deadline of their own; an
+        // unresponsive iCloud item must not hold the video pass.
+        return try await Self.withTimeout(seconds: allowNetwork ? 90 : 20) {
+            let options = PHVideoRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = allowNetwork
+            let request = CancellablePhotosRequest()
+            let avAsset: AVAsset = try await withTaskCancellationHandler {
+                    try await withCheckedThrowingContinuation { continuation in
+                let singleShot = SingleShotContinuation(continuation)
+                request.bind { singleShot.resume(throwing: CancellationError()) }
+                let requestID = PHImageManager.default().requestAVAsset(forVideo: video, options: options) { avAsset, _, info in
+                    if let error = info?[PHImageErrorKey] as? Error {
+                        if !allowNetwork && Self.isNetworkAccessRequired(error) {
+                            singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
+                        } else if Self.isResourceUnavailable(error) {
+                            singleShot.resume(throwing: UniversalScanError.resourceUnavailable(asset.displayName))
+                        } else if Self.isDownloadCancelled(error) {
+                            singleShot.resume(throwing: UniversalScanError.downloadCancelled(asset.displayName))
+                        } else {
+                            singleShot.resume(throwing: error)
+                        }
+                    } else if let avAsset {
+                        singleShot.resume(returning: avAsset)
+                    } else if allowNetwork {
+                        singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(asset.displayName))
                     } else {
-                        singleShot.resume(throwing: error)
+                        singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
                     }
-                } else if let avAsset {
-                    singleShot.resume(returning: avAsset)
-                } else if allowNetwork {
-                    singleShot.resume(throwing: UniversalScanError.inaccessibleAsset(asset.displayName))
-                } else {
-                    singleShot.resume(throwing: UniversalScanError.networkRequired(asset.displayName))
                 }
-            }
-                request.install(requestID)
-            }
-            } onCancel: { request.cancel() }
-        return try await UniversalVideoFrameSampler.sample(
-            avAsset: avAsset,
-            maximumPixelSize: maximumPixelSize
-        )
+                    request.install(requestID)
+                }
+                } onCancel: { request.cancel() }
+            return try await UniversalVideoFrameSampler.sample(
+                avAsset: avAsset,
+                maximumPixelSize: maximumPixelSize
+            )
+        }
     }
 
     private static func primaryResource(in resources: [PHAssetResource], mediaType: PHAssetMediaType) -> PHAssetResource? {
@@ -617,19 +651,26 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
             private let lock = NSLock()
             private var requestID: PHAssetResourceDataRequestID?
             private var cancelled = false
+            private var abandon: (@Sendable () -> Void)?
+            func bind(_ abandon: @escaping @Sendable () -> Void) {
+                lock.lock(); self.abandon = abandon; let pending = cancelled; lock.unlock()
+                if pending { abandon() }
+            }
             func install(_ id: PHAssetResourceDataRequestID) {
                 lock.lock(); requestID = id; let pending = cancelled; lock.unlock()
                 if pending { PHAssetResourceManager.default().cancelDataRequest(id) }
             }
             func cancel() {
-                lock.lock(); cancelled = true; let id = requestID; lock.unlock()
+                lock.lock(); cancelled = true; let id = requestID; let abandon = self.abandon; lock.unlock()
                 if let id { PHAssetResourceManager.default().cancelDataRequest(id) }
+                abandon?()
             }
         }
         let box = RequestBox()
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 let singleShot = SingleShotContinuation(continuation)
+                box.bind { singleShot.resume(throwing: CancellationError()) }
                 let requestID = PHAssetResourceManager.default().requestData(
                     for: resource,
                     options: options,
@@ -661,7 +702,11 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
         let smartAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
         var membership: [String: [MediaAlbum]] = [:]
+        // Recents/All Photos and Recently Added contain (nearly) the whole library: walking
+        // them costs one enumeration per asset and gives every item a meaningless album.
+        let skippedSubtypes: Set<PHAssetCollectionSubtype> = [.smartAlbumUserLibrary, .smartAlbumRecentlyAdded]
         let processCollection: (PHAssetCollection) -> Void = { collection in
+            guard !skippedSubtypes.contains(collection.assetCollectionSubtype) else { return }
             guard let title = collection.localizedTitle, !title.isEmpty else { return }
             let album = MediaAlbum(id: collection.localIdentifier, title: title)
             let members = PHAsset.fetchAssets(in: collection, options: nil)
@@ -670,19 +715,6 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         userAlbums.enumerateObjects { col, _, _ in processCollection(col) }
         smartAlbums.enumerateObjects { col, _, _ in processCollection(col) }
         return membership
-    }
-
-    private static func albumMemberIdentifiers() -> Set<String> {
-        let userAlbums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
-        let smartAlbums = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, options: nil)
-        var identifiers = Set<String>()
-        let processCollection: (PHAssetCollection) -> Void = { collection in
-            let members = PHAsset.fetchAssets(in: collection, options: nil)
-            members.enumerateObjects { asset, _, _ in identifiers.insert(asset.localIdentifier) }
-        }
-        userAlbums.enumerateObjects { col, _, _ in processCollection(col) }
-        smartAlbums.enumerateObjects { col, _, _ in processCollection(col) }
-        return identifiers
     }
 
     private static func isSharedAsset(_ asset: PHAsset) -> Bool {

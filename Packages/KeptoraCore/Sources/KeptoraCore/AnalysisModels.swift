@@ -294,6 +294,10 @@ public struct LibraryReviewDecisions: Codable, Equatable, Sendable {
         let byGroup = candidatesByGroup(groups)
         return UnifiedLibraryAdapter.uniqueReferences(similar.flatMap { byGroup[$0.id] ?? [] })
     }
+    public func suggestedCandidates(_ groups: [LibraryReviewGroup]) -> [UniversalMediaAsset] {
+        var seen = Set<String>()
+        return (exactSuggestions(groups) + similarSuggestions(groups)).filter { seen.insert($0.id).inserted }
+    }
 }
 
 public struct LibraryReviewBlock: Identifiable, Sendable {
@@ -315,6 +319,23 @@ public struct LibraryReviewBlock: Identifiable, Sendable {
     /// Connected blocks retain their actual relationships; they don't assert transitivity.
     public static func make(assets: [UniversalMediaAsset], groups: [LibraryReviewGroup], quality: [String: QualityAssessment], smart: Bool) -> [Self] {
         if !smart { return [.init(id: "timeline", assets: assets, groups: [])] }
+        if groups.isEmpty {
+            if quality.isEmpty {
+                return assets.isEmpty ? [] : [.init(id: "other", assets: assets, groups: [])]
+            }
+            var review: [UniversalMediaAsset] = []
+            var remaining: [UniversalMediaAsset] = []
+            review.reserveCapacity(min(quality.count, assets.count))
+            remaining.reserveCapacity(assets.count)
+            for asset in assets {
+                if quality[asset.id]?.needsReview == true { review.append(asset) }
+                else { remaining.append(asset) }
+            }
+            var result: [Self] = []
+            if !review.isEmpty { result.append(.init(id: "quality", assets: review, groups: [])) }
+            if !remaining.isEmpty { result.append(.init(id: "other", assets: remaining, groups: [])) }
+            return result
+        }
         let lookup = Dictionary(assets.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var parent: [String: String] = [:]
         func root(_ id: String) -> String {

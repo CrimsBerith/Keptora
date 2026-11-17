@@ -15,6 +15,23 @@ public enum LibraryAnalysisUpdate: Sendable {
     case finished(AnalysisSessionProgress)
 }
 
+/// Analyzers report progress for every item. Spawning a Task per item to reach the
+/// coordinator actor queued thousands of tasks on large libraries; this gate drops
+/// reports that would be throttled anyway before any task is created.
+final class AnalysisProgressGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var last = Date.distantPast
+    private let interval: TimeInterval
+    init(interval: TimeInterval = 0.3) { self.interval = interval }
+    func admit(done: Int, total: Int) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        let now = Date()
+        guard done == 0 || done >= total || now.timeIntervalSince(last) >= interval else { return false }
+        last = now
+        return true
+    }
+}
+
 /// Three bounded passes share one catalogue. Each photo is decoded once for both
 /// quality and similarity. Large original hashing cannot hold back preview results.
 public actor LibraryAnalysisCoordinator {
@@ -45,13 +62,20 @@ public actor LibraryAnalysisCoordinator {
     public func run(adapter: UnifiedLibraryAdapter, allowNetwork: Bool,
                     configuration: LibraryConfiguration = .init(), control: LibraryAnalysisControl? = nil,
                     checkpoint: UniversalScanCheckpoint? = nil,
+                    forwardPartialCatalogue: Bool = true,
                     checkpointUpdate: @escaping @Sendable (UniversalScanCheckpoint) -> Void = { _ in }) async throws {
         self.configuration = configuration; self.control = control
+        // Decode the fingerprint cache while the catalogue loads instead of on the first lookup.
+        Task.detached(priority: .utility) { await MediaFingerprintDiskCache.shared.prewarm() }
         try await control?.waitIfPaused()
         await progress(.catalogue, done: 0, total: 0)
-        let assets = try await adapter.enumerateAssets(control: control, onSourceBatch: { items, coverage, catalogue in
-            await self.receive(.catalogue(items, coverage, catalogue))
-        })
+        // When the caller already shows a catalogue, partial snapshots only shrink it and make
+        // the UI redo selection matching; the complete catalogue below is always sent.
+        var onPartial: (@Sendable ([UniversalMediaAsset], [LibrarySourceCoverage], LibrarySourceCatalogue) async -> Void)?
+        if forwardPartialCatalogue {
+            onPartial = { items, coverage, catalogue in await self.receive(.catalogue(items, coverage, catalogue)) }
+        }
+        let assets = try await adapter.enumerateAssets(control: control, onSourceBatch: onPartial)
         let coverage = await adapter.coverage
         await receive(.catalogue(assets, coverage, await adapter.catalogue))
         let catalogueStatus = AnalysisStageProgress(status: coverage.contains { $0.error != nil } ? .partial : .completed,
@@ -73,8 +97,10 @@ public actor LibraryAnalysisCoordinator {
                 try await group.waitForAll()
             }
             try Task.checkCancellation()
-            await MediaFingerprintDiskCache.shared.persistToDisk()
+            // Results first: writing the cache can take a while on large libraries and must
+            // not hold the UI at 100%.
             await receive(.finished(session))
+            await MediaFingerprintDiskCache.shared.persistToDisk()
         } catch {
             session.cancel()
             await MediaFingerprintDiskCache.shared.persistToDisk()
@@ -85,9 +111,11 @@ public actor LibraryAnalysisCoordinator {
                        checkpoint: UniversalScanCheckpoint?, checkpointUpdate: @escaping @Sendable (UniversalScanCheckpoint) -> Void) async throws {
         do {
             let scanner = UniversalExactScanner()
+            let gate = AnalysisProgressGate()
             let result = try await scanner.scan(adapter: adapter, allowNetwork: allowNetwork,
                 fingerprintAllAssets: false, preloadedAssets: assets, resuming: checkpoint, control: control,
                 checkpointInterval: configuration.checkpointInterval, checkpointUpdate: checkpointUpdate, groupsUpdate: { groups in Task { await self.exactGroups(groups) } }) { done, total, _ in
+                    guard gate.admit(done: done, total: total) else { return }
                     Task { await self.progress(.exact, done: done, total: total) }
                 }
             try Task.checkCancellation()
@@ -99,11 +127,13 @@ public actor LibraryAnalysisCoordinator {
     }
     private func photos(_ assets: [UniversalMediaAsset], adapter: UnifiedLibraryAdapter, allowNetwork: Bool) async throws {
         let analyzer = VisualSimilarityAnalyzer()
+        let gate = AnalysisProgressGate()
         do {
             let groups = try await analyzer.analyze(assets: assets, provider: adapter, allowNetwork: allowNetwork,
                 threshold: configuration.visualThreshold, control: control, similarityEnabled: configuration.similarityEnabled,
                 groupsUpdate: { groups in Task { await self.photoGroups(groups) } },
                 findings: { quality, issues in Task { await self.photoFindings(quality, issues) } }) { done, total in
+                    guard gate.admit(done: done, total: total) else { return }
                     Task { await self.progress(.photos, done: done, total: total) }
                 }
             try Task.checkCancellation()
@@ -128,8 +158,10 @@ public actor LibraryAnalysisCoordinator {
     }
     private func videos(_ assets: [UniversalMediaAsset], adapter: UnifiedLibraryAdapter, allowNetwork: Bool) async throws {
         let analyzer = VideoSimilarityAnalyzer()
+        let gate = AnalysisProgressGate()
         do {
             let groups = try await analyzer.analyze(assets: assets, provider: adapter, allowNetwork: allowNetwork, control: control) { done, total in
+                guard gate.admit(done: done, total: total) else { return }
                 Task { await self.progress(.videos, done: done, total: total) }
             }
             try Task.checkCancellation()

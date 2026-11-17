@@ -8,6 +8,9 @@ public actor VisualSimilarityAnalyzer {
     public private(set) var metrics = AnalysisWorkMetrics()
     public private(set) var qualityAssessments: [String: QualityAssessment] = [:]
     public private(set) var issues: [AnalysisIssue] = []
+    /// 64-bit difference hashes of analysed previews (similarity mode only). The exact pass
+    /// uses them to skip full-original hashing of photos that cannot be byte-identical.
+    public private(set) var coarseHashes: [String: UInt64] = [:]
     public init() {}
 
     public func analyze(
@@ -26,7 +29,7 @@ public actor VisualSimilarityAnalyzer {
         var clusters: [Cluster] = []
         skippedPreviewCount = 0
         metrics = .init()
-        qualityAssessments = [:]; issues = []
+        qualityAssessments = [:]; issues = []; coarseHashes = [:]
         var bandIndex: [UInt32: Set<Int>] = [:]
         var timeIndex: [Int: Set<Int>] = [:]
         var burstIndex: [String: Set<Int>] = [:]
@@ -35,14 +38,29 @@ public actor VisualSimilarityAnalyzer {
         var qualityByAssetID: [String: VisualQualityReport] = [:]
         var lastFindingsEmitTime = Date()
         var lastGroupsEmitTime = Date()
+        // Preview requests wait on PhotoKit/disk, not CPU. Keeping a few in flight ahead of
+        // the item being analysed hides that latency; Vision itself stays serial here.
+        let lookahead = 3
+        var prefetches: [Int: Task<CGImage?, Error>] = [:]
+        defer { for task in prefetches.values { task.cancel() } }
 
         for (index, asset) in candidates.enumerated() {
             try await control?.waitIfPaused()
             try Task.checkCancellation()
             if index % 8 == 0 { await Task.yield() }
             progress(index, candidates.count)
+            let prefetched = prefetches.removeValue(forKey: index)
+            defer { prefetched?.cancel() }
+            for ahead in (index + 1)..<min(candidates.count, index + 1 + lookahead) where prefetches[ahead] == nil {
+                let next = candidates[ahead]
+                prefetches[ahead] = Task { () async throws -> CGImage? in
+                    if await self.hasCachedDescriptor(for: next, similarityEnabled: similarityEnabled) { return nil }
+                    try Task.checkCancellation()
+                    return try await provider.similarityImage(for: next, maximumPixelSize: 384, allowNetwork: allowNetwork)
+                }
+            }
             let value: (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment)
-            do { value = try await descriptor(for: asset, provider: provider, allowNetwork: allowNetwork, similarityEnabled: similarityEnabled) }
+            do { value = try await descriptor(for: asset, provider: provider, allowNetwork: allowNetwork, similarityEnabled: similarityEnabled, prefetched: prefetched) }
             catch is CancellationError { throw CancellationError() }
             catch {
                 skippedPreviewCount += 1
@@ -57,6 +75,7 @@ public actor VisualSimilarityAnalyzer {
             }
             let feature = value.feature, hash = value.hash
             descriptors[asset.id] = (feature, hash)
+            if similarityEnabled { coarseHashes[asset.id] = hash }
             qualityByAssetID[asset.id] = VisualQualityReport(assetID: asset.id,
                 sharpnessScore: Float(value.quality.detailScore), exposureScore: Float(value.quality.exposureScore),
                 faceScore: 0, formatBonus: 0, compositeScore: Float(value.quality.score ?? 0), badges: [], assessment: value.quality)
@@ -194,8 +213,18 @@ public actor VisualSimilarityAnalyzer {
         }
     }
 
+    /// Mirrors the cache checks in `descriptor` without unarchiving, so prefetch skips cached items.
+    private func hasCachedDescriptor(for asset: UniversalMediaAsset, similarityEnabled: Bool) async -> Bool {
+        if !similarityEnabled, let cached = await MediaFingerprintDiskCache.shared.get(asset: asset, algorithm: MediaAnalysisVersion.quality), cached.quality != nil {
+            return true
+        }
+        guard let cached = await MediaFingerprintDiskCache.shared.get(asset: asset, algorithm: MediaAnalysisVersion.visual) else { return false }
+        return cached.coarseHash != nil && cached.quality != nil && cached.featurePrintData != nil
+    }
+
     private func descriptor(for asset: UniversalMediaAsset, provider: any SimilarityImageProviding,
-                            allowNetwork: Bool, similarityEnabled: Bool) async throws -> (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment) {
+                            allowNetwork: Bool, similarityEnabled: Bool,
+                            prefetched: Task<CGImage?, Error>? = nil) async throws -> (feature: VNFeaturePrintObservation?, hash: UInt64, quality: QualityAssessment) {
         let algorithm = similarityEnabled ? MediaAnalysisVersion.visual : MediaAnalysisVersion.quality
         if !similarityEnabled, let cached = await MediaFingerprintDiskCache.shared.get(asset: asset, algorithm: algorithm), let quality = cached.quality {
             metrics.cacheHits += 1; return (nil, 0, quality)
@@ -208,7 +237,12 @@ public actor VisualSimilarityAnalyzer {
             return (feature, hash, quality)
         }
         metrics.decodedPreviews += 1
-        let image = try await provider.similarityImage(for: asset, maximumPixelSize: 384, allowNetwork: allowNetwork)
+        let image: CGImage
+        if let prefetched, let ready = try await prefetched.value {
+            image = ready
+        } else {
+            image = try await provider.similarityImage(for: asset, maximumPixelSize: 384, allowNetwork: allowNetwork)
+        }
         try Task.checkCancellation()
         if similarityEnabled { metrics.featurePrintRequests += 1 }
         let value = try autoreleasepool { () throws -> (VNFeaturePrintObservation?, UInt64, QualityAssessment) in
