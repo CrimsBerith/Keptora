@@ -410,6 +410,15 @@ final class LibraryWorkflowTests: XCTestCase {
         XCTAssertTrue(SmartLibrarySearchMatcher.matches(asset: plainPhoto, query: "favori"))
         XCTAssertFalse(SmartLibrarySearchMatcher.matches(asset: travelAlbumPhoto, query: "favori"))
     }
+
+    func testPhotoLibrarySourceAdapterAlbumCacheInvalidation() async {
+        let adapter = PhotoLibrarySourceAdapter()
+        let initialCached = await adapter.isAlbumMembershipCached
+        XCTAssertFalse(initialCached)
+        await adapter.invalidateAlbumMembershipCache()
+        let afterInvalidate = await adapter.isAlbumMembershipCached
+        XCTAssertFalse(afterInvalidate)
+    }
 }
 
 private struct WorkflowSource: SourceAdapter {

@@ -886,6 +886,7 @@ final class MobileKeptoraStore: ObservableObject {
     private var photoReloadPending = false
     private var photoReloadTask: Task<Void, Never>?
     func photoLibraryDidChange() {
+        Task { await photosAdapter.invalidateAlbumMembershipCache() }
         photoReloadPending = true
         guard photoReloadTask == nil else { return }
         photoReloadTask = Task { [weak self] in

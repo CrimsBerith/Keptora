@@ -126,6 +126,16 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
 
     public init() {}
 
+    public func invalidateAlbumMembershipCache() {
+        albumMembershipCache = nil
+    }
+
+    #if DEBUG
+    var isAlbumMembershipCached: Bool {
+        albumMembershipCache != nil
+    }
+    #endif
+
     public func authorizationStatus() async -> SourceAuthorization {
         Self.map(PHPhotoLibrary.authorizationStatus(for: .readWrite))
     }
@@ -148,7 +158,7 @@ public actor PhotoLibrarySourceAdapter: SourceAdapter, SimilarityImageProviding,
         options.includeHiddenAssets = true
         let fetch = PHAsset.fetchAssets(with: options)
         let albumMemberships: [String: [MediaAlbum]]
-        if let cached = albumMembershipCache, cached.assetCount == fetch.count, Date().timeIntervalSince(cached.date) < 120 {
+        if let cached = albumMembershipCache, cached.assetCount == fetch.count, Date().timeIntervalSince(cached.date) < 15 {
             albumMemberships = cached.value
         } else {
             albumMemberships = Self.albumMemberships()
